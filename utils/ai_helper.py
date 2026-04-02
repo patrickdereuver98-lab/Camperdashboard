@@ -15,7 +15,7 @@ try:
     # CRUCIALE FIX: Activeer Google Search Grounding
     model = genai.GenerativeModel(
         model_name="gemini-2.5-flash",
-        tools=[{"google_search_retrieval": {}}] 
+        tools=[{"google_search": {}}] 
     )
     logger.info("Gemini model met Search Grounding geladen")
 except KeyError:
