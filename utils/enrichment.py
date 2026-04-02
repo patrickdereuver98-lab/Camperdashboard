@@ -1,9 +1,9 @@
 """
-utils/enrichment.py — AI-onderzoeker voor camper-specifieke data.
+utils/enrichment.py — Debug versie om de "Silent Crash" te ontmaskeren.
 """
 import json
+import streamlit as st
 from utils.ai_helper import get_gemini_response
-
 
 def research_location(row):
     naam = row.get('naam', 'Onbekende locatie')
@@ -11,61 +11,51 @@ def research_location(row):
     website = row.get('website', '')
 
     prompt = f"""
-Gebruik Google Search om de meest actuele informatie te vinden over: {naam} in {stad}.
-Bezoek indien mogelijk de website: {website}.
+    ONDERZOEKSTAAK: Verzamel alle details over camperplaats '{naam}' in '{stad}'.
+    Primaire bron: {website}
+    
+    Gebruik Google Search om de volgende 18 velden te verifiëren. 
+    Zoek op de officiële prijslijst en faciliteitenpagina.
 
-Zoek specifiek naar:
-1. Prijs per nacht voor 2 personen + camper.
-2. Of honden welkom zijn op de camperplaatsen.
-3. Faciliteiten: afvalwater lozen, vers water tanken, stroom (en prijs daarvan).
-4. Check-in en check-out tijden.
-
-Antwoord uitsluitend in JSON formaat:
-
-BELANGRIJK:
-- Gebruik meerdere bronnen (officiële website, camperplatforms, Google Maps, reviews).
-- Geef prioriteit aan de officiële website voor feiten zoals prijs en regels.
-- Vul ontbrekende info aan met betrouwbare secundaire bronnen.
-- Als informatie onzeker of niet vindbaar is: gebruik "Onbekend".
-- Hallucineer NOOIT gegevens.
-- wanneer de heel specifiek er geen score onbekend is, moet je zelf een slecht/voldoende/goed/uitstekend geven op basis van de reviews en voorzieningen.
-
-Geef uitsluitend een JSON-object terug met deze velden:
-
-{{
-    "prijs": "Prijs per nacht",
-    "honden_toegestaan": "Ja/Nee/Onbekend",
-    "stroom": "Ja/Nee/Onbekend",
-    "stroom_prijs": "Kosten of Onbekend",
-    "afvalwater": "Ja/Nee/Onbekend",
-    "chemisch_toilet": "Ja/Nee/Onbekend",
-    "water_tanken": "Ja/Nee/Onbekend",
-    "aantal_plekken": "Aantal of Onbekend",
-    "check_in_out": "Tijden of Vrij",
-    "website": "Officiële URL",
-    "beschrijving": "Max 20 woorden",
-    "ondergrond": "Type of Onbekend",
-    "toegankelijkheid": "Ja/Nee/Onbekend",
-    "rust": "Rustig/Druk/Onbekend",
-    "sanitair": "Ja/Nee/Onbekend",
-    "wifi": "Ja/Nee/Onbekend",
-    "beoordeling": "Score of Onbekend",
-    "samenvatting_reviews": "Max 30 woorden",
-    "extra": []
-}}
-
-Zorg dat de JSON geldig is en geen extra tekst bevat.
-"""
-
+    Retourneer uitsluitend JSON:
+    {{
+        "prijs": "Huidige prijs per nacht",
+        "honden_toegestaan": "Ja/Nee/Onbekend",
+        "stroom": "Ja/Nee/Onbekend",
+        "stroom_prijs": "Kosten per nacht/kWh of 'Inbegrepen'",
+        "afvalwater": "Ja/Nee/Onbekend",
+        "chemisch_toilet": "Ja/Nee/Onbekend",
+        "water_tanken": "Ja/Nee/Onbekend",
+        "aantal_plekken": "Totaal aantal plekken",
+        "check_in_out": "Tijden (bijv. 14:00/11:00)",
+        "website": "Directe URL naar de camping",
+        "beschrijving": "Max 20 woorden sfeeromschrijving",
+        "ondergrond": "Gras/Asfalt/Grind",
+        "toegankelijkheid": "Ja/Nee (geschikt voor >8m?)",
+        "rust": "Rustig/Druk",
+        "sanitair": "Ja/Nee",
+        "wifi": "Ja/Nee",
+        "beoordeling": "Score (1-5) op basis van reviews",
+        "samenvatting_reviews": "Max 15 woorden over de algemene mening",
+        "extra": []
+    }}
+    """
+    
     response_text = get_gemini_response(prompt)
 
+    # ── DEBUGGING: Toon de exacte output van Gemini op het scherm ──
+    st.warning(f"🔍 Ruwe AI Output voor {naam}:")
+    st.text(response_text)
+
     try:
-        # Robuuste extractie, onafhankelijk van wat de AI eromheen typt
         start = response_text.find('{')
         end = response_text.rfind('}') + 1
         if start != -1 and end != -1:
             return json.loads(response_text[start:end])
-    except Exception:
+        else:
+            st.error("Geen JSON haken gevonden in het antwoord.")
+            return None
+    except Exception as e:
+        # Nu zien we waarom hij crasht
+        st.error(f"JSON Parse Fout: {e}")
         return None
-
-    return None
