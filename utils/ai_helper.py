@@ -12,7 +12,10 @@ try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
     # Gemini 1.5 of 2.0 Flash zijn de 'sweet spot' voor snelheid en JSON-extractie.
-    model = genai.GenerativeModel("gemini-1.5-flash") 
+    model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    tools=[{"google_search_retrieval": {}}] # Dit zet de Google-motor aan!
+)
     logger.info("Gemini model geladen")
 except KeyError:
     model = None
