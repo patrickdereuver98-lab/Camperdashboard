@@ -11,7 +11,6 @@ import reverse_geocoder as rg
 import logging
 
 # ── 0. LOGGER INITIALISATIE ──────────────────────────────────────────────────
-# Voorkomt NameError als de cloud-fout optreedt
 logger = logging.getLogger(__name__)
 
 # ── 1. CONFIGURATIE ──────────────────────────────────────────────────────────
@@ -26,39 +25,49 @@ def get_connection():
 def load_data():
     """
     Laadt de data uit Google Sheets (Cloud). 
-    Valt terug op lokale CSV als de cloud onbereikbaar is.
+    Zorgt er nu ook voor dat de stempelkolom altijd bestaat.
     """
     try:
         conn = get_connection()
         # ttl=0 dwingt een live verversing af (cruciaal voor beheer-updates)
         df = conn.read(worksheet=SHEET_NAME, ttl=0)
+        
         if df is not None and not df.empty:
+            # CHIRURGISCHE FIX: Garandeer dat de stempelkolom bestaat voor de metrics
+            if "ai_gecheckt" not in df.columns:
+                df["ai_gecheckt"] = "Nee"
             return df.fillna("Onbekend")
+        elif df is not None:
+             # Sheet is leeg, maar object bestaat: geef lege DF terug met stempelkolom
+             return pd.DataFrame(columns=['naam', 'ai_gecheckt'])
+            
     except Exception as e:
         logger.error(f"Cloud-fout bij load_data: {e}")
     
-    # Fallback naar lokale CSV voor stabiliteit van de UI
+    # Fallback naar lokale CSV
     if os.path.exists(CSV_PATH):
         try:
-            return pd.read_csv(CSV_PATH).fillna("Onbekend")
+            df_local = pd.read_csv(CSV_PATH)
+            if not df_local.empty and "ai_gecheckt" not in df_local.columns:
+                df_local["ai_gecheckt"] = "Nee"
+            return df_local.fillna("Onbekend")
         except Exception:
             return pd.DataFrame()
     
     return pd.DataFrame()
 
 def get_master_data():
-    """Alias voor compatibiliteit met de Kaart-pagina (1_📍_Kaart.py)."""
+    """Alias voor compatibiliteit met de Kaart-pagina."""
     return load_data()
 
 # ── 3. DATA OPSLAAN ───────────────────────────────────────────────────────────
 def save_data(df):
     """
     Schrijft de dataset naar Google Sheets én de lokale CSV fallback.
-    Zorgt dat alle NaN waarden 'Onbekend' worden voor Sheet-integriteit.
     """
     df_clean = df.fillna("Onbekend")
     
-    # 1. Cloud Save (Primary)
+    # Cloud Save
     try:
         conn = get_connection()
         conn.update(worksheet=SHEET_NAME, data=df_clean)
@@ -67,7 +76,7 @@ def save_data(df):
         logger.error(f"Cloud Save Fout: {e}")
         st.error(f"⚠️ Kon niet opslaan in Google Sheets: {e}")
 
-    # 2. Lokale Fallback Save (Secondary)
+    # Lokale Fallback Save
     try:
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         df_clean.to_csv(CSV_PATH, index=False)
@@ -156,6 +165,5 @@ def enforce_nl_and_enrich_provinces(df):
     df['landcode'] = [res['cc'] for res in results]
     df['provincie'] = [res['admin1'] for res in results]
     
-    # Harde filter op Nederland
     df_nl = df[df['landcode'] == 'NL'].copy()
     return df_nl.drop(columns=['landcode'])
