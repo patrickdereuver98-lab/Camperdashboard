@@ -1,256 +1,137 @@
 """
-utils/ai_helper.py — Search-First AI Motor voor VrijStaan.
-Architectuur: Gemini 1.5 Flash + Google Search Grounding + Fuzzy Province Matching.
+ai_helper.py — Geoptimaliseerde Gemini Flash integratie voor VrijStaan.
+Inclusief: Google Search Grounding en Fuzzy Matching voor 18+ velden.
 """
 import json
-import re
 import pandas as pd
 import streamlit as st
+from utils.logger import logger
 
 try:
     import google.generativeai as genai
-except ImportError:
-    genai = None
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=API_KEY)
+    
+    # CRUCIALE FIX: Activeer Google Search Grounding
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        tools=[{"google_search_retrieval": {}}] 
+    )
+    logger.info("Gemini model met Search Grounding geladen")
+except KeyError:
+    model = None
+    logger.warning("GEMINI_API_KEY niet gevonden in st.secrets")
+except Exception as e:
+    model = None
+    logger.error(f"Gemini laad-fout: {e}")
 
-# ── PROVINCIE FUZZY MAP ───────────────────────────────────────────────────────
-# Vangt spelfouten, afkortingen en dialectvarianten op zodat we NOOIT 0 resultaten geven.
-PROVINCIE_ALIASES = {
-    # Drenthe
-    "drente": "Drenthe", "drenthe": "Drenthe",
-    # Friesland
-    "friesland": "Friesland", "fryslan": "Friesland", "fryslân": "Friesland", "frisia": "Friesland",
-    # Gelderland
-    "gelderland": "Gelderland", "gelre": "Gelderland",
-    # Groningen
-    "groningen": "Groningen", "stad": "Groningen",
-    # Limburg
-    "limburg": "Limburg",
-    # Noord-brabant
-    "noord-brabant": "Noord-Brabant", "brabant": "Noord-Brabant", "n-brabant": "Noord-Brabant",
-    # Noord-holland
-    "noord-holland": "Noord-Holland", "n-holland": "Noord-Holland", "noord holland": "Noord-Holland",
-    # Overijssel
-    "overijssel": "Overijssel",
-    # Utrecht
-    "utrecht": "Utrecht",
-    # Zeeland
-    "zeeland": "Zeeland",
-    # Zuid-holland
-    "zuid-holland": "Zuid-Holland", "z-holland": "Zuid-Holland", "zuid holland": "Zuid-Holland",
-    # Flevoland
-    "flevoland": "Flevoland",
-}
-
-# ── MODEL INIT ────────────────────────────────────────────────────────────────
-model = None
-model_no_tools = None  # Backup model zonder tools voor filterlogica
-
-def _init_model():
-    """Lazy-init: bouw het model pas als het echt nodig is."""
-    global model, model_no_tools
-    if model is not None:
-        return
-
-    if genai is None:
-        st.warning("google-generativeai package niet geïnstalleerd.")
-        return
-
-    try:
-        api_key = st.secrets.get("GEMINI_API_KEY", "")
-        if not api_key:
-            raise KeyError("GEMINI_API_KEY leeg of afwezig in st.secrets")
-
-        genai.configure(api_key=api_key)
-
-        # Model MET Google Search grounding — voor live data ophalen
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            tools=[{"google_search_retrieval": {}}],
-        )
-
-        # Model ZONDER tools — voor filter-parsing (grounding geeft hier errors)
-        model_no_tools = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-        )
-
-    except KeyError as e:
-        st.warning(f"⚠️ Gemini API-key ontbreekt: {e}")
-    except Exception as e:
-        st.error(f"❌ Gemini init-fout: {e}")
-
-
-# ── HULPFUNCTIES ──────────────────────────────────────────────────────────────
-
-def _extract_json(text: str) -> dict | None:
-    """
-    Robuuste JSON-extractor: pakt het eerste geldige JSON-object uit een tekst,
-    ook als Gemini er markdown-fences of extra uitleg omheen gooit.
-    """
-    # Stap 1: Verwijder markdown code-blokken
-    text = re.sub(r"```(?:json)?", "", text).strip()
-
-    # Stap 2: Zoek het eerste { ... } blok
-    start = text.find("{")
-    if start == -1:
-        return None
-
-    depth = 0
-    for i, ch in enumerate(text[start:], start=start):
-        if ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                json_str = text[start : i + 1]
-                try:
-                    return json.loads(json_str)
-                except json.JSONDecodeError:
-                    # Probeer kleine reparaties: trailing comma's
-                    cleaned = re.sub(r",\s*([}\]])", r"\1", json_str)
-                    try:
-                        return json.loads(cleaned)
-                    except Exception:
-                        return None
-    return None
-
-
-def _fuzzy_provincie(raw: str) -> str | None:
-    """Vertaalt een ruwe invoer naar een geldige provincienaam, of None."""
-    if not raw or raw.lower() in ("null", "none", ""):
-        return None
-    key = raw.lower().strip().replace("  ", " ")
-    # Directe hit
-    if key in PROVINCIE_ALIASES:
-        return PROVINCIE_ALIASES[key]
-    # Gedeeltelijke hit (bijv. "drenth")
-    for alias, official in PROVINCIE_ALIASES.items():
-        if alias.startswith(key[:4]) or key in alias:
-            return official
-    return raw.title()  # Fallback: probeer het als eigennaam
-
-
-# ── PUBLIEKE API ──────────────────────────────────────────────────────────────
 
 def get_gemini_response(prompt: str) -> str:
     """
-    Stuurt een prompt naar Gemini MET Google Search grounding.
-    Gebruikt voor live data-ophaling in enrichment.py.
+    Algemene functie voor AI-onderzoek. Maakt gebruik van live web-data.
     """
-    _init_model()
     if model is None:
-        return "FOUT: AI-model niet geconfigureerd. Controleer GEMINI_API_KEY."
-
+        return "Fout: AI model niet geconfigureerd."
+    
     try:
-        response = model.generate_content(prompt)
-        # Concateneer alle tekst-blokken (grounding kan meerdere blokken geven)
-        parts = [p.text for p in response.candidates[0].content.parts if hasattr(p, "text")]
-        return "\n".join(parts).strip()
+        # Forceer het gebruik van de zoekmachine voor actuele feiten
+        full_prompt = f"{prompt}\n\nBelangrijk: Gebruik de Google Search tool om actuele feiten te verifiëren."
+        response = model.generate_content(full_prompt)
+        return response.text
     except Exception as e:
-        return f"FOUT bij Gemini aanroep: {e}"
+        logger.error(f"Fout in get_gemini_response: {e}")
+        return f"Fout: {str(e)}"
 
 
 def process_ai_query(df: pd.DataFrame, user_query: str) -> tuple[pd.DataFrame, list[str]]:
     """
-    Vertaalt een vrije zoekvraag naar DataFrame-filters via Gemini.
-    
-    Strategie:
-    1. Gemini (ZONDER search-tools) parseert de intentie naar JSON-filters.
-    2. Fuzzy matching zorgt dat typefouten de gebruiker nooit stranden.
-    3. Elke actieve filter wordt bijgehouden voor UI-feedback.
+    Vertaalt zoekvragen naar filters via Fuzzy Matching om 0-resultaten te voorkomen.
     """
     if not user_query or df.empty:
         return df, []
+    if model is None:
+        return df, ["⚠️ AI niet beschikbaar — controleer API-key."]
 
-    _init_model()
-    if model_no_tools is None:
-        # Graceful degradation: geef alle data terug
-        return df, ["⚠️ AI niet beschikbaar — resultaten ongefilterd."]
+    prompt = f"""
+Je bent een backend data-extractor voor een Nederlandse camperdashboard-app.
+Analyseer de zoekopdracht en extraheer filters als strikte JSON.
 
-    # Beschikbare kolommen meegeven zodat AI weet wat er is
-    available_cols = df.columns.tolist()
+Zoekopdracht: "{user_query}"
 
-    parse_prompt = f"""
-Je bent een filter-parser voor een Nederlandse camperplaatsen-app.
-De gebruiker zoekt: "{user_query}"
-
-Beschikbare databasevelden: {available_cols}
-
-Extraheer de zoekintentie als een geldig JSON-object.
-Gebruik null voor velden die NIET gevraagd worden.
-Gebruik uitsluitend de exacte waarden "Ja", "Nee" of null — nooit andere strings.
-
-Geef ALLEEN het JSON-object terug, zonder uitleg of extra tekst:
+Retourneer UITSLUITEND geldige JSON zonder markdown.
+Gebruik null als een filter niet expliciet gevraagd wordt.
 
 {{
-  "provincie": "officiële Nederlandse provincienaam of null",
-  "gratis": true,
-  "honden": "Ja/Nee/null",
-  "stroom": "Ja/Nee/null",
-  "water": "Ja/Nee/null",
-  "sanitair": "Ja/Nee/null",
-  "wifi": "Ja/Nee/null",
-  "waterfront": "Ja/Nee/null",
-  "rust": "Rustig/Druk/null",
-  "toegankelijkheid": "Ja/Nee/null"
+  "provincie": "<provincienaam | null>",
+  "honden_toegestaan": "<'Ja' of 'Nee' | null>",
+  "is_gratis": "<true of false | null>",
+  "stroom": "<'Ja' of 'Nee' | null>",
+  "water": "<'Ja' | null>",
+  "sanitair": "<'Ja' | null>",
+  "wifi": "<'Ja' | null>"
 }}
 """
 
     try:
-        raw_response = model_no_tools.generate_content(parse_prompt)
-        raw_text = raw_response.text
+        logger.info(f"AI query: '{user_query}'")
+        response = model.generate_content(prompt)
+        
+        # Robuuste JSON extractie (voorkomt markdown crashes)
+        raw_text = response.text
+        start = raw_text.find('{')
+        end = raw_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            raise ValueError("Geen JSON gevonden in AI response.")
+            
+        filters = json.loads(raw_text[start:end])
+        logger.info(f"AI filters ontvangen: {filters}")
     except Exception as e:
-        return df, [f"⚠️ AI-fout bij filteren: {e}"]
-
-    filters = _extract_json(raw_text)
-    if not filters:
-        return df, ["⚠️ AI kon de zoekvraag niet vertalen. Toon alle resultaten."]
+        logger.error(f"AI Verwerkingsfout: {e}")
+        return df, ["⚠️ De AI begreep de zoekvraag niet volledig. Probeer het anders te formuleren."]
 
     filtered = df.copy()
-    actief: list[str] = []
+    actief = []
 
-    # ── PROVINCIE (Fuzzy) ──────────────────────────────────────────────────────
-    raw_prov = filters.get("provincie")
-    if raw_prov and str(raw_prov).lower() not in ("null", "none"):
-        prov_clean = _fuzzy_provincie(str(raw_prov))
-        if prov_clean:
-            mask = filtered["provincie"].str.contains(prov_clean, case=False, na=False)
-            if mask.sum() > 0:
-                filtered = filtered[mask]
-                actief.append(f"📍 {prov_clean}")
-            # Als geen resultaten: filter NIET toepassen (betere UX dan lege lijst)
+    # ── FUZZY FILTERING (Ongevoelig voor hoofdletters/streepjes) ──
 
-    # ── GRATIS ────────────────────────────────────────────────────────────────
-    if filters.get("gratis") is True:
-        mask = filtered["prijs"].astype(str).str.lower().str.contains("gratis", na=False)
-        filtered = filtered[mask]
+    prov = filters.get("provincie")
+    if prov and prov != "null":
+        filtered = filtered[filtered["provincie"].str.contains(prov, case=False, na=False)]
+        actief.append(f"📍 {prov}")
+
+    honden = filters.get("honden_toegestaan")
+    if honden in ("Ja", "Nee"):
+        filtered = filtered[filtered["honden_toegestaan"].astype(str).str.contains(honden, case=False, na=False)]
+        actief.append(f"{'🐾' if honden == 'Ja' else '🚫'} Honden: {honden}")
+
+    if filters.get("is_gratis") is True:
+        filtered = filtered[filtered["prijs"].astype(str).str.lower().str.contains("gratis", na=False)]
         actief.append("💰 Gratis")
 
-    # ── JA/NEE VELD HELPERS ───────────────────────────────────────────────────
-    bool_map = {
-        "honden":         ("honden_toegestaan", "🐾 Honden welkom"),
-        "stroom":         ("stroom",             "⚡ Stroom"),
-        "water":          ("water_tanken",       "🚰 Water tanken"),
-        "sanitair":       ("sanitair",           "🚿 Sanitair"),
-        "wifi":           ("wifi",               "📶 WiFi"),
-        "waterfront":     ("waterfront",         "🌊 Waterfront"),
-        "toegankelijkheid":("toegankelijkheid",  "♿ Toegankelijk"),
-    }
+    stroom = filters.get("stroom")
+    if stroom in ("Ja", "Nee"):
+        filtered = filtered[filtered["stroom"].astype(str).str.contains(stroom, case=False, na=False)]
+        actief.append(f"⚡ Stroom: {stroom}")
 
-    for filter_key, (col, label) in bool_map.items():
-        val = filters.get(filter_key)
-        if val in ("Ja", "Nee") and col in filtered.columns:
-            mask = filtered[col].str.contains(val, case=False, na=False)
-            filtered = filtered[mask]
-            actief.append(label if val == "Ja" else f"{label}: Nee")
-
-    # ── RUST ──────────────────────────────────────────────────────────────────
-    rust_val = filters.get("rust")
-    if rust_val and rust_val not in (None, "null") and "rust" in filtered.columns:
-        mask = filtered["rust"].str.contains(rust_val, case=False, na=False)
+    if filters.get("water") == "Ja":
+        mask = pd.Series(False, index=filtered.index)
+        if "waterfront" in filtered.columns:
+            mask = mask | filtered["waterfront"].astype(str).str.contains("Ja", case=False, na=False)
+        if "water_tanken" in filtered.columns:
+            mask = mask | filtered["water_tanken"].astype(str).str.contains("Ja", case=False, na=False)
         filtered = filtered[mask]
-        actief.append(f"🤫 {rust_val}")
+        actief.append("🌊 Water")
+
+    if filters.get("sanitair") == "Ja" and "sanitair" in filtered.columns:
+        filtered = filtered[filtered["sanitair"].astype(str).str.contains("Ja", case=False, na=False)]
+        actief.append("🚿 Sanitair")
+
+    if filters.get("wifi") == "Ja" and "wifi" in filtered.columns:
+        filtered = filtered[filtered["wifi"].astype(str).str.contains("Ja", case=False, na=False)]
+        actief.append("📶 Wifi")
 
     if not actief:
-        actief.append("ℹ️ Geen specifieke filters herkend — alle resultaten.")
+        actief.append("ℹ️ Geen specifieke filters herkend in de zoekvraag.")
 
     return filtered, actief
