@@ -1,65 +1,65 @@
 """
-ai_helper.py — Geoptimaliseerde Gemini Flash integratie voor VrijStaan.
-Inclusief: Google Search Grounding en Fuzzy Matching voor 18+ velden.
+utils/ai_helper.py — Gemini Integratie met X-Ray foutopsporing en Search Grounding.
 """
 import json
 import pandas as pd
 import streamlit as st
 from utils.logger import logger
 
+model = None
+init_error = "Onbekende fout"
+
 try:
     import google.generativeai as genai
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
     
-    # CRUCIALE FIX: Activeer Google Search Grounding
+    # ── KIES HIER JE MODEL ──
+    # Als je de 2.0 versie wilt gebruiken, is de officiële naam: "gemini-2.0-flash"
+    # Voor 1.5 is het: "gemini-1.5-flash"
+    gekozen_model = "gemini-2.0-flash" 
+    
+    # De veiligste manier in de Python SDK om search te activeren
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        tools=[{"google_search_tool": {}}] 
+        model_name=gekozen_model,
+        tools="google_search_retrieval" 
     )
-    logger.info("Gemini model met Search Grounding geladen")
+    logger.info(f"{gekozen_model} met Search Grounding geladen")
+
 except KeyError:
-    model = None
-    logger.warning("GEMINI_API_KEY niet gevonden in st.secrets")
+    init_error = "GEMINI_API_KEY mist in je secrets.toml"
+    logger.warning(init_error)
 except Exception as e:
-    model = None
-    logger.error(f"Gemini laad-fout: {e}")
+    init_error = str(e)
+    logger.error(f"Gemini laad-fout: {init_error}")
 
 
 def get_gemini_response(prompt: str) -> str:
-    """
-    Algemene functie voor AI-onderzoek. Maakt gebruik van live web-data.
-    """
+    """Algemene functie voor AI-onderzoek."""
     if model is None:
-        return "Fout: AI model niet geconfigureerd."
+        # Dit laat in jouw groene vlak op het scherm direct zien WAAROM hij faalt
+        return f"Fout tijdens opstarten: {init_error}"
     
     try:
-        # Forceer het gebruik van de zoekmachine voor actuele feiten
         full_prompt = f"{prompt}\n\nBelangrijk: Gebruik de Google Search tool om actuele feiten te verifiëren."
         response = model.generate_content(full_prompt)
         return response.text
     except Exception as e:
-        logger.error(f"Fout in get_gemini_response: {e}")
-        return f"Fout: {str(e)}"
+        return f"Fout tijdens genereren: {str(e)}"
 
 
 def process_ai_query(df: pd.DataFrame, user_query: str) -> tuple[pd.DataFrame, list[str]]:
-    """
-    Vertaalt zoekvragen naar filters via Fuzzy Matching om 0-resultaten te voorkomen.
-    """
+    """Vertaalt natuurlijke taal naar database-filters."""
     if not user_query or df.empty:
         return df, []
     if model is None:
-        return df, ["⚠️ AI niet beschikbaar — controleer API-key."]
+        return df, [f"⚠️ AI niet beschikbaar: {init_error}"]
 
     prompt = f"""
-Je bent een backend data-extractor voor een Nederlandse camperdashboard-app.
-Analyseer de zoekopdracht en extraheer filters als strikte JSON.
+Je bent een backend data-extractor voor een camper-app.
+Vertaal de zoekopdracht naar filters als strikte JSON.
 
 Zoekopdracht: "{user_query}"
-
-Retourneer UITSLUITEND geldige JSON zonder markdown.
-Gebruik null als een filter niet expliciet gevraagd wordt.
 
 {{
   "provincie": "<provincienaam | null>",
@@ -73,10 +73,7 @@ Gebruik null als een filter niet expliciet gevraagd wordt.
 """
 
     try:
-        logger.info(f"AI query: '{user_query}'")
         response = model.generate_content(prompt)
-        
-        # Robuuste JSON extractie (voorkomt markdown crashes)
         raw_text = response.text
         start = raw_text.find('{')
         end = raw_text.rfind('}') + 1
@@ -85,16 +82,13 @@ Gebruik null als een filter niet expliciet gevraagd wordt.
             raise ValueError("Geen JSON gevonden in AI response.")
             
         filters = json.loads(raw_text[start:end])
-        logger.info(f"AI filters ontvangen: {filters}")
     except Exception as e:
-        logger.error(f"AI Verwerkingsfout: {e}")
-        return df, ["⚠️ De AI begreep de zoekvraag niet volledig. Probeer het anders te formuleren."]
+        return df, ["⚠️ De AI begreep de zoekvraag niet volledig."]
 
     filtered = df.copy()
     actief = []
 
-    # ── FUZZY FILTERING (Ongevoelig voor hoofdletters/streepjes) ──
-
+    # Filters toepassen
     prov = filters.get("provincie")
     if prov and prov != "null":
         filtered = filtered[filtered["provincie"].str.contains(prov, case=False, na=False)]
