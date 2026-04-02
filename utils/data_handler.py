@@ -13,17 +13,20 @@ def load_data():
     en de uitgebreide query voor de juiste camperplaatsen.
     """
     
-    # 1. De verbeterde query (Fase 1 fix)
+    # 1. De verbeterde query (Nu specifiek op motorhome/campers gericht)
     overpass_query = """
-    [out:json][timeout:60];
+    [out:json][timeout:90];
     area["ISO3166-1"="NL"][admin_level=2]->.searchArea;
     (
       node["tourism"="caravan_site"](area.searchArea);
       way["tourism"="caravan_site"](area.searchArea);
       relation["tourism"="caravan_site"](area.searchArea);
       
-      node["amenity"="parking"]["motorcar"="yes"](area.searchArea);
+      node["amenity"="parking"]["motorhome"="yes"](area.searchArea);
+      way["amenity"="parking"]["motorhome"="yes"](area.searchArea);
+      
       node["tourism"="camp_site"]["motorhome"="yes"](area.searchArea);
+      way["tourism"="camp_site"]["motorhome"="yes"](area.searchArea);
     );
     out center;
     """
@@ -38,8 +41,8 @@ def load_data():
     url = "https://overpass-api.de/api/interpreter"
     
     try:
-        # Timeout verhoogd naar 60 seconden om zware queries de ruimte te geven
-        response = requests.post(url, data={'data': overpass_query}, headers=headers, timeout=60)
+        # Timeout verhoogd naar 90 seconden om zware queries de ruimte te geven
+        response = requests.post(url, data={'data': overpass_query}, headers=headers, timeout=90)
         response.raise_for_status()
         data = response.json()
         
@@ -68,9 +71,11 @@ def load_data():
         if not lat or not lon:
             continue
             
+        # FIX: We gooien geen data meer weg! We genereren een fallback-naam.
         naam = tags.get('name', '')
         if not naam:
-            continue # Alleen plekken met een bekende naam tonen voor een strakke UI
+            stad = tags.get('addr:city', tags.get('is_in:city', ''))
+            naam = f"Camperplaats {stad}".strip() if stad else "Naamloze Camperplaats"
             
         # Data vertalen naar onze UI velden
         fee = tags.get('fee', '')
