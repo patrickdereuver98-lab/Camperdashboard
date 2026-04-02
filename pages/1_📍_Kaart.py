@@ -4,20 +4,80 @@ Fixes:
   • Bug 2: beoordeling toont geen "/5" meer als AI tekst geeft (bijv. "Goed")
   • Bug 3: kaartkaart toont nu zowel waterfront (🌊) als water_tanken (🚰)
 """
-import pandas as pd
 import streamlit as st
-import folium
-import streamlit.components.v1 as components
+import leafmap.foliumap as leafmap
+import pandas as pd
+from ui.theme import apply_theme, render_sidebar_header
+from utils.data_handler import load_data
 
-from ui.theme import apply_theme, render_sidebar_header, price_badge
-from utils.ai_helper import process_ai_query
-from utils.data_handler import get_master_data
-from utils.favorites import get_favorites, toggle_favorite, init_favorites
+st.set_page_config(page_title="VrijStaan | Kaart", page_icon="📍", layout="wide")
 
-st.set_page_config(page_title="VrijStaan | Zoeken", page_icon="🚐", layout="wide")
 apply_theme()
 render_sidebar_header()
-init_favorites()
+
+st.title("📍 Camperplaatsen in Nederland")
+
+# Haal data op uit de handler (Cloud met Fallback)
+df = load_data()
+
+if df.empty:
+    st.warning("Nog geen data beschikbaar. Ga naar Beheer om de dataset te synchroniseren.")
+else:
+    # Sidebar Filters
+    with st.sidebar:
+        st.header("Filters")
+        
+        # Filter op Provincie
+        provincies = sorted(df['provincie'].unique().tolist())
+        sel_prov = st.multiselect("Provincie", provincies, default=provincies)
+        
+        # Filter op Prijs
+        prijs_options = ["Alle", "Gratis", "Betaald"]
+        sel_prijs = st.radio("Prijs", prijs_options)
+        
+        # Filter op Voorzieningen
+        st.subheader("Voorzieningen")
+        f_stroom = st.checkbox("⚡ Stroom")
+        f_honden = st.checkbox("🐾 Honden toegestaan")
+        f_water = st.checkbox("🌊 Aan het water")
+
+    # Toepassen filters
+    filtered_df = df[df['provincie'].isin(sel_prov)]
+    
+    if sel_prijs == "Gratis":
+        filtered_df = filtered_df[filtered_df['prijs'].astype(str).str.lower().contains('gratis')]
+    elif sel_prijs == "Betaald":
+        filtered_df = filtered_df[~filtered_df['prijs'].astype(str).str.lower().contains('gratis')]
+        
+    if f_stroom:
+        filtered_df = filtered_df[filtered_df['stroom'] == 'Ja']
+    if f_honden:
+        filtered_df = filtered_df[filtered_df['honden_toegestaan'] == 'Ja']
+    if f_water:
+        filtered_df = filtered_df[filtered_df['waterfront'] == 'Ja']
+
+    # Statistieken boven de kaart
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Gevonden locaties", len(filtered_df))
+    c2.metric("Provincies", len(sel_prov))
+    c3.metric("Filters actief", sum([f_stroom, f_honden, f_water]))
+
+    # Kaart weergave
+    m = leafmap.Map(center=[52.13, 5.29], zoom=7)
+    
+    # Voeg markers toe
+    if not filtered_df.empty:
+        m.add_points_from_xy(
+            filtered_df,
+            x="longitude",
+            y="latitude",
+            popup=["naam", "provincie", "prijs", "stroom", "website"],
+            color_column="provincie",
+            icon_names=["campground"] * len(filtered_df),
+            spin=False
+        )
+    
+    m.to_streamlit(height=600)
 
 # ── 0. INITIALISATIE ──────────────────────────────────────────────────────────
 if 'ai_search_query' not in st.session_state:
