@@ -6,6 +6,19 @@ import reverse_geocoder as rg
 
 CSV_PATH = "data/api_export_campers.csv"
 
+@st.cache_data
+def get_master_data():
+    """
+    RAZENDSNEL: Laadt uitsluitend de lokale dataset voor de UI.
+    Geen API-checks, geen wachttijden.
+    """
+    if os.path.exists(CSV_PATH):
+        try:
+            return pd.read_csv(CSV_PATH)
+        except Exception:
+            return pd.DataFrame()
+    return pd.DataFrame()
+
 @st.cache_data(ttl=86400)
 def load_data():
     """
