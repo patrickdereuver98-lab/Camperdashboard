@@ -1,110 +1,71 @@
 """
 theme.py — Centraal design systeem voor VrijStaan.
-Coast & Horizon thema: pine green + ocean blue + sunset orange.
+Coast & Horizon thema: Geforceerde Light Mode + Custom Navigatie.
 """
 import streamlit as st
 
-
 def apply_theme():
-    """Injecteert de centrale CSS styling in de applicatie."""
     st.markdown("""
     <style>
-        :root {
-            --pine-green: #2A5A4A;
-            --ocean-blue: #0077B6;
-            --sunset-orange: #FFB703;
-            --slate: #2C3E50;
-            --light-bg: #F8F9FA;
-            --sidebar-bg: #F0F4F3;
-        }
-        h1, h2, h3 { color: var(--pine-green) !important; font-family: 'Helvetica Neue', sans-serif; }
+        /* 1. Verberg de standaard lelijke Streamlit navigatie bovenaan */
+        [data-testid="stSidebarNav"] { display: none !important; }
+        
+        /* 2. Strakke styling voor de applicatie */
+        h1, h2, h3 { color: #0077B6 !important; font-weight: 700 !important; font-family: 'Helvetica Neue', sans-serif; }
+        
         .stButton>button {
-            background-color: var(--pine-green); color: white;
+            background-color: #0077B6; color: white;
             border-radius: 6px; border: none; padding: 0.5rem 1rem;
-            font-weight: bold; transition: all 0.25s ease;
+            font-weight: bold; transition: all 0.2s ease;
         }
-        .stButton>button:hover {
-            background-color: var(--slate);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
-        [data-testid="stSidebar"] { background-color: var(--sidebar-bg); }
-        [data-testid="metric-container"] {
-            background: white; border: 1px solid #E0E0E0;
-            border-radius: 8px; padding: 0.75rem;
-        }
+        .stButton>button:hover { background-color: #FFB703; color: #2B2D42; }
+        
+        /* 3. Locatie Cards */
         .locatie-card {
-            background: white; border-radius: 10px;
-            border: 1px solid #E8EDED; padding: 0.75rem;
-            margin-bottom: 0.6rem; transition: box-shadow 0.2s;
+            background: white; border-radius: 8px;
+            border: 1px solid #E0E0E0; padding: 1rem;
+            margin-bottom: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
-        .locatie-card:hover { box-shadow: 0 4px 16px rgba(42,90,74,0.12); }
         
-        /* Badges styling */
+        /* 4. Badges */
         .badge {
-            display: inline-block; padding: 2px 8px;
-            border-radius: 20px; font-size: 0.75rem; font-weight: 600;
-            margin-right: 4px;
+            display: inline-block; padding: 3px 8px;
+            border-radius: 4px; font-size: 0.75rem; font-weight: 600;
+            margin-right: 5px; margin-top: 5px;
         }
-        .badge-gratis { background: #D4EDDA; color: #155724; }
-        .badge-betaald { background: #FFF3CD; color: #856404; }
-        .badge-onbekend { background: #E8E8E8; color: #555; }
-        
-        .filter-tag {
-            background: #E8F4F1; color: var(--pine-green);
-            border-radius: 20px; padding: 3px 10px;
-            font-size: 0.8rem; display: inline-block; margin: 2px;
-        }
-        hr { border-color: #D0D7D4; }
+        .badge-gratis { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
+        .badge-betaald { background: #FFF3E0; color: #E65100; border: 1px solid #FFE0B2; }
+        .badge-onbekend { background: #F5F5F5; color: #616161; border: 1px solid #E0E0E0; }
+        .badge-facility { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
     </style>
     """, unsafe_allow_html=True)
 
-
-def render_logo():
-    """Rendert het grote logo voor de landingspagina."""
-    st.markdown("""
-    <div style="text-align:center;margin-bottom:2rem;">
-        <svg width="100" height="68" viewBox="0 0 24 24" fill="none" stroke="#2A5A4A"
-             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10
-                     s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9
-                     A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
-            <circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>
-            <path d="M14 10h5"/><path d="M5 10h4"/>
-        </svg>
-        <h1 style="margin-bottom:0;padding-bottom:0;">VrijStaan</h1>
-        <p style="color:#2C3E50;font-size:1.05rem;font-style:italic;margin-top:-4px;">
-            Camperplaatsen zonder vertrektijden
-        </p>
-    </div>""", unsafe_allow_html=True)
-
-
 def render_sidebar_header():
-    """Rendert het compacte logo voor de sidebar."""
+    """Rendert het logo bovenaan en bouwt direct de navigatie op."""
     with st.sidebar:
+        # 1. Het Logo
         st.markdown("""
-        <div style="text-align:center;padding:0.5rem 0 0.8rem 0;">
-            <svg width="48" height="34" viewBox="0 0 24 24" fill="none" stroke="#2A5A4A"
-                  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <div style="text-align:center; padding: 1rem 0 0.5rem 0;">
+            <svg width="60" height="42" viewBox="0 0 24 24" fill="none" stroke="#0077B6"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10
                          s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9
                          A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
                 <circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>
             </svg>
-            <div style="font-weight:700;color:#2A5A4A;font-size:1.05rem;margin-top:3px;">VrijStaan</div>
-            <div style="color:#666;font-size:0.72rem;font-style:italic;">Camperplaatsen zonder vertrektijden</div>
-        </div>""", unsafe_allow_html=True)
+            <h2 style="margin: 5px 0 0 0; color: #0077B6; font-size: 1.4rem;">VrijStaan</h2>
+            <p style="color: #6c757d; font-size: 0.8rem; font-style: italic; margin-top: 0;">Camperplaatsen zonder vertrektijden</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 2. De Logische Navigatie Menu
+        st.page_link("main.py", label="Startpagina", icon="🏠")
+        st.page_link("pages/1_📍_Kaart.py", label="Dashboard & Kaart", icon="📍")
+        st.page_link("pages/2_⚙️_Beheer.py", label="Data Beheer (Admin)", icon="⚙️")
         st.divider()
 
-
 def price_badge(prijs: str) -> str:
-    """Genereert de HTML-code voor de prijs-badge op basis van de tekst."""
     p = str(prijs).lower()
-    if "gratis" in p:
-        return '<span class="badge badge-gratis">💰 Gratis</span>'
-    elif p in ("onbekend", "", "nan", "–"):
-        return '<span class="badge badge-onbekend">❓ Onbekend</span>'
-    else:
-        # Als er een bedrag staat, tonen we de 'betaald' badge
-        return f'<span class="badge badge-betaald">💶 {prijs}</span>'
+    if p == "gratis": return '<span class="badge badge-gratis">💰 Gratis</span>'
+    elif p in ("onbekend", ""): return '<span class="badge badge-onbekend">❓ Onbekend</span>'
+    else: return f'<span class="badge badge-betaald">💶 {prijs}</span>'
