@@ -1,6 +1,6 @@
 """
-1_📍_Kaart.py — Hoofd-dashboard (Booking.com architectuur).
-Zoeken staat centraal. Resultaten in een strakke lijst. Details via een pop-up inclusief mini-kaart.
+1_📍_Kaart.py — Geoptimaliseerd Hoofd-dashboard (Booking.com architectuur).
+Fix: UI-First loading via get_master_data() en NameError preventie.
 """
 import pandas as pd
 import streamlit as st
@@ -9,13 +9,20 @@ import streamlit.components.v1 as components
 
 from ui.theme import apply_theme, render_sidebar_header, price_badge
 from utils.ai_helper import process_ai_query
-from utils.data_handler import load_data
+from utils.data_handler import get_master_data # Razendsnelle lokale load
 from utils.favorites import get_favorites, is_favorite, toggle_favorite, init_favorites
 
 st.set_page_config(page_title="VrijStaan | Zoeken", page_icon="🚐", layout="wide")
 apply_theme()
 render_sidebar_header()
 init_favorites()
+
+# ── 0. INITIALISATIE (Fix voor NameError) ───────────────────────────────────
+# We stellen de variabelen bovenaan vast zodat ze overal in het script bestaan.
+if 'ai_search_query' not in st.session_state:
+    st.session_state['ai_search_query'] = ""
+
+ai_query = st.session_state['ai_search_query']
 
 # ── 1. DETAIL DIALOG (Booking pop-up) ───────────────────────────────────────
 @st.dialog("📍 Locatiedetails", width="large")
@@ -59,7 +66,6 @@ def show_detail(row):
                 st.markdown(f"📞 [{tel}](tel:{tel})")
 
     with tab_kaart:
-        # Laad uitsluitend een kaart voor deze ene specifieke locatie (razendsnel)
         lat, lon = row.get("latitude"), row.get("longitude")
         if pd.notna(lat) and pd.notna(lon):
             m = folium.Map(location=[float(lat), float(lon)], zoom_start=14, tiles="OpenStreetMap")
@@ -70,15 +76,15 @@ def show_detail(row):
             ).add_to(m)
             components.html(m._repr_html_(), height=400)
             
-            gmaps = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+            gmaps = f"https://www.google.com/maps?q={lat},{lon}"
             st.markdown(f"[📍 Navigeer via Google Maps]({gmaps})")
 
-# ── 2. DATA LADEN ─────────────────────────────────────────────────────────────
-with st.spinner("Camperplaatsen laden..."):
-    df = load_data()
+# ── 2. DATA LADEN (UI-First) ──────────────────────────────────────────────────
+# Geen spinner meer nodig voor de API, dit is nu een milliseconde-actie.
+df = get_master_data()
 
 if df.empty:
-    st.warning("⚠️ Geen database gevonden. Ga naar **Beheer** om de data te initialiseren.")
+    st.warning("⚠️ Geen database gevonden. Ga naar **Beheer** om de data te initialiseren via API Sync.")
     st.stop()
 
 # ── 3. ZIJBALK (Standaard Filters) ────────────────────────────────────────────
@@ -93,34 +99,36 @@ with st.sidebar:
     st.divider()
     toon_favorieten = st.checkbox("❤️ Mijn Favorieten tonen")
 
-# ── 4. CENTRALE AI ZOEKBALK (Geoptimaliseerd) ──────────────────────────────────
-with st.container():
-    # Gebruik een form om te voorkomen dat hij bij elke letter herlaadt
+# ── 4. CENTRALE AI ZOEKBALK (Form-Geoptimaliseerd) ───────────────────────────
+st.markdown("<h1 style='text-align: center; color: #0077B6; margin-bottom: 0;'>Vind jouw perfecte camperplek</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #6c757d; font-size: 1.1rem; margin-bottom: 2rem;'>Zoek slim. Wat is je volgende bestemming?</p>", unsafe_allow_html=True)
+
+col_spacer1, col_search_box, col_spacer2 = st.columns([1, 4, 1])
+with col_search_box:
     with st.form("search_form", clear_on_submit=False):
-        col_search, col_btn = st.columns([4, 1])
-        with col_search:
+        col_input, col_btn = st.columns([4, 1])
+        with col_input:
             user_input = st.text_input(
                 "Waar wil je heen?", 
+                value=ai_query,
                 placeholder="Bijv: 'Gratis plek in Drenthe met stroom'",
                 label_visibility="collapsed"
             )
         with col_btn:
             submit_search = st.form_submit_button("🔍 Zoek", use_container_width=True)
 
-    # Alleen de AI triggeren als er echt op de knop is gedrukt
-    if submit_search and user_input:
+    if submit_search:
         st.session_state['ai_search_query'] = user_input
-        # (De rest van je AI-filter logica hieronder)
+        ai_query = user_input
+        st.rerun()
 
-# ── 5. SNELFILTERS (Gebaseerd op de analyse) ──────────────────────────────────
+# ── 5. SNELFILTERS ────────────────────────────────────────────────────────────
 st.write("")
 sf_col1, sf_col2, sf_col3, sf_col4, sf_col5 = st.columns(5)
 
-# Session state voor snelfilters
 if 'qf_gratis' not in st.session_state: st.session_state.qf_gratis = False
 if 'qf_honden' not in st.session_state: st.session_state.qf_honden = False
 if 'qf_stroom' not in st.session_state: st.session_state.qf_stroom = False
-if 'qf_water' not in st.session_state: st.session_state.qf_water = False
 
 with sf_col2:
     if st.button("💰 Gratis", use_container_width=True, type="primary" if st.session_state.qf_gratis else "secondary"):
@@ -162,7 +170,7 @@ if toon_favorieten:
     favs = get_favorites()
     processed = processed[processed["naam"].isin(favs)]
 
-# ── 7. RESULTATENLIJST (Booking.com stijl) ────────────────────────────────────
+# ── 7. RESULTATENLIJST ────────────────────────────────────────────────────────
 st.markdown(f"### {len(processed)} accommodaties gevonden")
 
 if ai_labels:
@@ -172,23 +180,20 @@ if processed.empty:
     st.info("Geen resultaten gevonden. Probeer je zoekopdracht aan te passen.")
     st.stop()
 
-# We tonen de resultaten met een schone layout
-for idx, row in processed.head(100).iterrows(): # Lazy load eerste 100 voor snelheid
+for idx, row in processed.head(100).iterrows():
     with st.container(border=True):
         c_img, c_text, c_btn = st.columns([1.5, 4, 1.5])
         
         with c_img:
-            # Fallback image als er geen is
             img = str(row.get("afbeelding", ""))
             if not img or img == "nan":
-                img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80"
+                img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=300"
             st.image(img, use_container_width=True)
             
         with c_text:
             st.markdown(f"#### {row['naam']}")
             st.markdown(f"<p style='color:#666; font-size:0.9rem; margin-top:-10px;'>📍 {row.get('provincie', 'Onbekend')}</p>", unsafe_allow_html=True)
             
-            # Subtiele snelinformatie
             faciliteiten = []
             if str(row.get('honden_toegestaan')) == 'Ja': faciliteiten.append("🐾 Honden")
             if str(row.get('stroom')) == 'Ja': faciliteiten.append("⚡ Stroom")
@@ -205,4 +210,4 @@ for idx, row in processed.head(100).iterrows(): # Lazy load eerste 100 voor snel
                 show_detail(row)
 
 if len(processed) > 100:
-    st.caption("Scroll verder of gebruik de filters om meer specifieke resultaten te vinden.")
+    st.caption("Gebruik filters om de resultaten te verfijnen.")
