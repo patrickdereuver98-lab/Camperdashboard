@@ -9,39 +9,41 @@ CSV_PATH = "data/api_export_campers.csv"
 def load_data():
     """
     Haalt de actuele dataset live op via de Overpass API.
-    Inclusief robuuste headers om cloud-blokkades (429/504) te voorkomen
-    en de uitgebreide query voor de juiste camperplaatsen.
+    Inclusief robuuste headers om cloud-blokkades te voorkomen
+    en een bredere query om ook reguliere campings mee te pakken.
     """
     
-    # 1. De verbeterde query (Nu specifiek op motorhome/campers gericht)
+    # 1. De bredere query (vangt specifieke camperplaatsen, parkings én alle campings)
     overpass_query = """
     [out:json][timeout:90];
     area["ISO3166-1"="NL"][admin_level=2]->.searchArea;
     (
+      /* Toegewijde camperplaatsen */
       node["tourism"="caravan_site"](area.searchArea);
       way["tourism"="caravan_site"](area.searchArea);
       relation["tourism"="caravan_site"](area.searchArea);
       
+      /* Parkeerplaatsen waar campers specifiek zijn toegestaan */
       node["amenity"="parking"]["motorhome"="yes"](area.searchArea);
       way["amenity"="parking"]["motorhome"="yes"](area.searchArea);
       
-      node["tourism"="camp_site"]["motorhome"="yes"](area.searchArea);
-      way["tourism"="camp_site"]["motorhome"="yes"](area.searchArea);
+      /* ALLE reguliere campings (de OSM community vergeet vaak de motorhome=yes tag) */
+      node["tourism"="camp_site"](area.searchArea);
+      way["tourism"="camp_site"](area.searchArea);
+      relation["tourism"="camp_site"](area.searchArea);
     );
     out center;
     """
     
-    # 2. Authenticatie-headers (Verplicht voor Streamlit Cloud)
+    # 2. Authenticatie-headers
     headers = {
         "User-Agent": "VrijStaanCamperApp/2.0 (Streamlit Cloud; info@vrijstaan.nl)",
         "Accept": "application/json"
     }
     
-    # We gebruiken de primaire, meest stabiele endpoint
     url = "https://overpass-api.de/api/interpreter"
     
     try:
-        # Timeout verhoogd naar 90 seconden om zware queries de ruimte te geven
         response = requests.post(url, data={'data': overpass_query}, headers=headers, timeout=90)
         response.raise_for_status()
         data = response.json()
@@ -71,11 +73,11 @@ def load_data():
         if not lat or not lon:
             continue
             
-        # FIX: We gooien geen data meer weg! We genereren een fallback-naam.
+        # Fallback-naam genereren als de locatie geen naam heeft gekregen in OSM
         naam = tags.get('name', '')
         if not naam:
             stad = tags.get('addr:city', tags.get('is_in:city', ''))
-            naam = f"Camperplaats {stad}".strip() if stad else "Naamloze Camperplaats"
+            naam = f"Camperplaats {stad}".strip() if stad else "Naamloze Locatie"
             
         # Data vertalen naar onze UI velden
         fee = tags.get('fee', '')
