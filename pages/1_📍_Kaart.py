@@ -1,263 +1,88 @@
 """
-1_📍_Kaart.py — Geoptimaliseerd Hoofd-dashboard.
+2_⚙️_Beheer.py — Data & Beheer Dashboard.
+Fix Bug 1: unkn_mask controleerde wifi-kolom met .get() — crasht als kolom nog niet bestaat.
+           Nu veilig via 'if kolom in master_df.columns'.
 """
+import os
 import pandas as pd
 import streamlit as st
-import folium
-import streamlit.components.v1 as components
+from utils.auth import require_admin_auth
+from utils.data_handler import load_data, validate_and_merge, CSV_PATH
+from ui.theme import apply_theme, render_sidebar_header
+from utils.enrichment import research_location
 
-from ui.theme import apply_theme, render_sidebar_header, price_badge
-from utils.ai_helper import process_ai_query
-from utils.data_handler import get_master_data
-from utils.favorites import get_favorites, toggle_favorite, init_favorites
-
-st.set_page_config(page_title="VrijStaan | Zoeken", page_icon="🚐", layout="wide")
+st.set_page_config(page_title="VrijStaan | Beheer", page_icon="⚙️", layout="wide")
 apply_theme()
 render_sidebar_header()
-init_favorites()
 
-# ── 0. INITIALISATIE ──────────────────────────────────────────────────────────
-if 'ai_search_query' not in st.session_state:
-    st.session_state['ai_search_query'] = ""
-
-ai_query = st.session_state['ai_search_query']
-
-
-# ── HULPFUNCTIE: Slimme score-weergave ───────────────────────────────────────
-def format_beoordeling(raw) -> str:
-    """
-    Bug 2 fix: toont cijfer + '/5' ALLEEN als het echt een getal is.
-    Tekstwaarden zoals 'Goed', 'Uitstekend', 'Onbekend' krijgen geen suffix.
-    """
-    val = str(raw).strip()
-    if val in ("", "nan", "None", "Onbekend", "–"):
-        return "–"
-    try:
-        # Vervang komma door punt voor Europese notatie (bijv. "4,2")
-        float(val.replace(",", "."))
-        return f"{val}/5"
-    except ValueError:
-        # Het is een tekst-oordeel ("Goed", "Uitstekend", etc.)
-        return val
-
-
-# ── 1. DETAIL DIALOG ──────────────────────────────────────────────────────────
-@st.dialog("📍 Locatiedetails", width="large")
-def show_detail(row):
-    st.markdown(f"## {row['naam']}")
-
-    tab_info, tab_voorzieningen, tab_reviews, tab_kaart = st.tabs([
-        "📋 Info", "🔌 Voorzieningen", "⭐ Reviews", "🗺️ Kaart"
-    ])
-
-    with tab_info:
-        c1, c2 = st.columns([1, 1.5])
-        with c1:
-            img = str(row.get("afbeelding", ""))
-            if not img or img == "nan":
-                img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=300"
-            st.image(img, use_container_width=True)
-            st.markdown(f"**💰 Prijs:** {row.get('prijs', 'Onbekend')}")
-            st.markdown(f"**🕐 Tijden:** {row.get('check_in_out', 'Vrij')}")
-        with c2:
-            st.markdown(f"**📝 Beschrijving:**\n*{row.get('beschrijving', 'Geen beschrijving.')}*")
-            st.markdown("---")
-            st.markdown(f"⛰️ **Ondergrond:** {row.get('ondergrond', 'Onbekend')}")
-            st.markdown(f"🤫 **Rust:** {row.get('rust', 'Onbekend')}")
-            st.markdown(f"♿ **Toegankelijk:** {row.get('toegankelijkheid', 'Onbekend')}")
-
-    with tab_voorzieningen:
-        v1, v2 = st.columns(2)
-        with v1:
-            st.write(f"🐾 **Honden:** {row.get('honden_toegestaan', '?')}")
-            st.write(f"⚡ **Stroom:** {row.get('stroom', '?')} ({row.get('stroom_prijs', '?')})")
-            st.write(f"📶 **Wifi:** {row.get('wifi', '?')}")
-        with v2:
-            st.write(f"🚰 **Water tanken:** {row.get('water_tanken', '?')}")
-            st.write(f"🚛 **Afvalwater:** {row.get('afvalwater', '?')}")
-            st.write(f"🚽 **Chemisch toilet:** {row.get('chemisch_toilet', '?')}")
-            st.write(f"🚿 **Sanitair:** {row.get('sanitair', '?')}")
-
-    with tab_reviews:
-        # Bug 2 fix: gebruik format_beoordeling() zodat "Goed/5" niet meer optreedt
-        score_str = format_beoordeling(row.get("beoordeling", "–"))
-        st.markdown(f"### Score: {score_str}")
-        st.info(f"🗨️ **Samenvatting:** {row.get('samenvatting_reviews', 'Nog geen reviews verwerkt.')}")
-
-    with tab_kaart:
-        lat, lon = row.get("latitude"), row.get("longitude")
-        if pd.notna(lat) and pd.notna(lon):
-            m = folium.Map(location=[float(lat), float(lon)], zoom_start=14, tiles="OpenStreetMap")
-            folium.Marker(
-                [float(lat), float(lon)],
-                popup=row['naam'],
-                icon=folium.Icon(color="green", icon="home")
-            ).add_to(m)
-            components.html(m._repr_html_(), height=400)
-            gmaps = f"https://www.google.com/maps?q={lat},{lon}"
-            st.markdown(f"[📍 Navigeer via Google Maps]({gmaps})")
-
-
-# ── 2. DATA LADEN ──────────────────────────────────────────────────────────────
-df = get_master_data()
-
-if df.empty:
-    st.warning("⚠️ Geen database gevonden. Ga naar **Beheer** om de data te initialiseren via API Sync.")
+if not require_admin_auth():
     st.stop()
 
+st.title("⚙️ Data & Beheer Dashboard")
+tab_sync, tab_import, tab_data = st.tabs(["🚀 API Sync", "📂 CSV Import", "📊 Dataset"])
 
-# ── 3. ZIJBALK ────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.subheader("Geavanceerd Filteren")
+with tab_data:
+    if os.path.exists(CSV_PATH):
+        master_df = pd.read_csv(CSV_PATH)
+        st.metric("Totaal locaties", len(master_df))
+        st.dataframe(master_df.head(50), use_container_width=True)
 
-    provincies_lijst = sorted([p for p in df["provincie"].unique() if p and p != "Onbekend"])
-    selected_prov = st.selectbox("Provincie", ["Alle provincies"] + provincies_lijst)
+        with st.expander("✨ AI Data Verrijking (Full Specs)", expanded=True):
 
-    prijs_filter = st.selectbox("Prijs", ["Alle", "Gratis", "Betaald"])
+            # Bug 1 fix: bouw de mask veilig op — kolom kan nog ontbreken na een verse API-sync.
+            # Versie vóór fix:  master_df.get('wifi', 'Onbekend') == 'Onbekend'
+            #   → als 'wifi' niet bestaat, vergelijkt .get() de scalar 'Onbekend' met 'Onbekend'
+            #   → altijd True → ALLE rijen worden verwerkt, ongeacht of ze al verrijkt zijn.
+            # Versie na fix: veilige kolom-check met 'in'.
 
-    st.divider()
-    toon_favorieten = st.checkbox("❤️ Mijn Favorieten tonen")
+            prijs_missing = master_df["prijs"] == "Onbekend"
 
+            if "wifi" in master_df.columns:
+                wifi_missing = master_df["wifi"] == "Onbekend"
+            else:
+                # Kolom bestaat nog niet → markeer alles als te verwerken
+                wifi_missing = pd.Series([True] * len(master_df), index=master_df.index)
 
-# ── 4. ZOEKBALK ──────────────────────────────────────────────────────────────
-st.markdown(
-    "<h1 style='text-align:center;color:#0077B6;margin-bottom:0;'>Vind jouw perfecte camperplek</h1>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    "<p style='text-align:center;color:#6c757d;font-size:1.1rem;margin-bottom:2rem;'>Zoek slim. Wat is je volgende bestemming?</p>",
-    unsafe_allow_html=True,
-)
+            unkn_mask = prijs_missing | wifi_missing
+            to_process_count = int(unkn_mask.sum())
 
-col_spacer1, col_search_box, col_spacer2 = st.columns([1, 4, 1])
-with col_search_box:
-    with st.form("search_form", clear_on_submit=False):
-        col_input, col_btn = st.columns([4, 1])
-        with col_input:
-            user_input = st.text_input(
-                "Waar wil je heen?",
-                value=ai_query,
-                placeholder="Bijv: 'Gratis plek in Drenthe met stroom'",
-                label_visibility="collapsed",
-            )
-        with col_btn:
-            submit_search = st.form_submit_button("🔍 Zoek", use_container_width=True)
+            st.info(f"Er zijn nog **{to_process_count}** locaties te verrijken.")
 
-    if submit_search:
-        st.session_state['ai_search_query'] = user_input
-        ai_query = user_input
-        st.rerun()
+            num_to_enrich = st.number_input("Aantal locaties", 1, 100, 5)
 
+            if st.button("🚀 Start Volledig Onderzoek"):
+                to_process = master_df[unkn_mask].head(num_to_enrich)
+                progress_bar = st.progress(0)
+                results_log = []
 
-# ── 5. SNELFILTERS ────────────────────────────────────────────────────────────
-st.write("")
-sf_col1, sf_col2, sf_col3, sf_col4, sf_col5 = st.columns(5)
+                for i, (idx, row) in enumerate(to_process.iterrows()):
+                    st.write(f"🔍 AI onderzoekt: **{row['naam']}**")
+                    result = research_location(row)
 
-for key in ("qf_gratis", "qf_honden", "qf_stroom"):
-    if key not in st.session_state:
-        st.session_state[key] = False
+                    if isinstance(result, dict):
+                        for key, value in result.items():
+                            if key not in master_df.columns:
+                                master_df[key] = "Onbekend"
+                            master_df.at[idx, key] = value
+                        results_log.append(result)
 
-with sf_col2:
-    if st.button("💰 Gratis", use_container_width=True,
-                 type="primary" if st.session_state.qf_gratis else "secondary"):
-        st.session_state.qf_gratis = not st.session_state.qf_gratis
-        st.rerun()
-with sf_col3:
-    if st.button("🐾 Honden Welkom", use_container_width=True,
-                 type="primary" if st.session_state.qf_honden else "secondary"):
-        st.session_state.qf_honden = not st.session_state.qf_honden
-        st.rerun()
-with sf_col4:
-    if st.button("⚡ Met Stroom", use_container_width=True,
-                 type="primary" if st.session_state.qf_stroom else "secondary"):
-        st.session_state.qf_stroom = not st.session_state.qf_stroom
-        st.rerun()
+                    progress_bar.progress((i + 1) / len(to_process))
 
-st.divider()
+                master_df.to_csv(CSV_PATH, index=False)
+                st.success("✅ Verrijking voltooid!")
+                st.markdown("### 📊 AI Resultaten (Direct uit de bron)")
+                if results_log:
+                    st.dataframe(pd.DataFrame(results_log), use_container_width=True)
 
+                if st.button("🔄 Ververs Pagina"):
+                    st.rerun()
 
-# ── 6. DATA FILTEREN ──────────────────────────────────────────────────────────
-processed = df.copy()
-ai_labels = []
+        st.divider()
 
-if ai_query:
-    processed, ai_labels = process_ai_query(processed, ai_query)
-
-if selected_prov != "Alle provincies":
-    processed = processed[processed["provincie"] == selected_prov]
-
-if prijs_filter == "Gratis" or st.session_state.qf_gratis:
-    processed = processed[processed["prijs"].astype(str).str.lower() == "gratis"]
-elif prijs_filter == "Betaald":
-    processed = processed[processed["prijs"].astype(str).str.lower() != "gratis"]
-
-if st.session_state.qf_honden:
-    processed = processed[processed["honden_toegestaan"] == "Ja"]
-
-if st.session_state.qf_stroom:
-    processed = processed[processed["stroom"] == "Ja"]
-
-if toon_favorieten:
-    favs = get_favorites()
-    processed = processed[processed["naam"].isin(favs)]
-
-
-# ── 7. RESULTATENLIJST ────────────────────────────────────────────────────────
-st.markdown(f"### {len(processed)} accommodaties gevonden")
-
-if ai_labels:
-    st.markdown(f"**Geïnterpreteerd door AI:** {', '.join(ai_labels)}")
-
-if processed.empty:
-    st.info("Geen resultaten gevonden. Probeer je zoekopdracht aan te passen.")
-    st.stop()
-
-for idx, row in processed.head(100).iterrows():
-    with st.container(border=True):
-        c_img, c_text, c_btn = st.columns([1.5, 4, 1.5])
-
-        with c_img:
-            img = str(row.get("afbeelding", ""))
-            if not img or img == "nan":
-                img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=300"
-            st.image(img, use_container_width=True)
-
-        with c_text:
-            st.markdown(f"#### {row['naam']}")
-            st.markdown(
-                f"<p style='color:#666;font-size:0.9rem;margin-top:-10px;'>📍 {row.get('provincie','Onbekend')}</p>",
-                unsafe_allow_html=True,
-            )
-
-            # Bug 3 fix: controleer BEIDE watervelden zodat het icoon niet verdwijnt na verrijking.
-            # waterfront = is er water in de buurt (OSM-bron)
-            # water_tanken = kan je water bijvullen (AI-verrijking)
-            faciliteiten = []
-            if str(row.get("honden_toegestaan")) == "Ja":
-                faciliteiten.append("🐾 Honden")
-            if str(row.get("stroom")) == "Ja":
-                faciliteiten.append("⚡ Stroom")
-            if str(row.get("waterfront")) == "Ja":
-                faciliteiten.append("🌊 Waterfront")
-            if str(row.get("water_tanken")) == "Ja":
-                faciliteiten.append("🚰 Water tanken")
-            if str(row.get("wifi")) == "Ja":
-                faciliteiten.append("📶 WiFi")
-
-            if faciliteiten:
-                st.markdown(
-                    f"<p style='font-size:0.85rem;color:#2A5A4A;'>{' | '.join(faciliteiten)}</p>",
-                    unsafe_allow_html=True,
-                )
-
-        with c_btn:
-            prijs_str = str(row.get("prijs", "Onbekend"))
-            st.markdown(
-                f"<div style='text-align:center;margin-bottom:10px;'>{price_badge(prijs_str)}</div>",
-                unsafe_allow_html=True,
-            )
-            if st.button("🔍 Bekijk details", key=f"btn_{idx}", use_container_width=True):
-                show_detail(row)
-
-if len(processed) > 100:
-    st.caption("Gebruik filters om de resultaten te verfijnen.")
+        if st.button("🗑️ Reset master dataset", type="secondary"):
+            os.remove(CSV_PATH)
+            load_data.clear()
+            st.warning("Master dataset verwijderd. Draai een API Sync om opnieuw te beginnen.")
+            st.rerun()
+    else:
+        st.warning("Nog geen master dataset. Draai eerst een API Sync of importeer een CSV.")
