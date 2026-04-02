@@ -84,11 +84,19 @@ if df.empty:
 with st.sidebar:
     st.subheader("🔍 Filters")
 
+# Haal de eventuele zoekopdracht op van de landingspagina
+    default_query = st.session_state.get('ai_search_query', "")
+
     ai_query = st.text_input(
         "Slim zoeken (AI)",
+        value=default_query, # Hier injecteren we de tekst!
         placeholder="Bijv: 'Gratis in Limburg met stroom'",
         help="Gebruik natuurlijke taal — de AI vertaalt dit naar filters.",
     )
+    
+    # Update de sessie als de gebruiker de zoekopdracht op de kaart-pagina aanpast
+    if ai_query != default_query:
+        st.session_state['ai_search_query'] = ai_query
 
     st.divider()
 
