@@ -68,7 +68,7 @@ def research_location(row):
 Je bent een Senior Data Analist voor een Nederlandse camper-app.
 Onderwerp: Camperplaats '{naam}' in provincie '{stad}'.
 
-We gebruiken een 'Waterval Methode' om 18 velden in te vullen. Combineer de volgende 3 methodes in deze exacte volgorde van prioriteit:
+We gebruiken een 'Waterval Methode' om 19 velden in te vullen. Combineer de volgende 3 methodes in deze exacte volgorde van prioriteit:
 
 BRON 1 (Hoofdprioriteit - Live Website Tekst):
 Haal alle feiten uit deze actuele websitetekst van de locatie zelf:
@@ -105,6 +105,7 @@ Retourneer UITSLUITEND een geldig JSON-object:
     "wifi": "Ja/Nee/Onbekend",
     "beoordeling": "Score op basis van reviews (bijv 4.2) of Onbekend",
     "samenvatting_reviews": "Max 15 woorden over de algemene mening of Onbekend",
+    "telefoonummer"
     "extra": []
 }}
 """
