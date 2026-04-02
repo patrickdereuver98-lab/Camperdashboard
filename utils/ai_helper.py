@@ -1,6 +1,6 @@
 """
 utils/ai_helper.py — Gemini Integratie met X-Ray foutopsporing en Search Grounding.
-Inclusief "Camper-Politie" Batch Verrijking.
+Inclusief "Camper-Politie" Batch Verrijking met Visuele Optimalisatie.
 """
 import json
 import pandas as pd
@@ -47,8 +47,8 @@ def get_gemini_response(prompt: str) -> str:
 
 def get_batch_enrichment_results(locations_data: list) -> list:
     """
-    STAP 5: DE CAMPER-POLITIE. 
-    Verwerkt batch van 5 voor maximale extractie-snelheid met strikte eisen.
+    STAP 5: DE CAMPER-POLITIE (Visuele Editie). 
+    Verwerkt batch van 5 voor maximale extractie-snelheid met strikte visuele en inhoudelijke eisen.
     """
     if model is None:
         return []
@@ -59,9 +59,10 @@ Onderzoek de volgende lijst van locaties: {json.dumps(locations_data)}
 
 STRIKTE EISEN (GEEN UITZONDERINGEN):
 1. CAMPER-ONLY: Wij tonen enkel camperplaatsen. Als een locatie een hotel, appartement of bungalowpark is ZONDER specifieke camperplekken, zet 'ai_gecheckt' op 'Nee - Ongeschikt'.
-2. DATA: Zoek het telefoonnummer, de actuele prijs per nacht, en of honden/stroom aanwezig zijn.
+2. AFBEELDING & LOGO: Zoek een directe URL naar een representatieve foto (uitzicht, camperveld) of het officiële logo van de site.
+   - BELANGRIJK: Vind je GEEN kwalitatieve nieuwe foto-URL? Laat het veld 'afbeelding' dan EXACT zoals het nu is (behoud de bestaande favicon/logo link).
 3. TELEFOON: Noteer het telefoonnummer altijd beginnend met een 0 (bijv. 0612345678). Geen +31 gebruiken.
-4. SEARCH: Gebruik Google Search Grounding om JetCamp, Campercontact en de eigen website te verifiëren.
+4. SEARCH: Gebruik Google Search Grounding om JetCamp, Campercontact en de officiële website te verifiëren voor actuele prijzen en voorzieningen.
 
 Output ALTIJD een JSON lijst van objecten in deze volgorde:
 [
@@ -71,6 +72,7 @@ Output ALTIJD een JSON lijst van objecten in deze volgorde:
     "prijs": "€...",
     "stroom": "Ja/Nee",
     "honden_toegestaan": "Ja/Nee",
+    "afbeelding": "Nieuwe_URL_of_Huidige_Waarde",
     "samenvatting_reviews": "Korte sfeerbeschrijving (max 12 woorden)",
     "ai_gecheckt": "Ja"
   }},
