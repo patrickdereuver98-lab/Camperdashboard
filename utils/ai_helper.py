@@ -1,6 +1,6 @@
 """
-ai_helper.py — Gemini Flash integratie voor natuurlijke taalfiltering en data-verrijking.
-Uitgebreide filters: provincie, honden, prijs, stroom, waterfront.
+ai_helper.py — Geoptimaliseerde Gemini Flash integratie voor VrijStaan.
+Fix: Fuzzy string matching voor filters en robuuste JSON extractie.
 """
 import json
 import pandas as pd
@@ -11,7 +11,7 @@ try:
     import google.generativeai as genai
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    # Gebruik de versie die in jouw omgeving geconfigureerd is
+    # Gemini 1.5 of 2.0 Flash zijn de 'sweet spot' voor snelheid en JSON-extractie.
     model = genai.GenerativeModel("gemini-1.5-flash") 
     logger.info("Gemini model geladen")
 except KeyError:
@@ -24,8 +24,7 @@ except Exception as e:
 
 def get_gemini_response(prompt: str) -> str:
     """
-    Algemene functie om tekstuele antwoorden van Gemini te krijgen.
-    Wordt gebruikt door de enrichment-module.
+    Algemene functie voor AI-tekstrespons. Gebruikt door de verrijkings-module.
     """
     if model is None:
         return "Fout: AI model niet geconfigureerd."
@@ -40,76 +39,89 @@ def get_gemini_response(prompt: str) -> str:
 
 def process_ai_query(df: pd.DataFrame, user_query: str) -> tuple[pd.DataFrame, list[str]]:
     """
-    Vertaalt een natuurlijke taalvraag naar pandas-filters via Gemini.
-    Retourneert (gefilterd_df, actieve_filter_labels).
+    Vertaalt natuurlijke taal naar DataFrame filters via Gemini Flash.
+    Gebruikt fuzzy matching om 0-resultaat fouten te voorkomen.
     """
-    if not user_query:
+    if not user_query or df.empty:
         return df, []
     if model is None:
-        return df, ["⚠️ AI niet beschikbaar — voeg GEMINI_API_KEY toe aan .streamlit/secrets.toml"]
+        return df, ["⚠️ AI niet beschikbaar — controleer API-key."]
 
     prompt = f"""
-Je bent een backend data-extractor voor een Nederlandse camperdashboard-app.
-Analyseer de zoekopdracht en extraheer filters als strikte JSON.
+Je bent een data-extractor voor een Nederlandse camper-app. 
+Vertaal de zoekopdracht naar een strikt JSON-object.
 
 Zoekopdracht: "{user_query}"
 
-Retourneer UITSLUITEND geldige JSON zonder markdown, zonder uitleg.
-Gebruik null als een filter niet expliciet gevraagd wordt.
-
 {{
-  "provincie": "<exacte Nederlandse provincienaam | null>",
+  "provincie": "<provincienaam | null>",
   "honden_toegestaan": "<'Ja' of 'Nee' | null>",
   "is_gratis": "<true of false | null>",
   "stroom": "<'Ja' of 'Nee' | null>",
-  "waterfront": "<'Ja' als water/strand/meer/rivier gevraagd | null>"
+  "water": "<'Ja' | null>"
 }}
 
-Geldige provincies: Groningen, Friesland, Drenthe, Overijssel, Gelderland,
-Utrecht, Noord-Holland, Zuid-Holland, Zeeland, Noord-Brabant, Limburg, Flevoland.
+Retourneer UITSLUITEND de JSON. Gebruik null als een filter niet expliciet gevraagd wordt.
 """
 
     try:
         logger.info(f"AI query: '{user_query}'")
         response = model.generate_content(prompt)
-        clean = response.text.replace("```json", "").replace("```", "").strip()
-        filters = json.loads(clean)
+        
+        # Robuuste JSON extractie: zoek naar de accolades om markdown-tekst te negeren.
+        raw_text = response.text
+        start = raw_text.find('{')
+        end = raw_text.rfind('}') + 1
+        
+        if start == -1 or end == 0:
+            raise ValueError("Geen JSON gevonden in AI response.")
+            
+        filters = json.loads(raw_text[start:end])
         logger.info(f"AI filters ontvangen: {filters}")
-    except json.JSONDecodeError:
-        logger.warning(f"AI JSON parse fout. Response: {response.text[:300]}")
-        return df, ["⚠️ Gemini gaf een onverwacht antwoord. Probeer de vraag anders te stellen."]
     except Exception as e:
-        logger.error(f"Gemini API fout: {e}")
-        return df, [f"⚠️ Communicatiefout: {e}"]
+        logger.error(f"AI Verwerkingsfout: {e}")
+        return df, ["⚠️ De AI begreep de zoekvraag niet volledig. Probeer het anders te formuleren."]
 
     filtered = df.copy()
     actief = []
 
-    provincie = filters.get("provincie")
-    if provincie:
-        filtered = filtered[filtered["provincie"].str.contains(provincie, case=False, na=False)]
-        actief.append(f"📍 Provincie: {provincie}")
+    # ── FUZZY FILTER LOGICA ──
+    # We gebruiken .str.contains(..., case=False) om matches te vinden ongeacht hoofdletters.
 
+    # 1. Provincie
+    prov = filters.get("provincie")
+    if prov and prov != "null":
+        filtered = filtered[filtered["provincie"].str.contains(prov, case=False, na=False)]
+        actief.append(f"📍 Provincie: {prov}")
+
+    # 2. Honden
     honden = filters.get("honden_toegestaan")
     if honden in ("Ja", "Nee"):
-        filtered = filtered[filtered["honden_toegestaan"] == honden]
+        filtered = filtered[filtered["honden_toegestaan"].str.contains(honden, case=False, na=False)]
         actief.append(f"{'🐾' if honden == 'Ja' else '🚫'} Honden: {honden}")
 
+    # 3. Gratis
     if filters.get("is_gratis") is True:
-        filtered = filtered[filtered["prijs"].astype(str).str.lower() == "gratis"]
+        # Zoekt naar 'gratis' in de prijskolom.
+        filtered = filtered[filtered["prijs"].astype(str).str.lower().str.contains("gratis", na=False)]
         actief.append("💰 Prijs: Gratis")
 
+    # 4. Stroom
     stroom = filters.get("stroom")
     if stroom in ("Ja", "Nee"):
-        filtered = filtered[filtered["stroom"] == stroom]
+        filtered = filtered[filtered["stroom"].str.contains(stroom, case=False, na=False)]
         actief.append(f"⚡ Stroom: {stroom}")
 
-    if filters.get("waterfront") == "Ja":
-        filtered = filtered[filtered["waterfront"] == "Ja"]
-        actief.append("🌊 Aan het water")
+    # 5. Water
+    if filters.get("water") == "Ja":
+        # Checkt zowel waterfront als de nieuwe water_tanken kolom indien aanwezig.
+        mask = filtered["waterfront"].str.contains("Ja", case=False, na=False)
+        if "water_tanken" in filtered.columns:
+            mask = mask | filtered["water_tanken"].str.contains("Ja", case=False, na=False)
+        filtered = filtered[mask]
+        actief.append("🌊 Water")
 
     if not actief:
-        actief.append("ℹ️ Geen specifieke filters herkend in de zoekvraag.")
+        actief.append("ℹ️ Geen specifieke filters herkend.")
 
-    logger.info(f"AI resultaat: {len(filtered)}/{len(df)} locaties, filters: {actief}")
     return filtered, actief
