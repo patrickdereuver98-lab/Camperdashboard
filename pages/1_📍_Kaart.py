@@ -1,78 +1,79 @@
 """
-1_📍_Kaart.py — Hoofd-dashboard met kaart, filters, detail-dialog en favorieten.
-
-Fase 2/3 fixes:
-- Lege dataset afhandeling (#7)
-- Detail-dialog per locatie (#9)
-- Favorieten-knop (#10)
-- MarkerCluster via map_view (#11)
-- Stroom/waterfront filters in sidebar
+1_📍_Kaart.py — Hoofd-dashboard (Booking.com architectuur).
+Zoeken staat centraal. Resultaten in een strakke lijst. Details via een pop-up inclusief mini-kaart.
 """
-
 import pandas as pd
 import streamlit as st
+import folium
+import streamlit.components.v1 as components
 
-from ui.map_view import render_map
 from ui.theme import apply_theme, render_sidebar_header, price_badge
 from utils.ai_helper import process_ai_query
 from utils.data_handler import load_data
 from utils.favorites import get_favorites, is_favorite, toggle_favorite, init_favorites
-from utils.geo_logic import filter_by_distance
 
-st.set_page_config(page_title="VrijStaan | Dashboard", page_icon="🚐", layout="wide")
+st.set_page_config(page_title="VrijStaan | Zoeken", page_icon="🚐", layout="wide")
 apply_theme()
 render_sidebar_header()
 init_favorites()
 
-
+# ── 1. DETAIL DIALOG (Booking pop-up) ───────────────────────────────────────
 @st.dialog("📍 Locatiedetails", width="large")
 def show_detail(row):
-    c_img, c_info = st.columns([1, 1.6])
-    with c_img:
-        img = str(row.get("afbeelding", ""))
-        if img and img != "nan":
-            st.image(img, use_container_width=True)
-        else:
-            st.markdown("🏕️ *Geen foto beschikbaar*")
-    with c_info:
-        st.markdown(f"## {row['naam']}")
-        fav = is_favorite(row["naam"])
-        fav_label = "❤️ Verwijder uit favorieten" if fav else "🤍 Sla op als favoriet"
-        if st.button(fav_label, key=f"fav_dialog_{row['naam']}"):
-            toggle_favorite(row["naam"])
-            st.rerun()
-        st.markdown("---")
-        st.markdown(f"📍 **Provincie:** {row.get('provincie','–')}")
-        st.markdown(f"💰 **Prijs:** {row.get('prijs','–')}")
-        st.markdown(f"🐾 **Honden toegestaan:** {row.get('honden_toegestaan','–')}")
-        st.markdown(f"⚡ **Stroom:** {row.get('stroom','–')}")
-        st.markdown(f"🌊 **Aan het water:** {row.get('waterfront','–')}")
-        st.markdown(f"🏕️ **Aantal plekken:** {row.get('aantal_plekken','–')}")
-        st.markdown(f"🕐 **Openingstijden:** {row.get('openingstijden','–')}")
+    st.markdown(f"## {row['naam']}")
+    st.markdown(f"<p style='color:#666; margin-top:-10px;'>📍 {row.get('provincie','Onbekend')}</p>", unsafe_allow_html=True)
+    
+    tab_info, tab_kaart = st.tabs(["📋 Informatie", "🗺️ Bekijk op Kaart"])
+    
+    with tab_info:
+        c_img, c_specs = st.columns([1, 1.5])
+        with c_img:
+            img = str(row.get("afbeelding", ""))
+            if img and img != "nan":
+                st.image(img, use_container_width=True)
+            
+            fav = is_favorite(row["naam"])
+            fav_label = "❤️ Verwijder uit favorieten" if fav else "🤍 Sla op als favoriet"
+            if st.button(fav_label, key=f"fav_dialog_{row['naam']}", use_container_width=True):
+                toggle_favorite(row["naam"])
+                st.rerun()
 
-    st.markdown("---")
-    col_tel, col_web = st.columns(2)
-    tel = str(row.get("telefoon", "")).strip()
-    web = str(row.get("website", "")).strip()
-    with col_tel:
-        if tel and tel != "nan":
-            st.markdown(f"📞 [{tel}](tel:{tel})")
-    with col_web:
-        if web and web != "nan":
-            url = web if web.startswith("http") else f"https://{web}"
-            st.markdown(f"🌐 [Website openen]({url})")
+        with c_specs:
+            st.markdown(f"### Specificaties")
+            st.markdown(f"💰 **Prijs per nacht:** {row.get('prijs','Onbekend')}")
+            st.markdown(f"🏕️ **Aantal plekken:** {row.get('aantal_plekken','Onbekend')}")
+            st.markdown(f"🕐 **Openingstijden:** {row.get('openingstijden','Onbekend')}")
+            st.markdown("---")
+            st.markdown(f"🐾 **Honden:** {row.get('honden_toegestaan','Onbekend')}")
+            st.markdown(f"⚡ **Stroom:** {row.get('stroom','Onbekend')}")
+            st.markdown(f"🌊 **Water(front):** {row.get('waterfront','Onbekend')}")
+            
+            tel = str(row.get("telefoon", "")).strip()
+            web = str(row.get("website", "")).strip()
+            
+            st.markdown("---")
+            if web and web != "nan":
+                url = web if web.startswith("http") else f"https://{web}"
+                st.markdown(f"🌐 [Website openen]({url})")
+            if tel and tel != "nan":
+                st.markdown(f"📞 [{tel}](tel:{tel})")
 
-    beschr = str(row.get("beschrijving", "")).strip()
-    if beschr and beschr not in ("nan", "Demo locatie", ""):
-        st.markdown(f"**Over deze locatie:** {beschr}")
+    with tab_kaart:
+        # Laad uitsluitend een kaart voor deze ene specifieke locatie (razendsnel)
+        lat, lon = row.get("latitude"), row.get("longitude")
+        if pd.notna(lat) and pd.notna(lon):
+            m = folium.Map(location=[float(lat), float(lon)], zoom_start=14, tiles="OpenStreetMap")
+            folium.Marker(
+                [float(lat), float(lon)], 
+                popup=row['naam'], 
+                icon=folium.Icon(color="green", icon="home")
+            ).add_to(m)
+            components.html(m._repr_html_(), height=400)
+            
+            gmaps = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+            st.markdown(f"[📍 Navigeer via Google Maps]({gmaps})")
 
-    lat, lon = row.get("latitude"), row.get("longitude")
-    if lat and lon:
-        gmaps = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
-        st.markdown(f"[📍 Open in Google Maps]({gmaps})")
-
-
-# ── DATA LADEN ─────────────────────────────────────────────────────────────
+# ── 2. DATA LADEN ─────────────────────────────────────────────────────────────
 with st.spinner("Camperplaatsen laden..."):
     df = load_data()
 
@@ -80,48 +81,60 @@ if df.empty:
     st.warning("⚠️ Geen database gevonden. Ga naar **Beheer** om de data te initialiseren.")
     st.stop()
 
-# ── SIDEBAR FILTERS ─────────────────────────────────────────────────────────
+# ── 3. ZIJBALK (Standaard Filters) ────────────────────────────────────────────
 with st.sidebar:
-    st.subheader("🔍 Filters")
-
-# Haal de eventuele zoekopdracht op van de landingspagina
-    default_query = st.session_state.get('ai_search_query', "")
-
-    ai_query = st.text_input(
-        "Slim zoeken (AI)",
-        value=default_query, # Hier injecteren we de tekst!
-        placeholder="Bijv: 'Gratis in Limburg met stroom'",
-        help="Gebruik natuurlijke taal — de AI vertaalt dit naar filters.",
-    )
+    st.subheader("Geavanceerd Filteren")
     
-    # Update de sessie als de gebruiker de zoekopdracht op de kaart-pagina aanpast
-    if ai_query != default_query:
-        st.session_state['ai_search_query'] = ai_query
-
-    st.divider()
-
     provincies_lijst = sorted([p for p in df["provincie"].unique() if p and p != "Onbekend"])
     selected_prov = st.selectbox("Provincie", ["Alle provincies"] + provincies_lijst)
 
     prijs_filter = st.selectbox("Prijs", ["Alle", "Gratis", "Betaald"])
-    honden_filter = st.selectbox("Honden toegestaan", ["Alle", "Ja", "Nee"])
-    stroom_filter = st.selectbox("Stroom aanwezig", ["Alle", "Ja", "Nee"])
-    water_filter = st.selectbox("Aan het water", ["Alle", "Ja"])
-
+    
     st.divider()
+    toon_favorieten = st.checkbox("❤️ Mijn Favorieten tonen")
 
-    user_loc = st.text_input("Mijn locatie", placeholder="Postcode of plaatsnaam")
-    radius = st.slider("Zoekstraal (km)", 5, 200, 50)
+# ── 4. CENTRALE AI ZOEKBALK (De Hero Sectie) ──────────────────────────────────
+st.markdown("<h1 style='text-align: center; color: #0077B6; margin-bottom: 0;'>Vind jouw perfecte camperplek</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #6c757d; font-size: 1.1rem; margin-bottom: 2rem;'>Zoek slim. Wat is je volgende bestemming?</p>", unsafe_allow_html=True)
 
-    toon_favorieten = st.checkbox("❤️ Alleen favorieten")
+col_spacer1, col_search, col_spacer2 = st.columns([1, 4, 1])
+with col_search:
+    default_query = st.session_state.get('ai_search_query', "")
+    ai_query = st.text_input(
+        "AI Zoeken", 
+        value=default_query,
+        placeholder="Bijv: 'Een gratis plek in Drenthe waar de hond mee mag en stroom is'",
+        label_visibility="collapsed"
+    )
+    if ai_query != default_query:
+        st.session_state['ai_search_query'] = ai_query
 
-    st.divider()
-    st.caption("v2.0 | Coast & Horizon Editie")
+# ── 5. SNELFILTERS (Gebaseerd op de analyse) ──────────────────────────────────
+st.write("")
+sf_col1, sf_col2, sf_col3, sf_col4, sf_col5 = st.columns(5)
 
-# Zorg dat deze import bovenaan je bestand staat als hij er nog niet staat:
-# import streamlit as st
+# Session state voor snelfilters
+if 'qf_gratis' not in st.session_state: st.session_state.qf_gratis = False
+if 'qf_honden' not in st.session_state: st.session_state.qf_honden = False
+if 'qf_stroom' not in st.session_state: st.session_state.qf_stroom = False
+if 'qf_water' not in st.session_state: st.session_state.qf_water = False
 
-# ── DATA VERWERKING ──────────────────────────────────────────────────────────
+with sf_col2:
+    if st.button("💰 Gratis", use_container_width=True, type="primary" if st.session_state.qf_gratis else "secondary"):
+        st.session_state.qf_gratis = not st.session_state.qf_gratis
+        st.rerun()
+with sf_col3:
+    if st.button("🐾 Honden Welkom", use_container_width=True, type="primary" if st.session_state.qf_honden else "secondary"):
+        st.session_state.qf_honden = not st.session_state.qf_honden
+        st.rerun()
+with sf_col4:
+    if st.button("⚡ Met Stroom", use_container_width=True, type="primary" if st.session_state.qf_stroom else "secondary"):
+        st.session_state.qf_stroom = not st.session_state.qf_stroom
+        st.rerun()
+
+st.divider()
+
+# ── 6. DATA FILTEREN ──────────────────────────────────────────────────────────
 processed = df.copy()
 ai_labels = []
 
@@ -131,121 +144,62 @@ if ai_query:
 if selected_prov != "Alle provincies":
     processed = processed[processed["provincie"] == selected_prov]
 
-# Checken voor snelfilters uit de KPI tegels (Sessie geheugen)
-if st.session_state.get('quick_filter_gratis'):
+if prijs_filter == "Gratis" or st.session_state.qf_gratis:
     processed = processed[processed["prijs"].astype(str).str.lower() == "gratis"]
-if st.session_state.get('quick_filter_honden'):
+elif prijs_filter == "Betaald":
+    processed = processed[processed["prijs"].astype(str).str.lower() != "gratis"]
+
+if st.session_state.qf_honden:
     processed = processed[processed["honden_toegestaan"] == "Ja"]
 
-# ... (Je bestaande radius en stroom/water filters hier) ...
+if st.session_state.qf_stroom:
+    processed = processed[processed["stroom"] == "Ja"]
 
-# ── HET KPI DASHBOARD (Interactieve Tegels) ──────────────────────────────────
-st.markdown("### 📊 In één oogopslag")
+if toon_favorieten:
+    favs = get_favorites()
+    processed = processed[processed["naam"].isin(favs)]
 
-# Bereken de statistieken van de HUIDIGE selectie
-totaal_aantal = len(processed)
-gratis_aantal = len(processed[processed["prijs"].astype(str).str.lower() == "gratis"])
-honden_aantal = len(processed[processed["honden_toegestaan"] == "Ja"])
-stroom_aantal = len(processed[processed["stroom"] == "Ja"])
-
-kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-with kpi1:
-    with st.container(border=True):
-        st.metric(label="🏕️ Totaal Gevonden", value=totaal_aantal)
-        if st.button("Reset Filters", use_container_width=True):
-            st.session_state['quick_filter_gratis'] = False
-            st.session_state['quick_filter_honden'] = False
-            st.rerun()
-
-with kpi2:
-    with st.container(border=True):
-        st.metric(label="💰 Gratis Plekken", value=gratis_aantal)
-        if st.button("Toon Gratis", key="btn_gratis", use_container_width=True):
-            st.session_state['quick_filter_gratis'] = True
-            st.rerun()
-
-with kpi3:
-    with st.container(border=True):
-        st.metric(label="🐾 Honden Welkom", value=honden_aantal)
-        if st.button("Toon Honden", key="btn_honden", use_container_width=True):
-            st.session_state['quick_filter_honden'] = True
-            st.rerun()
-
-with kpi4:
-    with st.container(border=True):
-        st.metric(label="⚡ Met Stroom", value=stroom_aantal)
-        # Optioneel: stroom knop toevoegen volgens dezelfde logica
-
-st.markdown("---")
-
-# ── HOOFDLAYOUT: LIJST | KAART ────────────────────────────────────────────────
-col_list, col_map = st.columns([3.5, 6.5])
-
-with col_list:
-    with st.container(height=650, border=False):
-        # ... (Je bestaande lijst-weergave code hier) ...
-        for idx, row in processed.head(80).iterrows():
-            pass # (Laat je bestaande cards hier staan)
-
-with col_map:
-    # 🚀 PRESTATIE-HACK: Bescherm de browser tegen overbelasting
-    MAX_MARKERS = 250
-    kaart_df = processed.head(MAX_MARKERS)
-    
-    if totaal_aantal > MAX_MARKERS:
-        st.warning(f"⚠️ Om de kaart snel te houden, tonen we de top {MAX_MARKERS} van de {totaal_aantal} locaties. Gebruik de filters of KPI-tegels om verder in te zoomen.")
-        
-    render_map(kaart_df)
-
-# ── HEADER ───────────────────────────────────────────────────────────────────
-st.markdown(f"### 🚐 {len(processed)} camperplaatsen gevonden")
+# ── 7. RESULTATENLIJST (Booking.com stijl) ────────────────────────────────────
+st.markdown(f"### {len(processed)} accommodaties gevonden")
 
 if ai_labels:
-    tags_html = " ".join(f'<span class="filter-tag">{t}</span>' for t in ai_labels)
-    st.markdown(f"**AI filters actief:** {tags_html}", unsafe_allow_html=True)
+    st.markdown(f"**Geïnterpreteerd door AI:** {', '.join(ai_labels)}")
 
 if processed.empty:
-    st.info("😕 Geen camperplaatsen gevonden met deze filters. Pas je zoekopdracht aan.")
+    st.info("Geen resultaten gevonden. Probeer je zoekopdracht aan te passen.")
     st.stop()
 
-# ── HOOFDLAYOUT: LIJST | KAART ────────────────────────────────────────────────
-col_list, col_map = st.columns([3.5, 6.5])
-
-with col_list:
-    # Native Streamlit scroll-container in plaats van HTML hacks
-    with st.container(height=650, border=False):
-        for idx, row in processed.head(80).iterrows():
-            fav_icon = "❤️" if is_favorite(row["naam"]) else "🤍"
+# We tonen de resultaten met een schone layout
+for idx, row in processed.head(100).iterrows(): # Lazy load eerste 100 voor snelheid
+    with st.container(border=True):
+        c_img, c_text, c_btn = st.columns([1.5, 4, 1.5])
+        
+        with c_img:
+            # Fallback image als er geen is
+            img = str(row.get("afbeelding", ""))
+            if not img or img == "nan":
+                img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80"
+            st.image(img, use_container_width=True)
+            
+        with c_text:
+            st.markdown(f"#### {row['naam']}")
+            st.markdown(f"<p style='color:#666; font-size:0.9rem; margin-top:-10px;'>📍 {row.get('provincie', 'Onbekend')}</p>", unsafe_allow_html=True)
+            
+            # Subtiele snelinformatie
+            faciliteiten = []
+            if str(row.get('honden_toegestaan')) == 'Ja': faciliteiten.append("🐾 Honden")
+            if str(row.get('stroom')) == 'Ja': faciliteiten.append("⚡ Stroom")
+            if str(row.get('waterfront')) == 'Ja': faciliteiten.append("🌊 Water")
+            
+            if faciliteiten:
+                st.markdown(f"<p style='font-size:0.85rem; color:#2A5A4A;'>{' | '.join(faciliteiten)}</p>", unsafe_allow_html=True)
+                
+        with c_btn:
             prijs_str = str(row.get("prijs", "Onbekend"))
-            afstand = f' · {row["afstand_label"]}' if "afstand_label" in row else ""
+            st.markdown(f"<div style='text-align:center; margin-bottom:10px;'>{price_badge(prijs_str)}</div>", unsafe_allow_html=True)
+            
+            if st.button("🔍 Bekijk details", key=f"btn_{idx}", use_container_width=True):
+                show_detail(row)
 
-            # Schone opmaak van de locatiekaart
-            st.markdown(f"""
-            <div class="locatie-card">
-                <div style="font-size: 1.1rem; font-weight: 700; color: #2B2D42;">{row['naam']}</div>
-                <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 8px;">📍 {row['provincie']}{afstand}</div>
-                <div>
-                    {price_badge(prijs_str)}
-                    {'<span class="badge badge-facility">🐾 Honden</span>' if str(row.get('honden_toegestaan')) == 'Ja' else ''}
-                    {'<span class="badge badge-facility">⚡ Stroom</span>' if str(row.get('stroom')) == 'Ja' else ''}
-                    {'<span class="badge badge-facility">🌊 Water</span>' if str(row.get('waterfront')) == 'Ja' else ''}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            btn_c1, btn_c2 = st.columns([3, 1])
-            with btn_c1:
-                if st.button("🔍 Details", key=f"detail_{idx}", use_container_width=True):
-                    show_detail(row)
-            with btn_c2:
-                if st.button(fav_icon, key=f"fav_{idx}", help="Favoriet aan/uit"):
-                    toggle_favorite(row["naam"])
-                    st.rerun()
-                    
-        if len(processed) > 80:
-            st.caption(f"Top 80 van {len(processed)} getoond. Gebruik filters om te verfijnen.")
-
-with col_map:
-    # Zorg dat de kaart de volledige hoogte pakt
-    render_map(processed)
+if len(processed) > 100:
+    st.caption("Scroll verder of gebruik de filters om meer specifieke resultaten te vinden.")
