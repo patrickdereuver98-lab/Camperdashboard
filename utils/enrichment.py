@@ -28,6 +28,7 @@ BELANGRIJK:
 - Vul ontbrekende info aan met betrouwbare secundaire bronnen.
 - Als informatie onzeker of niet vindbaar is: gebruik "Onbekend".
 - Hallucineer NOOIT gegevens.
+-  wanneer de heel specifiek er geen score onbekend is, moet je zelf een slecht/voldoende/goed/uitstekend geven op basis van de reviews en voorzieningen.
 
 Geef uitsluitend een JSON-object terug met deze velden:
 
