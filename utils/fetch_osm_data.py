@@ -73,7 +73,9 @@ def fetch_camper_places():
         provincie = tags.get('is_in:province', tags.get('addr:province', 'Onbekend'))
         
         # Standaard placeholder afbeelding voor de UI
-        afbeelding = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80"
+            afbeelding = f"https://www.google.com/s2/favicons?domain={domein}&sz=128"
+        else:
+            afbeelding = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80"
         
         camper_data.append({
             "naam": naam,
