@@ -1,5 +1,5 @@
 """
-2_⚙️_Beheer.py — Beveiligd beheer-dashboard.
+2_⚙️_Beheer.py — Beveiligd beheer-dashboard met AI-Rapportage.
 """
 import os
 import pandas as pd
@@ -123,15 +123,16 @@ with tab_data:
         st.divider()
 
         # ── AI VERRIJKING ──────────────────────────────────────────────────────
-        with st.expander("✨ AI Data Verrijking (Beta)"):
+        with st.expander("✨ AI Data Verrijking (Beta)", expanded=True):
             st.write("Verrijk 'Onbekend' velden met Gemini AI onderzoek.")
             
-            # 🔥 VERBETERDE FILTER (meer velden)
+            # 🔥 UITGEBREIDE FILTER: Zoekt specifiek naar alle camper-velden
             unkn_mask = (
                 (master_df['prijs'] == 'Onbekend') |
                 (master_df['honden_toegestaan'] == 'Onbekend') |
                 (master_df.get('stroom', 'Onbekend') == 'Onbekend') |
-                (master_df.get('water_tanken', 'Onbekend') == 'Onbekend')
+                (master_df.get('water_tanken', 'Onbekend') == 'Onbekend') |
+                (master_df.get('afvalwater', 'Onbekend') == 'Onbekend')
             )
 
             to_process_count = len(master_df[unkn_mask])
@@ -147,30 +148,48 @@ with tab_data:
                 else:
                     progress_bar = st.progress(0)
                     status_text = st.empty()
+                    results_log = [] # Voor het visuele feedback-rapport
                     
                     for i, (idx, row) in enumerate(to_process.iterrows()):
-                        status_text.text(f"Onderzoek bezig voor: {row['naam']}...")
+                        status_text.text(f"🔍 Onderzoek bezig voor: {row['naam']}...")
                         result = research_location(row)
                         
                         if isinstance(result, dict):
-                            # 🔥 DYNAMISCHE UPDATE (BELANGRIJKSTE FIX)
+                            # Dynamische update van de velden
                             for key, value in result.items():
                                 if key not in master_df.columns:
                                     master_df[key] = "Onbekend"
                                 
-                                current_value = master_df.at[idx, key] if key in master_df.columns else "Onbekend"
-                                
-                                # Alleen overschrijven als huidige waarde slecht is
-                                if current_value in ["Onbekend", "", None] and value not in [None, "", "Onbekend"]:
+                                # Sla op als de nieuwe waarde bruikbaar is
+                                if value and value != "Onbekend":
                                     master_df.at[idx, key] = value
+                            
+                            results_log.append({
+                                "Locatie": row['naam'],
+                                "Prijs": result.get('prijs', '?'),
+                                "Water/Afval": f"🚰{result.get('water_tanken','?')}/🚛{result.get('afvalwater','?')}",
+                                "Status": "✅ Verrijkt"
+                            })
+                        else:
+                            results_log.append({
+                                "Locatie": row['naam'],
+                                "Prijs": "-",
+                                "Water/Afval": "-",
+                                "Status": "❌ Geen resultaat"
+                            })
                         
                         progress_bar.progress((i + 1) / len(to_process))
                     
-                    # Opslaan naar CSV
+                    # ── OPSLAG & FEEDBACK ──
                     master_df.to_csv(CSV_PATH, index=False)
                     load_data.clear()
-                    st.success(f"✅ Klaar! {len(to_process)} locaties zijn bijgewerkt.")
-                    st.rerun()
+                    
+                    st.success(f"✅ Onderzoek voltooid voor {len(to_process)} locaties.")
+                    st.markdown("### 📊 AI Rapportage")
+                    st.dataframe(results_log, use_container_width=True) # Toon de feedback tabel
+                    
+                    if st.button("🔄 Dashboard Verversen"):
+                        st.rerun()
 
         st.divider()
 
