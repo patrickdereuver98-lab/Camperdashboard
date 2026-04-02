@@ -4,10 +4,17 @@ Beheert Google Sheets connectie, OSM Sync en Provincie-verrijking.
 """
 import pandas as pd
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection  # <--- Deze veroorzaakt nu de fout
+from streamlit_gsheets import GSheetsConnection
 import requests
 import os
 import reverse_geocoder as rg
+
+# Robuuste Logger Fallback
+try:
+    from utils.logger import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
 # Configuur
 CSV_PATH = "data/api_export_campers.csv"
@@ -17,7 +24,7 @@ def get_connection():
     """Initialiseert de beveiligde verbinding met Google Sheets."""
     return st.connection("gsheets", type=GSheetsConnection)
 
-def get_master_data():
+def load_data():
     """
     Laadt de data uit Google Sheets (Cloud). 
     Valt terug op lokale CSV als de cloud onbereikbaar is.
@@ -25,22 +32,24 @@ def get_master_data():
     try:
         conn = get_connection()
         # ttl=0 dwingt een live verversing af van de cloud-data
-        df = conn.read(worksheet=SHEET_NAME, ttl="0")
+        df = conn.read(worksheet=SHEET_NAME, ttl=0)
         if df is not None and not df.empty:
             return df.fillna("Onbekend")
     except Exception as e:
-        logger.error(f"Cloud-fout bij get_master_data: {e}")
+        logger.error(f"Cloud-fout bij load_data: {e}")
     
     # Fallback naar lokale CSV voor UI-stabiliteit
     if os.path.exists(CSV_PATH):
-        return pd.read_csv(CSV_PATH).fillna("Onbekend")
+        try:
+            return pd.read_csv(CSV_PATH).fillna("Onbekend")
+        except Exception:
+            return pd.DataFrame()
     
     return pd.DataFrame()
 
 def save_data(df):
     """
     Schrijft de dataset naar Google Sheets én de lokale CSV fallback.
-    Cruciaal: vult NaN waarden met 'Onbekend' voor Sheets-integriteit.
     """
     df_clean = df.fillna("Onbekend")
     
@@ -64,7 +73,6 @@ def save_data(df):
 def load_data_from_osm():
     """
     Haalt de actuele dataset live op via de Overpass API (OSM).
-    Deze functie wordt aangeroepen vanuit de API Sync tab in Beheer.
     """
     overpass_query = """
     [out:json][timeout:90][bbox:50.75,3.36,53.56,7.23];
