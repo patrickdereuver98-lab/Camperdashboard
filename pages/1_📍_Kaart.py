@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.data_handler import load_data, filter_data
+import pandas as pd
 from utils.geo_logic import filter_by_distance
 from ui.map_view import render_map
 from ui.theme import apply_theme
@@ -10,82 +10,53 @@ st.set_page_config(page_title="VrijStaan | Kaart", page_icon="📍", layout="wid
 def app():
     apply_theme()
     
-    # --- UX: Laad-status voor de data ---
-    with st.spinner('Data wordt geladen en gecontroleerd...'):
-        df = load_data()
-    
-    # --- DEFENSIVE PROGRAMMING ---
-    if 'provincie' not in df.columns: df['provincie'] = "Onbekend"
-    if 'afbeelding' not in df.columns: df['afbeelding'] = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80"
-    if 'honden_toegestaan' not in df.columns: df['honden_toegestaan'] = "Onbekend"
-    if 'aantal_plekken' not in df.columns: df['aantal_plekken'] = "?"
-    if 'prijs' not in df.columns: df['prijs'] = "Onbekend"
+    # --- PURE DATA CONSUMPTIE ---
+    # We lezen alleen het statische bestand dat door de Beheer-pagina is gemaakt
+    try:
+        df = pd.read_csv("data/api_export_campers.csv")
+    except FileNotFoundError:
+        st.warning("⚠️ Geen data gevonden. Ga naar de Beheer-pagina om de database te vullen.")
+        return
 
     st.markdown("<h2 style='color: #2A5A4A;'>📍 Zoek jouw volgende plek</h2>", unsafe_allow_html=True)
     
-    # --- 🤖 AI ZOEKBALK ---
+    # AI Zoekbalk
     st.markdown("### 🤖 Slim Zoeken")
-    ai_query = st.text_input(
-        "Vraag het de assistent", 
-        placeholder="Bijv: 'Ik zoek een gratis plek in Drenthe waar mijn hond mee mag'",
-        label_visibility="collapsed"
-    )
+    ai_query = st.text_input("Vraag het de assistent", placeholder="Bijv: 'Gratis plekken in Limburg'", label_visibility="collapsed")
 
     if ai_query:
-        with st.spinner('🤖 Assistent analyseert je vraag...'):
-            df, herkende_filters = process_ai_query(df, ai_query)
-        if herkende_filters:
-            st.caption(f"**Geïnterpreteerde zoekopdracht:** {', '.join(herkende_filters)}")
+        df, _ = process_ai_query(df, ai_query)
 
     st.markdown("---")
 
-    # --- REGULIERE FILTERS ---
-    filter_col1, filter_col2, filter_col3 = st.columns(3)
-    
-    with filter_col1:
-        # BUGFIX: We gebruiken nu de reeds geladen 'df', dit voorkomt de KeyError
-        alle_provincies = ["Alle provincies"] + sorted(df['provincie'].astype(str).unique().tolist())
-        selected_provincie = st.selectbox("Provincie (Handmatig)", alle_provincies)
-        
-    with filter_col2:
-        user_loc = st.text_input("Huidige locatie (Postcode of Stad)", placeholder="Bijv. Amsterdam")
-        
-    with filter_col3:
-        radius = st.slider("Straal (km)", min_value=5, max_value=150, value=30, step=5)
+    # Filters
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        prov = st.selectbox("Provincie", ["Alle provincies"] + sorted(df['provincie'].unique().tolist()))
+    with f2:
+        loc = st.text_input("Huidige locatie", placeholder="Stad of Postcode")
+    with f3:
+        rad = st.slider("Straal (km)", 5, 150, 30)
 
-    # Toepassen van de filters in de juiste volgorde
-    filtered_df = filter_data(df, selected_provincie)
-    
-    if user_loc:
-        with st.spinner('📍 Afstanden berekenen...'):
-            filtered_df = filter_by_distance(filtered_df, user_loc, radius)
-    
-    st.markdown("---")
+    # Filtering
+    if prov != "Alle provincies":
+        df = df[df['provincie'] == prov]
+    if loc:
+        df = filter_by_distance(df, loc, rad)
 
-    # --- SPLIT-SCREEN LAYOUT ---
-    col_lijst, col_kaart = st.columns([4, 6])
-
-    with col_lijst:
-        st.subheader(f"{len(filtered_df)} locaties gevonden")
-        
-        for _, row in filtered_df.iterrows():
+    # Display
+    col_list, col_map = st.columns([4, 6])
+    with col_list:
+        st.subheader(f"{len(df)} Resultaten")
+        for _, row in df.head(20).iterrows(): # We tonen de eerste 20 voor performance
             with st.container(border=True):
-                img_col, txt_col = st.columns([1, 2])
-                with img_col:
-                    st.image(row['afbeelding'], use_column_width=True)
-                with txt_col:
-                    st.markdown(f"**{row.get('naam', 'Onbekende locatie')}**")
-                    
-                    # Toon de berekende afstand als deze beschikbaar is
-                    afstand_text = f" | 📏 {row['afstand_km']:.1f} km" if 'afstand_km' in row else ""
-                    st.caption(f"{row['provincie']} | {row['aantal_plekken']} plekken{afstand_text}")
-                    st.write(f"Prijs: €{row['prijs']}")
-                    
-                    if row['honden_toegestaan'] == "Ja":
-                        st.write("🐾 Honden toegestaan")
+                st.markdown(f"**{row['naam']}**")
+                st.caption(f"{row['provincie']} | Prijs: {row['prijs']}")
+                if st.button(f"Details {row['naam']}", key=row['naam']):
+                    st.info(f"Website: {row['website']}")
 
-    with col_kaart:
-        render_map(filtered_df)
+    with col_map:
+        render_map(df)
 
 if __name__ == "__main__":
     app()
