@@ -15,19 +15,23 @@ from utils.auth import require_admin_auth
 from utils.data_handler import load_data, validate_and_merge, CSV_PATH
 from utils.logger import logger
 
+from ui.theme import apply_theme, render_sidebar_header
+
 st.set_page_config(page_title="VrijStaan | Beheer", page_icon="⚙️", layout="wide")
+apply_theme()
+render_sidebar_header()
 
 # ── AUTH GUARD ────────────────────────────────────────────────────────────────
 if not require_admin_auth():
     st.stop()
 
-# ── UITLOG-KNOP ───────────────────────────────────────────────────────────────
+# ── UITLOG-KNOP (Nu netjes onder het logo) ────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚙️ Beheer")
     if st.button("🔓 Uitloggen"):
         st.session_state["admin_authenticated"] = False
         st.rerun()
-
+        
 st.title("⚙️ Data & Beheer Dashboard")
 
 tab_sync, tab_import, tab_data, tab_logs = st.tabs(
