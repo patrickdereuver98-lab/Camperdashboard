@@ -4,11 +4,10 @@ Beheert Google Sheets connectie, OSM Sync en Provincie-verrijking.
 """
 import pandas as pd
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
+from streamlit_gsheets import GSheetsConnection  # <--- Deze veroorzaakt nu de fout
 import requests
 import os
 import reverse_geocoder as rg
-from utils.logger import logger
 
 # Configuur
 CSV_PATH = "data/api_export_campers.csv"
