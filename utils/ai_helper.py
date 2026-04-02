@@ -1,5 +1,5 @@
 """
-ai_helper.py — Gemini 2.5 Flash integratie voor natuurlijke taalfiltering.
+ai_helper.py — Gemini Flash integratie voor natuurlijke taalfiltering en data-verrijking.
 Uitgebreide filters: provincie, honden, prijs, stroom, waterfront.
 """
 import json
@@ -11,7 +11,8 @@ try:
     import google.generativeai as genai
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    # Gebruik de versie die in jouw omgeving geconfigureerd is
+    model = genai.GenerativeModel("gemini-1.5-flash") 
     logger.info("Gemini model geladen")
 except KeyError:
     model = None
@@ -19,6 +20,22 @@ except KeyError:
 except Exception as e:
     model = None
     logger.error(f"Gemini laad-fout: {e}")
+
+
+def get_gemini_response(prompt: str) -> str:
+    """
+    Algemene functie om tekstuele antwoorden van Gemini te krijgen.
+    Wordt gebruikt door de enrichment-module.
+    """
+    if model is None:
+        return "Fout: AI model niet geconfigureerd."
+    
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        logger.error(f"Fout in get_gemini_response: {e}")
+        return f"Fout: {str(e)}"
 
 
 def process_ai_query(df: pd.DataFrame, user_query: str) -> tuple[pd.DataFrame, list[str]]:
