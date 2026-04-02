@@ -2,5 +2,17 @@
 base="light"
 primaryColor="#E84E0F"
 
-[client]
-showSidebarNavigation = true
+[theme]
+primaryColor = "#2A5A4A"
+backgroundColor = "#F8F9FA"
+secondaryBackgroundColor = "#F0F4F3"
+textColor = "#2C3E50"
+font = "sans serif"
+
+[server]
+headless = true
+enableCORS = false
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
