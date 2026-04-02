@@ -10,11 +10,11 @@ CSV_PATH = "data/api_export_campers.csv"
 def load_data():
     """
     Haalt de actuele dataset live op via de Overpass API.
-    Inclusief robuuste headers, een brede camping-query en
-    een keiharde 'Double Lock' filter op uitsluitend Nederlands grondgebied.
+    Gebruikt een "Failover" systeem: als server A faalt (bijv. 504 Timeout), 
+    probeert hij direct server B. Faalt alles? Dan valt hij terug op de CSV.
     """
     
-    # 1. API Laag: Vraag om de Nederlandse grens
+    # 1. De brede query voor maximale dekking
     overpass_query = """
     [out:json][timeout:90];
     area["ISO3166-1"="NL"][admin_level=2]->.searchArea;
@@ -38,23 +38,33 @@ def load_data():
         "Accept": "application/json"
     }
     
-    url = "https://overpass-api.de/api/interpreter"
+    # 2. De Failover Mirrors (onze reddingsboeien)
+    mirrors = [
+        "https://overpass-api.de/api/interpreter",        # Hoofdserver
+        "https://lz4.overpass-api.de/api/interpreter",    # Mirror 1 (Duitsland)
+        "https://z.overpass-api.de/api/interpreter",      # Mirror 2 (Duitsland)
+        "https://overpass.kumi.systems/api/interpreter"   # Mirror 3 (Alternatief netwerk)
+    ]
     
-    try:
-        response = requests.post(url, data={'data': overpass_query}, headers=headers, timeout=90)
-        response.raise_for_status()
-        data = response.json()
-        
-    except requests.exceptions.Timeout:
-        st.error("API Timeout: De server doet er te lang over. Probeer het over een minuut opnieuw.")
-        return fallback_data()
-    except requests.exceptions.HTTPError as err:
-        st.error(f"API HTTP Fout: De verbinding is geweigerd. Details: {err}")
-        return fallback_data()
-    except Exception as e:
-        st.error(f"Systeemfout bij ophalen API: {e}")
+    data = None
+    
+    # Loop door de servers heen tot er eentje antwoord geeft
+    for url in mirrors:
+        try:
+            response = requests.post(url, data={'data': overpass_query}, headers=headers, timeout=90)
+            response.raise_for_status() # Gooit een error bij 504, 502, 429 etc.
+            data = response.json()
+            break # Succes! Breek uit de loop en ga door.
+        except requests.exceptions.RequestException:
+            # Server gefaald, ga stil door naar de volgende in de lijst
+            continue
+            
+    # 3. Faalt alles? Fallback naar CSV met duidelijke melding
+    if not data:
+        st.warning("⚠️ Alle OSM-servers zijn momenteel overbelast (Timeout). We zijn succesvol teruggevallen op de laatste lokale export (CSV).")
         return fallback_data()
 
+    # 4. Data Verwerking
     elements = data.get('elements', [])
     camper_data = []
     
@@ -91,8 +101,7 @@ def load_data():
             "naam": naam,
             "latitude": lat,
             "longitude": lon,
-            # We zetten provincie tijdelijk op Onbekend, de Reverse Geocoder lost dit zometeen op
-            "provincie": "Onbekend", 
+            "provincie": "Onbekend", # Wordt verrijkt door reverse_geocoder
             "honden_toegestaan": honden,
             "stroom": stroom,
             "waterfront": waterfront,
@@ -106,10 +115,11 @@ def load_data():
 
     df = pd.DataFrame(camper_data)
     
-    # Data Verrijking & Harde NL-Filter
+    # 5. Data Verrijking (Reverse Geocoder) & Harde NL-Filter
     if not df.empty:
         df = enforce_nl_and_enrich_provinces(df)
         
+        # Sla op als nieuwe fallback Master CSV
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         df.to_csv(CSV_PATH, index=False)
         
@@ -117,29 +127,20 @@ def load_data():
 
 def enforce_nl_and_enrich_provinces(df):
     """
-    Reverse-geocodes coördinaten. 
-    1. Filtert genadeloos alles weg wat geen 'NL' landcode heeft.
-    2. Vult de lege provincies in met keiharde data.
+    Reverse-geocodes coördinaten om lege provincies in te vullen
+    en trekt een keiharde grens: alleen landcode 'NL' blijft over.
     """
-    # Zet lat/lon om naar tuples voor de module
     coords = list(zip(df['latitude'], df['longitude']))
-    
-    # Zoek lokaal en offline de locatiegegevens op (dit kost slechts 1 seconde voor 4000 rijen)
     results = rg.search(coords)
     
-    # Maak nieuwe kolommen voor het filteren
     df['landcode'] = [res['cc'] for res in results]
     df['berekende_provincie'] = [res['admin1'] for res in results]
     
-    # ── DE HARDE EIS: Alleen Nederland ──
+    # Strikte filter
     df_nl = df[df['landcode'] == 'NL'].copy()
     
-    # Overschrijf de 'Onbekend' provincies met de werkelijke data
-    # (Bijv. 'North Brabant' naar 'Noord-Brabant' vertalen doen we op een later moment in de UI als we willen, 
-    # maar rg pakt standaard de correcte admin namen).
+    # Provincies overschrijven
     df_nl['provincie'] = df_nl['berekende_provincie']
-    
-    # Opruimen van tijdelijke kolommen
     df_nl = df_nl.drop(columns=['landcode', 'berekende_provincie'])
     
     return df_nl
