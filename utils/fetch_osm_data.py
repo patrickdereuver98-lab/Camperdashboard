@@ -81,6 +81,7 @@ def fetch_camper_places():
             "naam": naam,
             "latitude": lat,
             "longitude": lon,
+            "telefoonnummer": telefoon
             "provincie": provincie,
             "honden_toegestaan": honden,
             "aantal_plekken": capaciteit,
