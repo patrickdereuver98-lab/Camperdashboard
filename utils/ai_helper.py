@@ -1,5 +1,5 @@
 """
-utils/ai_helper.py — Gemini Integratie met X-Ray foutopsporing en Search Grounding.
+utils/ai_helper.py — Gemini Integratie met Batch-verwerking en Search Grounding.
 """
 import json
 import pandas as pd
@@ -14,15 +14,13 @@ try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=API_KEY)
     
-    # ── KIES HIER JE MODEL ──
-    gekozen_model = "gemini-2.5-flash"
+    # Gebruik gemini-1.5-flash voor optimale snelheid/stabiliteit bij batches
+    gekozen_model = "gemini-1.5-flash"
     
-    # CRUCIALE FIX: De API eist nu "google_search"
     model = genai.GenerativeModel(
         model_name=gekozen_model,
-
     )
-    logger.info(f"{gekozen_model} met Search Grounding geladen")
+    logger.info(f"{gekozen_model} geladen voor batch-verwerking")
 
 except KeyError:
     init_error = "GEMINI_API_KEY mist in je secrets.toml"
@@ -31,13 +29,10 @@ except Exception as e:
     init_error = str(e)
     logger.error(f"Gemini laad-fout: {init_error}")
 
-
 def get_gemini_response(prompt: str) -> str:
     """Algemene functie voor AI-onderzoek."""
     if model is None:
-        # Dit laat in jouw groene vlak op het scherm direct zien WAAROM hij faalt
         return f"Fout tijdens opstarten: {init_error}"
-    
     try:
         full_prompt = f"{prompt}\n\nBelangrijk: Gebruik de Google Search tool om actuele feiten te verifiëren."
         response = model.generate_content(full_prompt)
@@ -45,6 +40,41 @@ def get_gemini_response(prompt: str) -> str:
     except Exception as e:
         return f"Fout tijdens genereren: {str(e)}"
 
+def get_batch_enrichment_results(locations_data: list) -> list:
+    """
+    STAP 5: TURBO BATCH. Verwerkt meerdere locaties in één AI-request.
+    """
+    if model is None: return []
+    
+    prompt = f"""
+Je bent een data-expert voor camperplaatsen. Onderzoek de volgende lijst met locaties.
+Retourneer voor ELKE locatie de ontbrekende info als een strikte JSON lijst.
+
+Input Data: {json.dumps(locations_data)}
+
+Output formaat (lijst van objecten):
+[
+  {{
+    "naam": "exacte naam uit input",
+    "prijs": "bijv. € 15,00 of Gratis",
+    "stroom": "Ja of Nee",
+    "honden_toegestaan": "Ja of Nee",
+    "samenvatting_reviews": "Korte sfeerschets van max 15 woorden",
+    "ai_gecheckt": "Ja"
+  }},
+  ...
+]
+"""
+    try:
+        # Gebruik Google Search Grounding indien beschikbaar voor actuele prijzen
+        response = model.generate_content(prompt)
+        raw_text = response.text
+        start = raw_text.find('[')
+        end = raw_text.rfind(']') + 1
+        return json.loads(raw_text[start:end])
+    except Exception as e:
+        logger.error(f"Batch AI Fout: {e}")
+        return []
 
 def process_ai_query(df: pd.DataFrame, user_query: str) -> tuple[pd.DataFrame, list[str]]:
     """Vertaalt natuurlijke taal naar database-filters."""
