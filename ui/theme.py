@@ -6,6 +6,7 @@ import streamlit as st
 
 
 def apply_theme():
+    """Injecteert de centrale CSS styling in de applicatie."""
     st.markdown("""
     <style>
         :root {
@@ -39,6 +40,8 @@ def apply_theme():
             margin-bottom: 0.6rem; transition: box-shadow 0.2s;
         }
         .locatie-card:hover { box-shadow: 0 4px 16px rgba(42,90,74,0.12); }
+        
+        /* Badges styling */
         .badge {
             display: inline-block; padding: 2px 8px;
             border-radius: 20px; font-size: 0.75rem; font-weight: 600;
@@ -47,6 +50,7 @@ def apply_theme():
         .badge-gratis { background: #D4EDDA; color: #155724; }
         .badge-betaald { background: #FFF3CD; color: #856404; }
         .badge-onbekend { background: #E8E8E8; color: #555; }
+        
         .filter-tag {
             background: #E8F4F1; color: var(--pine-green);
             border-radius: 20px; padding: 3px 10px;
@@ -58,6 +62,7 @@ def apply_theme():
 
 
 def render_logo():
+    """Rendert het grote logo voor de landingspagina."""
     st.markdown("""
     <div style="text-align:center;margin-bottom:2rem;">
         <svg width="100" height="68" viewBox="0 0 24 24" fill="none" stroke="#2A5A4A"
@@ -76,11 +81,12 @@ def render_logo():
 
 
 def render_sidebar_header():
+    """Rendert het compacte logo voor de sidebar."""
     with st.sidebar:
         st.markdown("""
         <div style="text-align:center;padding:0.5rem 0 0.8rem 0;">
             <svg width="48" height="34" viewBox="0 0 24 24" fill="none" stroke="#2A5A4A"
-                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10
                          s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9
                          A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
@@ -93,10 +99,12 @@ def render_sidebar_header():
 
 
 def price_badge(prijs: str) -> str:
+    """Genereert de HTML-code voor de prijs-badge op basis van de tekst."""
     p = str(prijs).lower()
-    if p == "gratis":
+    if "gratis" in p:
         return '<span class="badge badge-gratis">💰 Gratis</span>'
-    elif p in ("onbekend", ""):
+    elif p in ("onbekend", "", "nan", "–"):
         return '<span class="badge badge-onbekend">❓ Onbekend</span>'
     else:
+        # Als er een bedrag staat, tonen we de 'betaald' badge
         return f'<span class="badge badge-betaald">💶 {prijs}</span>'
