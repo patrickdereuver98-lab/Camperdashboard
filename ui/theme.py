@@ -29,10 +29,10 @@ def apply_theme():
     Injecteer het volledige VrijStaan design systeem.
     Altijd als EERSTE aanroepen, vóór enige data-laad operatie.
     """
-    # We gebruiken st.html voor zuivere CSS injectie, dit voorkomt dat tekst lekt.
     st.html(f"""
     <style>
     @import url('{_FONTS}');
+    
     /* ── BASIS & ACHTERGROND ─────────────────────────────────────────── */
     html, body,
     [data-testid="stAppViewContainer"],
@@ -41,63 +41,51 @@ def apply_theme():
         background-color: {BG_PAGE} !important;
         font-family: 'DM Sans', system-ui, sans-serif !important;
     }}
-    /* ... rest van Claude's CSS code blijft hier EXACT hetzelfde ... */
-    </style>
-    """)
-    
-/* ── BASIS & ACHTERGROND ─────────────────────────────────────────── */
-html, body,
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-section.main, .main {{
-    background-color: {BG_PAGE} !important;
-    font-family: 'DM Sans', system-ui, sans-serif !important;
-}}
-[data-testid="stSidebarNav"] {{ display: none !important; }}
-[data-testid="stDecoration"]  {{ display: none !important; }}
+    [data-testid="stSidebarNav"] {{ display: none !important; }}
+    [data-testid="stDecoration"]  {{ display: none !important; }}
 
-/* ── BLOCK CONTAINER ─────────────────────────────────────────────── */
-.block-container {{
-    padding-top: 1.5rem !important;
-    max-width: 1200px !important;
-}}
+    /* ── BLOCK CONTAINER ─────────────────────────────────────────────── */
+    .block-container {{
+        padding-top: 1.5rem !important;
+        max-width: 1200px !important;
+    }}
 
-/* ── TYPOGRAFIE ──────────────────────────────────────────────────── */
-h1, h2, h3, h4, h5, h6 {{
-    font-family: 'DM Serif Display', Georgia, serif !important;
-    color: {BRAND_DARK} !important;
-    letter-spacing: -0.01em;
-}}
-p, span, div, label, li,
-.stMarkdown p, .stMarkdown span {{
-    font-family: 'DM Sans', system-ui, sans-serif !important;
-}}
+    /* ── TYPOGRAFIE ──────────────────────────────────────────────────── */
+    h1, h2, h3, h4, h5, h6 {{
+        font-family: 'DM Serif Display', Georgia, serif !important;
+        color: {BRAND_DARK} !important;
+        letter-spacing: -0.01em;
+    }}
+    p, span, div, label, li,
+    .stMarkdown p, .stMarkdown span {{
+        font-family: 'DM Sans', system-ui, sans-serif !important;
+    }}
 
-/* ── SIDEBAR ─────────────────────────────────────────────────────── */
-[data-testid="stSidebar"] {{
-    background: {BG_CARD} !important;
-    border-right: 1px solid {BORDER} !important;
-}}
-[data-testid="stSidebar"] > div:first-child,
-[data-testid="stSidebarContent"] {{
-    padding: 0 !important;
-}}
+    /* ── SIDEBAR ─────────────────────────────────────────────────────── */
+    [data-testid="stSidebar"] {{
+        background: {BG_CARD} !important;
+        border-right: 1px solid {BORDER} !important;
+    }}
+    [data-testid="stSidebar"] > div:first-child,
+    [data-testid="stSidebarContent"] {{
+        padding: 0 !important;
+    }}
 
-/* ── SIDEBAR NAV LINKS ───────────────────────────────────────────── */
-[data-testid="stSidebar"] a,
-[data-testid="stSidebar"] [data-testid="stPageLink"] a {{
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.9rem !important;
-    font-weight: 500 !important;
-    color: {BRAND_DARK} !important;
-    text-decoration: none !important;
-    border-radius: 8px !important;
-    transition: background 0.15s, color 0.15s !important;
-}}
-[data-testid="stSidebar"] [data-testid="stPageLink"]:hover a {{
-    color: {BRAND_PRIMARY} !important;
-    background: rgba(0,119,182,0.07) !important;
-}}
+    /* ── SIDEBAR NAV LINKS ───────────────────────────────────────────── */
+    [data-testid="stSidebar"] a,
+    [data-testid="stSidebar"] [data-testid="stPageLink"] a {{
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        color: {BRAND_DARK} !important;
+        text-decoration: none !important;
+        border-radius: 8px !important;
+        transition: background 0.15s, color 0.15s !important;
+    }}
+    [data-testid="stSidebar"] [data-testid="stPageLink"]:hover a {{
+        color: {BRAND_PRIMARY} !important;
+        background: rgba(0,119,182,0.07) !important;
+    }}
 
 /* ── KNOPPEN ─────────────────────────────────────────────────────── */
 .stButton > button {{
