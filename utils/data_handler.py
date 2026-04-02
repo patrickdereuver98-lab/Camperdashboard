@@ -13,8 +13,6 @@ import logging
 # Logger initialisatie om NameError te voorkomen
 logger = logging.getLogger(__name__)
 
-# Hardcoded configuratie voor stabiliteit
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1lTkEDUzXI_nWqYlDsfS60azIDjiuX1cAV_686Ur6fAU/edit#gid=0"
 CSV_PATH = "data/api_export_campers.csv"
 SHEET_NAME = "MasterData"
 
@@ -29,13 +27,9 @@ def load_data():
     """
     try:
         conn = get_connection()
-        # Dwing inladen via hardcoded URL om 'None' errors te voorkomen
-        df = conn.read(spreadsheet=SHEET_URL, worksheet=SHEET_NAME, ttl=0)
+        # ttl=0 dwingt een live verversing af van de cloud-data
+        df = conn.read(worksheet=SHEET_NAME, ttl=0)
         if df is not None and not df.empty:
-            # CRUCIALE FIX: Converteer naar object om Arrow-string errors te voorkomen
-            df = df.astype(object)
-            if "ai_gecheckt" not in df.columns:
-                df["ai_gecheckt"] = "Nee"
             return df.fillna("Onbekend")
     except Exception as e:
         logger.error(f"Cloud-fout bij load_data: {e}")
@@ -43,10 +37,7 @@ def load_data():
     # Fallback naar lokale CSV voor UI-stabiliteit
     if os.path.exists(CSV_PATH):
         try:
-            df_local = pd.read_csv(CSV_PATH).astype(object)
-            if "ai_gecheckt" not in df_local.columns:
-                df_local["ai_gecheckt"] = "Nee"
-            return df_local.fillna("Onbekend")
+            return pd.read_csv(CSV_PATH).fillna("Onbekend")
         except Exception:
             return pd.DataFrame()
     
@@ -65,12 +56,11 @@ def save_data(df):
     # 1. Cloud Save
     try:
         conn = get_connection()
-        conn.update(spreadsheet=SHEET_URL, worksheet=SHEET_NAME, data=df_clean)
+        conn.update(worksheet=SHEET_NAME, data=df_clean)
         st.cache_data.clear()
     except Exception as e:
         logger.error(f"Cloud Save Fout: {e}")
-        # Alleen een toast om de AI-loop niet te onderbreken
-        st.toast(f"⚠️ Cloud sync vertraagd, lokaal opgeslagen.", icon="💾")
+        st.error(f"⚠️ Kon niet opslaan in Google Sheets: {e}")
 
     # 2. Lokale Fallback Save
     try:
