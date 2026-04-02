@@ -10,11 +10,17 @@ def research_location(row):
     stad = row.get('provincie', 'Nederland')
     website = row.get('website', '')
 
-    prompt = f"""
-Je bent een expert in Nederlandse camperplaatsen en voert diepgaand online onderzoek uit.
+prompt = f"""
+Gebruik Google Search om de meest actuele informatie te vinden over: {naam} in {stad}.
+Bezoek indien mogelijk de website: {website}.
 
-Onderzoek de locatie: {naam} in {stad}.
-Website (indien bekend): {website}
+Zoek specifiek naar:
+1. Prijs per nacht voor 2 personen + camper.
+2. Of honden welkom zijn op de camperplaatsen.
+3. Faciliteiten: afvalwater lozen, vers water tanken, stroom (en prijs daarvan).
+4. Check-in en check-out tijden.
+
+Antwoord uitsluitend in JSON formaat:
 
 BELANGRIJK:
 - Gebruik meerdere bronnen (officiële website, camperplatforms, Google Maps, reviews).
