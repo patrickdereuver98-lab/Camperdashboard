@@ -105,7 +105,7 @@ Retourneer UITSLUITEND een geldig JSON-object:
     "wifi": "Ja/Nee/Onbekend",
     "beoordeling": "Score op basis van reviews (bijv 4.2) of Onbekend",
     "samenvatting_reviews": "Max 15 woorden over de algemene mening of Onbekend",
-    "telefoonummer"
+    "telefoonummer",
     "extra": []
 }}
 """
