@@ -148,7 +148,7 @@ with tab_data:
                         status_text.text(f"Onderzoek bezig voor: {row['naam']}...")
                         result = research_location(row)
                         
-                        if result:
+                        if isinstance(result, dict):
                             # Update waarden in de originele dataframe
                             master_df.at[idx, 'prijs'] = result.get('prijs', master_df.at[idx, 'prijs'])
                             master_df.at[idx, 'honden_toegestaan'] = result.get('honden_toegestaan', master_df.at[idx, 'honden_toegestaan'])
