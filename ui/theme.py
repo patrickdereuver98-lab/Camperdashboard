@@ -29,11 +29,22 @@ def apply_theme():
     Injecteer het volledige VrijStaan design systeem.
     Altijd als EERSTE aanroepen, vóór enige data-laad operatie.
     """
-    st.markdown(f"""
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="{_FONTS}" rel="stylesheet">
-<style>
+    # We gebruiken st.html voor zuivere CSS injectie, dit voorkomt dat tekst lekt.
+    st.html(f"""
+    <style>
+    @import url('{_FONTS}');
+    /* ── BASIS & ACHTERGROND ─────────────────────────────────────────── */
+    html, body,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    section.main, .main {{
+        background-color: {BG_PAGE} !important;
+        font-family: 'DM Sans', system-ui, sans-serif !important;
+    }}
+    /* ... rest van Claude's CSS code blijft hier EXACT hetzelfde ... */
+    </style>
+    """)
+    
 /* ── BASIS & ACHTERGROND ─────────────────────────────────────────── */
 html, body,
 [data-testid="stAppViewContainer"],
