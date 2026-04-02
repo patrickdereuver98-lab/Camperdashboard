@@ -1,6 +1,6 @@
 """
 2_⚙️_Beheer.py — Data & Beheer Dashboard.
-Fix: Volledige herstel van API Sync & CSV Import + veilige unkn_mask controle.
+Fix: Volledige herstel van API Sync & CSV Import + Iterable/List fix voor Pandas.
 """
 import os
 import pandas as pd
@@ -116,7 +116,6 @@ with tab_data:
 
         with st.expander("✨ AI Data Verrijking (Full Specs)", expanded=True):
 
-            # Veilige mask opbouw (Claude's Bug 1 Fix)
             prijs_missing = master_df["prijs"] == "Onbekend"
 
             if "wifi" in master_df.columns:
@@ -144,6 +143,14 @@ with tab_data:
                         for key, value in result.items():
                             if key not in master_df.columns:
                                 master_df[key] = "Onbekend"
+                            
+                            # CRUCIALE FIX: Zet lijsten (zoals "extra": []) om naar gewone tekst 
+                            # zodat Pandas niet meer crasht op de iterables.
+                            if isinstance(value, list):
+                                value = ", ".join([str(v) for v in value])
+                            elif isinstance(value, dict):
+                                value = str(value)
+                                
                             master_df.at[idx, key] = value
                         results_log.append(result)
 
