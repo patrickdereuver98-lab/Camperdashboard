@@ -12,8 +12,21 @@ def app():
     df = load_data()
     
     if df.empty:
-        st.error("Systeemfout: Data kon niet worden geladen. Controleer dummy_campers.csv.")
+        st.error("Systeemfout: Data kon niet worden geladen. Controleer of data/dummy_campers.csv bestaat.")
         return
+
+    # --- DEFENSIVE PROGRAMMING ---
+    # Voorkomt KeyError als de CSV nog niet de juiste kolommen bevat
+    if 'provincie' not in df.columns:
+        df['provincie'] = "Onbekende Provincie"
+    if 'afbeelding' not in df.columns:
+        df['afbeelding'] = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80"
+    if 'honden_toegestaan' not in df.columns:
+        df['honden_toegestaan'] = "Onbekend"
+    if 'aantal_plekken' not in df.columns:
+        df['aantal_plekken'] = "?"
+    if 'prijs' not in df.columns:
+        df['prijs'] = "0.00"
 
     # Gebruik de primaire kleur in de header
     st.markdown("<h2 style='color: #2A5A4A;'>📍 Zoek jouw volgende plek</h2>", unsafe_allow_html=True)
@@ -46,7 +59,8 @@ def app():
                 with img_col:
                     st.image(row['afbeelding'], use_column_width=True)
                 with txt_col:
-                    st.markdown(f"**{row['naam']}**")
+                    # Gebruik .get() voor extra veiligheid als de 'naam' kolom onverwacht leeg is
+                    st.markdown(f"**{row.get('naam', 'Onbekende locatie')}**")
                     st.caption(f"{row['provincie']} | {row['aantal_plekken']} plekken")
                     st.write(f"Prijs: €{row['prijs']}")
                     
@@ -54,6 +68,7 @@ def app():
                         st.write("🐾 Honden toegestaan")
 
     with col_kaart:
+        # Hier wordt de interactieve kaart aangeroepen en gerenderd
         render_map(filtered_df)
 
 if __name__ == "__main__":
