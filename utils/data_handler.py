@@ -8,15 +8,11 @@ from streamlit_gsheets import GSheetsConnection
 import requests
 import os
 import reverse_geocoder as rg
+import logging
 
-# Robuuste Logger Fallback
-try:
-    from utils.logger import logger
-except ImportError:
-    import logging
-    logger = logging.getLogger(__name__)
+# Logger initialisatie om NameError te voorkomen
+logger = logging.getLogger(__name__)
 
-# Configuur
 CSV_PATH = "data/api_export_campers.csv"
 SHEET_NAME = "MasterData"
 
@@ -47,6 +43,10 @@ def load_data():
     
     return pd.DataFrame()
 
+# Alias voor compatibiliteit met oudere Kaart-code
+def get_master_data():
+    return load_data()
+
 def save_data(df):
     """
     Schrijft de dataset naar Google Sheets én de lokale CSV fallback.
@@ -71,9 +71,7 @@ def save_data(df):
 
 @st.cache_data(ttl=86400)
 def load_data_from_osm():
-    """
-    Haalt de actuele dataset live op via de Overpass API (OSM).
-    """
+    """Haalt de actuele dataset live op via de Overpass API (OSM)."""
     overpass_query = """
     [out:json][timeout:90][bbox:50.75,3.36,53.56,7.23];
     (
@@ -94,10 +92,7 @@ def load_data_from_osm():
         "Accept": "application/json"
     }
     
-    mirrors = [
-        "https://overpass-api.de/api/interpreter",
-        "https://lz4.overpass-api.de/api/interpreter"
-    ]
+    mirrors = ["https://overpass-api.de/api/interpreter", "https://lz4.overpass-api.de/api/interpreter"]
     
     data = None
     for url in mirrors:
@@ -145,22 +140,10 @@ def load_data_from_osm():
     return df
 
 def enforce_nl_and_enrich_provinces(df):
-    """Reverse-geocoding voor landcode-filter en provincie-toewijzing."""
     coords = list(zip(df['latitude'], df['longitude']))
     results = rg.search(coords)
-    
     df['landcode'] = [res['cc'] for res in results]
     df['berekende_provincie'] = [res['admin1'] for res in results]
-    
     df_nl = df[df['landcode'] == 'NL'].copy()
     df_nl['provincie'] = df_nl['berekende_provincie']
     return df_nl.drop(columns=['landcode', 'berekende_provincie'])
-
-def validate_and_merge(master_df, import_df):
-    """Voegt nieuwe import samen met bestaande dataset op basis van unieke naam."""
-    if master_df.empty:
-        return import_df, ["Nieuwe dataset aangemaakt."]
-        
-    combined = pd.concat([master_df, import_df], ignore_index=True)
-    combined.drop_duplicates(subset=['naam'], keep='last', inplace=True)
-    return combined, [f"Dataset samengevoegd ({len(combined)} locaties)."]
