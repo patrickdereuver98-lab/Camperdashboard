@@ -10,25 +10,24 @@ CSV_PATH = "data/api_export_campers.csv"
 def load_data():
     """
     Haalt de actuele dataset live op via de Overpass API.
-    Gebruikt een "Failover" systeem: als server A faalt (bijv. 504 Timeout), 
-    probeert hij direct server B. Faalt alles? Dan valt hij terug op de CSV.
+    Gebruikt een razendsnelle Bounding Box (BBOX) in plaats van trage Area-berekeningen.
     """
     
-    # 1. De brede query voor maximale dekking
+    # 1. Bounding Box voor Nederland (Zuid, West, Noord, Oost)
+    # Dit is extreem veel sneller voor de OSM servers om te verwerken.
     overpass_query = """
-    [out:json][timeout:90];
-    area["ISO3166-1"="NL"][admin_level=2]->.searchArea;
+    [out:json][timeout:90][bbox:50.75,3.36,53.56,7.23];
     (
-      node["tourism"="caravan_site"](area.searchArea);
-      way["tourism"="caravan_site"](area.searchArea);
-      relation["tourism"="caravan_site"](area.searchArea);
+      node["tourism"="caravan_site"];
+      way["tourism"="caravan_site"];
+      relation["tourism"="caravan_site"];
       
-      node["amenity"="parking"]["motorhome"="yes"](area.searchArea);
-      way["amenity"="parking"]["motorhome"="yes"](area.searchArea);
+      node["amenity"="parking"]["motorhome"="yes"];
+      way["amenity"="parking"]["motorhome"="yes"];
       
-      node["tourism"="camp_site"](area.searchArea);
-      way["tourism"="camp_site"](area.searchArea);
-      relation["tourism"="camp_site"](area.searchArea);
+      node["tourism"="camp_site"];
+      way["tourism"="camp_site"];
+      relation["tourism"="camp_site"];
     );
     out center;
     """
@@ -38,33 +37,28 @@ def load_data():
         "Accept": "application/json"
     }
     
-    # 2. De Failover Mirrors (onze reddingsboeien)
     mirrors = [
-        "https://overpass-api.de/api/interpreter",        # Hoofdserver
-        "https://lz4.overpass-api.de/api/interpreter",    # Mirror 1 (Duitsland)
-        "https://z.overpass-api.de/api/interpreter",      # Mirror 2 (Duitsland)
-        "https://overpass.kumi.systems/api/interpreter"   # Mirror 3 (Alternatief netwerk)
+        "https://overpass-api.de/api/interpreter",
+        "https://lz4.overpass-api.de/api/interpreter",
+        "https://z.overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter"
     ]
     
     data = None
     
-    # Loop door de servers heen tot er eentje antwoord geeft
     for url in mirrors:
         try:
             response = requests.post(url, data={'data': overpass_query}, headers=headers, timeout=90)
-            response.raise_for_status() # Gooit een error bij 504, 502, 429 etc.
+            response.raise_for_status()
             data = response.json()
-            break # Succes! Breek uit de loop en ga door.
+            break 
         except requests.exceptions.RequestException:
-            # Server gefaald, ga stil door naar de volgende in de lijst
             continue
             
-    # 3. Faalt alles? Fallback naar CSV met duidelijke melding
     if not data:
-        st.warning("⚠️ Alle OSM-servers zijn momenteel overbelast (Timeout). We zijn succesvol teruggevallen op de laatste lokale export (CSV).")
+        st.warning("⚠️ Alle OSM-servers zijn momenteel overbelast. We zijn succesvol teruggevallen op de lokale CSV.")
         return fallback_data()
 
-    # 4. Data Verwerking
     elements = data.get('elements', [])
     camper_data = []
     
@@ -101,7 +95,7 @@ def load_data():
             "naam": naam,
             "latitude": lat,
             "longitude": lon,
-            "provincie": "Onbekend", # Wordt verrijkt door reverse_geocoder
+            "provincie": "Onbekend",
             "honden_toegestaan": honden,
             "stroom": stroom,
             "waterfront": waterfront,
@@ -115,11 +109,9 @@ def load_data():
 
     df = pd.DataFrame(camper_data)
     
-    # 5. Data Verrijking (Reverse Geocoder) & Harde NL-Filter
     if not df.empty:
         df = enforce_nl_and_enrich_provinces(df)
         
-        # Sla op als nieuwe fallback Master CSV
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         df.to_csv(CSV_PATH, index=False)
         
@@ -127,8 +119,9 @@ def load_data():
 
 def enforce_nl_and_enrich_provinces(df):
     """
-    Reverse-geocodes coördinaten om lege provincies in te vullen
-    en trekt een keiharde grens: alleen landcode 'NL' blijft over.
+    Reverse-geocodes coördinaten. 
+    Omdat we een rechthoek (BBOX) gebruikten over NL heen, zitten er nu Belgische
+    en Duitse campings in de lijst. Deze landcode filter haalt ze er genadeloos uit.
     """
     coords = list(zip(df['latitude'], df['longitude']))
     results = rg.search(coords)
@@ -136,7 +129,7 @@ def enforce_nl_and_enrich_provinces(df):
     df['landcode'] = [res['cc'] for res in results]
     df['berekende_provincie'] = [res['admin1'] for res in results]
     
-    # Strikte filter
+    # ── DE HARDE EIS: Alleen Nederland ──
     df_nl = df[df['landcode'] == 'NL'].copy()
     
     # Provincies overschrijven
@@ -146,13 +139,11 @@ def enforce_nl_and_enrich_provinces(df):
     return df_nl
 
 def fallback_data():
-    """Valt terug op de eerder opgeslagen CSV als de live API weigert."""
     if os.path.exists(CSV_PATH):
         return pd.read_csv(CSV_PATH)
     return pd.DataFrame()
 
 def validate_and_merge(master_df, import_df):
-    """Samenvoegen van CSV met master data inclusief duplicaten controle."""
     if master_df.empty:
         return import_df, ["Master was leeg, import direct geaccepteerd."]
         
