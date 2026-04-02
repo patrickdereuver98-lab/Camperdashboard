@@ -1,3 +1,8 @@
+"""
+2_⚙️_Beheer.py — Data & Beheer Dashboard.
+Fix Bug 1: unkn_mask controleerde wifi-kolom met .get() — crasht als kolom nog niet bestaat.
+           Nu veilig via 'if kolom in master_df.columns'.
+"""
 import os
 import pandas as pd
 import streamlit as st
@@ -23,34 +28,54 @@ with tab_data:
         st.dataframe(master_df.head(50), use_container_width=True)
 
         with st.expander("✨ AI Data Verrijking (Full Specs)", expanded=True):
-            unkn_mask = (master_df['prijs'] == 'Onbekend') | (master_df.get('wifi', 'Onbekend') == 'Onbekend')
-            to_process_count = len(master_df[unkn_mask])
+
+            # Bug 1 fix: bouw de mask veilig op — kolom kan nog ontbreken na een verse API-sync.
+            # Versie vóór fix:  master_df.get('wifi', 'Onbekend') == 'Onbekend'
+            #   → als 'wifi' niet bestaat, vergelijkt .get() de scalar 'Onbekend' met 'Onbekend'
+            #   → altijd True → ALLE rijen worden verwerkt, ongeacht of ze al verrijkt zijn.
+            # Versie na fix: veilige kolom-check met 'in'.
+
+            prijs_missing = master_df["prijs"] == "Onbekend"
+
+            if "wifi" in master_df.columns:
+                wifi_missing = master_df["wifi"] == "Onbekend"
+            else:
+                # Kolom bestaat nog niet → markeer alles als te verwerken
+                wifi_missing = pd.Series([True] * len(master_df), index=master_df.index)
+
+            unkn_mask = prijs_missing | wifi_missing
+            to_process_count = int(unkn_mask.sum())
+
             st.info(f"Er zijn nog **{to_process_count}** locaties te verrijken.")
-            
+
             num_to_enrich = st.number_input("Aantal locaties", 1, 100, 5)
-            
+
             if st.button("🚀 Start Volledig Onderzoek"):
                 to_process = master_df[unkn_mask].head(num_to_enrich)
                 progress_bar = st.progress(0)
                 results_log = []
-                
+
                 for i, (idx, row) in enumerate(to_process.iterrows()):
-                    st.write(f"🔍 AI bezoekt website voor: **{row['naam']}**")
+                    st.write(f"🔍 AI onderzoekt: **{row['naam']}**")
                     result = research_location(row)
-                    
+
                     if isinstance(result, dict):
                         for key, value in result.items():
-                            if key not in master_df.columns: master_df[key] = "Onbekend"
+                            if key not in master_df.columns:
+                                master_df[key] = "Onbekend"
                             master_df.at[idx, key] = value
                         results_log.append(result)
-                    
+
                     progress_bar.progress((i + 1) / len(to_process))
-                
+
                 master_df.to_csv(CSV_PATH, index=False)
                 st.success("✅ Verrijking voltooid!")
                 st.markdown("### 📊 AI Resultaten (Direct uit de bron)")
-                st.dataframe(pd.DataFrame(results_log), use_container_width=True)
-                if st.button("🔄 Ververs Pagina"): st.rerun()
+                if results_log:
+                    st.dataframe(pd.DataFrame(results_log), use_container_width=True)
+
+                if st.button("🔄 Ververs Pagina"):
+                    st.rerun()
 
         st.divider()
 
