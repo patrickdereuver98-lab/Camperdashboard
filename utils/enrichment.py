@@ -51,7 +51,7 @@ Geef uitsluitend een JSON-object terug met deze velden:
     "wifi": "Ja/Nee/Onbekend",
 
     "beoordeling": "Score of Onbekend",
-    "samenvatting_reviews": "Max 15 woorden",
+    "samenvatting_reviews": "Max 30 woorden",
 
     "extra": []
 }}
