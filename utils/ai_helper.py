@@ -15,14 +15,13 @@ try:
     genai.configure(api_key=API_KEY)
     
     # ── KIES HIER JE MODEL ──
-    # Als je de 2.0 versie wilt gebruiken, is de officiële naam: "gemini-2.0-flash"
-    # Voor 1.5 is het: "gemini-2.5-flash"
-    gekozen_model = "gemini-2.5-flash" 
+    gekozen_model = "gemini-2.5-flash"
     
-    # De veiligste manier in de Python SDK om search te activeren
+    # CRUCIALE FIX: De API eist nu "google_search"
     model = genai.GenerativeModel(
         model_name=gekozen_model,
-        tools="google_search_retrieval" 
+        tools="google_search" 
+
     )
     logger.info(f"{gekozen_model} met Search Grounding geladen")
 
