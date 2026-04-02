@@ -93,21 +93,24 @@ with st.sidebar:
     st.divider()
     toon_favorieten = st.checkbox("❤️ Mijn Favorieten tonen")
 
-# ── 4. CENTRALE AI ZOEKBALK (De Hero Sectie) ──────────────────────────────────
-st.markdown("<h1 style='text-align: center; color: #0077B6; margin-bottom: 0;'>Vind jouw perfecte camperplek</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #6c757d; font-size: 1.1rem; margin-bottom: 2rem;'>Zoek slim. Wat is je volgende bestemming?</p>", unsafe_allow_html=True)
+# ── 4. CENTRALE AI ZOEKBALK (Geoptimaliseerd) ──────────────────────────────────
+with st.container():
+    # Gebruik een form om te voorkomen dat hij bij elke letter herlaadt
+    with st.form("search_form", clear_on_submit=False):
+        col_search, col_btn = st.columns([4, 1])
+        with col_search:
+            user_input = st.text_input(
+                "Waar wil je heen?", 
+                placeholder="Bijv: 'Gratis plek in Drenthe met stroom'",
+                label_visibility="collapsed"
+            )
+        with col_btn:
+            submit_search = st.form_submit_button("🔍 Zoek", use_container_width=True)
 
-col_spacer1, col_search, col_spacer2 = st.columns([1, 4, 1])
-with col_search:
-    default_query = st.session_state.get('ai_search_query', "")
-    ai_query = st.text_input(
-        "AI Zoeken", 
-        value=default_query,
-        placeholder="Bijv: 'Een gratis plek in Drenthe waar de hond mee mag en stroom is'",
-        label_visibility="collapsed"
-    )
-    if ai_query != default_query:
-        st.session_state['ai_search_query'] = ai_query
+    # Alleen de AI triggeren als er echt op de knop is gedrukt
+    if submit_search and user_input:
+        st.session_state['ai_search_query'] = user_input
+        # (De rest van je AI-filter logica hieronder)
 
 # ── 5. SNELFILTERS (Gebaseerd op de analyse) ──────────────────────────────────
 st.write("")
