@@ -87,339 +87,338 @@ def apply_theme():
         background: rgba(0,119,182,0.07) !important;
     }}
 
-/* ── KNOPPEN ─────────────────────────────────────────────────────── */
-.stButton > button {{
-    font-family: 'DM Sans', sans-serif !important;
-    font-weight: 600 !important;
-    border-radius: 10px !important;
-    transition: all 0.18s ease !important;
-    letter-spacing: 0.01em !important;
-    padding: 0.5rem 1.2rem !important;
-}}
-.stButton > button[kind="primary"] {{
-    background: {BRAND_PRIMARY} !important;
-    border: none !important;
-    color: white !important;
-    box-shadow: 0 2px 8px rgba(0,119,182,0.25) !important;
-}}
-.stButton > button[kind="primary"]:hover {{
-    background: {BRAND_DARK} !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 16px rgba(0,119,182,0.35) !important;
-}}
-.stButton > button[kind="secondary"] {{
-    background: {BG_CARD} !important;
-    border: 1.5px solid {BORDER} !important;
-    color: {BRAND_DARK} !important;
-}}
-.stButton > button[kind="secondary"]:hover {{
-    border-color: {BRAND_PRIMARY} !important;
-    color: {BRAND_PRIMARY} !important;
-    background: rgba(0,119,182,0.04) !important;
-}}
+    /* ── KNOPPEN ─────────────────────────────────────────────────────── */
+    .stButton > button {{
+        font-family: 'DM Sans', sans-serif !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        transition: all 0.18s ease !important;
+        letter-spacing: 0.01em !important;
+        padding: 0.5rem 1.2rem !important;
+    }}
+    .stButton > button[kind="primary"] {{
+        background: {BRAND_PRIMARY} !important;
+        border: none !important;
+        color: white !important;
+        box-shadow: 0 2px 8px rgba(0,119,182,0.25) !important;
+    }}
+    .stButton > button[kind="primary"]:hover {{
+        background: {BRAND_DARK} !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px rgba(0,119,182,0.35) !important;
+    }}
+    .stButton > button[kind="secondary"] {{
+        background: {BG_CARD} !important;
+        border: 1.5px solid {BORDER} !important;
+        color: {BRAND_DARK} !important;
+    }}
+    .stButton > button[kind="secondary"]:hover {{
+        border-color: {BRAND_PRIMARY} !important;
+        color: {BRAND_PRIMARY} !important;
+        background: rgba(0,119,182,0.04) !important;
+    }}
 
-/* ── INPUTS & FORMULIEREN ────────────────────────────────────────── */
-.stTextInput > div > div > input {{
-    font-family: 'DM Sans', sans-serif !important;
-    border-radius: 12px !important;
-    border: 2px solid {BORDER} !important;
-    padding: 0.72rem 1rem !important;
-    font-size: 1rem !important;
-    background: {BG_CARD} !important;
-    color: {BRAND_DARK} !important;
-    box-shadow: 0 2px 8px rgba(10,37,64,0.04) !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
-}}
-.stTextInput > div > div > input:focus {{
-    border-color: {BRAND_PRIMARY} !important;
-    box-shadow: 0 0 0 3px rgba(0,119,182,0.14) !important;
-    outline: none !important;
-}}
-.stTextInput > div > div > input::placeholder {{
-    color: {TEXT_MUTED} !important;
-    font-style: italic;
-}}
-.stSelectbox > div > div > div,
-.stMultiSelect > div > div > div {{
-    border-radius: 10px !important;
-    border: 1.5px solid {BORDER} !important;
-    font-family: 'DM Sans', sans-serif !important;
-    background: {BG_CARD} !important;
-}}
-[data-testid="stSidebar"] .stTextInput > div > div > input {{
-    border-radius: 8px !important;
-    font-size: 0.88rem !important;
-}}
-.stCheckbox label {{
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.88rem !important;
-    color: #3A4A5C !important;
-}}
-.stSelectbox label,
-.stMultiSelect label,
-.stSlider label,
-.stCheckbox label,
-[data-testid="stSidebar"] label {{
-    font-family: 'DM Sans', sans-serif !important;
-}}
+    /* ── INPUTS & FORMULIEREN ────────────────────────────────────────── */
+    .stTextInput > div > div > input {{
+        font-family: 'DM Sans', sans-serif !important;
+        border-radius: 12px !important;
+        border: 2px solid {BORDER} !important;
+        padding: 0.72rem 1rem !important;
+        font-size: 1rem !important;
+        background: {BG_CARD} !important;
+        color: {BRAND_DARK} !important;
+        box-shadow: 0 2px 8px rgba(10,37,64,0.04) !important;
+        transition: border-color 0.2s, box-shadow 0.2s !important;
+    }}
+    .stTextInput > div > div > input:focus {{
+        border-color: {BRAND_PRIMARY} !important;
+        box-shadow: 0 0 0 3px rgba(0,119,182,0.14) !important;
+        outline: none !important;
+    }}
+    .stTextInput > div > div > input::placeholder {{
+        color: {TEXT_MUTED} !important;
+        font-style: italic;
+    }}
+    .stSelectbox > div > div > div,
+    .stMultiSelect > div > div > div {{
+        border-radius: 10px !important;
+        border: 1.5px solid {BORDER} !important;
+        font-family: 'DM Sans', sans-serif !important;
+        background: {BG_CARD} !important;
+    }}
+    [data-testid="stSidebar"] .stTextInput > div > div > input {{
+        border-radius: 8px !important;
+        font-size: 0.88rem !important;
+    }}
+    .stCheckbox label {{
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 0.88rem !important;
+        color: #3A4A5C !important;
+    }}
+    .stSelectbox label,
+    .stMultiSelect label,
+    .stSlider label,
+    .stCheckbox label,
+    [data-testid="stSidebar"] label {{
+        font-family: 'DM Sans', sans-serif !important;
+    }}
 
-/* ── TABS ────────────────────────────────────────────────────────── */
-.stTabs [data-baseweb="tab-list"] {{
-    gap: 4px !important;
-    border-bottom: 2px solid {BORDER} !important;
-    background: transparent !important;
-}}
-.stTabs [data-baseweb="tab"] {{
-    font-family: 'DM Sans', sans-serif !important;
-    font-weight: 500 !important;
-    font-size: 0.9rem !important;
-    border-radius: 8px 8px 0 0 !important;
-    padding: 0.5rem 1.2rem !important;
-    color: {TEXT_MUTED} !important;
-}}
-.stTabs [aria-selected="true"] {{
-    color: {BRAND_PRIMARY} !important;
-    border-bottom: 2px solid {BRAND_PRIMARY} !important;
-}}
+    /* ── TABS ────────────────────────────────────────────────────────── */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 4px !important;
+        border-bottom: 2px solid {BORDER} !important;
+        background: transparent !important;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        font-family: 'DM Sans', sans-serif !important;
+        font-weight: 500 !important;
+        font-size: 0.9rem !important;
+        border-radius: 8px 8px 0 0 !important;
+        padding: 0.5rem 1.2rem !important;
+        color: {TEXT_MUTED} !important;
+    }}
+    .stTabs [aria-selected="true"] {{
+        color: {BRAND_PRIMARY} !important;
+        border-bottom: 2px solid {BRAND_PRIMARY} !important;
+    }}
 
-/* ── METRICS ─────────────────────────────────────────────────────── */
-[data-testid="stMetric"] {{
-    background: {BG_CARD} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 14px !important;
-    padding: 1.1rem !important;
-}}
-[data-testid="stMetricLabel"] span {{
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.8rem !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.06em !important;
-    color: {TEXT_MUTED} !important;
-}}
-[data-testid="stMetricValue"] {{
-    font-family: 'DM Serif Display', serif !important;
-    color: {BRAND_DARK} !important;
-}}
-[data-testid="stMetricDelta"] {{
-    font-family: 'DM Sans', sans-serif !important;
-}}
+    /* ── METRICS ─────────────────────────────────────────────────────── */
+    [data-testid="stMetric"] {{
+        background: {BG_CARD} !important;
+        border: 1px solid {BORDER} !important;
+        border-radius: 14px !important;
+        padding: 1.1rem !important;
+    }}
+    [data-testid="stMetricLabel"] span {{
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        color: {TEXT_MUTED} !important;
+    }}
+    [data-testid="stMetricValue"] {{
+        font-family: 'DM Serif Display', serif !important;
+        color: {BRAND_DARK} !important;
+    }}
+    [data-testid="stMetricDelta"] {{
+        font-family: 'DM Sans', sans-serif !important;
+    }}
 
-/* ── EXPANDER ────────────────────────────────────────────────────── */
-[data-testid="stExpander"] {{
-    border: 1px solid {BORDER} !important;
-    border-radius: 12px !important;
-    background: {BG_CARD} !important;
-}}
-[data-testid="stExpander"] summary {{
-    font-family: 'DM Sans', sans-serif !important;
-    font-weight: 600 !important;
-    color: {BRAND_DARK} !important;
-}}
+    /* ── EXPANDER ────────────────────────────────────────────────────── */
+    [data-testid="stExpander"] {{
+        border: 1px solid {BORDER} !important;
+        border-radius: 12px !important;
+        background: {BG_CARD} !important;
+    }}
+    [data-testid="stExpander"] summary {{
+        font-family: 'DM Sans', sans-serif !important;
+        font-weight: 600 !important;
+        color: {BRAND_DARK} !important;
+    }}
 
-/* ── ALERTS ──────────────────────────────────────────────────────── */
-[data-testid="stAlert"],
-.stAlert {{
-    border-radius: 12px !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.9rem !important;
-}}
+    /* ── ALERTS ──────────────────────────────────────────────────────── */
+    [data-testid="stAlert"],
+    .stAlert {{
+        border-radius: 12px !important;
+        font-family: 'DM Sans', sans-serif !important;
+        font-size: 0.9rem !important;
+    }}
 
-/* ── DATAFRAME ───────────────────────────────────────────────────── */
-[data-testid="stDataFrame"] {{
-    border-radius: 12px !important;
-    overflow: hidden !important;
-    border: 1px solid {BORDER} !important;
-}}
+    /* ── DATAFRAME ───────────────────────────────────────────────────── */
+    [data-testid="stDataFrame"] {{
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        border: 1px solid {BORDER} !important;
+    }}
 
-/* ── SPINNER ─────────────────────────────────────────────────────── */
-[data-testid="stSpinner"] p {{
-    font-family: 'DM Sans', sans-serif !important;
-    color: {TEXT_MUTED} !important;
-}}
+    /* ── SPINNER ─────────────────────────────────────────────────────── */
+    [data-testid="stSpinner"] p {{
+        font-family: 'DM Sans', sans-serif !important;
+        color: {TEXT_MUTED} !important;
+    }}
 
-/* ── DIVIDER ─────────────────────────────────────────────────────── */
-hr {{
-    border-color: {BORDER} !important;
-    margin: 1.2rem 0 !important;
-}}
+    /* ── DIVIDER ─────────────────────────────────────────────────────── */
+    hr {{
+        border-color: {BORDER} !important;
+        margin: 1.2rem 0 !important;
+    }}
 
-/* ── GEDEELDE BADGE COMPONENTEN (gebruikt door alle pagina's) ─────── */
-.vs-badge {{
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 9px; border-radius: 6px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.71rem; font-weight: 600;
-    margin: 2px 3px 2px 0; white-space: nowrap;
-}}
-.vs-badge-gratis   {{ background:#E8F5E9; color:#1B5E20; border:1px solid #C8E6C9; }}
-.vs-badge-betaald  {{ background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; }}
-.vs-badge-onbekend {{ background:#F5F5F5; color:#546E7A; border:1px solid #E0E0E0; }}
-.vs-badge-stroom   {{ background:#EDF4FF; color:#0056A8; border:1px solid #BBDEFB; }}
-.vs-badge-honden   {{ background:#FFF4E5; color:#B76300; border:1px solid #FFD9A0; }}
-.vs-badge-wifi     {{ background:#EDFAF3; color:#1A7F5A; border:1px solid #B2DFDB; }}
-.vs-badge-water    {{ background:#E8F5FF; color:#005A8C; border:1px solid #B3D9F0; }}
-.vs-badge-groen    {{ background:#F1F8E9; color:#33691E; border:1px solid #DCEDC8; }}
+    /* ── GEDEELDE BADGE COMPONENTEN (gebruikt door alle pagina's) ─────── */
+    .vs-badge {{
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 9px; border-radius: 6px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.71rem; font-weight: 600;
+        margin: 2px 3px 2px 0; white-space: nowrap;
+    }}
+    .vs-badge-gratis   {{ background:#E8F5E9; color:#1B5E20; border:1px solid #C8E6C9; }}
+    .vs-badge-betaald  {{ background:#FFF3E0; color:#E65100; border:1px solid #FFE0B2; }}
+    .vs-badge-onbekend {{ background:#F5F5F5; color:#546E7A; border:1px solid #E0E0E0; }}
+    .vs-badge-stroom   {{ background:#EDF4FF; color:#0056A8; border:1px solid #BBDEFB; }}
+    .vs-badge-honden   {{ background:#FFF4E5; color:#B76300; border:1px solid #FFD9A0; }}
+    .vs-badge-wifi     {{ background:#EDFAF3; color:#1A7F5A; border:1px solid #B2DFDB; }}
+    .vs-badge-water    {{ background:#E8F5FF; color:#005A8C; border:1px solid #B3D9F0; }}
+    .vs-badge-groen    {{ background:#F1F8E9; color:#33691E; border:1px solid #DCEDC8; }}
 
-/* ── LOCATIE CARD COMPONENT ──────────────────────────────────────── */
-.vs-loc-card {{
-    display: flex; flex-direction: row;
-    background: {BG_CARD}; border-radius: 14px;
-    border: 1px solid {BORDER};
-    box-shadow: 0 2px 8px rgba(10,37,64,0.05);
-    overflow: hidden; margin-bottom: 0.9rem;
-    height: 148px;
-    transition: transform 0.18s, box-shadow 0.18s;
-}}
-.vs-loc-card:hover {{
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(10,37,64,0.11);
-}}
-.vs-loc-card-img {{
-    width: 155px; min-width: 155px;
-    object-fit: cover; background: #D0E4F0;
-}}
-.vs-loc-card-body {{
-    padding: 0.85rem 1rem;
-    flex: 1; display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    overflow: hidden;
-}}
-.vs-loc-card-name {{
-    font-family: 'DM Serif Display', serif;
-    font-size: 1rem; color: {BRAND_DARK};
-    margin: 0 0 2px; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
-}}
-.vs-loc-card-location {{
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.77rem; color: #8A9DB5; margin: 0 0 5px;
-}}
-.vs-score-pill {{
-    display: inline-flex; align-items: center;
-    background: {BRAND_PRIMARY}; color: white;
-    border-radius: 6px; padding: 2px 7px;
-    font-size: 0.72rem; font-weight: 700;
-    font-family: 'DM Sans', sans-serif;
-}}
+    /* ── LOCATIE CARD COMPONENT ──────────────────────────────────────── */
+    .vs-loc-card {{
+        display: flex; flex-direction: row;
+        background: {BG_CARD}; border-radius: 14px;
+        border: 1px solid {BORDER};
+        box-shadow: 0 2px 8px rgba(10,37,64,0.05);
+        overflow: hidden; margin-bottom: 0.9rem;
+        height: 148px;
+        transition: transform 0.18s, box-shadow 0.18s;
+    }}
+    .vs-loc-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(10,37,64,0.11);
+    }}
+    .vs-loc-card-img {{
+        width: 155px; min-width: 155px;
+        object-fit: cover; background: #D0E4F0;
+    }}
+    .vs-loc-card-body {{
+        padding: 0.85rem 1rem;
+        flex: 1; display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+    }}
+    .vs-loc-card-name {{
+        font-family: 'DM Serif Display', serif;
+        font-size: 1rem; color: {BRAND_DARK};
+        margin: 0 0 2px; white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis;
+    }}
+    .vs-loc-card-location {{
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.77rem; color: #8A9DB5; margin: 0 0 5px;
+    }}
+    .vs-score-pill {{
+        display: inline-flex; align-items: center;
+        background: {BRAND_PRIMARY}; color: white;
+        border-radius: 6px; padding: 2px 7px;
+        font-size: 0.72rem; font-weight: 700;
+        font-family: 'DM Sans', sans-serif;
+    }}
 
-/* ── HERO SECTIE ─────────────────────────────────────────────────── */
-.vs-hero {{
-    background: linear-gradient(135deg, {BRAND_DARK} 0%, {BRAND_PRIMARY} 60%, {BRAND_LIGHT} 100%);
-    border-radius: 20px; padding: 3rem 2.5rem 2.5rem;
-    position: relative; overflow: hidden; margin-bottom: 1.5rem;
-}}
-.vs-hero::before {{
-    content: ''; position: absolute;
-    top: -60px; right: -60px;
-    width: 280px; height: 280px; border-radius: 50%;
-    background: rgba(255,183,3,0.10);
-    pointer-events: none;
-}}
-.vs-hero::after {{
-    content: ''; position: absolute;
-    bottom: -80px; left: 20px;
-    width: 220px; height: 220px; border-radius: 50%;
-    background: rgba(0,180,216,0.15);
-    pointer-events: none;
-}}
-.vs-hero-title {{
-    font-family: 'DM Serif Display', serif !important;
-    font-size: 2.4rem; color: #FFFFFF !important;
-    margin: 0 0 0.4rem; position: relative; z-index: 1;
-    line-height: 1.15;
-}}
-.vs-hero-sub {{
-    font-family: 'DM Sans', sans-serif;
-    color: rgba(255,255,255,0.78); font-size: 1.05rem;
-    margin: 0; position: relative; z-index: 1;
-}}
+    /* ── HERO SECTIE ─────────────────────────────────────────────────── */
+    .vs-hero {{
+        background: linear-gradient(135deg, {BRAND_DARK} 0%, {BRAND_PRIMARY} 60%, {BRAND_LIGHT} 100%);
+        border-radius: 20px; padding: 3rem 2.5rem 2.5rem;
+        position: relative; overflow: hidden; margin-bottom: 1.5rem;
+    }}
+    .vs-hero::before {{
+        content: ''; position: absolute;
+        top: -60px; right: -60px;
+        width: 280px; height: 280px; border-radius: 50%;
+        background: rgba(255,183,3,0.10);
+        pointer-events: none;
+    }}
+    .vs-hero::after {{
+        content: ''; position: absolute;
+        bottom: -80px; left: 20px;
+        width: 220px; height: 220px; border-radius: 50%;
+        background: rgba(0,180,216,0.15);
+        pointer-events: none;
+    }}
+    .vs-hero-title {{
+        font-family: 'DM Serif Display', serif !important;
+        font-size: 2.4rem; color: #FFFFFF !important;
+        margin: 0 0 0.4rem; position: relative; z-index: 1;
+        line-height: 1.15;
+    }}
+    .vs-hero-sub {{
+        font-family: 'DM Sans', sans-serif;
+        color: rgba(255,255,255,0.78); font-size: 1.05rem;
+        margin: 0; position: relative; z-index: 1;
+    }}
 
-/* ── AI FILTER TAG ───────────────────────────────────────────────── */
-.vs-ai-tag {{
-    display: inline-flex; align-items: center; gap: 5px;
-    background: linear-gradient(90deg, {BRAND_DARK}, {BRAND_PRIMARY});
-    color: white; border-radius: 20px;
-    padding: 4px 12px; font-size: 0.77rem;
-    font-family: 'DM Sans', sans-serif;
-    margin: 3px 3px 3px 0;
-}}
+    /* ── AI FILTER TAG ───────────────────────────────────────────────── */
+    .vs-ai-tag {{
+        display: inline-flex; align-items: center; gap: 5px;
+        background: linear-gradient(90deg, {BRAND_DARK}, {BRAND_PRIMARY});
+        color: white; border-radius: 20px;
+        padding: 4px 12px; font-size: 0.77rem;
+        font-family: 'DM Sans', sans-serif;
+        margin: 3px 3px 3px 0;
+    }}
 
-/* ── KAART WRAPPER ───────────────────────────────────────────────── */
-.vs-map-wrap {{
-    border-radius: 16px; overflow: hidden;
-    box-shadow: 0 4px 20px rgba(10,37,64,0.10);
-    border: 1px solid {BORDER};
-}}
+    /* ── KAART WRAPPER ───────────────────────────────────────────────── */
+    .vs-map-wrap {{
+        border-radius: 16px; overflow: hidden;
+        box-shadow: 0 4px 20px rgba(10,37,64,0.10);
+        border: 1px solid {BORDER};
+    }}
 
-/* ── FILTER HEADER IN SIDEBAR ────────────────────────────────────── */
-.vs-filter-header {{
-    font-family: 'DM Serif Display', serif;
-    font-size: 0.95rem; color: {BRAND_DARK};
-    margin: 0.8rem 0 0.4rem;
-    padding-bottom: 4px;
-    border-bottom: 2px solid {BRAND_ACCENT};
-    display: inline-block;
-}}
+    /* ── FILTER HEADER IN SIDEBAR ────────────────────────────────────── */
+    .vs-filter-header {{
+        font-family: 'DM Serif Display', serif;
+        font-size: 0.95rem; color: {BRAND_DARK};
+        margin: 0.8rem 0 0.4rem;
+        padding-bottom: 4px;
+        border-bottom: 2px solid {BRAND_ACCENT};
+        display: inline-block;
+    }}
 
-/* ── GEEN RESULTATEN ─────────────────────────────────────────────── */
-.vs-no-results {{
-    text-align: center; padding: 3rem 1rem;
-    color: #8A9DB5; font-family: 'DM Sans', sans-serif;
-}}
+    /* ── GEEN RESULTATEN ─────────────────────────────────────────────── */
+    .vs-no-results {{
+        text-align: center; padding: 3rem 1rem;
+        color: #8A9DB5; font-family: 'DM Sans', sans-serif;
+    }}
 
-/* ── LANDING STAT CARD ───────────────────────────────────────────── */
-.vs-stat-card {{
-    background: {BG_CARD}; border-radius: 16px;
-    border: 1px solid {BORDER};
-    box-shadow: 0 2px 10px rgba(10,37,64,0.05);
-    padding: 1.4rem 1.2rem; text-align: center;
-}}
-.vs-stat-num {{
-    font-family: 'DM Serif Display', serif;
-    font-size: 2.2rem; color: {BRAND_PRIMARY};
-    line-height: 1.1; margin-bottom: 4px;
-}}
-.vs-stat-label {{
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.82rem; color: {TEXT_MUTED};
-    font-weight: 500;
-}}
+    /* ── LANDING STAT CARD ───────────────────────────────────────────── */
+    .vs-stat-card {{
+        background: {BG_CARD}; border-radius: 16px;
+        border: 1px solid {BORDER};
+        box-shadow: 0 2px 10px rgba(10,37,64,0.05);
+        padding: 1.4rem 1.2rem; text-align: center;
+    }}
+    .vs-stat-num {{
+        font-family: 'DM Serif Display', serif;
+        font-size: 2.2rem; color: {BRAND_PRIMARY};
+        line-height: 1.1; margin-bottom: 4px;
+    }}
+    .vs-stat-label {{
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.82rem; color: {TEXT_MUTED};
+        font-weight: 500;
+    }}
 
-/* ── FEATURE CARD ────────────────────────────────────────────────── */
-.vs-feature-card {{
-    background: {BG_CARD}; border-radius: 16px;
-    border: 1px solid {BORDER};
-    padding: 1.5rem 1.3rem;
-    transition: transform 0.18s, box-shadow 0.18s;
-}}
-.vs-feature-card:hover {{
-    transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(10,37,64,0.09);
-}}
-.vs-feature-icon {{
-    font-size: 1.8rem; margin-bottom: 0.7rem; display: block;
-}}
-.vs-feature-title {{
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.05rem; color: {BRAND_DARK};
-    margin: 0 0 0.4rem;
-}}
-.vs-feature-desc {{
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.83rem; color: {TEXT_MUTED}; line-height: 1.55;
-    margin: 0;
-}}
-</style>
-""", unsafe_allow_html=True)
+    /* ── FEATURE CARD ────────────────────────────────────────────────── */
+    .vs-feature-card {{
+        background: {BG_CARD}; border-radius: 16px;
+        border: 1px solid {BORDER};
+        padding: 1.5rem 1.3rem;
+        transition: transform 0.18s, box-shadow 0.18s;
+    }}
+    .vs-feature-card:hover {{
+        transform: translateY(-3px);
+        box-shadow: 0 10px 28px rgba(10,37,64,0.09);
+    }}
+    .vs-feature-icon {{
+        font-size: 1.8rem; margin-bottom: 0.7rem; display: block;
+    }}
+    .vs-feature-title {{
+        font-family: 'DM Serif Display', serif;
+        font-size: 1.05rem; color: {BRAND_DARK};
+        margin: 0 0 0.4rem;
+    }}
+    .vs-feature-desc {{
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.83rem; color: {TEXT_MUTED}; line-height: 1.55;
+        margin: 0;
+    }}
+    </style>
+    """)
 
 
 def render_sidebar_header():
     """
     Rendert de volledige premium sidebar.
     Bevat: gradient logo, navigatie, feature-highlights en footer.
-    Fix: paginapaden gecentraliseerd — wijzig hier voor héél de app.
     """
     with st.sidebar:
         # ── LOGO SECTIE ──────────────────────────────────────────────
@@ -506,7 +505,7 @@ def render_sidebar_header():
 <div style="margin:0 0.8rem;"><hr style="border-color:{BORDER};margin:0.2rem 0 0;"></div>
 <div style="padding:0.8rem 1.2rem;font-family:'DM Sans',sans-serif;
             font-size:0.71rem;color:#B0BEC5;text-align:center;line-height:1.7;">
-  © 2025 VrijStaan &nbsp;·&nbsp;
+  © 2026 VrijStaan &nbsp;·&nbsp;
   <span style="color:{BRAND_PRIMARY};font-weight:600;">v2.0</span><br>
   OpenStreetMap + Google Gemini
 </div>
