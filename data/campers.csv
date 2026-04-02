@@ -1,0 +1,13 @@
+naam,latitude,longitude,provincie,honden_toegestaan,aantal_plekken,prijs,website,afbeelding
+Camperplaats Leeuwarden,53.1955,5.8153,Friesland,Ja,18,17.50,www.camperplaatsleeuwarden.nl,https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80
+Camperpark Zeeland,51.5794,3.6261,Zeeland,Ja,100,23.00,www.camperparkzeeland.nl,https://images.unsplash.com/photo-1513673054901-2b5f51551112?auto=format&fit=crop&w=300&q=80
+Camperplaats Oirschot,51.5036,5.3117,Noord-Brabant,Ja,60,18.50,www.camperplaatsoirschot.nl,https://images.unsplash.com/photo-1533873984035-25970ab07461?auto=format&fit=crop&w=300&q=80
+Camperplaats Vechtdal,52.5768,6.2754,Overijssel,Ja,25,16.00,www.camperplaatsvechtdal.nl,https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=300&q=80
+Camperplaats Nuilerveld,52.7788,6.4521,Drenthe,Ja,25,15.00,www.camperplaatsnuilerveld.nl,https://images.unsplash.com/photo-1504280741564-f21aeac8ea37?auto=format&fit=crop&w=300&q=80
+Marina Waterland,52.4021,4.8932,Noord-Holland,Nee,12,25.00,www.marinawaterland.nl,https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80
+Camperplaats Maastricht,50.8681,5.7022,Limburg,Ja,100,19.00,www.camperplaatsmaastricht.nl,https://images.unsplash.com/photo-1513673054901-2b5f51551112?auto=format&fit=crop&w=300&q=80
+Passantenhaven Vianen,51.9962,5.0931,Utrecht,Ja,15,12.50,www.vianen-havens.nl,https://images.unsplash.com/photo-1533873984035-25970ab07461?auto=format&fit=crop&w=300&q=80
+Havenkade Urk,52.6583,5.5921,Flevoland,Ja,20,14.00,www.touristinfourk.nl,https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=300&q=80
+Kardinge Groningen,53.2381,6.6022,Groningen,Ja,8,Gratis,www.groningen.nl,https://images.unsplash.com/photo-1504280741564-f21aeac8ea37?auto=format&fit=crop&w=300&q=80
+Camperplaats Alblasserdam,51.8592,4.6543,Zuid-Holland,Ja,30,16.50,www.alblasserdam.nl,https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=300&q=80
+Jachthaven de Bijland,51.8681,6.0823,Gelderland,Ja,40,18.00,www.debijland.nl,https://images.unsplash.com/photo-1513673054901-2b5f51551112?auto=format&fit=crop&w=300&q=80
