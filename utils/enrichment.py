@@ -1,61 +1,84 @@
 """
-utils/enrichment.py — Debug versie om de "Silent Crash" te ontmaskeren.
+utils/enrichment.py — AI-Extractie Motor.
+Functie: Voert ruwe websitetekst aan de AI en vraagt een strikt JSON object terug.
 """
 import json
 import streamlit as st
 from utils.ai_helper import get_gemini_response
+from utils.scraper import fetch_clean_text
 
 def research_location(row):
     naam = row.get('naam', 'Onbekende locatie')
     stad = row.get('provincie', 'Nederland')
     website = row.get('website', '')
 
-    prompt = f"""
-    ONDERZOEKSTAAK: Verzamel alle details over camperplaats '{naam}' in '{stad}'.
-    Primaire bron: {website}
-    
-    Gebruik Google Search om de volgende 18 velden te verifiëren. 
-    Zoek op de officiële prijslijst en faciliteitenpagina.
+    # 1. Start het scrape proces
+    st.write(f"🌐 Website ophalen: {website}")
+    website_content = fetch_clean_text(website)
 
-    Retourneer uitsluitend JSON:
-    {{
-        "prijs": "Huidige prijs per nacht",
-        "honden_toegestaan": "Ja/Nee/Onbekend",
-        "stroom": "Ja/Nee/Onbekend",
-        "stroom_prijs": "Kosten per nacht/kWh of 'Inbegrepen'",
-        "afvalwater": "Ja/Nee/Onbekend",
-        "chemisch_toilet": "Ja/Nee/Onbekend",
-        "water_tanken": "Ja/Nee/Onbekend",
-        "aantal_plekken": "Totaal aantal plekken",
-        "check_in_out": "Tijden (bijv. 14:00/11:00)",
-        "website": "Directe URL naar de camping",
-        "beschrijving": "Max 20 woorden sfeeromschrijving",
-        "ondergrond": "Gras/Asfalt/Grind",
-        "toegankelijkheid": "Ja/Nee (geschikt voor >8m?)",
-        "rust": "Rustig/Druk",
-        "sanitair": "Ja/Nee",
-        "wifi": "Ja/Nee",
-        "beoordeling": "Score (1-5) op basis van reviews",
-        "samenvatting_reviews": "Max 15 woorden over de algemene mening",
-        "extra": []
-    }}
-    """
+    # Als de scraper echt faalt, proberen we het zonder tekst (als fallback)
+    if website_content.startswith("Fout:"):
+        st.warning(website_content)
+
+    # 2. Bouw de AI-instructie op
+    prompt = f"""
+Je bent een Senior Data Analist voor een camper-app.
+Hieronder vind je de ruwe tekst van de website van camperplaats '{naam}' in '{stad}'.
+
+BRONTEKST VAN WEBSITE:
+--------------------------------------------------
+{website_content}
+--------------------------------------------------
+
+Jouw taak: Lees de bovenstaande tekst en haal de volgende 18 velden eruit.
+Als een specifiek detail niet in de tekst te vinden is, vul dan EXACT "Onbekend" in.
+Tijden mogen als format "14:00/11:00" of tekst.
+Beoordeling moet een cijfer op 5 zijn als dat vermeld is, anders "Onbekend".
+
+Retourneer UITSLUITEND een geldig JSON-object:
+{{
+    "prijs": "Huidige prijs per nacht of Gratis",
+    "honden_toegestaan": "Ja/Nee/Onbekend",
+    "stroom": "Ja/Nee/Onbekend",
+    "stroom_prijs": "Kosten per nacht/kWh of 'Inbegrepen' of Onbekend",
+    "afvalwater": "Ja/Nee/Onbekend",
+    "chemisch_toilet": "Ja/Nee/Onbekend",
+    "water_tanken": "Ja/Nee/Onbekend",
+    "aantal_plekken": "Totaal aantal plekken of Onbekend",
+    "check_in_out": "Tijden of Onbekend",
+    "website": "{website}",
+    "beschrijving": "Max 20 woorden sfeeromschrijving op basis van de tekst",
+    "ondergrond": "Gras/Asfalt/Grind/Verhard of Onbekend",
+    "toegankelijkheid": "Ja/Nee of Onbekend",
+    "rust": "Rustig/Druk of Onbekend",
+    "sanitair": "Ja/Nee/Onbekend",
+    "wifi": "Ja/Nee/Onbekend",
+    "beoordeling": "Score of Onbekend",
+    "samenvatting_reviews": "Max 15 woorden over de algemene mening of Onbekend",
+    "extra": []
+}}
+"""
     
+    # 3. Roep Gemini aan (puur tekst-gebaseerd nu, geen Google Search Tool nodig)
     response_text = get_gemini_response(prompt)
 
-    # ── DEBUGGING: Toon de exacte output van Gemini op het scherm ──
-    st.warning(f"🔍 Ruwe AI Output voor {naam}:")
-    st.text(response_text)
+    # X-RAY DEBUG: Toon wat de AI teruggeeft
+    with st.expander(f"⚙️ Bekijk ruwe AI output voor {naam}"):
+        st.text(response_text)
 
+    # 4. JSON Extractie
     try:
         start = response_text.find('{')
         end = response_text.rfind('}') + 1
         if start != -1 and end != -1:
-            return json.loads(response_text[start:end])
+            json_data = json.loads(response_text[start:end])
+            return json_data
         else:
-            st.error("Geen JSON haken gevonden in het antwoord.")
+            st.error(f"Geen JSON structuur gevonden voor {naam}.")
             return None
+    except json.JSONDecodeError as e:
+        st.error(f"JSON Parse Fout bij {naam}: {e}")
+        return None
     except Exception as e:
-        # Nu zien we waarom hij crasht
-        st.error(f"JSON Parse Fout: {e}")
+        st.error(f"Onverwachte fout bij data-extractie voor {naam}: {e}")
         return None
