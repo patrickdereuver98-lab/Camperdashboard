@@ -2,61 +2,81 @@ import streamlit as st
 import pandas as pd
 from utils.geo_logic import filter_by_distance
 from ui.map_view import render_map
-from ui.theme import apply_theme
+from ui.theme import apply_theme, render_sidebar_header
 from utils.ai_helper import process_ai_query
 
-st.set_page_config(page_title="VrijStaan | Kaart", page_icon="📍", layout="wide")
+st.set_page_config(page_title="VrijStaan | Dashboard", page_icon="🚐", layout="wide")
 
 def app():
+    # 1. Stijl en Sidebar Layout
     apply_theme()
+    render_sidebar_header()
     
-    # --- PURE DATA CONSUMPTIE ---
-    # We lezen alleen het statische bestand dat door de Beheer-pagina is gemaakt
+    # 2. Data inladen
     try:
         df = pd.read_csv("data/api_export_campers.csv")
     except FileNotFoundError:
-        st.warning("⚠️ Geen data gevonden. Ga naar de Beheer-pagina om de database te vullen.")
+        st.warning("⚠️ Geen database gevonden. Initialiseer de data in de Beheer-sectie.")
         return
 
-    st.markdown("<h2 style='color: #2A5A4A;'>📍 Zoek jouw volgende plek</h2>", unsafe_allow_html=True)
+    # 3. SIDEBAR FILTERS (De kracht van een Dashboard)
+    with st.sidebar:
+        st.subheader("🔍 Filters")
+        
+        # AI Zoekbalk in de sidebar voor snelle toegang
+        ai_query = st.text_input("Slim zoeken (AI)", placeholder="Bijv: 'Gratis in Limburg'")
+        
+        st.divider()
+        
+        # Handmatige filters
+        selected_prov = st.selectbox("Provincie", ["Alle provincies"] + sorted(df['provincie'].unique().tolist()))
+        
+        user_loc = st.text_input("Mijn Locatie", placeholder="Postcode of Stad")
+        radius = st.slider("Zoekstraal (km)", 5, 150, 30)
+        
+        st.divider()
+        st.caption("v1.2 | Coast & Horizon Editie")
+
+    # 4. DATA VERWERKING
+    processed_df = df.copy()
     
-    # AI Zoekbalk
-    st.markdown("### 🤖 Slim Zoeken")
-    ai_query = st.text_input("Vraag het de assistent", placeholder="Bijv: 'Gratis plekken in Limburg'", label_visibility="collapsed")
-
+    # AI Filter
     if ai_query:
-        df, _ = process_ai_query(df, ai_query)
+        processed_df, _ = process_ai_query(processed_df, ai_query)
+        
+    # Provincie Filter
+    if selected_prov != "Alle provincies":
+        processed_df = processed_df[processed_df['provincie'] == selected_prov]
+        
+    # Afstand Filter
+    if user_loc:
+        processed_df = filter_by_distance(processed_df, user_loc, radius)
 
-    st.markdown("---")
+    # 5. HOOFDSCHERM LAYOUT
+    st.markdown(f"### 🚐 {len(processed_df)} Camperplaatsen gevonden")
+    
+    # Split-screen: Lijst (35%) | Kaart (65%)
+    col_list, col_map = st.columns([3.5, 6.5])
 
-    # Filters
-    f1, f2, f3 = st.columns(3)
-    with f1:
-        prov = st.selectbox("Provincie", ["Alle provincies"] + sorted(df['provincie'].unique().tolist()))
-    with f2:
-        loc = st.text_input("Huidige locatie", placeholder="Stad of Postcode")
-    with f3:
-        rad = st.slider("Straal (km)", 5, 150, 30)
-
-    # Filtering
-    if prov != "Alle provincies":
-        df = df[df['provincie'] == prov]
-    if loc:
-        df = filter_by_distance(df, loc, rad)
-
-    # Display
-    col_list, col_map = st.columns([4, 6])
     with col_list:
-        st.subheader(f"{len(df)} Resultaten")
-        for _, row in df.head(20).iterrows(): # We tonen de eerste 20 voor performance
-            with st.container(border=True):
-                st.markdown(f"**{row['naam']}**")
-                st.caption(f"{row['provincie']} | Prijs: {row['prijs']}")
-                if st.button(f"Details {row['naam']}", key=row['naam']):
-                    st.info(f"Website: {row['website']}")
+        # Scrollbare lijst met locaties
+        for _, row in processed_df.iterrows():
+            with st.container():
+                c1, c2 = st.columns([1, 2])
+                with c1:
+                    st.image(row['afbeelding'], use_container_width=True)
+                with c2:
+                    st.markdown(f"**{row['naam']}**")
+                    st.caption(f"📍 {row['provincie']} | 💰 {row['prijs']}")
+                    
+                    # Kleine actieknop per locatie
+                    if st.button("Details", key=f"btn_{row['naam']}"):
+                        st.toast(f"Website: {row['website']}")
+                st.write("---")
 
     with col_map:
-        render_map(df)
+        # De kaart vult de rest van het scherm
+        render_map(processed_df)
 
 if __name__ == "__main__":
     app()
