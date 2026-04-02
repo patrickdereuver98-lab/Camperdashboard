@@ -1,28 +1,43 @@
 import streamlit as st
-import pandas as pd
+from ui.theme import apply_theme, render_logo
 
-# Pagina configuratie instellen (dit moet altijd het eerste Streamlit commando zijn!)
-st.set_page_config(
-    page_title="Camperdashboard",
-    page_icon="🚐",
-    layout="wide"
-)
+# Configuratie MOET als eerste
+st.set_page_config(page_title="VrijStaan | Welkom", page_icon="🚐", layout="centered")
 
 def main():
-    st.title("🚐 Camperdashboard Nederland")
-    st.write("De architectuur staat klaar. Vanaf hier bouwen we de modules (kaart, filters, API) één voor één in.")
+    # Stijl en logo inladen
+    apply_theme()
+    render_logo()
+    
+    st.markdown("---")
+    
+    # Hero Sectie
+    st.markdown("""
+    ### Welkom bij het onafhankelijke platform voor camperaars.
+    Vind de beste verborgen plekken, rustpunten en officiële camperplaatsen in Nederland. 
+    Geen stress over uitchecktijden, gewoon genieten van de vrijheid.
+    """)
+    
+    st.write("")
+    
+    # Knoppen voor navigatie
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🗺️ Open de Camperkaart", use_container_width=True):
+            st.switch_page("pages/1_📍_Kaart.py")
 
-    st.divider()
-
-    # Validatie: Kijken of de datalaag correct is aangesloten
-    st.subheader("Data Validatie Check")
-    try:
-        # Later verplaatsen we deze logica naar utils/data_handler.py
-        df = pd.read_csv("data/dummy_campers.csv")
-        st.success("Dummy-data succesvol geladen!")
-        st.dataframe(df, use_container_width=True)
-    except FileNotFoundError:
-        st.error("Architectuur-fout: Het bestand 'data/dummy_campers.csv' is niet gevonden. Controleer de mapstructuur.")
+    st.write("")
+    st.write("")
+    
+    # Informatie sectie met 3 kolommen
+    info1, info2, info3 = st.columns(3)
+    
+    with info1:
+        st.info("**Locatiegericht**\n\nVind direct plekken binnen een specifieke straal rondom jouw huidige locatie of bestemming.")
+    with info2:
+        st.success("**Geverifieerde Data**\n\nGebouwd op basis van actuele inzichten en gedeelde ervaringen vanuit de community.")
+    with info3:
+        st.warning("**Filters**\n\nZoek gericht op faciliteiten zoals huisdiervriendelijkheid, prijs en beschikbare capaciteit.")
 
 if __name__ == "__main__":
     main()
