@@ -25,45 +25,44 @@ if 'ai_search_query' not in st.session_state:
 ai_query = st.session_state['ai_search_query']
 
 # ── 1. DETAIL DIALOG (Booking pop-up) ───────────────────────────────────────
+# Zoek de show_detail functie in pages/1_📍_Kaart.py en vervang deze:
+
 @st.dialog("📍 Locatiedetails", width="large")
 def show_detail(row):
     st.markdown(f"## {row['naam']}")
-    st.markdown(f"<p style='color:#666; margin-top:-10px;'>📍 {row.get('provincie','Onbekend')}</p>", unsafe_allow_html=True)
     
-    tab_info, tab_kaart = st.tabs(["📋 Informatie", "🗺️ Bekijk op Kaart"])
+    tab_info, tab_voorzieningen, tab_reviews, tab_kaart = st.tabs([
+        "📋 Info", "🔌 Voorzieningen", "⭐ Reviews", "🗺️ Kaart"
+    ])
     
     with tab_info:
-        c_img, c_specs = st.columns([1, 1.5])
-        with c_img:
-            img = str(row.get("afbeelding", ""))
-            if img and img != "nan":
-                st.image(img, use_container_width=True)
-            
-            fav = is_favorite(row["naam"])
-            fav_label = "❤️ Verwijder uit favorieten" if fav else "🤍 Sla op als favoriet"
-            if st.button(fav_label, key=f"fav_dialog_{row['naam']}", use_container_width=True):
-                toggle_favorite(row["naam"])
-                st.rerun()
+        c1, c2 = st.columns([1, 1.5])
+        with c1:
+            st.image(row.get('afbeelding', 'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=300'), use_container_width=True)
+            st.markdown(f"**💰 Prijs:** {row.get('prijs','Onbekend')}")
+            st.markdown(f"**🕐 Tijden:** {row.get('check_in_out','Vrij')}")
+        with c2:
+            st.markdown(f"**📝 Beschrijving:**\n*{row.get('beschrijving', 'Geen beschrijving.')}*")
+            st.markdown("---")
+            st.markdown(f"⛰️ **Ondergrond:** {row.get('ondergrond','Onbekend')}")
+            st.markdown(f"🤫 **Rust:** {row.get('rust','Onbekend')}")
+            st.markdown(f"♿ **Toegankelijk:** {row.get('toegankelijkheid','Onbekend')}")
 
-        with c_specs:
-            st.markdown(f"### Specificaties")
-            st.markdown(f"💰 **Prijs per nacht:** {row.get('prijs','Onbekend')}")
-            st.markdown(f"🏕️ **Aantal plekken:** {row.get('aantal_plekken','Onbekend')}")
-            st.markdown(f"🕐 **Openingstijden:** {row.get('openingstijden','Onbekend')}")
-            st.markdown("---")
-            st.markdown(f"🐾 **Honden:** {row.get('honden_toegestaan','Onbekend')}")
-            st.markdown(f"⚡ **Stroom:** {row.get('stroom','Onbekend')}")
-            st.markdown(f"🌊 **Water(front):** {row.get('waterfront','Onbekend')}")
-            
-            tel = str(row.get("telefoon", "")).strip()
-            web = str(row.get("website", "")).strip()
-            
-            st.markdown("---")
-            if web and web != "nan":
-                url = web if web.startswith("http") else f"https://{web}"
-                st.markdown(f"🌐 [Website openen]({url})")
-            if tel and tel != "nan":
-                st.markdown(f"📞 [{tel}](tel:{tel})")
+    with tab_voorzieningen:
+        v1, v2 = st.columns(2)
+        with v1:
+            st.write(f"🐾 **Honden:** {row.get('honden_toegestaan','?')}")
+            st.write(f"⚡ **Stroom:** {row.get('stroom','?')} ({row.get('stroom_prijs','?')})")
+            st.write(f"📶 **Wifi:** {row.get('wifi','?')}")
+        with v2:
+            st.write(f"🚰 **Water tanken:** {row.get('water_tanken','?')}")
+            st.write(f"🚛 **Afvalwater:** {row.get('afvalwater','?')}")
+            st.write(f"🚽 **Chemisch toilet:** {row.get('chemisch_toilet','?')}")
+            st.write(f"🚿 **Sanitair:** {row.get('sanitair','?')}")
+
+    with tab_reviews:
+        st.markdown(f"### Score: {row.get('beoordeling','–')}/5")
+        st.info(f"🗨️ **Samenvatting:** {row.get('samenvatting_reviews', 'Nog geen reviews verwerkt.')}")
 
     with tab_kaart:
         lat, lon = row.get("latitude"), row.get("longitude")
