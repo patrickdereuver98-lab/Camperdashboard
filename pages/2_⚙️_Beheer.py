@@ -8,6 +8,8 @@ import streamlit as st
 from utils.auth import require_admin_auth
 from utils.data_handler import load_data, validate_and_merge, CSV_PATH
 from ui.theme import apply_theme, render_sidebar_header
+# CHIRURGISCHE TOEVOEGING 1: Import van de verrijkingsfunctie
+from utils.enrichment import research_location
 
 st.set_page_config(page_title="VrijStaan | Beheer", page_icon="⚙️", layout="wide")
 
@@ -84,7 +86,7 @@ with tab_import:
             else:
                 master_df = pd.DataFrame()
 
-            if st.button("✅ Importeer en merge met master dataset", use_container_width=True):
+            if st.button("✅ Importeer en merge met master dataset", key="btn_merge_manual", use_container_width=True):
                 merged, warnings = validate_and_merge(master_df, import_df)
                 merged.to_csv(CSV_PATH, index=False)
                 load_data.clear()
@@ -112,13 +114,59 @@ with tab_data:
 
         csv_bytes = master_df.to_csv(index=False).encode("utf-8")
         
-        # HIER IS DE WIJZIGING TOEGEPAST:
         st.download_button(
             "📥 Download actuele API Export",
             data=csv_bytes,
             file_name="api_export_campers.csv",
             mime="text/csv",
         )
+
+        st.divider()
+
+        # CHIRURGISCHE TOEVOEGING 2: AI Verrijkingsblok
+        with st.expander("✨ AI Data Verrijking (Beta)"):
+            st.write("Verrijk 'Onbekend' velden met Gemini AI onderzoek.")
+            
+            # Alleen rijen pakken die nog verrijkt moeten worden
+            unkn_mask = (master_df['prijs'] == 'Onbekend') | (master_df['honden_toegestaan'] == 'Onbekend')
+            to_process_count = len(master_df[unkn_mask])
+            
+            st.info(f"Er zijn momenteel **{to_process_count}** locaties met onvolledige data.")
+            
+            num_to_enrich = st.number_input("Aantal locaties om nu te verrijken", min_value=1, max_value=100, value=5)
+            
+            if st.button(f"🚀 Start AI onderzoek voor {num_to_enrich} locaties", use_container_width=True):
+                to_process = master_df[unkn_mask].head(num_to_enrich)
+                
+                if to_process.empty:
+                    st.success("Alle data is al volledig verrijkt!")
+                else:
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    for i, (idx, row) in enumerate(to_process.iterrows()):
+                        status_text.text(f"Onderzoek bezig voor: {row['naam']}...")
+                        result = research_location(row)
+                        
+                        if result:
+                            # Update waarden in de originele dataframe
+                            master_df.at[idx, 'prijs'] = result.get('prijs', master_df.at[idx, 'prijs'])
+                            master_df.at[idx, 'honden_toegestaan'] = result.get('honden_toegestaan', master_df.at[idx, 'honden_toegestaan'])
+                            master_df.at[idx, 'stroom'] = result.get('stroom', master_df.at[idx, 'stroom'])
+                            # Beschrijving kolom toevoegen indien niet aanwezig
+                            if 'beschrijving' not in master_df.columns:
+                                master_df['beschrijving'] = ""
+                            master_df.at[idx, 'beschrijving'] = result.get('beschrijving', "")
+                        
+                        progress_bar.progress((i + 1) / len(to_process))
+                    
+                    # Opslaan naar CSV
+                    master_df.to_csv(CSV_PATH, index=False)
+                    load_data.clear()
+                    st.success(f"✅ Klaar! {len(to_process)} locaties zijn bijgewerkt.")
+                    st.rerun()
+
+        st.divider()
 
         if st.button("🗑️ Reset master dataset", type="secondary"):
             os.remove(CSV_PATH)
@@ -127,24 +175,3 @@ with tab_data:
             st.rerun()
     else:
         st.warning("Nog geen master dataset. Draai eerst een API Sync of importeer een CSV.")
-
-# Toevoegen aan tab_data in Beheer.py
-with st.expander("✨ AI Data Verrijking (Beta)"):
-    st.write("Verrijk de 'Onbekend' velden met behulp van AI onderzoek.")
-    
-    num_to_enrich = st.number_input("Aantal locaties om te verrijken", min_value=1, max_value=50, value=5)
-    
-    if st.button(f"Start onderzoek voor {num_to_enrich} locaties"):
-        # 1. Filter locaties die nog 'Onbekend' zijn
-        to_process = master_df[master_df['prijs'] == 'Onbekend'].head(num_to_enrich)
-        
-        progress_bar = st.progress(0)
-        for i, (idx, row) in enumerate(to_process.iterrows()):
-            # Voer het onderzoek uit
-            result = research_location(row)
-            
-            # Update de voortgang
-            progress_bar.progress((i + 1) / num_to_enrich)
-            st.write(f"✅ {row['naam']} verwerkt...")
-            
-        st.success("Verrijking voltooid! Download de nieuwe export om de wijzigingen op te slaan.")
