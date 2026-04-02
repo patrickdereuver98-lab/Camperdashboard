@@ -10,7 +10,7 @@ def research_location(row):
     stad = row.get('provincie', 'Nederland')
     website = row.get('website', '')
 
-prompt = f"""
+    prompt = f"""
 Gebruik Google Search om de meest actuele informatie te vinden over: {naam} in {stad}.
 Bezoek indien mogelijk de website: {website}.
 
@@ -28,7 +28,7 @@ BELANGRIJK:
 - Vul ontbrekende info aan met betrouwbare secundaire bronnen.
 - Als informatie onzeker of niet vindbaar is: gebruik "Onbekend".
 - Hallucineer NOOIT gegevens.
--  wanneer de heel specifiek er geen score onbekend is, moet je zelf een slecht/voldoende/goed/uitstekend geven op basis van de reviews en voorzieningen.
+- wanneer de heel specifiek er geen score onbekend is, moet je zelf een slecht/voldoende/goed/uitstekend geven op basis van de reviews en voorzieningen.
 
 Geef uitsluitend een JSON-object terug met deze velden:
 
