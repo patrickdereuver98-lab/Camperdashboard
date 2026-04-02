@@ -150,43 +150,33 @@ with tab_data:
                     status_text = st.empty()
                     results_log = [] # Voor het visuele feedback-rapport
                     
+# Zoek het AI-onderzoek blok in pages/2_⚙️_Beheer.py en vervang de loop:
+
                     for i, (idx, row) in enumerate(to_process.iterrows()):
                         status_text.text(f"🔍 Onderzoek bezig voor: {row['naam']}...")
                         result = research_location(row)
                         
                         if isinstance(result, dict):
-                            # Dynamische update van de velden
+                            # Dynamische update van de velden in de CSV
                             for key, value in result.items():
                                 if key not in master_df.columns:
                                     master_df[key] = "Onbekend"
-                                
-                                # Sla op als de nieuwe waarde bruikbaar is
-                                if value and value != "Onbekend":
-                                    master_df.at[idx, key] = value
+                                master_df.at[idx, key] = value
                             
-                            results_log.append({
-                                "Locatie": row['naam'],
-                                "Prijs": result.get('prijs', '?'),
-                                "Water/Afval": f"🚰{result.get('water_tanken','?')}/🚛{result.get('afvalwater','?')}",
-                                "Status": "✅ Verrijkt"
-                            })
+                            # Voeg toe aan het uitgebreide rapportage-log
+                            results_log.append(result) 
                         else:
-                            results_log.append({
-                                "Locatie": row['naam'],
-                                "Prijs": "-",
-                                "Water/Afval": "-",
-                                "Status": "❌ Geen resultaat"
-                            })
+                            results_log.append({"naam": row['naam'], "status": "❌ Gefaald"})
                         
                         progress_bar.progress((i + 1) / len(to_process))
                     
-                    # ── OPSLAG & FEEDBACK ──
+                    # Opslaan
                     master_df.to_csv(CSV_PATH, index=False)
-                    load_data.clear()
+                    st.success("✅ Verrijking voltooid!")
                     
-                    st.success(f"✅ Onderzoek voltooid voor {len(to_process)} locaties.")
-                    st.markdown("### 📊 AI Rapportage")
-                    st.dataframe(results_log, use_container_width=True) # Toon de feedback tabel
+                    # DIRECTE FEEDBACK: Toon alle AI-data in een tabel
+                    st.markdown("### 📊 Gedetailleerd AI Rapport")
+                    st.dataframe(pd.DataFrame(results_log), use_container_width=True)
                     
                     if st.button("🔄 Dashboard Verversen"):
                         st.rerun()
