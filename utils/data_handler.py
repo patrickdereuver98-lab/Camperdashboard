@@ -1,6 +1,6 @@
 """
-utils/data_handler.py — Cloud-Powered Data Architectuur voor VrijStaan.
-Beheert Google Sheets connectie, OSM Sync en Provincie-verrijking.
+utils/data_handler.py — Hardcoded Cloud Architectuur voor VrijStaan.
+Dwingt de verbinding af door directe URL-injectie bij elke actie.
 """
 import pandas as pd
 import streamlit as st
@@ -10,45 +10,41 @@ import os
 import reverse_geocoder as rg
 import logging
 
-# ── 0. LOGGER INITIALISATIE ──────────────────────────────────────────────────
+# ── 0. LOGGER & CONFIG ───────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
 
-# ── 1. CONFIGURATIE ──────────────────────────────────────────────────────────
-CSV_PATH = "data/api_export_campers.csv"
+# De hardcoded bron van waarheid
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1lTkEDUzXI_nWqYlDsfS60azIDjiuX1cAV_686Ur6fAU/edit#gid=0"
 SHEET_NAME = "MasterData"
+CSV_PATH = "data/api_export_campers.csv"
 
 def get_connection():
-    """Initialiseert de beveiligde verbinding met Google Sheets via Secrets."""
+    """Initialiseert de basisverbinding."""
     return st.connection("gsheets", type=GSheetsConnection)
 
-# ── 2. DATA LADEN ─────────────────────────────────────────────────────────────
+# ── 1. DATA LADEN (DIRECTE URL) ───────────────────────────────────────────────
 def load_data():
     """
-    Laadt de data uit Google Sheets (Cloud). 
-    Zorgt er nu ook voor dat de stempelkolom altijd bestaat.
+    Laadt data door de URL direct in de aanroep te dwingen.
     """
     try:
         conn = get_connection()
-        # ttl=0 dwingt een live verversing af (cruciaal voor beheer-updates)
-        df = conn.read(worksheet=SHEET_NAME, ttl=0)
+        # We injecteren de SHEET_URL direct in de read-call
+        df = conn.read(spreadsheet=SHEET_URL, worksheet=SHEET_NAME, ttl=0)
         
         if df is not None and not df.empty:
-            # CHIRURGISCHE FIX: Garandeer dat de stempelkolom bestaat voor de metrics
             if "ai_gecheckt" not in df.columns:
                 df["ai_gecheckt"] = "Nee"
             return df.fillna("Onbekend")
-        elif df is not None:
-             # Sheet is leeg, maar object bestaat: geef lege DF terug met stempelkolom
-             return pd.DataFrame(columns=['naam', 'ai_gecheckt'])
             
     except Exception as e:
-        logger.error(f"Cloud-fout bij load_data: {e}")
+        logger.error(f"Cloud-leesfout: {e}")
     
-    # Fallback naar lokale CSV
+    # Fallback naar lokaal
     if os.path.exists(CSV_PATH):
         try:
             df_local = pd.read_csv(CSV_PATH)
-            if not df_local.empty and "ai_gecheckt" not in df_local.columns:
+            if "ai_gecheckt" not in df_local.columns:
                 df_local["ai_gecheckt"] = "Nee"
             return df_local.fillna("Onbekend")
         except Exception:
@@ -60,33 +56,35 @@ def get_master_data():
     """Alias voor compatibiliteit met de Kaart-pagina."""
     return load_data()
 
-# ── 3. DATA OPSLAAN ───────────────────────────────────────────────────────────
+# ── 2. DATA OPSLAAN (DIRECTE URL + LOCAL BACKUP) ──────────────────────────────
 def save_data(df):
     """
-    Schrijft de dataset naar Google Sheets én de lokale CSV fallback.
+    Slaat data op door de URL direct in de update-call te dwingen.
     """
     df_clean = df.fillna("Onbekend")
     
-    # Cloud Save
-    try:
-        conn = get_connection()
-        conn.update(worksheet=SHEET_NAME, data=df_clean)
-        st.cache_data.clear()
-    except Exception as e:
-        logger.error(f"Cloud Save Fout: {e}")
-        st.error(f"⚠️ Kon niet opslaan in Google Sheets: {e}")
-
-    # Lokale Fallback Save
+    # STAP 1: Altijd lokale backup (veiligheid voorop)
     try:
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         df_clean.to_csv(CSV_PATH, index=False)
     except Exception as e:
-        logger.error(f"Lokale Save Fout: {e}")
+        logger.error(f"Lokale opslagfout: {e}")
 
-# ── 4. API SYNCHRONISATIE ─────────────────────────────────────────────────────
+    # STAP 2: Cloud Sync met geforceerde URL
+    try:
+        conn = get_connection()
+        # Hier dwingen we de spreadsheet URL af om de 'None' error te voorkomen
+        conn.update(spreadsheet=SHEET_URL, worksheet=SHEET_NAME, data=df_clean)
+        st.cache_data.clear()
+        st.toast("✅ Cloud gesynchroniseerd", icon="☁️")
+    except Exception as e:
+        logger.error(f"Cloud-schrijffout: {e}")
+        st.toast("⚠️ Lokaal opgeslagen (Cloud tijdelijk offline)", icon="💾")
+
+# ── 3. API SYNC ───────────────────────────────────────────────────────────────
 @st.cache_data(ttl=86400)
 def load_data_from_osm():
-    """Haalt de actuele basis-dataset op via de Overpass API (OSM)."""
+    """Haalt de basis-dataset op via de Overpass API."""
     overpass_query = """
     [out:json][timeout:90][bbox:50.75,3.36,53.56,7.23];
     (
@@ -101,28 +99,14 @@ def load_data_from_osm():
     );
     out center;
     """
+    headers = {"User-Agent": "VrijStaanApp/2.0", "Accept": "application/json"}
     
-    headers = {
-        "User-Agent": "VrijStaanCamperApp/2.0 (Streamlit Cloud)",
-        "Accept": "application/json"
-    }
-    
-    mirrors = [
-        "https://overpass-api.de/api/interpreter",
-        "https://lz4.overpass-api.de/api/interpreter"
-    ]
-    
-    data = None
-    for url in mirrors:
-        try:
-            response = requests.post(url, data={'data': overpass_query}, headers=headers, timeout=90)
-            response.raise_for_status()
-            data = response.json()
-            break 
-        except Exception:
-            continue
-            
-    if not data:
+    try:
+        response = requests.post("https://overpass-api.de/api/interpreter", 
+                                 data={'data': overpass_query}, headers=headers, timeout=90)
+        response.raise_for_status()
+        data = response.json()
+    except Exception:
         return pd.DataFrame()
 
     elements = data.get('elements', [])
@@ -132,16 +116,11 @@ def load_data_from_osm():
         tags = el.get('tags', {})
         lat = el.get('lat') or el.get('center', {}).get('lat')
         lon = el.get('lon') or el.get('center', {}).get('lon')
-        
         if not lat or not lon: continue
-            
         naam = tags.get('name') or f"Camperplaats {tags.get('addr:city', '')}".strip() or "Naamloze Locatie"
         
         camper_data.append({
-            "naam": naam,
-            "latitude": lat,
-            "longitude": lon,
-            "provincie": "Onbekend",
+            "naam": naam, "latitude": lat, "longitude": lon, "provincie": "Onbekend",
             "honden_toegestaan": "Ja" if tags.get('dog') == 'yes' else "Onbekend",
             "stroom": "Ja" if tags.get('power_supply') == 'yes' else "Nee",
             "waterfront": "Ja" if tags.get('water_point') == 'yes' else "Nee",
@@ -158,12 +137,10 @@ def load_data_from_osm():
     return df
 
 def enforce_nl_and_enrich_provinces(df):
-    """Filtert op landcode NL en wijst provincies toe via reverse geocoding."""
+    """Filtert op NL en wijst provincies toe."""
     coords = list(zip(df['latitude'], df['longitude']))
     results = rg.search(coords)
-    
     df['landcode'] = [res['cc'] for res in results]
     df['provincie'] = [res['admin1'] for res in results]
-    
     df_nl = df[df['landcode'] == 'NL'].copy()
     return df_nl.drop(columns=['landcode'])
