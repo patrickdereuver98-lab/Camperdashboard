@@ -20,6 +20,7 @@ Alle bugs gefixed:
 import pandas as pd
 import streamlit as st
 import folium
+import streamlit.components.v1 as components
 
 from ui.theme import apply_theme, render_sidebar_header, BRAND_PRIMARY, BRAND_DARK, BORDER, TEXT_MUTED
 from utils.ai_helper import process_ai_query
@@ -158,7 +159,7 @@ def show_detail(row):
                 popup=clean_val(row.get("naam")),
                 icon=folium.Icon(color="blue", icon="home", prefix="fa"),
             ).add_to(m_d)
-            st.html(m_d._repr_html_())
+            components.html(m_d._repr_html_(), height=380)
             st.markdown(
                 f"[📍 Open in Google Maps]"
                 f"(https://www.google.com/maps?q={lat_f},{lon_f})"
@@ -500,10 +501,11 @@ if st.session_state.show_map:
         if not display_df.empty:
             map_data = display_df.dropna(subset=["latitude", "longitude"]).head(200)
             f_map = _build_map(map_data)
-            st.html(f_map._repr_html_())
+            
+            # VERVANG ST.HTML DOOR DIT:
+            components.html(f_map._repr_html_(), height=580)
         else:
             st.info("Geen locaties om op de kaart te tonen.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_list:
         if display_df.empty:
