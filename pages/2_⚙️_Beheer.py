@@ -8,7 +8,6 @@ import streamlit as st
 from utils.auth import require_admin_auth
 from utils.data_handler import load_data, validate_and_merge, CSV_PATH
 from ui.theme import apply_theme, render_sidebar_header
-# CHIRURGISCHE TOEVOEGING 1: Import van de verrijkingsfunctie
 from utils.enrichment import research_location
 
 st.set_page_config(page_title="VrijStaan | Beheer", page_icon="⚙️", layout="wide")
@@ -123,14 +122,19 @@ with tab_data:
 
         st.divider()
 
-        # CHIRURGISCHE TOEVOEGING 2: AI Verrijkingsblok
+        # ── AI VERRIJKING ──────────────────────────────────────────────────────
         with st.expander("✨ AI Data Verrijking (Beta)"):
             st.write("Verrijk 'Onbekend' velden met Gemini AI onderzoek.")
             
-            # Alleen rijen pakken die nog verrijkt moeten worden
-            unkn_mask = (master_df['prijs'] == 'Onbekend') | (master_df['honden_toegestaan'] == 'Onbekend')
+            # 🔥 VERBETERDE FILTER (meer velden)
+            unkn_mask = (
+                (master_df['prijs'] == 'Onbekend') |
+                (master_df['honden_toegestaan'] == 'Onbekend') |
+                (master_df.get('stroom', 'Onbekend') == 'Onbekend') |
+                (master_df.get('water_tanken', 'Onbekend') == 'Onbekend')
+            )
+
             to_process_count = len(master_df[unkn_mask])
-            
             st.info(f"Er zijn momenteel **{to_process_count}** locaties met onvolledige data.")
             
             num_to_enrich = st.number_input("Aantal locaties om nu te verrijken", min_value=1, max_value=100, value=5)
@@ -149,14 +153,16 @@ with tab_data:
                         result = research_location(row)
                         
                         if isinstance(result, dict):
-                            # Update waarden in de originele dataframe
-                            master_df.at[idx, 'prijs'] = result.get('prijs', master_df.at[idx, 'prijs'])
-                            master_df.at[idx, 'honden_toegestaan'] = result.get('honden_toegestaan', master_df.at[idx, 'honden_toegestaan'])
-                            master_df.at[idx, 'stroom'] = result.get('stroom', master_df.at[idx, 'stroom'])
-                            # Beschrijving kolom toevoegen indien niet aanwezig
-                            if 'beschrijving' not in master_df.columns:
-                                master_df['beschrijving'] = ""
-                            master_df.at[idx, 'beschrijving'] = result.get('beschrijving', "")
+                            # 🔥 DYNAMISCHE UPDATE (BELANGRIJKSTE FIX)
+                            for key, value in result.items():
+                                if key not in master_df.columns:
+                                    master_df[key] = "Onbekend"
+                                
+                                current_value = master_df.at[idx, key] if key in master_df.columns else "Onbekend"
+                                
+                                # Alleen overschrijven als huidige waarde slecht is
+                                if current_value in ["Onbekend", "", None] and value not in [None, "", "Onbekend"]:
+                                    master_df.at[idx, key] = value
                         
                         progress_bar.progress((i + 1) / len(to_process))
                     
