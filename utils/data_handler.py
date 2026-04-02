@@ -1,6 +1,6 @@
 """
-utils/data_handler.py — Hardcoded Cloud Architectuur voor VrijStaan.
-Dwingt de verbinding af door directe URL-injectie bij elke actie.
+utils/data_handler.py — Cloud-Powered Data Architectuur voor VrijStaan.
+Oplossing voor TypeError: Arrow-backed string assignment conflict.
 """
 import pandas as pd
 import streamlit as st
@@ -10,7 +10,7 @@ import os
 import reverse_geocoder as rg
 import logging
 
-# ── 0. LOGGER & CONFIG ───────────────────────────────────────────────────────
+# ── 0. LOGGER INITIALISATIE ──────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
 
 # De hardcoded bron van waarheid
@@ -22,17 +22,21 @@ def get_connection():
     """Initialiseert de basisverbinding."""
     return st.connection("gsheets", type=GSheetsConnection)
 
-# ── 1. DATA LADEN (DIRECTE URL) ───────────────────────────────────────────────
+# ── 1. DATA LADEN (MET TYPE-FIX) ─────────────────────────────────────────────
 def load_data():
     """
-    Laadt data door de URL direct in de aanroep te dwingen.
+    Laadt data en converteert naar object-type om Arrow-fouten bij schrijven te voorkomen.
     """
     try:
         conn = get_connection()
-        # We injecteren de SHEET_URL direct in de read-call
+        # We forceren het inladen via de URL
         df = conn.read(spreadsheet=SHEET_URL, worksheet=SHEET_NAME, ttl=0)
         
         if df is not None and not df.empty:
+            # CRUCIALE FIX: Converteer naar object-type om .at[] assignment 
+            # in de AI-verrijking mogelijk te maken (omzeilt Arrow-beperkingen).
+            df = df.astype(object)
+            
             if "ai_gecheckt" not in df.columns:
                 df["ai_gecheckt"] = "Nee"
             return df.fillna("Onbekend")
@@ -44,6 +48,8 @@ def load_data():
     if os.path.exists(CSV_PATH):
         try:
             df_local = pd.read_csv(CSV_PATH)
+            # Ook hier object-type forceren
+            df_local = df_local.astype(object)
             if "ai_gecheckt" not in df_local.columns:
                 df_local["ai_gecheckt"] = "Nee"
             return df_local.fillna("Onbekend")
@@ -56,24 +62,23 @@ def get_master_data():
     """Alias voor compatibiliteit met de Kaart-pagina."""
     return load_data()
 
-# ── 2. DATA OPSLAAN (DIRECTE URL + LOCAL BACKUP) ──────────────────────────────
+# ── 2. DATA OPSLAAN ───────────────────────────────────────────────────────────
 def save_data(df):
     """
-    Slaat data op door de URL direct in de update-call te dwingen.
+    Slaat data op in de Cloud en lokaal.
     """
     df_clean = df.fillna("Onbekend")
     
-    # STAP 1: Altijd lokale backup (veiligheid voorop)
+    # STAP 1: Lokale backup
     try:
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         df_clean.to_csv(CSV_PATH, index=False)
     except Exception as e:
         logger.error(f"Lokale opslagfout: {e}")
 
-    # STAP 2: Cloud Sync met geforceerde URL
+    # STAP 2: Cloud Sync
     try:
         conn = get_connection()
-        # Hier dwingen we de spreadsheet URL af om de 'None' error te voorkomen
         conn.update(spreadsheet=SHEET_URL, worksheet=SHEET_NAME, data=df_clean)
         st.cache_data.clear()
         st.toast("✅ Cloud gesynchroniseerd", icon="☁️")
@@ -81,7 +86,7 @@ def save_data(df):
         logger.error(f"Cloud-schrijffout: {e}")
         st.toast("⚠️ Lokaal opgeslagen (Cloud tijdelijk offline)", icon="💾")
 
-# ── 3. API SYNC ───────────────────────────────────────────────────────────────
+# ── 3. API SYNCHRONISATIE ─────────────────────────────────────────────────────
 @st.cache_data(ttl=86400)
 def load_data_from_osm():
     """Haalt de basis-dataset op via de Overpass API."""
@@ -137,7 +142,7 @@ def load_data_from_osm():
     return df
 
 def enforce_nl_and_enrich_provinces(df):
-    """Filtert op NL en wijst provincies toe."""
+    """Filtert op NL en wijst provincies toe via reverse geocoding."""
     coords = list(zip(df['latitude'], df['longitude']))
     results = rg.search(coords)
     df['landcode'] = [res['cc'] for res in results]
