@@ -156,38 +156,39 @@ if processed.empty:
 col_list, col_map = st.columns([3.5, 6.5])
 
 with col_list:
-    st.markdown(
-        '<div style="max-height:600px;overflow-y:auto;padding-right:4px;">',
-        unsafe_allow_html=True,
-    )
-    for idx, row in processed.head(80).iterrows():
-        fav_icon = "❤️" if is_favorite(row["naam"]) else "🤍"
-        prijs_str = str(row.get("prijs", "Onbekend"))
-        afstand = f' · {row["afstand_label"]}' if "afstand_label" in row else ""
+    # Native Streamlit scroll-container in plaats van HTML hacks
+    with st.container(height=650, border=False):
+        for idx, row in processed.head(80).iterrows():
+            fav_icon = "❤️" if is_favorite(row["naam"]) else "🤍"
+            prijs_str = str(row.get("prijs", "Onbekend"))
+            afstand = f' · {row["afstand_label"]}' if "afstand_label" in row else ""
 
-        st.markdown(f"""
-        <div class="locatie-card">
-            <strong>{row['naam']}</strong><br>
-            <small style="color:#666;">📍 {row['provincie']}{afstand}</small><br>
-            {price_badge(prijs_str)}
-            {'<span class="badge" style="background:#E8F4F1;color:#2A5A4A;">🐾 Honden</span>' if str(row.get('honden_toegestaan')) == 'Ja' else ''}
-            {'<span class="badge" style="background:#FFF8EC;color:#B37D00;">⚡ Stroom</span>' if str(row.get('stroom')) == 'Ja' else ''}
-            {'<span class="badge" style="background:#EEF6FF;color:#0077B6;">🌊 Water</span>' if str(row.get('waterfront')) == 'Ja' else ''}
-        </div>
-        """, unsafe_allow_html=True)
+            # Schone opmaak van de locatiekaart
+            st.markdown(f"""
+            <div class="locatie-card">
+                <div style="font-size: 1.1rem; font-weight: 700; color: #2B2D42;">{row['naam']}</div>
+                <div style="color: #6c757d; font-size: 0.85rem; margin-bottom: 8px;">📍 {row['provincie']}{afstand}</div>
+                <div>
+                    {price_badge(prijs_str)}
+                    {'<span class="badge badge-facility">🐾 Honden</span>' if str(row.get('honden_toegestaan')) == 'Ja' else ''}
+                    {'<span class="badge badge-facility">⚡ Stroom</span>' if str(row.get('stroom')) == 'Ja' else ''}
+                    {'<span class="badge badge-facility">🌊 Water</span>' if str(row.get('waterfront')) == 'Ja' else ''}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        btn_c1, btn_c2 = st.columns([3, 1])
-        with btn_c1:
-            if st.button("🔍 Details", key=f"detail_{idx}", use_container_width=True):
-                show_detail(row)
-        with btn_c2:
-            if st.button(fav_icon, key=f"fav_{idx}", help="Favoriet aan/uit"):
-                toggle_favorite(row["naam"])
-                st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-    if len(processed) > 80:
-        st.caption(f"Top 80 van {len(processed)} getoond. Gebruik filters om te verfijnen.")
+            btn_c1, btn_c2 = st.columns([3, 1])
+            with btn_c1:
+                if st.button("🔍 Details", key=f"detail_{idx}", use_container_width=True):
+                    show_detail(row)
+            with btn_c2:
+                if st.button(fav_icon, key=f"fav_{idx}", help="Favoriet aan/uit"):
+                    toggle_favorite(row["naam"])
+                    st.rerun()
+                    
+        if len(processed) > 80:
+            st.caption(f"Top 80 van {len(processed)} getoond. Gebruik filters om te verfijnen.")
 
 with col_map:
+    # Zorg dat de kaart de volledige hoogte pakt
     render_map(processed)
