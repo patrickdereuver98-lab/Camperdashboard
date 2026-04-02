@@ -127,3 +127,24 @@ with tab_data:
             st.rerun()
     else:
         st.warning("Nog geen master dataset. Draai eerst een API Sync of importeer een CSV.")
+
+# Toevoegen aan tab_data in Beheer.py
+with st.expander("✨ AI Data Verrijking (Beta)"):
+    st.write("Verrijk de 'Onbekend' velden met behulp van AI onderzoek.")
+    
+    num_to_enrich = st.number_input("Aantal locaties om te verrijken", min_value=1, max_value=50, value=5)
+    
+    if st.button(f"Start onderzoek voor {num_to_enrich} locaties"):
+        # 1. Filter locaties die nog 'Onbekend' zijn
+        to_process = master_df[master_df['prijs'] == 'Onbekend'].head(num_to_enrich)
+        
+        progress_bar = st.progress(0)
+        for i, (idx, row) in enumerate(to_process.iterrows()):
+            # Voer het onderzoek uit
+            result = research_location(row)
+            
+            # Update de voortgang
+            progress_bar.progress((i + 1) / num_to_enrich)
+            st.write(f"✅ {row['naam']} verwerkt...")
+            
+        st.success("Verrijking voltooid! Download de nieuwe export om de wijzigingen op te slaan.")
