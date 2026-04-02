@@ -20,7 +20,6 @@ try:
     # CRUCIALE FIX: De API eist nu "google_search"
     model = genai.GenerativeModel(
         model_name=gekozen_model,
-        tools="google_search" 
 
     )
     logger.info(f"{gekozen_model} met Search Grounding geladen")
