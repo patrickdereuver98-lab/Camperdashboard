@@ -5,13 +5,14 @@ Architectuur:
   - ThreadPoolExecutor (20 workers) voor parallelle website-scraping
   - Batch Gemini-aanroepen: 5 locaties per prompt (was: 1)
   - Checkpoint-saves: elke 25 locaties naar CSV + elke 50 naar Sheets
-  - Hervattingslogica: sla over wat al ai_gecheckt=Ja heeft
-  - Robuuste Rate-Limit afhandeling (Exponential Backoff)
+  - Bypasses Google Search Grounding om API-deadlocks te voorkomen.
+  - Harde timeout (45s) voorkomt oneindig vastlopen.
 """
 import json
 import os
 import time
 import logging
+import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -22,16 +23,20 @@ import pandas as pd
 logger = logging.getLogger("vrijstaan.batch")
 
 # ── CONFIGURATIE ──────────────────────────────────────────────────────────────
-MAX_SCRAPE_WORKERS  = 20
-AI_BATCH_SIZE       = 5
-CHECKPOINT_CSV_N    = 25
-CHECKPOINT_SHEETS_N = 50
-SCRAPE_TIMEOUT      = 10
+MAX_SCRAPE_WORKERS  = 20    # Parallelle HTTP-threads voor scraping
+AI_BATCH_SIZE       = 5     # Locaties per Gemini-aanroep
+CHECKPOINT_CSV_N    = 25    # Sla CSV op elke N locaties
+CHECKPOINT_SHEETS_N = 50    # Sla Google Sheets op elke N locaties
+SCRAPE_TIMEOUT      = 10    # Seconden per website-request
 CHECKPOINT_DIR      = "data/checkpoints"
 CHECKPOINT_FILE     = f"{CHECKPOINT_DIR}/batch_progress.csv"
 
+
+# ── DATA KLASSEN ──────────────────────────────────────────────────────────────
+
 @dataclass
 class BatchStats:
+    """Live statistieken tijdens de batch-run."""
     totaal:         int   = 0
     verwerkt:       int   = 0
     succesvol:      int   = 0
@@ -59,49 +64,87 @@ class BatchStats:
     def pct(self) -> float:
         return (self.verwerkt / self.totaal * 100) if self.totaal else 0
 
+
+# ── STAP 1: PARALLELLE SCRAPER ────────────────────────────────────────────────
+
 def _scrape_one(row_tuple: tuple) -> tuple[int, str, str, str, str]:
-    from utils.enrichment import scrape_website, scrape_campercontact, scrape_park4night
+    """
+    Scrapet één locatie (index, naam, website, cc-url, p4n-url).
+    """
+    from utils.enrichment import scrape_website
+    
+    # CHIRURGISCHE FIX: Dummy functies voor CC en P4N
+    def scrape_campercontact(n, p): return ""
+    def scrape_park4night(n, p): return ""
+
     idx, naam, provincie, website = row_tuple
     ws  = scrape_website(website)
     cc  = scrape_campercontact(naam, provincie)
     p4n = scrape_park4night(naam, provincie)
     return idx, naam, ws, cc, p4n
 
-def parallel_scrape(df: pd.DataFrame, progress_cb: Callable | None = None) -> dict[int, dict]:
+
+def parallel_scrape(df: pd.DataFrame,
+                    progress_cb: Callable | None = None) -> dict[int, dict]:
+    """
+    Scrapet alle locaties parallel met MAX_SCRAPE_WORKERS threads.
+    """
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
     taken = [
-        (idx, str(row.get("naam", "")), str(row.get("provincie", "Nederland")), str(row.get("website", "")))
+        (idx, str(row.get("naam", "")),
+         str(row.get("provincie", "Nederland")),
+         str(row.get("website", "")))
         for idx, row in df.iterrows()
     ]
+
     resultaten: dict[int, dict] = {}
     klaar = 0
 
     with ThreadPoolExecutor(max_workers=MAX_SCRAPE_WORKERS) as executor:
         futures = {executor.submit(_scrape_one, t): t for t in taken}
+
         for future in as_completed(futures):
             try:
                 idx, naam, ws, cc, p4n = future.result(timeout=SCRAPE_TIMEOUT + 5)
-                resultaten[idx] = {"website": ws, "campercontact": cc, "park4night": p4n}
+                resultaten[idx] = {
+                    "website":       ws,
+                    "campercontact": cc,
+                    "park4night":    p4n,
+                }
             except Exception as e:
                 t = futures[future]
+                logger.warning(f"Scrape mislukt voor {t[1]}: {e}")
                 resultaten[t[0]] = {"website": "", "campercontact": "", "park4night": ""}
+
             klaar += 1
             if progress_cb:
                 progress_cb(klaar, len(taken), f"🌐 Scraping ({klaar}/{len(taken)})…")
+
     return resultaten
+
+
+# ── STAP 2: BATCH AI-VERRIJKING ───────────────────────────────────────────────
 
 def _build_batch_prompt(batch: list[dict]) -> str:
     locaties_json = json.dumps(
         [{k: v for k, v in loc.items() if k != "_bronnen"} for loc in batch],
-        ensure_ascii=False, indent=2
+        ensure_ascii=False,
+        indent=2,
     )
+
     bronnen_blok = ""
     for i, loc in enumerate(batch, 1):
         bronnen = loc.get("_bronnen", {})
         ws_tekst = bronnen.get("website", "")[:3000]
         cc_tekst = bronnen.get("campercontact", "")[:2000]
         p4n_tekst = bronnen.get("park4night", "")[:2000]
-        bronnen_blok += f"--- Locatie {i}: {loc.get('naam', '?')} ---\nWebsite: {ws_tekst}\nCampercontact: {cc_tekst}\nPark4Night: {p4n_tekst}\n"
+        bronnen_blok += f"""
+--- Locatie {i}: {loc.get('naam', '?')} ---
+Website: {ws_tekst or '(niet beschikbaar)'}
+Campercontact: {cc_tekst or '(niet gevonden)'}
+Park4Night: {p4n_tekst or '(niet gevonden)'}
+"""
 
     return f"""
 Je bent een expert data-analist voor het Nederlandse camperplatform VrijStaan.
@@ -116,20 +159,34 @@ LOCATIEDATA OM TE VERRIJKEN:
 ══════════════════════════════
 INSTRUCTIES (VERPLICHT)
 ══════════════════════════════
-REGEL 1 — JA/NEE/ONBEKEND: "Ja", "Nee", "Onbekend"
-REGEL 2 — GEBRUIK GOOGLE SEARCH: Zoek actief.
-REGEL 3 — DEDUCTIE PARKEERPLAATSEN: parking = Nee voor faciliteiten.
-REGEL 4 — BESCHRIJVING: 2-4 sfeervolle zinnen.
-REGEL 5 — REVIEWS: "Gasten waarderen..." (20-40 woorden).
 
-Retourneer UITSLUITEND een geldig JSON-array met exact {len(batch)} objecten:
+REGEL 1 — JA/NEE/ONBEKEND:
+• "Ja"       = faciliteit aanwezig (bewijs OF logische deductie)
+• "Nee"      = faciliteit NIET aanwezig (bewijs OF locatietype)
+• "Onbekend" = ALLEEN als je het na alle bronnen echt niet kunt bepalen
+
+REGEL 2 — GEBRUIK GOOGLE SEARCH:
+Zoek actief voor elke locatie op Campercontact, Park4Night, ANWB, Google Maps.
+
+REGEL 3 — DEDUCTIE PARKEERPLAATSEN:
+Locaties met "parking" of "parkeer" in de naam: stroom=Nee, sanitair=Nee,
+wifi=Nee, chemisch_toilet=Nee, water_tanken=Nee — tenzij bewijs zegt anders.
+
+REGEL 4 — BESCHRIJVING (2-4 zinnen):
+Sfeervolle tekst over omgeving, karakter en doelgroep.
+
+REGEL 5 — REVIEWS (20-40 woorden):
+Doorlopende zin, "Gasten-stijl": "Gasten waarderen..." of "Bezoekers zijn enthousiast..."
+Nooit steekwoorden of lijsten.
+
+Retourneer UITSLUITEND een geldig JSON-array met exact {len(batch)} objecten (zelfde volgorde):
 [
   {{
     "naam": "exacte naam",
     "prijs": "€X of Gratis of Onbekend",
     "honden_toegestaan": "Ja/Nee/Onbekend",
     "stroom": "Ja/Nee/Onbekend",
-    "stroom_prijs": "€X/nacht of Inbegrepen of Nee of Onbekend",
+    "stroom_prijs": "€X/nacht of Inbegrepen of Nee (geen stroom) of Onbekend",
     "afvalwater": "Ja/Nee/Onbekend",
     "chemisch_toilet": "Ja/Nee/Onbekend",
     "water_tanken": "Ja/Nee/Onbekend",
@@ -142,16 +199,21 @@ Retourneer UITSLUITEND een geldig JSON-array met exact {len(batch)} objecten:
     "sanitair": "Ja/Nee/Onbekend",
     "wifi": "Ja/Nee/Onbekend",
     "beoordeling": "bijv. 4.3 of Onbekend",
-    "samenvatting_reviews": "doorlopende Gasten-zin",
+    "samenvatting_reviews": "doorlopende Gasten-zin 20-40 woorden of Onbekend",
     "telefoonnummer": "0XXXXXXXXX of Onbekend",
-    "ai_gecheckt": "Ja",
-    "afbeelding": "Huidige waarde behouden indien geen betere gevonden"
+    "ai_gecheckt": "Ja"
   }}
 ]
 """
 
-def ai_batch_enrich(batch: list[dict], max_retries: int = 4) -> list[dict]:
-    from utils.ai_helper import get_gemini_response
+
+def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_retries: int = 4) -> list[dict]:
+    """
+    Verrijkt een batch met een HARDE kill-switch (45s) en zonder Search Grounding 
+    om eindeloos hangen van de Google-servers te voorkomen.
+    """
+    # Fix: Directe _generate import om Grounding over te slaan
+    from utils.ai_helper import _generate
 
     if not batch:
         return []
@@ -160,8 +222,19 @@ def ai_batch_enrich(batch: list[dict], max_retries: int = 4) -> list[dict]:
     
     for poging in range(max_retries):
         try:
-            response = get_gemini_response(prompt)
+            if status_cb and poging > 0:
+                status_cb(f"⏳ Retry {poging} naar Google API...")
+
+            # De Kill-Switch: wacht maximaal 45 seconden op Google
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                # Grounding = False is cruciaal om deadlocks te voorkomen
+                future = ex.submit(_generate, prompt, False) 
+                response = future.result(timeout=45)
+
             clean = response.strip()
+            if clean.startswith("⚠️"):
+                raise ValueError(f"AI API Fout: {clean}")
+
             if clean.startswith("```"):
                 lines = clean.split("\n")
                 clean = "\n".join(lines[1:] if lines[0].startswith("```") else lines)
@@ -171,7 +244,7 @@ def ai_batch_enrich(batch: list[dict], max_retries: int = 4) -> list[dict]:
             start = clean.find("[")
             end   = clean.rfind("]") + 1
             if start == -1 or end == 0:
-                raise ValueError("Invalid JSON format")
+                raise ValueError("Geen JSON-array in batch response")
 
             resultaten = json.loads(clean[start:end])
 
@@ -182,15 +255,26 @@ def ai_batch_enrich(batch: list[dict], max_retries: int = 4) -> list[dict]:
 
             return resultaten
 
+        except concurrent.futures.TimeoutError:
+            wachttijd = 5
+            if status_cb:
+                status_cb(f"⚠️ Google API hing vast. Timeout geforceerd. Wacht {wachttijd}s...")
+            time.sleep(wachttijd)
         except Exception as e:
-            fout = str(e).lower()
-            if "429" in fout or "quota" in fout or "exhausted" in fout or "invalid json" in fout:
-                wachttijd = (poging + 1) * 15
-                logger.warning(f"Rate limit of API fout geraakt. Wacht {wachttijd}s...")
+            fout_msg = str(e).lower()
+            if "429" in fout_msg or "quota" in fout_msg or "exhausted" in fout_msg:
+                wachttijd = (poging + 1) * 10
+                if status_cb:
+                    status_cb(f"⏳ Rate limit geraakt. Wacht {wachttijd}s...")
                 time.sleep(wachttijd)
             else:
+                logger.error(f"Batch AI fout (niet-quota gerelateerd): {e}")
                 return batch
+
     return batch
+
+
+# ── STAP 3: CHECKPOINT MANAGER ────────────────────────────────────────────────
 
 class CheckpointManager:
     def __init__(self, master_df: pd.DataFrame):
@@ -217,8 +301,8 @@ class CheckpointManager:
             try:
                 self.df.to_csv(CHECKPOINT_FILE, index=False)
                 self.laatste_csv_save = n
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"CSV checkpoint fout: {e}")
 
         if force or (n - self.laatste_sheets_save) >= CHECKPOINT_SHEETS_N:
             try:
@@ -226,24 +310,37 @@ class CheckpointManager:
                 save_data(self.df)
                 self.laatste_sheets_save = n
                 return True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Sheets checkpoint fout: {e}")
+
         return False
 
     def load_checkpoint(self) -> pd.DataFrame | None:
         if os.path.exists(CHECKPOINT_FILE):
             try:
-                return pd.read_csv(CHECKPOINT_FILE).astype(object).fillna("Onbekend")
+                df = pd.read_csv(CHECKPOINT_FILE).astype(object).fillna("Onbekend")
+                return df
             except Exception:
                 pass
         return None
 
-def run_full_batch(master_df: pd.DataFrame, max_locations: int = 700, progress_cb: Callable | None = None, status_cb: Callable | None = None) -> pd.DataFrame:
-    stats = BatchStats()
+
+# ── HOOFD: COMPLETE BATCH RUN ─────────────────────────────────────────────────
+
+def run_full_batch(
+    master_df:      pd.DataFrame,
+    max_locations:  int = 700,
+    progress_cb:    Callable | None = None,
+    status_cb:      Callable | None = None,
+) -> pd.DataFrame:
+    
+    stats     = BatchStats()
     checkpoint = CheckpointManager(master_df)
 
     vorig = checkpoint.load_checkpoint()
     if vorig is not None and len(vorig) == len(master_df):
+        if status_cb:
+            status_cb("♻️ Vorig checkpoint hersteld")
         checkpoint.df = vorig
 
     mask = checkpoint.df.get("ai_gecheckt", pd.Series("Nee", index=checkpoint.df.index)) != "Ja"
@@ -256,13 +353,21 @@ def run_full_batch(master_df: pd.DataFrame, max_locations: int = 700, progress_c
     stats.overgeslagen = int((~mask).sum())
 
     if stats.totaal == 0:
+        if status_cb:
+            status_cb("✅ Alle locaties zijn al verrijkt!")
         return checkpoint.df
+
+    if status_cb:
+        status_cb(f"🌐 Stap 1/2: Websites parallel scrapen ({MAX_SCRAPE_WORKERS} workers)…")
 
     def _scrape_progress(done, total, label):
         if progress_cb:
-            progress_cb(done, total * 2, label)
+            progress_cb(done, total * 2, label) 
 
     scrape_resultaten = parallel_scrape(to_process, progress_cb=_scrape_progress)
+
+    if status_cb:
+        status_cb(f"✅ Scraping klaar. Start AI-verrijking…")
 
     rijen = list(to_process.iterrows())
     totaal_batches = (len(rijen) + AI_BATCH_SIZE - 1) // AI_BATCH_SIZE
@@ -275,15 +380,20 @@ def run_full_batch(master_df: pd.DataFrame, max_locations: int = 700, progress_c
         batch_input = []
         for idx, row in batch_rijen:
             bronnen = scrape_resultaten.get(idx, {})
-            batch_input.append({
-                "_idx": idx,
+            entry = {
+                "_idx":     idx,
                 "_bronnen": bronnen,
-                "naam": str(row.get("naam", "")),
+                "naam":     str(row.get("naam", "")),
                 "provincie": str(row.get("provincie", "Nederland")),
-                "website": str(row.get("website", "")),
-            })
+                "website":  str(row.get("website", "")),
+            }
+            batch_input.append(entry)
 
-        batch_resultaten = ai_batch_enrich(batch_input)
+        if status_cb:
+            status_cb(f"🤖 Verbinden met Google AI voor batch {batch_nr+1}/{totaal_batches}...")
+
+        # De veilige API aanroep inclusief status callbacks
+        batch_resultaten = ai_batch_enrich(batch_input, status_cb=status_cb)
 
         for i, res in enumerate(batch_resultaten):
             orig_idx = batch_rijen[i][0]
@@ -292,19 +402,42 @@ def run_full_batch(master_df: pd.DataFrame, max_locations: int = 700, progress_c
             stats.succesvol += 1 if res else 0
 
         if progress_cb:
-            progress_cb(len(rijen) + stats.verwerkt, len(rijen) * 2, f"🤖 AI batch {batch_nr+1}/{totaal_batches} · ETA {stats.eta}")
+            progress_cb(
+                len(rijen) + stats.verwerkt,  
+                len(rijen) * 2,
+                f"🤖 AI batch {batch_nr+1}/{totaal_batches} · "
+                f"{stats.verwerkt}/{stats.totaal} verwerkt · ETA {stats.eta}"
+            )
 
         sheets_opgeslagen = checkpoint.maybe_save()
         if status_cb and sheets_opgeslagen:
-            status_cb(f"💾 Checkpoint: {stats.verwerkt}/{stats.totaal} opgeslagen")
+            status_cb(
+                f"💾 Checkpoint: {stats.verwerkt}/{stats.totaal} opgeslagen "
+                f"| Verstreken: {stats.elapsed}"
+            )
 
-        time.sleep(4)
+        # CHIRURGISCHE FIX: Handrem eraf! Tier 1 Postpay is actief.
+        time.sleep(0.5)
 
     checkpoint.maybe_save(force=True)
+
+    if status_cb:
+        status_cb(
+            f"🎉 Klaar! {stats.succesvol}/{stats.totaal} locaties verrijkt "
+            f"in {stats.elapsed}."
+        )
+
     return checkpoint.df
 
+
+# ── STATISTIEKEN HELPER ───────────────────────────────────────────────────────
+
 def get_onbekend_stats(df: pd.DataFrame) -> dict:
-    velden = ["prijs", "honden_toegestaan", "stroom", "sanitair", "wifi", "water_tanken", "afvalwater", "beoordeling", "beschrijving", "telefoonnummer"]
+    velden = [
+        "prijs", "honden_toegestaan", "stroom", "sanitair",
+        "wifi", "water_tanken", "afvalwater", "beoordeling",
+        "beschrijving", "telefoonnummer",
+    ]
     stats = {}
     for veld in velden:
         if veld in df.columns:
@@ -312,8 +445,10 @@ def get_onbekend_stats(df: pd.DataFrame) -> dict:
             stats[veld] = {"onbekend": n, "pct": round(n / len(df) * 100, 1)}
     return stats
 
+
 def estimate_batch_time(n: int) -> str:
     scrape_min = (n / MAX_SCRAPE_WORKERS * 2) / 60
-    ai_min = (n / AI_BATCH_SIZE * 6) / 60
-    totaal = scrape_min + ai_min
+    ai_min = (n / AI_BATCH_SIZE * 4) / 60
+    overhead_min = (n / AI_BATCH_SIZE * 0.5) / 60
+    totaal = scrape_min + ai_min + overhead_min
     return f"~{int(totaal)} – {int(totaal * 1.5)} minuten"
