@@ -298,7 +298,7 @@ def run_full_batch(master_df: pd.DataFrame, max_locations: int = 700, progress_c
         if status_cb and sheets_opgeslagen:
             status_cb(f"💾 Checkpoint: {stats.verwerkt}/{stats.totaal} opgeslagen")
 
-        time.sleep(0.5)
+        time.sleep(4)
 
     checkpoint.maybe_save(force=True)
     return checkpoint.df
