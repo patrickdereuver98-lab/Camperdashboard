@@ -3,15 +3,16 @@ utils/batch_processor.py — Hoge-snelheid batch verrijking voor VrijStaan.
 
 Architectuur:
   - ThreadPoolExecutor (20 workers) voor parallelle website-scraping
-  - Batch Gemini-aanroepen: 5 locaties per prompt (was: 1)
+  - Pure HTTP REST API aanroep voor Gemini (Bypast gRPC deadlocks volledig!)
+  - Batch Gemini-aanroepen: 5 locaties per prompt
   - Checkpoint-saves: elke 25 locaties naar CSV + elke 50 naar Sheets
-  - Bypasses Google Search Grounding om API-deadlocks te voorkomen.
-  - Directe AI-aanroep zonder Streamlit thread-conflicten.
 """
 import json
 import os
 import time
 import logging
+import requests
+import streamlit as st
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -68,7 +69,7 @@ class BatchStats:
 def _scrape_one(row_tuple: tuple) -> tuple[int, str, str, str, str]:
     from utils.enrichment import scrape_website
     
-    # CHIRURGISCHE FIX: Dummy functies voor CC en P4N
+    # Dummy functies voor ontbrekende scrapers
     def scrape_campercontact(n, p): return ""
     def scrape_park4night(n, p): return ""
 
@@ -116,7 +117,37 @@ def parallel_scrape(df: pd.DataFrame,
     return resultaten
 
 
-# ── STAP 2: BATCH AI-VERRIJKING ───────────────────────────────────────────────
+# ── STAP 2: PURE HTTP REST AANROEP VOOR GEMINI ────────────────────────────────
+
+def _direct_gemini_call(prompt: str) -> str:
+    """
+    Volledige bypass van de Google SDK. HTTP requests kunnen niet deadloacken.
+    """
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+    except KeyError:
+        raise ValueError("API key ontbreekt in st.secrets")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}]
+    }
+    
+    # Een ijzersterke timeout van 30 seconden. Als hij niet antwoordt, klapt hij.
+    resp = requests.post(url, headers=headers, json=payload, timeout=30)
+    
+    if resp.status_code != 200:
+        if resp.status_code == 429:
+            raise Exception("429 Too Many Requests")
+        raise Exception(f"API Error {resp.status_code}: {resp.text}")
+        
+    data = resp.json()
+    try:
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise ValueError(f"Onverwachte API response: {data}")
+
 
 def _build_batch_prompt(batch: list[dict]) -> str:
     locaties_json = json.dumps(
@@ -157,17 +188,14 @@ REGEL 1 — JA/NEE/ONBEKEND:
 • "Nee"      = faciliteit NIET aanwezig (bewijs OF locatietype)
 • "Onbekend" = ALLEEN als je het na alle bronnen echt niet kunt bepalen
 
-REGEL 2 — GEBRUIK GOOGLE SEARCH:
-Zoek actief voor elke locatie op Campercontact, Park4Night, ANWB, Google Maps.
-
-REGEL 3 — DEDUCTIE PARKEERPLAATSEN:
+REGEL 2 — DEDUCTIE PARKEERPLAATSEN:
 Locaties met "parking" of "parkeer" in de naam: stroom=Nee, sanitair=Nee,
 wifi=Nee, chemisch_toilet=Nee, water_tanken=Nee — tenzij bewijs zegt anders.
 
-REGEL 4 — BESCHRIJVING (2-4 zinnen):
+REGEL 3 — BESCHRIJVING (2-4 zinnen):
 Sfeervolle tekst over omgeving, karakter en doelgroep.
 
-REGEL 5 — REVIEWS (20-40 woorden):
+REGEL 4 — REVIEWS (20-40 woorden):
 Doorlopende zin, "Gasten-stijl": "Gasten waarderen..." of "Bezoekers zijn enthousiast..."
 Nooit steekwoorden of lijsten.
 
@@ -200,11 +228,6 @@ Retourneer UITSLUITEND een geldig JSON-array met exact {len(batch)} objecten (ze
 
 
 def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_retries: int = 4) -> list[dict]:
-    """
-    Directe aanroep: Geen threading deadlocks meer en Grounding staat UIT.
-    """
-    from utils.ai_helper import _generate
-
     if not batch:
         return []
 
@@ -215,13 +238,10 @@ def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_re
             if status_cb and poging > 0:
                 status_cb(f"⏳ Retry {poging} naar Google API...")
 
-            # De definitieve, directe aanroep (Grounding=False voorkomt API deadlocks)
-            response = _generate(prompt, use_grounding=False)
+            # De ultieme deadlock-bypass via REST
+            response = _direct_gemini_call(prompt)
 
             clean = response.strip()
-            if clean.startswith("⚠️"):
-                raise ValueError(f"AI API Fout: {clean}")
-
             if clean.startswith("```"):
                 lines = clean.split("\n")
                 clean = "\n".join(lines[1:] if lines[0].startswith("```") else lines)
@@ -242,10 +262,15 @@ def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_re
 
             return resultaten
 
+        except requests.exceptions.Timeout:
+            wachttijd = 5
+            if status_cb:
+                status_cb(f"⚠️ API timeout (30s). Retry over {wachttijd}s...")
+            time.sleep(wachttijd)
         except Exception as e:
             fout_msg = str(e).lower()
             if "429" in fout_msg or "quota" in fout_msg or "exhausted" in fout_msg:
-                wachttijd = (poging + 1) * 10
+                wachttijd = (poging + 1) * 5
                 if status_cb:
                     status_cb(f"⏳ Rate limit geraakt. Wacht {wachttijd}s...")
                 time.sleep(wachttijd)
@@ -374,7 +399,7 @@ def run_full_batch(
             batch_input.append(entry)
 
         if status_cb:
-            status_cb(f"🤖 Verbinden met Google AI voor batch {batch_nr+1}/{totaal_batches}...")
+            status_cb(f"🤖 Verbinden met Google REST API voor batch {batch_nr+1}/{totaal_batches}...")
 
         batch_resultaten = ai_batch_enrich(batch_input, status_cb=status_cb)
 
