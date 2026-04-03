@@ -132,7 +132,7 @@ with tab_data:
                         progress_bar.progress((i + 1) / len(to_process))
                         
                         # API RATE LIMIT FIX: Rust inbouwen voor Gemini
-                        time.sleep(3)
+                        time.sleep(0.5)
 
                     status_text.empty()
                     st.success(f"✅ Run van {len(to_process)} locaties succesvol verwerkt en opgeslagen in Google Sheets!")
