@@ -6,13 +6,12 @@ Architectuur:
   - Batch Gemini-aanroepen: 5 locaties per prompt (was: 1)
   - Checkpoint-saves: elke 25 locaties naar CSV + elke 50 naar Sheets
   - Bypasses Google Search Grounding om API-deadlocks te voorkomen.
-  - Harde timeout (45s) voorkomt oneindig vastlopen.
+  - Directe AI-aanroep zonder Streamlit thread-conflicten.
 """
 import json
 import os
 import time
 import logging
-import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -23,11 +22,11 @@ import pandas as pd
 logger = logging.getLogger("vrijstaan.batch")
 
 # ── CONFIGURATIE ──────────────────────────────────────────────────────────────
-MAX_SCRAPE_WORKERS  = 20    # Parallelle HTTP-threads voor scraping
-AI_BATCH_SIZE       = 5     # Locaties per Gemini-aanroep
-CHECKPOINT_CSV_N    = 25    # Sla CSV op elke N locaties
-CHECKPOINT_SHEETS_N = 50    # Sla Google Sheets op elke N locaties
-SCRAPE_TIMEOUT      = 10    # Seconden per website-request
+MAX_SCRAPE_WORKERS  = 20    
+AI_BATCH_SIZE       = 5     
+CHECKPOINT_CSV_N    = 25    
+CHECKPOINT_SHEETS_N = 50    
+SCRAPE_TIMEOUT      = 10    
 CHECKPOINT_DIR      = "data/checkpoints"
 CHECKPOINT_FILE     = f"{CHECKPOINT_DIR}/batch_progress.csv"
 
@@ -36,7 +35,6 @@ CHECKPOINT_FILE     = f"{CHECKPOINT_DIR}/batch_progress.csv"
 
 @dataclass
 class BatchStats:
-    """Live statistieken tijdens de batch-run."""
     totaal:         int   = 0
     verwerkt:       int   = 0
     succesvol:      int   = 0
@@ -68,9 +66,6 @@ class BatchStats:
 # ── STAP 1: PARALLELLE SCRAPER ────────────────────────────────────────────────
 
 def _scrape_one(row_tuple: tuple) -> tuple[int, str, str, str, str]:
-    """
-    Scrapet één locatie (index, naam, website, cc-url, p4n-url).
-    """
     from utils.enrichment import scrape_website
     
     # CHIRURGISCHE FIX: Dummy functies voor CC en P4N
@@ -86,9 +81,6 @@ def _scrape_one(row_tuple: tuple) -> tuple[int, str, str, str, str]:
 
 def parallel_scrape(df: pd.DataFrame,
                     progress_cb: Callable | None = None) -> dict[int, dict]:
-    """
-    Scrapet alle locaties parallel met MAX_SCRAPE_WORKERS threads.
-    """
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
     taken = [
@@ -209,10 +201,8 @@ Retourneer UITSLUITEND een geldig JSON-array met exact {len(batch)} objecten (ze
 
 def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_retries: int = 4) -> list[dict]:
     """
-    Verrijkt een batch met een HARDE kill-switch (45s) en zonder Search Grounding 
-    om eindeloos hangen van de Google-servers te voorkomen.
+    Directe aanroep: Geen threading deadlocks meer en Grounding staat UIT.
     """
-    # Fix: Directe _generate import om Grounding over te slaan
     from utils.ai_helper import _generate
 
     if not batch:
@@ -225,11 +215,8 @@ def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_re
             if status_cb and poging > 0:
                 status_cb(f"⏳ Retry {poging} naar Google API...")
 
-            # De Kill-Switch: wacht maximaal 45 seconden op Google
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-                # Grounding = False is cruciaal om deadlocks te voorkomen
-                future = ex.submit(_generate, prompt, False) 
-                response = future.result(timeout=45)
+            # De definitieve, directe aanroep (Grounding=False voorkomt API deadlocks)
+            response = _generate(prompt, use_grounding=False)
 
             clean = response.strip()
             if clean.startswith("⚠️"):
@@ -255,11 +242,6 @@ def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_re
 
             return resultaten
 
-        except concurrent.futures.TimeoutError:
-            wachttijd = 5
-            if status_cb:
-                status_cb(f"⚠️ Google API hing vast. Timeout geforceerd. Wacht {wachttijd}s...")
-            time.sleep(wachttijd)
         except Exception as e:
             fout_msg = str(e).lower()
             if "429" in fout_msg or "quota" in fout_msg or "exhausted" in fout_msg:
@@ -268,7 +250,9 @@ def ai_batch_enrich(batch: list[dict], status_cb: Callable | None = None, max_re
                     status_cb(f"⏳ Rate limit geraakt. Wacht {wachttijd}s...")
                 time.sleep(wachttijd)
             else:
-                logger.error(f"Batch AI fout (niet-quota gerelateerd): {e}")
+                logger.error(f"Batch AI fout: {e}")
+                if status_cb:
+                    status_cb(f"⚠️ Batch fout, sla over: {e}")
                 return batch
 
     return batch
@@ -392,7 +376,6 @@ def run_full_batch(
         if status_cb:
             status_cb(f"🤖 Verbinden met Google AI voor batch {batch_nr+1}/{totaal_batches}...")
 
-        # De veilige API aanroep inclusief status callbacks
         batch_resultaten = ai_batch_enrich(batch_input, status_cb=status_cb)
 
         for i, res in enumerate(batch_resultaten):
@@ -416,7 +399,6 @@ def run_full_batch(
                 f"| Verstreken: {stats.elapsed}"
             )
 
-        # CHIRURGISCHE FIX: Handrem eraf! Tier 1 Postpay is actief.
         time.sleep(0.5)
 
     checkpoint.maybe_save(force=True)
@@ -429,8 +411,6 @@ def run_full_batch(
 
     return checkpoint.df
 
-
-# ── STATISTIEKEN HELPER ───────────────────────────────────────────────────────
 
 def get_onbekend_stats(df: pd.DataFrame) -> dict:
     velden = [
