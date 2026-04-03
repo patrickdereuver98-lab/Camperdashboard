@@ -77,11 +77,11 @@ with tab_data:
 
         st.divider()
 
-        # ── AI VERRIJKING ──────────────────────────────────────────────
-        with st.expander("✨ AI Data Verrijking (Smart Batch)", expanded=True):
+# ── AI VERRIJKING (FULL AUTO MODUS) ──────────────────────────────────
+        with st.expander("✨ AI Data Verrijking (Full Auto)", expanded=True):
             st.markdown(
-                "Verrijkt ontbrekende data per locatie via webscraping + Gemini AI. "
-                "Resultaten worden direct opgeslagen in Google Sheets."
+                "Verrijkt alle ontbrekende data. In 'Full Auto' modus stopt de AI pas "
+                "als de volledige database van 747 locaties is verwerkt."
             )
 
             # Initialiseer controle-kolom
@@ -96,20 +96,27 @@ with tab_data:
             else:
                 st.info(f"**{to_process_count}** locaties staan klaar voor verrijking.")
 
-                col_batch, col_info = st.columns([2, 3])
-                with col_batch:
-                    num_to_enrich = st.number_input(
-                        "Locaties voor deze batch", min_value=1, max_value=100, value=5
-                    )
+                col_mode, col_info = st.columns([2, 3])
+                with col_mode:
+                    # NIEUW: Keuze tussen batch of alles in één keer
+                    verwerk_alles = st.toggle("🔄 Full Auto: Verwerk alles tot 100% klaar", value=True)
+                    
+                    if verwerk_alles:
+                        num_to_enrich = to_process_count
+                    else:
+                        num_to_enrich = st.number_input(
+                            "Of kies een handmatige batch", 
+                            min_value=1, max_value=to_process_count, value=min(5, to_process_count)
+                        )
+
                 with col_info:
-                    # Fix: waarschuw over rate limits
-                    st.info(
-                        f"💡 Data wordt opgeslagen per **10 locaties** "
-                        f"om Google Sheets-quotum te respecteren (~60/min)."
+                    st.warning(
+                        "⚠️ **Belangrijk:** Houd dit tabblad actief en je laptop aan. "
+                        "Bij slaapstand of sluiten stopt de verwerking."
                     )
 
                 if st.button(
-                    f"🚀 Start verrijking voor {num_to_enrich} locaties",
+                    f"🚀 Start {'Volledige' if verwerk_alles else 'Batch'} Verrijking",
                     type="primary",
                     use_container_width=True,
                 ):
@@ -119,50 +126,35 @@ with tab_data:
                     progress    = st.progress(0.0)
                     status_text = st.empty()
                     results_log = []
-                    save_errors = []
 
                     for i, (idx, row) in enumerate(to_process.iterrows()):
                         naam = str(row.get("naam", f"Locatie {i+1}"))
                         status_text.markdown(f"🔍 **{i+1}/{len(to_process)}** — {naam}")
 
-                        result = research_location(row, verbose=True)
+                        # Gebruik de AI-politie voor onderzoek
+                        result = research_location(row, verbose=False)
 
                         if isinstance(result, dict):
                             for key, value in result.items():
                                 if key not in master_df.columns:
                                     master_df[key] = "Onbekend"
-                                if isinstance(value, (list, dict)):
-                                    value = str(value)
                                 master_df.at[idx, key] = value
                             results_log.append({"naam": naam, **result})
 
-                        # Zet AI-stempel
+                        # Markeer als gecheckt
                         master_df.at[idx, "ai_gecheckt"] = "Ja"
 
-                        # FIX: Sla op elke 10 locaties + bij de laatste
-                        # Was: save_data() na ELKE locatie → 750 API-calls → quota crash
+                        # STABILITEIT: Sla op per 10 locaties om quota-fouten te voorkomen
                         if (i + 1) % 10 == 0 or (i + 1) == len(to_process):
-                            try:
-                                save_data(master_df)
-                            except Exception as e:
-                                save_errors.append(f"Slagopslag fout bij batch {i+1}: {e}")
+                            save_data(master_df)
+                            # Toon een kleine 'pulse' in de UI dat de data veilig is opgeslagen
+                            st.toast(f"💾 Tussenopslag bij {i+1} locaties voltooid.")
 
                         progress.progress((i + 1) / len(to_process))
 
                     status_text.empty()
-
-                    if save_errors:
-                        for err in save_errors:
-                            st.error(err)
-                    else:
-                        st.success(
-                            f"✅ {len(to_process)} locaties verrijkt en opgeslagen in Google Sheets!"
-                        )
-
-                    if results_log:
-                        st.markdown("#### 📊 Resultaten van deze batch")
-                        st.dataframe(pd.DataFrame(results_log), use_container_width=True)
-
+                    st.success(f"✅ Klaar! {len(to_process)} locaties zijn nu volledig verrijkt.")
+                    
                     if st.button("🔄 Dashboard verversen"):
                         st.rerun()
 
