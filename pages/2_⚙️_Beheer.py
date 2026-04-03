@@ -4,13 +4,25 @@ Fixes:
   - Rate limit: save_data() was na élke locatie → nu elke 10 + finale save
   - Import: load_data_from_osm bovenaan, niet in button-handler
   - UI: consistente theme-toepassing voor foutmeldingen
+  - High-Speed Batch: Geïntegreerd via utils.batch_processor
 """
 import streamlit as st
 import pandas as pd
+import threading
 
 from utils.auth import require_admin_auth
 from utils.data_handler import load_data, save_data
 from ui.theme import apply_theme, render_sidebar_header
+
+# Importeer de nieuwe batch processor functies
+try:
+    from utils.batch_processor import (
+        run_full_batch, get_onbekend_stats, estimate_batch_time
+    )
+    BATCH_PROCESSOR_AVAILABLE = True
+except ImportError:
+    BATCH_PROCESSOR_AVAILABLE = False
+
 
 # ── CONFIGURATIE ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -57,106 +69,160 @@ with tab_data:
     if master_df.empty:
         st.warning("⚠️ De Google Sheet is momenteel leeg of niet bereikbaar.")
     else:
-        # Statistieken
-        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-        col_m1.metric("Locaties in Cloud", f"{len(master_df):,}")
+        # ── HOGE-SNELHEID BATCH VERRIJKING ────────────────────────────────────
+        with st.expander("✨ AI Data Verrijking — Hoge-Snelheid Batch", expanded=True):
+            if not BATCH_PROCESSOR_AVAILABLE:
+                st.error("⚠️ Kan `utils/batch_processor.py` niet vinden. Zorg dat het bestand is geüpload.")
+            else:
+                # ── Status overzicht ──────────────────────────────────────────
+                if "ai_gecheckt" not in master_df.columns:
+                    master_df["ai_gecheckt"] = "Nee"
 
-        gratis_count = int((master_df["prijs"].astype(str).str.lower() == "gratis").sum())
-        col_m2.metric("Gratis plekken", f"{gratis_count:,}")
+                n_klaar    = int((master_df["ai_gecheckt"] == "Ja").sum())
+                n_resterend = len(master_df) - n_klaar
+                pct_klaar  = round(n_klaar / len(master_df) * 100) if len(master_df) > 0 else 0
 
-        if "ai_gecheckt" in master_df.columns:
-            gecheckt = int((master_df["ai_gecheckt"] == "Ja").sum())
-            col_m3.metric("AI Verrijkt", f"{gecheckt} / {len(master_df)}")
-            col_m4.metric("Nog te verrijken", f"{len(master_df) - gecheckt:,}")
-        else:
-            col_m3.metric("AI Status", "Geen stempelkolom")
-            col_m4.metric("Kolommen", f"{len(master_df.columns)}")
+                col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+                col_s1.metric("Totaal in database",    f"{len(master_df):,}")
+                col_s2.metric("AI Verrijkt ✅",        f"{n_klaar:,}")
+                col_s3.metric("Nog te verrijken",      f"{n_resterend:,}")
+                col_s4.metric("Voortgang",             f"{pct_klaar}%")
+
+                st.progress(pct_klaar / 100)
+
+                # ── Onbekend-statistieken ─────────────────────────────────────
+                if n_klaar > 0:
+                    with st.expander("📊 Onbekend-statistieken (kwaliteitscheck)", expanded=False):
+                        stats_onb = get_onbekend_stats(master_df)
+                        if stats_onb:
+                            df_stats = pd.DataFrame([
+                                {"Veld": k, "Onbekend": v["onbekend"], "Percentage": f"{v['pct']}%"}
+                                for k, v in stats_onb.items()
+                            ]).sort_values("Onbekend", ascending=False)
+                            st.dataframe(df_stats, use_container_width=True, hide_index=True)
+                        st.caption(
+                            "Streefwaarde: < 15% Onbekend per veld. "
+                            "Parkeerplaatsen zullen structureel 'Nee' tonen voor sanitair/stroom/wifi."
+                        )
+
+                st.divider()
+
+                if n_resterend == 0:
+                    st.success("🎉 Alle locaties zijn al verrijkt!")
+                    if st.button("🔄 Alles opnieuw verrijken (reset stempels)"):
+                        master_df["ai_gecheckt"] = "Nee"
+                        save_data(master_df)
+                        st.rerun()
+                else:
+                    # ── Batch instellingen ────────────────────────────────────
+                    st.markdown("#### ⚙️ Batch instellingen")
+
+                    col_inst1, col_inst2 = st.columns(2)
+                    with col_inst1:
+                        max_te_verwerken = st.number_input(
+                            "Maximaal te verwerken",
+                            min_value=10,
+                            max_value=len(master_df),
+                            value=min(n_resterend, 700),
+                            step=50,
+                            help="0 = alle resterend locaties"
+                        )
+                    with col_inst2:
+                        st.info(
+                            f"⏱️ Geschatte tijd: **{estimate_batch_time(max_te_verwerken)}**\n\n"
+                            f"Methode: 20 parallelle scrapers + batches van 5 per AI-aanroep"
+                        )
+
+                    # ── Uitleg over de aanpak ─────────────────────────────────
+                    with st.expander("ℹ️ Hoe werkt de snelle batch?"):
+                        st.markdown("""
+            **Stap 1 — Parallelle scraping (20 workers tegelijk)**
+            Alle websites, Campercontact en Park4Night worden gelijktijdig opgehaald.
+            Dit duurt slechts enkele minuten voor 700 locaties.
+
+            **Stap 2 — Batch AI-verrijking (5 locaties per aanroep)**
+            In plaats van 700 losse Gemini-aanroepen worden 5 locaties tegelijk
+            in één prompt verwerkt. Dit is **5× sneller** en **5× goedkoper**.
+            Gemini zoekt via Search Grounding actief op alle platformen.
+
+            **Stap 3 — Automatisch checkpointing**
+            - Elke 25 locaties → CSV backup (snel, lokaal)
+            - Elke 50 locaties → Google Sheets (cloud sync)
+
+            **Bij een crash:** herstart gewoon — al verwerkte locaties worden overgeslagen.
+                        """)
+
+                    # ── Start knop ────────────────────────────────────────────
+                    if "batch_running" not in st.session_state:
+                        st.session_state["batch_running"] = False
+
+                    if not st.session_state["batch_running"]:
+                        if st.button(
+                            f"🚀 Start Hoge-Snelheid Verrijking voor {max_te_verwerken} locaties",
+                            type="primary",
+                            use_container_width=True,
+                        ):
+                            st.session_state["batch_running"] = True
+                            st.rerun()
+
+                    if st.session_state["batch_running"]:
+                        st.warning("⚡ Batch actief — sluit dit venster NIET", icon="⚠️")
+
+                        progress_bar  = st.progress(0.0)
+                        status_label  = st.empty()
+                        fase_label    = st.empty()
+                        metrics_row   = st.empty()
+
+                        def _update_progress(verwerkt, totaal, label):
+                            pct = min(verwerkt / totaal, 1.0) if totaal > 0 else 0
+                            progress_bar.progress(pct)
+                            fase_label.markdown(
+                                f"<small style='color:#6B7F94;'>{label}</small>",
+                                unsafe_allow_html=True,
+                            )
+
+                        def _update_status(tekst):
+                            status_label.info(tekst)
+
+                        try:
+                            bijgewerkte_df = run_full_batch(
+                                master_df        = master_df,
+                                max_locations    = int(max_te_verwerken),
+                                progress_cb      = _update_progress,
+                                status_cb        = _update_status,
+                            )
+
+                            # Finale opslag
+                            save_data(bijgewerkte_df)
+
+                            n_nu_klaar = int((bijgewerkte_df["ai_gecheckt"] == "Ja").sum())
+                            progress_bar.progress(1.0)
+                            status_label.success(
+                                f"✅ Batch voltooid! {n_nu_klaar}/{len(bijgewerkte_df)} locaties verrijkt."
+                            )
+
+                            # Toon verbeteringsstatistieken
+                            onb_stats = get_onbekend_stats(bijgewerkte_df)
+                            if onb_stats:
+                                st.markdown("#### 📈 Kwaliteitsresultaat")
+                                df_res = pd.DataFrame([
+                                    {"Veld": k, "Onbekend": v["onbekend"], "%": f"{v['pct']}%"}
+                                    for k, v in onb_stats.items()
+                                ]).sort_values("Onbekend")
+                                st.dataframe(df_res, use_container_width=True, hide_index=True)
+
+                        except Exception as e:
+                            st.error(f"❌ Batch fout: {e}")
+                            st.info("💾 Voortgang is bewaard in CSV. Herstart om door te gaan.")
+                        finally:
+                            st.session_state["batch_running"] = False
+
+                        if st.button("🔄 Dashboard verversen"):
+                            st.rerun()
 
         st.subheader("Actuele Cloud Dataset")
         st.dataframe(master_df.head(100), use_container_width=True, height=380)
 
-        st.divider()
-
-# ── AI VERRIJKING (FULL AUTO MODUS) ──────────────────────────────────
-        with st.expander("✨ AI Data Verrijking (Full Auto)", expanded=True):
-            st.markdown(
-                "Verrijkt alle ontbrekende data. In 'Full Auto' modus stopt de AI pas "
-                "als de volledige database van 747 locaties is verwerkt."
-            )
-
-            # Initialiseer controle-kolom
-            if "ai_gecheckt" not in master_df.columns:
-                master_df["ai_gecheckt"] = "Nee"
-
-            mask = master_df["ai_gecheckt"] != "Ja"
-            to_process_count = int(mask.sum())
-
-            if to_process_count == 0:
-                st.success("🎉 Alle locaties zijn al door de AI gecontroleerd!")
-            else:
-                st.info(f"**{to_process_count}** locaties staan klaar voor verrijking.")
-
-                col_mode, col_info = st.columns([2, 3])
-                with col_mode:
-                    # NIEUW: Keuze tussen batch of alles in één keer
-                    verwerk_alles = st.toggle("🔄 Full Auto: Verwerk alles tot 100% klaar", value=True)
-                    
-                    if verwerk_alles:
-                        num_to_enrich = to_process_count
-                    else:
-                        num_to_enrich = st.number_input(
-                            "Of kies een handmatige batch", 
-                            min_value=1, max_value=to_process_count, value=min(5, to_process_count)
-                        )
-
-                with col_info:
-                    st.warning(
-                        "⚠️ **Belangrijk:** Houd dit tabblad actief en je laptop aan. "
-                        "Bij slaapstand of sluiten stopt de verwerking."
-                    )
-
-                if st.button(
-                    f"🚀 Start {'Volledige' if verwerk_alles else 'Batch'} Verrijking",
-                    type="primary",
-                    use_container_width=True,
-                ):
-                    from utils.enrichment import research_location
-
-                    to_process  = master_df[mask].head(num_to_enrich)
-                    progress    = st.progress(0.0)
-                    status_text = st.empty()
-                    results_log = []
-
-                    for i, (idx, row) in enumerate(to_process.iterrows()):
-                        naam = str(row.get("naam", f"Locatie {i+1}"))
-                        status_text.markdown(f"🔍 **{i+1}/{len(to_process)}** — {naam}")
-
-                        # Gebruik de AI-politie voor onderzoek
-                        result = research_location(row, verbose=False)
-
-                        if isinstance(result, dict):
-                            for key, value in result.items():
-                                if key not in master_df.columns:
-                                    master_df[key] = "Onbekend"
-                                master_df.at[idx, key] = value
-                            results_log.append({"naam": naam, **result})
-
-                        # Markeer als gecheckt
-                        master_df.at[idx, "ai_gecheckt"] = "Ja"
-
-                        # STABILITEIT: Sla op per 10 locaties om quota-fouten te voorkomen
-                        if (i + 1) % 10 == 0 or (i + 1) == len(to_process):
-                            save_data(master_df)
-                            # Toon een kleine 'pulse' in de UI dat de data veilig is opgeslagen
-                            st.toast(f"💾 Tussenopslag bij {i+1} locaties voltooid.")
-
-                        progress.progress((i + 1) / len(to_process))
-
-                    status_text.empty()
-                    st.success(f"✅ Klaar! {len(to_process)} locaties zijn nu volledig verrijkt.")
-                    
-                    if st.button("🔄 Dashboard verversen"):
-                        st.rerun()
 
 # ── TAB 2: API SYNC ────────────────────────────────────────────────────────────
 with tab_sync:
