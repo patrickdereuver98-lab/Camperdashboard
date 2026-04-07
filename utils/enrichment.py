@@ -1,27 +1,27 @@
 """
-utils/enrichment.py — AI-onderzoeker v4 met Intelligente Waterval Methode.
-Pijler 2: Datakwaliteit & hygiëne voor VrijStaan.
+utils/enrichment.py — AI-onderzoeker v4 met Multi-Photo Scraping en Rijke JSON.
+Pijler 3: Meerdere foto's, uitgebreide faciliteiten-data, huisregels.
 
-Verbeteringen t.o.v. v3:
-  - Expliciete provincie-normalisatie in ALLE prompts (officieel Nederlands)
-  - Telefoonnummer-instructies in ALLE prompts (+31 formaat)
-  - Python post-processing via batch_engine.normalize_province/normalize_phone
-    als vangnet náást de AI-instructies
-  - Deductie-regels uitgebreid: meer locatietypes gedekt
-  - "Onbekend" reductie: threshold verlaagd naar 4 velden voor hersearch
-  - Search Grounding drempel blijft 0.1 (agressief zoeken)
-  - _hersearch geeft nu ook provincie + telefoon mee in instructies
-  - Alle beschrijvingen: minimaal 2, maximaal 4 zinnen (was niet gehandhaafd)
+Nieuw in v4:
+  - scrape_photos(): actief zoeken naar <img> tags / galerijen op bronwebsites
+  - Rijkere AI JSON output: faciliteiten_extra, huisregels, reviews_tekst,
+    roken, feesten, stilteplicht, loc_type
+  - Deductie-regels per locatietype (uitgebreid)
+  - Provincie + telefoon normalisatie in alle prompts
+  - Hersearch drempel: 4 onbekende velden
 """
+from __future__ import annotations
+
 import json
+import re
 import time
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse, quote_plus, urljoin
 
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
-from utils.ai_helper import get_gemini_response, get_gemini_response_grounded
+from utils.ai_helper import get_gemini_response_grounded
 
 
 # ── SCRAPER CONFIGURATIE ───────────────────────────────────────────────────────
@@ -34,26 +34,31 @@ _HEADERS = {
     "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "nl-NL,nl;q=0.9,en-US;q=0.8",
 }
-_TIMEOUT    = 12
-_MAX_TEKST  = 12_000  # tekens per bron
+_TIMEOUT   = 12
+_MAX_TEKST = 12_000
+
+# Extensies die zeker foto zijn
+_IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+# Sleutelwoorden in src die op een foto wijzen
+_IMG_KEYWORDS = {"photo", "foto", "image", "img", "gallery", "gallerij", "camp", "camper"}
+# Minimale afbeeldingsbreedte om als "echt" te tellen (in pixels)
+_MIN_IMG_WIDTH = 200
 
 
-# ── BRON 1: EIGEN WEBSITE ──────────────────────────────────────────────────────
+# ── BRON 1: EIGEN WEBSITE + FOTO SCRAPING ─────────────────────────────────────
 
 def scrape_website(url: str) -> str:
     """Haalt tekst van de eigen website op. SSRF-beveiligd."""
     if not url or pd.isna(url):
         return ""
     url = str(url).strip()
-    if str(url).lower() in ("nan", "onbekend", "none", ""):
+    if url.lower() in ("nan", "onbekend", "none", ""):
         return ""
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
-
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
         return ""
-
     try:
         resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT)
         resp.raise_for_status()
@@ -62,10 +67,118 @@ def scrape_website(url: str) -> str:
         return ""
 
 
+def scrape_photos(url: str, max_photos: int = 6) -> list[str]:
+    """
+    Pijler 3: Scrapet actief foto-URLs van een website.
+    Zoekt naar:
+      1. <img> tags met grote afmetingen (width/height attribuut ≥ 200px)
+      2. <meta property="og:image"> tags (OpenGraph)
+      3. JSON-LD afbeeldingen
+      4. Src's die foto-keywords of -extensies bevatten
+
+    Args:
+      url:        Website URL om te scrapen
+      max_photos: Maximum aantal foto URLs te retourneren
+
+    Returns:
+      Lijst van absolute foto-URLs (gedupliceert gefilterd)
+    """
+    if not url or str(url).lower() in ("nan", "onbekend", "none", ""):
+        return []
+    url = str(url).strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return []
+
+    try:
+        resp = requests.get(url, headers=_HEADERS, timeout=_TIMEOUT)
+        resp.raise_for_status()
+    except Exception:
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    photos: list[str] = []
+    seen: set[str] = set()
+    base = f"{parsed.scheme}://{parsed.netloc}"
+
+    def _add(src: str) -> None:
+        """Voeg foto toe als het een geldige URL is en nog niet gezien."""
+        if not src:
+            return
+        # Maak absoluut
+        if src.startswith("//"):
+            src = "https:" + src
+        elif src.startswith("/"):
+            src = base + src
+        elif not src.startswith("http"):
+            src = urljoin(url, src)
+        # Filter kleine/data-uri/svg
+        if any(bad in src.lower() for bad in ("data:", ".svg", "logo", "icon", "sprite")):
+            return
+        if src not in seen:
+            seen.add(src)
+            photos.append(src)
+
+    # 1. OpenGraph image (meest betrouwbaar)
+    for og in soup.find_all("meta", property="og:image"):
+        _add(og.get("content", ""))
+
+    # 2. JSON-LD afbeeldingen
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+            imgs = data.get("image", [])
+            if isinstance(imgs, str):
+                _add(imgs)
+            elif isinstance(imgs, list):
+                for i in imgs:
+                    _add(i if isinstance(i, str) else i.get("url", ""))
+        except Exception:
+            pass
+
+    # 3. <img> tags met breedte-indicatie
+    for img in soup.find_all("img"):
+        src = img.get("src", "") or img.get("data-src", "") or img.get("data-lazy-src", "")
+        if not src:
+            continue
+
+        # Check width/height attributen
+        try:
+            w = int(img.get("width", 0) or 0)
+            h = int(img.get("height", 0) or 0)
+            if w >= _MIN_IMG_WIDTH or h >= _MIN_IMG_WIDTH:
+                _add(src)
+                continue
+        except (ValueError, TypeError):
+            pass
+
+        # Check op foto-keywords in src of class
+        src_lower = src.lower()
+        classes   = " ".join(img.get("class", [])).lower()
+        if (
+            any(ext in src_lower for ext in _IMG_EXTS)
+            and any(kw in src_lower or kw in classes for kw in _IMG_KEYWORDS)
+        ):
+            _add(src)
+
+    # 4. Srcset (responsieve afbeeldingen)
+    for elem in soup.find_all(["img", "source"]):
+        srcset = elem.get("srcset", "")
+        if srcset:
+            # Pak de laatste URL uit srcset (hoogste resolutie)
+            parts = [p.strip().split(" ")[0] for p in srcset.split(",") if p.strip()]
+            if parts:
+                _add(parts[-1])
+
+    return photos[:max_photos]
+
+
 # ── BRON 2: CAMPERCONTACT ──────────────────────────────────────────────────────
 
 def scrape_campercontact(naam: str, provincie: str) -> str:
-    """Zoekt de locatie op Campercontact.com — grootste NL camper-database."""
+    """Zoekt op Campercontact.com."""
     zoekterm   = f"{naam} {provincie}".strip()
     search_url = f"https://www.campercontact.com/nl/zoeken?q={quote_plus(zoekterm)}"
     try:
@@ -82,7 +195,7 @@ def scrape_campercontact(naam: str, provincie: str) -> str:
 # ── BRON 3: PARK4NIGHT ─────────────────────────────────────────────────────────
 
 def scrape_park4night(naam: str, provincie: str) -> str:
-    """Zoekt de locatie op Park4Night — populaire camper review-site."""
+    """Zoekt op Park4Night."""
     zoekterm   = f"{naam} Nederland"
     search_url = f"https://park4night.com/fr/search?q={quote_plus(zoekterm)}"
     try:
@@ -96,10 +209,10 @@ def scrape_park4night(naam: str, provincie: str) -> str:
         return ""
 
 
-# ── BRON 4: ANWB KAMPEREN ─────────────────────────────────────────────────────
+# ── BRON 4: ANWB ──────────────────────────────────────────────────────────────
 
 def scrape_anwb(naam: str) -> str:
-    """Zoekt op ANWB Kamperen — betrouwbare Nederlandse bron."""
+    """Zoekt op ANWB Kamperen."""
     zoekterm   = f"{naam} camperplaats"
     search_url = f"https://www.anwb.nl/kamperen/search?q={quote_plus(zoekterm)}"
     try:
@@ -116,402 +229,142 @@ def scrape_anwb(naam: str) -> str:
 # ── TEKST EXTRACTOR ────────────────────────────────────────────────────────────
 
 def _extract_text(html: str) -> str:
-    """Extraheer schone tekst uit HTML, zonder navs/footers/scripts."""
+    """Extraheer schone tekst uit HTML."""
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "nav", "footer", "header",
                      "aside", "noscript", "iframe", "form"]):
         tag.extract()
-    tekst = " ".join(soup.get_text(separator=" ", strip=True).split())
-    return tekst
+    return " ".join(soup.get_text(separator=" ", strip=True).split())
 
 
 # ── LOCATIETYPE DETECTOR ───────────────────────────────────────────────────────
 
-def _detect_type(naam: str, tags: dict | None = None) -> str:
-    """Detecteert het locatietype op basis van naam voor deductie-hints."""
+def _detect_type(naam: str) -> str:
+    """Detecteert locatietype voor deductie-hints in de AI-prompt."""
     naam_l = naam.lower()
-    if any(w in naam_l for w in ["parking", "parkeer", "p+r", "p &", "p-r"]):
+    if any(w in naam_l for w in ["parking", "parkeer", "p+r", "p-r"]):
         return "parking"
-    if any(w in naam_l for w in ["jachthaven", "marina", "haven", "harbour"]):
+    if any(w in naam_l for w in ["jachthaven", "marina", "haven"]):
         return "jachthaven"
-    if any(w in naam_l for w in ["boerderij", "farm", "hoeve", "agrarisch"]):
+    if any(w in naam_l for w in ["boerderij", "farm", "hoeve"]):
         return "boerderij"
-    if any(w in naam_l for w in ["camping", "kampeer", "vakantiepark", "resort", "bungalowpark"]):
+    if any(w in naam_l for w in ["camping", "kampeer", "vakantiepark"]):
         return "camping"
-    if any(w in naam_l for w in ["camper", "motorhome", "camperplaats", "camperpark", "camperterrein"]):
+    if any(w in naam_l for w in ["camper", "motorhome", "camperplaats"]):
         return "camperplaats"
-    if any(w in naam_l for w in ["strand", "beach", "kust", "zee"]):
-        return "strandlocatie"
-    if any(w in naam_l for w in ["wijnaard", "winery", "wijngaard", "wijngoed"]):
-        return "wijnaard"
-    return "onbekend"
+    return "camperplaats"  # standaard
 
 
-# ── DATAHYGIËNE HELPERS ────────────────────────────────────────────────────────
+# ── DEDUCTIE REGELS ────────────────────────────────────────────────────────────
 
-def _apply_python_hygiene(data: dict, naam: str) -> dict:
-    """
-    Python-level vangnet voor datahygiëne, ONGEACHT wat de AI returneerde.
-    Roept normalize_province() en normalize_phone() aan uit batch_engine.
-    Werkt ook als enrichment standalone wordt gebruikt (buiten batch_engine).
-    """
-    try:
-        from utils.batch_engine import normalize_province, normalize_phone
-        if "provincie" in data:
-            data["provincie"] = normalize_province(str(data.get("provincie", "")))
-        if "telefoonnummer" in data:
-            data["telefoonnummer"] = normalize_phone(str(data.get("telefoonnummer", "")))
-    except ImportError:
-        pass  # batch_engine niet beschikbaar — prompt-instructies zijn het vangnet
-
-    # Logische consistentie
-    if data.get("stroom", "").lower() == "nee":
-        data["stroom_prijs"] = "Nee (geen stroom)"
-
-    # extra-veld altijd als string
-    if isinstance(data.get("extra"), list):
-        data["extra"] = ", ".join(str(v) for v in data["extra"])
-    elif not data.get("extra"):
-        data["extra"] = ""
-
-    return data
-
-
-# ── PROVINCIE + TELEFOON INSTRUCTIES (gedeeld door alle prompts) ───────────────
+_DEDUCTIE: dict[str, str] = {
+    "parking": (
+        "PARKEERPLAATS: tenzij bewijs anders: stroom=Nee, sanitair=Nee, wifi=Nee, "
+        "chemisch_toilet=Nee, water_tanken=Nee. Honden meestal Ja."
+    ),
+    "jachthaven": (
+        "JACHTHAVEN: bijna altijd: water_tanken=Ja, afvalwater=Ja, sanitair=Ja, stroom=Ja."
+    ),
+    "boerderij": (
+        "BOERDERIJ: Ondergrond=Gras, Rust=Rustig. Honden: check bronnen (vaak Nee i.v.m. vee)."
+    ),
+    "camping": (
+        "CAMPING: bijna altijd: sanitair=Ja, water_tanken=Ja. Stroom: check bronnen."
+    ),
+    "camperplaats": (
+        "CAMPERPLAATS: bijna altijd: water_tanken=Ja, afvalwater=Ja. Stroom: check bronnen."
+    ),
+}
 
 _PROVINCIE_INSTRUCTIE = """
-PROVINCIE-INSTRUCTIE (VERPLICHT):
-Gebruik ALTIJD de officiële Nederlandse spelling:
-  Fryslân / Frisian / Fryslan  → "Friesland"
-  North Holland / Noord Holland → "Noord-Holland"
-  South Holland / Zuid Holland  → "Zuid-Holland"
-  North Brabant / Noord Brabant → "Noord-Brabant"
-  Guelders / Guelderland        → "Gelderland"
-  Zealand                       → "Zeeland"
-Geldige provincies: Groningen, Friesland, Drenthe, Overijssel, Flevoland,
+PROVINCIE (VERPLICHT officieel Nederlands):
+  Fryslân/Frisian → "Friesland" | North Holland → "Noord-Holland"
+  South Holland → "Zuid-Holland" | North Brabant → "Noord-Brabant"
+  Guelders → "Gelderland" | Zealand → "Zeeland"
+Geldige waarden: Groningen, Friesland, Drenthe, Overijssel, Flevoland,
   Gelderland, Utrecht, Noord-Holland, Zuid-Holland, Zeeland, Noord-Brabant, Limburg
 """
 
 _TELEFOON_INSTRUCTIE = """
-TELEFOONNUMMER-INSTRUCTIE (VERPLICHT):
-Formaat: +31 X XXXX XXXX (mobiel) of +31 XX XXX XXXX (vast)
-  0612345678   → "+31 6 1234 5678"
-  0512345678   → "+31 512 34 5678"
-  020-1234567  → "+31 20 123 4567"
-  0031512...   → "+31 512 ..."
-Als telefoonnummer onbekend is: exact "Onbekend" (geen lege string, geen streepje)
+TELEFOONNUMMER (+31 formaat):
+  0612345678 → "+31 6 1234 5678" | 0201234567 → "+31 20 123 4567"
+  Onbekend → exact "Onbekend"
 """
 
 
-# ── DEDUCTIE REGELS PER LOCATIETYPE ───────────────────────────────────────────
+# ── RIJKE AI PROMPT BUILDER ────────────────────────────────────────────────────
 
-def _get_deductie_hints(loc_type: str) -> str:
-    """
-    Geeft specifieke deductie-hints per locatietype.
-    Dit is de kernlogica die 'Onbekend' terugdringt naar < 4 velden per locatie.
-    """
-    hints = {
-        "parking": """
-- PARKEERPLAATS: tenzij expliciet vermeld in bronnen:
-  stroom=Nee, sanitair=Nee, wifi=Nee, chemisch_toilet=Nee, water_tanken=Nee, afvalwater=Nee
-- Honden: bijna altijd toegestaan op openbare parkeerplaatsen → standaard Ja
-- Rust: stad of drukke weg → Druk, buiten bebouwde kom → Rustig
-- Prijs: vaak Gratis of parkeertarief (pas dan "Betaald")
-- Ondergrond: vrijwel altijd Asfalt of Verhard""",
-
-        "jachthaven": """
-- JACHTHAVEN: bijna altijd aanwezig:
-  water_tanken=Ja, afvalwater=Ja, sanitair=Ja, stroom=Ja
-- Wifi: in moderne jachthavens (post-2015) steeds gebruikelijker → zoek actief
-- Honden: wisselend, zoek expliciet in bronnen
-- Ondergrond: vrijwel altijd Asfalt of Verhard
-- Rust: varieert — actieve jachthaven = Druk, rustig meer = Rustig""",
-
-        "boerderij": """
-- BOERDERIJ-CAMPERPLAATS:
-  Ondergrond: bijna altijd Gras
-  Rust: vrijwel altijd Rustig (landelijk)
-  Wifi: zelden aanwezig → Nee tenzij bewijs
-- Honden: VRAAG EXPLICIET — vaak Nee vanwege vee (check bronnen!)
-- Stroom: wisselend — check bronnen, anders Onbekend
-- Sanitair: wisselend — check bronnen""",
-
-        "camping": """
-- CAMPING: bijna altijd aanwezig:
-  sanitair=Ja, water_tanken=Ja
-- Stroom: bij elektra-haak Ja, anders Nee
-- Wifi: bij moderne campings (post-2018) steeds vaker → check bronnen
-- Honden: meestal toegestaan mits aangelijnd — zoek campingregels
-- Ondergrond: Gras, Grind of Gemengd (afhankelijk van camping)""",
-
-        "camperplaats": """
-- DEDICATED CAMPERPLAATS: bijna altijd aanwezig:
-  water_tanken=Ja, afvalwater=Ja
-- Stroom: bij zuil aanwezig Ja, anders check bronnen
-- Sanitair: wisselend per locatie
-- Honden: over het algemeen welkom → Ja tenzij verbod vermeld
-- Wifi: bij moderne camperterreinen (post-2019) steeds vaker aanwezig""",
-
-        "strandlocatie": """
-- STRANDLOCATIE:
-  Rust: seizoensafhankelijk — zomer Druk, buiten seizoen Rustig
-  Ondergrond: Zand of Verhard (parkeerterrein bij strand)
-  Stroom: zelden aanwezig → Nee tenzij bewijs
-- Honden: op veel stranden seizoensgebonden verbod — check bronnen
-- Sanitair: openbare toiletten soms beschikbaar → check bronnen""",
-
-        "wijnaard": """
-- WIJNAARD/WIJNGOED:
-  Rust: bijna altijd Rustig (landelijk)
-  Ondergrond: Gras of Grind
-  Honden: wisselend — check bronnen
-- Stroom: soms aanwezig als service → check bronnen
-- Wifi: zelden → Nee tenzij bewijs""",
-
-        "onbekend": """
-- Gebruik de locatienaam en context om het type te raden
-- Bij twijfel: vergelijk met vergelijkbare locaties in dezelfde regio
-- Gebruik Google Search Grounding MAXIMAAL voor elk onbekend veld
-- Liever "Nee" (logische deductie) dan "Onbekend" (niet gezocht)""",
-    }
-    return hints.get(loc_type, hints["onbekend"])
-
-
-# ── KWALITEITSCHECK ────────────────────────────────────────────────────────────
-
-def _count_onbekend(data: dict) -> int:
-    """Telt het aantal velden met waarde 'Onbekend'."""
-    return sum(
-        1 for v in data.values()
-        if isinstance(v, str) and v.strip().lower() == "onbekend"
-    )
-
-
-# ── HERSEARCH BIJ TE VEEL ONBEKEND ────────────────────────────────────────────
-
-def _hersearch(
+def _build_rich_prompt(
     naam: str,
     provincie: str,
     website: str,
-    huidige_data: dict,
-    verbose: bool,
-) -> dict:
+    alle_bronnen: str,
+    loc_type: str,
+) -> str:
     """
-    Tweede AI-aanroep specifiek voor het invullen van lege velden.
-    Drempel verlaagd naar 4 (was 6) voor betere datakwaliteit.
-    Bevat ook provincie + telefoon instructies.
+    Bouwt de rijke AI-prompt voor één locatie.
+    Output bevat uitgebreide faciliteiten, huisregels, meerdere velden voor de
+    Booking.com-stijl detailpagina.
     """
-    onbekende_keys = [
-        k for k, v in huidige_data.items()
-        if isinstance(v, str) and v.strip().lower() == "onbekend"
-    ]
+    deductie = _DEDUCTIE.get(loc_type, _DEDUCTIE["camperplaats"])
+    return f"""
+Je bent een expert data-analist voor het Nederlandse camperplatform VrijStaan.
+Vul een VOLLEDIG, RIJKPROFIEL in voor '{naam}' in {provincie}.
+Locatietype: {loc_type}
 
-    prompt_hersearch = f"""
-Je hebt zojuist data verzameld over camperplaats '{naam}' in {provincie}.
-De volgende velden zijn nog ONBEKEND en moeten worden ingevuld:
-{', '.join(onbekende_keys)}
+BRONINHOUD:
+{alle_bronnen[:22_000]}
 
-GEBRUIK GOOGLE SEARCH GROUNDING om SPECIFIEK te zoeken naar:
-1. "{naam} camperplaats {provincie}" → Campercontact, Park4Night, Google Maps
-2. "{naam} camping {provincie} faciliteiten" → ANWB, NKC
-3. "{naam} {provincie} reviews ervaringen" → TripAdvisor, Google Reviews
-
-Huidige (onvolledige) data:
-{json.dumps(huidige_data, ensure_ascii=False, indent=2)}
-
+INSTRUCTIES:
+• Ja/Nee/Onbekend: gebruik deductie — "Onbekend" alleen als echt niet te bepalen
+• Deductie voor {loc_type}: {deductie}
+• Gebruik Google Search Grounding voor ontbrekende velden
 {_PROVINCIE_INSTRUCTIE}
-
 {_TELEFOON_INSTRUCTIE}
+• beschrijving: 2-4 sfeervolle zinnen
+• samenvatting_reviews: doorlopende zin 20-40 woorden, "Gasten-stijl"
+• faciliteiten_extra: opsomming van overige faciliteiten als CSV-string
+• huisregels: korte beschrijving van regels/beleid als tekst
+• loc_type: het locatietype in het Nederlands (bijv. "Camping", "Camperplaats", "Parking")
 
-INSTRUCTIE:
-- Vervang alle "Onbekend" waarden die je kunt achterhalen met echte data
-- Gebruik "Nee" als een faciliteit er logischerwijs NIET is
-- Gebruik "Onbekend" ALLEEN als je het echt niet kunt bepalen na intensief zoeken
-- Retourneer UITSLUITEND het volledige, verbeterde JSON-object zonder uitleg:
-"""
-
-    response  = get_gemini_response_grounded(prompt_hersearch)
-    verbeterd = _parse_json(response)
-
-    if verbeterd:
-        for key, val in verbeterd.items():
-            if key in huidige_data:
-                orig = str(huidige_data[key]).strip().lower()
-                if orig == "onbekend" and str(val).strip().lower() != "onbekend":
-                    huidige_data[key] = val
-        if verbose:
-            nieuw_onbekend = _count_onbekend(huidige_data)
-            _ui_write(f"   └─ ✅ Hersearch: van {len(onbekende_keys)} → {nieuw_onbekend} onbekende velden")
-
-    return huidige_data
-
-
-# ── HOOFD: LOCATIE ONDERZOEK ───────────────────────────────────────────────────
-
-def research_location(row, verbose: bool = True) -> dict | None:
-    """
-    Onderzoekt één locatierij via Waterval Methode v4.
-
-    Verbeteringen t.o.v. v3:
-    - Provincie + telefoon instructies in hoofd-prompt
-    - Python-level hygiëne als vangnet na JSON parse
-    - Hersearch drempel: 4 velden (was 6)
-    - Locatietype strandlocatie + wijnaard toegevoegd
-    - Beschrijving: hard 2-4 zinnen afgedwongen in prompt
-    """
-    naam      = str(row.get("naam",      "Onbekende locatie")).strip()
-    provincie = str(row.get("provincie", "Nederland")).strip()
-    website   = str(row.get("website",   "")).strip()
-    loc_type  = _detect_type(naam)
-
-    if verbose:
-        _ui_write(f"🔍 Onderzoek: **{naam}** ({provincie}) · type: {loc_type}")
-
-    # ── Bronnen scrapen ─────────────────────────────────────────────────
-    bronnen: list[str] = []
-
-    if verbose:
-        _ui_write("   └─ 🌐 Eigen website ophalen…")
-    website_tekst = scrape_website(website)
-    if website_tekst:
-        bronnen.append(f"[Eigen website]\n{website_tekst[:_MAX_TEKST]}")
-    else:
-        if verbose:
-            _ui_warn("   └─ ⚠️ Geen eigen website of niet bereikbaar")
-
-    if verbose:
-        _ui_write("   └─ 📡 Campercontact zoeken…")
-    cc_tekst = scrape_campercontact(naam, provincie)
-    if cc_tekst:
-        bronnen.append(cc_tekst)
-        if verbose:
-            _ui_write("   └─ ✅ Campercontact-data gevonden")
-    else:
-        if verbose:
-            _ui_write("   └─ ⬜ Niet gevonden op Campercontact")
-
-    time.sleep(0.5)  # Rate-limiting Park4Night
-    p4n_tekst = scrape_park4night(naam, provincie)
-    if p4n_tekst:
-        bronnen.append(p4n_tekst)
-        if verbose:
-            _ui_write("   └─ ✅ Park4Night-data gevonden")
-
-    anwb_tekst = scrape_anwb(naam)
-    if anwb_tekst:
-        bronnen.append(anwb_tekst)
-        if verbose:
-            _ui_write("   └─ ✅ ANWB-data gevonden")
-
-    alle_bronnen    = "\n\n".join(bronnen) if bronnen else "Geen webinhoud beschikbaar."
-    deductie_hints  = _get_deductie_hints(loc_type)
-
-    # ── Hoofd-verrijking prompt ─────────────────────────────────────────
-    prompt_hoofd = f"""
-Je bent een expert data-analist voor de Nederlandse camperplatform VrijStaan.
-Vul een volledig, accuraat profiel in voor camperplaats '{naam}' in {provincie}.
-
-══════════════════════════════════════════
-WEBSITEINHOUD (uit {len(bronnen)} bronnen):
-══════════════════════════════════════════
-{alle_bronnen[:25_000]}
-
-══════════════════════════════════════════
-INSTRUCTIES — lees dit ZORGVULDIG
-══════════════════════════════════════════
-
-REGEL 1 — JA / NEE / ONBEKEND:
-  - "Ja"      → faciliteit aanwezig (bewijs in bronnen OF logische deductie)
-  - "Nee"     → faciliteit NIET aanwezig (bewijs OF locatietype)
-  - "Onbekend" → ALLEEN als je na bronnen + deductie + kennisbase echt niets weet
-
-REGEL 2 — DEDUCTIE VOOR TYPE '{loc_type.upper()}':
-{deductie_hints}
-
-REGEL 3 — GEBRUIK ALTIJD SEARCH GROUNDING:
-Als bronnen onvolledig zijn, gebruik dan je Google Search kennis om:
-- Campercontact.com/nl/{naam.lower().replace(' ', '-')} te raadplegen
-- Park4night.com reviews te raadplegen
-- NKC.nl, ANWB kamperen, Google Maps reviews te raadplegen
-
-{_PROVINCIE_INSTRUCTIE}
-
-{_TELEFOON_INSTRUCTIE}
-
-REGEL 7 — BESCHRIJVING (VERPLICHT 2-4 ZINNEN):
-Schrijf minimaal 2 en maximaal 4 sfeervolle zinnen. Beschrijf de omgeving,
-het gevoel, de sfeer en de doelgroep. Geen opsomming, lopende tekst.
-Voorbeeld: "Rustig gelegen aan de rand van het bos bij Dwingeloo. Ideaal voor wie
-natuur zoekt: wandelpaden beginnen direct achter de camping. De plaatsen zijn
-ruim opgezet op gras, perfect voor camperaars die even willen ontsnappen."
-
-REGEL 8 — REVIEWS (20-40 WOORDEN):
-Doorlopende zin, toon: "Gasten zijn enthousiast over..." of "Bezoekers waarderen..."
-NOOIT steekwoorden, NOOIT lijsten.
-
-REGEL 9 — BEOORDELING:
-Cijfer 1.0–5.0 op basis van gevonden reviews. Bijv. 4.2, 3.8. Niet heel getal.
-Als er echt geen reviews zijn: "Onbekend"
-
-══════════════════════════════════════════
-Retourneer UITSLUITEND geldig JSON, geen uitleg, geen markdown:
-══════════════════════════════════════════
+Retourneer UITSLUITEND geldig JSON:
 {{
-    "prijs": "€X per nacht of €X-Y per nacht of Gratis of Onbekend",
-    "provincie": "officiële NL-provincienaam",
-    "honden_toegestaan": "Ja/Nee/Onbekend",
-    "stroom": "Ja/Nee/Onbekend",
-    "stroom_prijs": "€X/nacht of Inbegrepen of Nee (geen stroom) of Onbekend",
-    "afvalwater": "Ja/Nee/Onbekend",
-    "chemisch_toilet": "Ja/Nee/Onbekend",
-    "water_tanken": "Ja/Nee/Onbekend",
-    "aantal_plekken": "getal bijv. 40 of Onbekend",
-    "check_in_out": "bijv. 14:00 / 12:00 of Vrij of Onbekend",
-    "website": "{website}",
-    "beschrijving": "minimaal 2, maximaal 4 sfeervolle zinnen",
-    "ondergrond": "Gras / Asfalt / Grind / Verhard / Gemengd / Onbekend",
-    "toegankelijkheid": "Ja/Nee/Onbekend",
-    "rust": "Rustig / Gemiddeld / Druk / Onbekend",
-    "sanitair": "Ja/Nee/Onbekend",
-    "wifi": "Ja/Nee/Onbekend",
-    "beoordeling": "bijv. 4.3 of Onbekend",
-    "samenvatting_reviews": "doorlopende zin 20-40 woorden Gasten-stijl of Onbekend",
-    "telefoonnummer": "+31 X XXXX XXXX of Onbekend",
-    "extra": []
+  "prijs": "€X per nacht of Gratis of Onbekend",
+  "provincie": "officiële NL-provincie",
+  "honden_toegestaan": "Ja/Nee/Onbekend",
+  "stroom": "Ja/Nee/Onbekend",
+  "stroom_prijs": "€X/nacht of Inbegrepen of Nee (geen stroom) of Onbekend",
+  "afvalwater": "Ja/Nee/Onbekend",
+  "chemisch_toilet": "Ja/Nee/Onbekend",
+  "water_tanken": "Ja/Nee/Onbekend",
+  "aantal_plekken": "getal of Onbekend",
+  "check_in_out": "tijden of Vrij of Onbekend",
+  "beschrijving": "2-4 sfeervolle zinnen",
+  "ondergrond": "Gras/Asfalt/Grind/Verhard/Gemengd/Onbekend",
+  "toegankelijkheid": "Ja/Nee/Onbekend",
+  "rust": "Rustig/Gemiddeld/Druk/Onbekend",
+  "sanitair": "Ja/Nee/Onbekend",
+  "wifi": "Ja/Nee/Onbekend",
+  "waterfront": "Ja/Nee/Onbekend",
+  "beoordeling": "bijv. 4.3 of Onbekend",
+  "samenvatting_reviews": "Gasten-stijl zin 20-40 woorden of Onbekend",
+  "reviews_tekst": "uitgebreidere review-tekst of Onbekend",
+  "telefoonnummer": "+31 X XXXX XXXX of Onbekend",
+  "roken": "Ja/Nee/Onbekend",
+  "feesten": "Ja/Nee/Onbekend",
+  "stilteplicht": "Ja/Nee/Onbekend",
+  "faciliteiten_extra": "CSV van extra faciliteiten of Onbekend",
+  "huisregels": "korte omschrijving regels of Onbekend",
+  "loc_type": "Camping/Camperplaats/Parking/Jachthaven/Boerderij",
+  "ai_gecheckt": "Ja"
 }}
 """
-
-    response_text = get_gemini_response_grounded(prompt_hoofd)
-
-    if verbose:
-        _ui_expander(f"⚙️ Ruwe AI output — {naam}", response_text)
-
-    # ── JSON parsen ─────────────────────────────────────────────────────
-    data = _parse_json(response_text)
-    if data is None:
-        if verbose:
-            _ui_error(f"❌ JSON-parse mislukt voor {naam}")
-        return None
-
-    # ── Python-level datahygiëne (vangnet) ─────────────────────────────
-    data = _apply_python_hygiene(data, naam)
-
-    # ── Kwaliteitscheck & Heronderzoek (drempel: 4 onbekende velden) ───
-    onbekend_velden = _count_onbekend(data)
-    if onbekend_velden > 4:
-        if verbose:
-            _ui_warn(f"⚠️ {onbekend_velden} velden onbekend → hersearch gestart…")
-        data = _hersearch(naam, provincie, website, data, verbose)
-        # Hygiëne nogmaals na hersearch
-        data = _apply_python_hygiene(data, naam)
-
-    return data
 
 
 # ── JSON PARSER ────────────────────────────────────────────────────────────────
 
 def _parse_json(text: str) -> dict | None:
-    """Robuust JSON parsen uit AI response — tolereert markdown fences."""
+    """Robuust JSON parsen, tolereert markdown fences."""
     if not text:
         return None
     try:
@@ -520,20 +373,164 @@ def _parse_json(text: str) -> dict | None:
             clean = "\n".join(clean.split("\n")[1:])
         if clean.endswith("```"):
             clean = "\n".join(clean.split("\n")[:-1])
-        clean = clean.strip()
-
         start = clean.find("{")
         end   = clean.rfind("}") + 1
         if start == -1 or end == 0:
             return None
         return json.loads(clean[start:end])
-    except (json.JSONDecodeError, Exception):
+    except Exception:
         return None
+
+
+def _count_onbekend(data: dict) -> int:
+    return sum(
+        1 for v in data.values()
+        if isinstance(v, str) and v.strip().lower() == "onbekend"
+    )
+
+
+# ── DATAHYGIËNE POST-PROCESSOR ─────────────────────────────────────────────────
+
+def _apply_hygiene(data: dict) -> dict:
+    """Past provincie en telefoon normalisatie toe als Python-vangnet."""
+    try:
+        from utils.batch_engine import normalize_province, normalize_phone
+        if "provincie" in data:
+            data["provincie"] = normalize_province(str(data.get("provincie", "")))
+        if "telefoonnummer" in data:
+            data["telefoonnummer"] = normalize_phone(str(data.get("telefoonnummer", "")))
+    except ImportError:
+        pass
+    if data.get("stroom", "").lower() == "nee":
+        data["stroom_prijs"] = "Nee (geen stroom)"
+    if isinstance(data.get("extra"), list):
+        data["extra"] = ", ".join(str(v) for v in data["extra"])
+    return data
+
+
+# ── HOOFD: LOCATIE ONDERZOEK ───────────────────────────────────────────────────
+
+def research_location(row: object, verbose: bool = True) -> dict | None:
+    """
+    Onderzoekt één locatierij via Waterval Methode v4.
+    Nieuw: scrape_photos() voor meerdere foto's per locatie.
+
+    Returns:
+      dict met verrijkte data, of None bij parse-fout.
+    """
+    naam      = str(row.get("naam",      "Onbekende locatie")).strip()  # type: ignore[union-attr]
+    provincie = str(row.get("provincie", "Nederland")).strip()           # type: ignore[union-attr]
+    website   = str(row.get("website",   "")).strip()                   # type: ignore[union-attr]
+    loc_type  = _detect_type(naam)
+
+    if verbose:
+        _ui_write(f"🔍 Onderzoek: **{naam}** ({provincie})")
+
+    # ── Foto's scrapen (Pijler 3) ───────────────────────────────────────
+    photos: list[str] = []
+    if website:
+        if verbose:
+            _ui_write("   └─ 📸 Foto's scrapen van website…")
+        photos = scrape_photos(website, max_photos=6)
+        if verbose:
+            _ui_write(f"   └─ ✅ {len(photos)} foto's gevonden")
+
+    # ── Tekst-bronnen scrapen ───────────────────────────────────────────
+    bronnen: list[str] = []
+    ws_tekst = scrape_website(website)
+    if ws_tekst:
+        bronnen.append(f"[Eigen website]\n{ws_tekst[:_MAX_TEKST]}")
+
+    cc_tekst = scrape_campercontact(naam, provincie)
+    if cc_tekst:
+        bronnen.append(cc_tekst)
+
+    time.sleep(0.4)
+    p4n_tekst = scrape_park4night(naam, provincie)
+    if p4n_tekst:
+        bronnen.append(p4n_tekst)
+
+    anwb_tekst = scrape_anwb(naam)
+    if anwb_tekst:
+        bronnen.append(anwb_tekst)
+
+    alle_bronnen = "\n\n".join(bronnen) if bronnen else "Geen webinhoud beschikbaar."
+
+    # ── AI-verrijking ───────────────────────────────────────────────────
+    prompt = _build_rich_prompt(naam, provincie, website, alle_bronnen, loc_type)
+    response_text = get_gemini_response_grounded(prompt)
+
+    if verbose:
+        _ui_expander(f"⚙️ Ruwe AI output — {naam}", response_text)
+
+    data = _parse_json(response_text)
+    if data is None:
+        if verbose:
+            _ui_error(f"❌ JSON-parse mislukt voor {naam}")
+        return None
+
+    # ── Python-level datahygiëne ────────────────────────────────────────
+    data = _apply_hygiene(data)
+
+    # ── Hersearch bij te veel onbekende velden ──────────────────────────
+    if _count_onbekend(data) > 4:
+        if verbose:
+            _ui_warn(f"⚠️ Veel onbekende velden → hersearch gestart…")
+        data = _hersearch(naam, provincie, data, verbose)
+        data = _apply_hygiene(data)
+
+    # ── Foto's toevoegen als JSON-string ────────────────────────────────
+    if photos:
+        data["photos"] = json.dumps(photos, ensure_ascii=False)
+    elif not data.get("photos"):
+        data["photos"] = "[]"
+
+    return data
+
+
+def _hersearch(
+    naam: str, provincie: str, huidige_data: dict, verbose: bool
+) -> dict:
+    """Tweede AI-aanroep gericht op lege velden."""
+    onbekende_keys = [
+        k for k, v in huidige_data.items()
+        if isinstance(v, str) and v.strip().lower() == "onbekend"
+    ]
+    prompt = f"""
+Zoek SPECIFIEK naar ontbrekende data voor '{naam}' in {provincie}.
+Onbekende velden: {', '.join(onbekende_keys)}
+
+Gebruik Google Search Grounding voor:
+1. "{naam} camperplaats {provincie}" op Campercontact, Park4Night, Google Maps
+2. "{naam} {provincie} faciliteiten" op ANWB, NKC
+
+Huidige data:
+{json.dumps(huidige_data, ensure_ascii=False, indent=2)}
+
+{_PROVINCIE_INSTRUCTIE}
+{_TELEFOON_INSTRUCTIE}
+
+Retourneer UITSLUITEND het volledige, verbeterde JSON-object.
+Gebruik "Nee" voor logisch afwezige faciliteiten, "Onbekend" alleen als echt niet te vinden.
+"""
+    response  = get_gemini_response_grounded(prompt)
+    verbeterd = _parse_json(response)
+    if verbeterd:
+        for key, val in verbeterd.items():
+            if key in huidige_data:
+                orig = str(huidige_data[key]).strip().lower()
+                if orig == "onbekend" and str(val).strip().lower() != "onbekend":
+                    huidige_data[key] = val
+        if verbose:
+            _ui_write(
+                f"   └─ ✅ Hersearch klaar: {_count_onbekend(huidige_data)} velden onbekend"
+            )
+    return huidige_data
 
 
 # ── UI HELPERS ─────────────────────────────────────────────────────────────────
 
-def _ui_write(msg: str):
+def _ui_write(msg: str) -> None:
     try:
         import streamlit as st
         st.write(msg)
@@ -541,7 +538,7 @@ def _ui_write(msg: str):
         pass
 
 
-def _ui_warn(msg: str):
+def _ui_warn(msg: str) -> None:
     try:
         import streamlit as st
         st.warning(msg)
@@ -549,7 +546,7 @@ def _ui_warn(msg: str):
         pass
 
 
-def _ui_error(msg: str):
+def _ui_error(msg: str) -> None:
     try:
         import streamlit as st
         st.error(msg)
@@ -557,7 +554,7 @@ def _ui_error(msg: str):
         pass
 
 
-def _ui_expander(title: str, content: str):
+def _ui_expander(title: str, content: str) -> None:
     try:
         import streamlit as st
         with st.expander(title):

@@ -1,77 +1,135 @@
 """
-map_view.py — Geoptimaliseerde Folium kaart voor VrijStaan.
-Fix: Gebruikt native HTML rendering in plaats van trage st_folium bidirectionele brug.
+ui/map_view.py — Kaartweergave component voor VrijStaan v4.
+De kaart is verborgen by default en klapt open via de sidebar toggle.
+Booking.com: kaart is een overlay/sectie, niet altijd zichtbaar.
 """
+from __future__ import annotations
+
 import folium
-from folium.plugins import MarkerCluster
-import streamlit.components.v1 as components
+import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
-def render_map(df):
-    nl_coords = [52.1326, 5.2913]
-    m = folium.Map(location=nl_coords, zoom_start=7, tiles="OpenStreetMap")
+from ui.theme import BRAND_PRIMARY, BRAND_DARK, BORDER
+from utils.helpers import clean_val, safe_html, is_ja
 
-    if df.empty:
-        components.html(m._repr_html_(), height=600)
-        return
 
-    # ── VEILIGHEIDSLIMIET ──
-    # Mocht de dataset toch te groot worden doorbroken, beschermen we de browser
-    MAX_MARKERS = 800
-    if len(df) > MAX_MARKERS:
-        st.caption(f"⚠️ Kaart toont top {MAX_MARKERS} locaties om snelheid te garanderen. Gebruik filters voor meer.")
-        df = df.head(MAX_MARKERS)
+def build_folium_map(map_df: pd.DataFrame) -> folium.Map:
+    """
+    Bouwt een Folium-kaart met MarkerCluster voor alle locaties.
 
-    cluster = MarkerCluster(
-        options={
-            "maxClusterRadius": 60,
-            "disableClusteringAtZoom": 12,
-            "spiderfyOnMaxZoom": True,
-        }
+    Args:
+      map_df: DataFrame met latitude/longitude kolommen
+
+    Returns:
+      Folium Map object
+    """
+    if map_df.empty:
+        center, zoom = [52.3, 5.3], 7
+    else:
+        center = [
+            float(map_df["latitude"].dropna().mean()),
+            float(map_df["longitude"].dropna().mean()),
+        ]
+        zoom = 8 if len(map_df) > 15 else 11
+
+    m = folium.Map(location=center, zoom_start=zoom, tiles=None)
+    folium.TileLayer(
+        tiles=(
+            "https://{s}.basemaps.cartocdn.com/"
+            "rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        ),
+        attr="&copy; OpenStreetMap &copy; CARTO",
+        name="Voyager",
+        max_zoom=19,
     ).add_to(m)
 
-    for _, row in df.iterrows():
-        prijs_str = str(row.get("prijs", "Onbekend"))
-        prijs_kleur = "green" if prijs_str.lower() == "gratis" else "orange" if prijs_str != "Onbekend" else "gray"
+    try:
+        from folium.plugins import MarkerCluster
+        cluster = MarkerCluster(
+            options={"maxClusterRadius": 60, "disableClusteringAtZoom": 13}
+        ).add_to(m)
+    except ImportError:
+        cluster = m
 
-        afstand_html = ""
-        if "afstand_label" in row and str(row["afstand_label"]) not in ("nan", ""):
-            afstand_html = f'<br><small>📏 {row["afstand_label"]} van jouw locatie</small>'
+    for _, row in map_df.iterrows():
+        try:
+            lat = float(str(row["latitude"]).replace(",", "."))
+            lon = float(str(row["longitude"]).replace(",", "."))
+        except (ValueError, TypeError):
+            continue
 
-        website = str(row.get("website", "")).strip()
-        website_html = f'<a href="{website if website.startswith("http") else "https://"+website}" target="_blank">🌐 Website</a>' if website and website != "nan" else ""
+        naam_s   = safe_html(clean_val(row.get("naam"), "Onbekend"))
+        prov_s   = safe_html(clean_val(row.get("provincie"), ""))
+        prijs_s  = clean_val(row.get("prijs"), "Onbekend")
+        honden   = "✅" if is_ja(row.get("honden_toegestaan")) else "❌"
+        stroom   = "✅" if is_ja(row.get("stroom")) else "❌"
+        wifi     = "✅" if is_ja(row.get("wifi")) else "❌"
 
-        # Simpele, schone HTML popup
+        is_gratis = "gratis" in str(prijs_s).lower()
+        prijs_color = "#008009" if is_gratis else BRAND_PRIMARY
+
         popup_html = f"""
-        <div style="width:220px;font-family:sans-serif;font-size:13px;">
-            <b style="font-size:14px;">{row['naam']}</b><br>
-            <span style="color:#666;">📍 {row.get('provincie', 'Onbekend')}</span><br>
-            <hr style="margin:6px 0;">
-            💰 {prijs_str}<br>
-            🐾 Honden: {row.get('honden_toegestaan','?')}<br>
-            ⚡ Stroom: {row.get('stroom','?')}<br>
-            🌊 Water: {row.get('waterfront','?')}<br>
-            {afstand_html}
-            <hr style="margin:6px 0;">
-            {website_html}
-        </div>
-        """
+<div style="font-family:'DM Sans',sans-serif;min-width:200px;max-width:240px;">
+  <div style="font-weight:700;font-size:0.95rem;color:{BRAND_DARK};margin-bottom:4px;">
+    {naam_s}
+  </div>
+  <div style="font-size:0.75rem;color:#6B7897;margin-bottom:8px;">📍 {prov_s}</div>
+  <div style="font-size:0.78rem;display:flex;gap:8px;margin-bottom:6px;">
+    <span>🐾 {honden}</span>
+    <span>⚡ {stroom}</span>
+    <span>📶 {wifi}</span>
+  </div>
+  <div style="font-weight:700;color:{prijs_color};font-size:0.9rem;">
+    💶 {safe_html(prijs_s)}
+  </div>
+</div>"""
 
         folium.Marker(
-            location=[float(row["latitude"]), float(row["longitude"])],
-            popup=folium.Popup(popup_html, max_width=240),
-            icon=folium.Icon(color=prijs_kleur, icon="home", prefix="fa"),
-            tooltip=f"{row['naam']} — {prijs_str}",
+            location=[lat, lon],
+            popup=folium.Popup(popup_html, max_width=260),
+            tooltip=naam_s,
+            icon=folium.Icon(
+                color="green" if is_gratis else "blue",
+                icon="home",
+                prefix="fa",
+            ),
         ).add_to(cluster)
 
-    # Pas kaartbounds aan op de data
-    if len(df) > 0:
-        lats = df["latitude"].astype(float)
-        lons = df["longitude"].astype(float)
-        m.fit_bounds([
-            [lats.min() - 0.1, lons.min() - 0.1],
-            [lats.max() + 0.1, lons.max() + 0.1],
-        ])
+    return m
 
-    # 🚀 DE SNELHEIDS-HACK: Teken de kaart als statische HTML
-    components.html(m._repr_html_(), height=600)
+
+def render_map_section(display_df: pd.DataFrame, height: int = 500) -> None:
+    """
+    Rendert de kaart als uitklapbare sectie (bij toon_kaart=True).
+    Getoond als een volledige balk boven de resultatenlijst.
+
+    Args:
+      display_df: Gefilterde dataset om op de kaart te tonen
+      height:     Kaarth hoogte in pixels
+    """
+    st.markdown(
+        f"""<div style="border-radius:12px;overflow:hidden;
+border:1px solid {BORDER};margin-bottom:1rem;
+box-shadow:0 2px 12px rgba(0,0,0,0.08);">""",
+        unsafe_allow_html=True,
+    )
+
+    if display_df.empty:
+        st.info("📍 Geen locaties om op de kaart te tonen met de huidige filters.")
+    else:
+        map_data = (
+            display_df
+            .dropna(subset=["latitude", "longitude"])
+            .head(300)
+        )
+        try:
+            f_map = build_folium_map(map_data)
+            components.html(f_map._repr_html_(), height=height)
+        except Exception as e:
+            st.error(f"Kaart kon niet worden geladen: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.caption(
+        f"📍 {min(len(display_df), 300)} van {len(display_df)} locaties getoond op de kaart."
+    )

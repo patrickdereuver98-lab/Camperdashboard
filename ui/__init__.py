@@ -1,1 +1,1 @@
-# ui package
+"""ui — VrijStaan UI component package."""
