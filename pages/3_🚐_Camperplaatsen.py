@@ -1,28 +1,28 @@
 """
-pages/3_🚐_Camperplaatsen.py — Premium Zoek & Ontdek Dashboard voor VrijStaan.
-Design: Dutch Coastal v2.
+pages/3_🚐_Camperplaatsen.py — Premium Zoek & Ontdek Dashboard voor VrijStaan v3.
+Pijler 1: UI/UX op Booking.com / Trivago niveau.
 
-Alle bugs gefixed:
-  - apply_theme() toegevoegd (was vergeten)
-  - st.container(height=560) voor echte scroll-container
-  - MarkerCluster voor kaartperformance
-  - AI-query gecached (niet per rerender opnieuw)
-  - _render_list dode variabele verwijderd
-  - toggle_favorite knoppen op cards
-  - Sorteeropties toegevoegd
-  - HTML-escaping op naam/provincie (XSS-fix)
-  - Dynamische subtitle met len(df)
-  - Waterfront-badge hersteld
-  - Wis-zoekopdracht knop
-  - Provincie-filter vanuit landing-page
-  - Centrale helpers uit utils.helpers
+Verbeteringen t.o.v. v2:
+  - Booking.com-stijl kaarten: grote afbeelding (200px), vetgedrukte prijs,
+    visuele sterren (★★★☆☆), capaciteitsindicator
+  - white-space:nowrap + text-overflow:ellipsis — geen afgebroken tekst op mobiel
+  - Prijsweergave prominent in dikgedrukte accentkleur
+  - Grid-view: 2 kolommen, gelijke kaarthoogte
+  - _render_card volledig herschreven voor premium look
+  - Alle session_state variabelen ongewijzigd
+  - Centrale helpers uit utils.helpers (ongewijzigd)
+  - Filter-sidebar ongewijzigd (werkt goed)
+  - Filtering pipeline ongewijzigd (correcte logica)
 """
 import pandas as pd
 import streamlit as st
 import folium
 import streamlit.components.v1 as components
 
-from ui.theme import apply_theme, render_sidebar_header, BRAND_PRIMARY, BRAND_DARK, BORDER, TEXT_MUTED
+from ui.theme import (
+    apply_theme, render_sidebar_header,
+    BRAND_PRIMARY, BRAND_DARK, BRAND_ACCENT, BORDER, TEXT_MUTED,
+)
 from utils.ai_helper import process_ai_query
 from utils.data_handler import load_data
 from utils.favorites import get_favorites, toggle_favorite, init_favorites
@@ -31,7 +31,7 @@ from utils.helpers import (
     facility_badges_html, price_badge_html, is_ja,
 )
 
-# ── CONFIGURATIE ──────────────────────────────────────────────────────────────
+# ── CONFIGURATIE ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="VrijStaan | Camperplaatsen",
     page_icon="🚐",
@@ -39,20 +39,20 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Fix: apply_theme() EERST — zodat ook foutmeldingen gestyled zijn
+# apply_theme() EERST — zodat ook foutmeldingen gestyled zijn
 apply_theme()
 render_sidebar_header()
 init_favorites()
 
-# ── SESSIE STATE ──────────────────────────────────────────────────────────────
+# ── SESSIE STATE ───────────────────────────────────────────────────────────────
 _DEFAULTS = {
-    "ai_query_cp":      "",
+    "ai_query_cp":       "",
     "ai_active_filters": [],
-    "qf_gratis":        False,
-    "qf_honden":        False,
-    "qf_stroom":        False,
-    "qf_wifi":          False,
-    "show_map":         True,
+    "qf_gratis":         False,
+    "qf_honden":         False,
+    "qf_stroom":         False,
+    "qf_wifi":           False,
+    "show_map":          True,
     "_landing_province": None,
 }
 for k, v in _DEFAULTS.items():
@@ -60,7 +60,7 @@ for k, v in _DEFAULTS.items():
         st.session_state[k] = v
 
 
-# ── DATA LADEN ────────────────────────────────────────────────────────────────
+# ── DATA LADEN ─────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300, show_spinner=False)
 def _load():
     return load_data()
@@ -76,7 +76,57 @@ if df.empty:
     st.stop()
 
 
-# ── DETAIL DIALOOG ────────────────────────────────────────────────────────────
+# ── HELPER: STERREN HTML ───────────────────────────────────────────────────────
+def _stars_html(score_raw) -> str:
+    """
+    Genereert visuele sterren HTML op basis van score.
+    Score 4.2 → ★★★★☆ 4.2
+    Retourneert lege string bij ongeldige input.
+    """
+    val = clean_val(score_raw, "")
+    if not val:
+        return ""
+    try:
+        score_f = float(val.replace(",", ".").split("/")[0])
+        full  = min(5, max(0, int(round(score_f))))
+        empty = 5 - full
+        stars = (
+            f'<span class="vs-star-full">{"★" * full}</span>'
+            f'<span class="vs-star-empty">{"★" * empty}</span>'
+        )
+        return (
+            f'<span class="vs-loc-card-stars">'
+            f'{stars}'
+            f'<span class="vs-star-score">{score_f:.1f}/5</span>'
+            f'</span>'
+        )
+    except (ValueError, TypeError):
+        return ""
+
+
+def _price_display_html(prijs_raw) -> str:
+    """
+    Prominent prijsdisplay: dikgedrukt, accentkleur.
+    Gratis → groen. Onbekend → gedempte stijl. Betaald → donker/bold.
+    """
+    p = clean_val(prijs_raw, "")
+    if p.lower() == "gratis":
+        return '<span class="vs-price-main gratis">💰 Gratis</span>'
+    elif not p:
+        return '<span class="vs-price-main onbekend">Prijs onbekend</span>'
+    else:
+        return f'<span class="vs-price-main">💶 {safe_html(p)}</span>'
+
+
+def _capacity_html(row) -> str:
+    """Capaciteitsindicator als klein label."""
+    cap = clean_val(row.get("aantal_plekken"), "")
+    if cap and cap.isdigit():
+        return f' &nbsp;·&nbsp; <span style="font-size:0.72rem;color:{TEXT_MUTED};">{cap} plekken</span>'
+    return ""
+
+
+# ── DETAIL DIALOOG ─────────────────────────────────────────────────────────────
 @st.dialog("📍 Locatiedetails", width="large")
 def show_detail(row):
     naam = safe_html(clean_val(row.get("naam"), "Onbekend"))
@@ -141,8 +191,10 @@ def show_detail(row):
 
     with tab_reviews:
         score_str = format_score(row.get("beoordeling"))
+        stars_detail = _stars_html(row.get("beoordeling"))
         st.markdown(
-            f"### Score: {score_str if score_str else '–'}",
+            f"### Score: {score_str if score_str else '–'} "
+            + (f"&nbsp; {stars_detail}" if stars_detail else ""),
             unsafe_allow_html=True,
         )
         samen = clean_val(row.get("samenvatting_reviews"), "Nog geen reviews verwerkt.")
@@ -168,7 +220,7 @@ def show_detail(row):
             st.warning("Geen geldige coördinaten voor deze locatie.")
 
 
-# ── SIDEBAR ───────────────────────────────────────────────────────────────────
+# ── SIDEBAR ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(
         f'<div class="vs-filter-header">🗂 Filters</div>',
@@ -183,7 +235,7 @@ with st.sidebar:
         if p.lower() not in ("onbekend", "", "nan")
     ])
 
-    # Fix: province preset vanuit landing-pagina
+    # Province preset vanuit landing-pagina
     preset_prov = st.session_state.pop("_landing_province", None)
     default_provs = [preset_prov] if preset_prov and preset_prov in prov_opties else []
 
@@ -225,11 +277,13 @@ with st.sidebar:
     if st.button("🔄 Alle filters wissen", use_container_width=True):
         for k in ("ai_query_cp", "ai_active_filters", "qf_gratis",
                   "qf_honden", "qf_stroom", "qf_wifi"):
-            st.session_state[k] = [] if k == "ai_active_filters" else (False if k.startswith("qf") else "")
+            st.session_state[k] = [] if k == "ai_active_filters" else (
+                False if k.startswith("qf") else ""
+            )
         st.rerun()
 
 
-# ── HERO SECTIE ───────────────────────────────────────────────────────────────
+# ── HERO SECTIE ────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="vs-hero">
   <div style="position:relative;z-index:2;">
@@ -242,7 +296,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── AI ZOEKBALK ───────────────────────────────────────────────────────────────
+# ── AI ZOEKBALK ────────────────────────────────────────────────────────────────
 col_ai, col_btn = st.columns([5, 1])
 with col_ai:
     ai_input = st.text_input(
@@ -256,23 +310,25 @@ with col_btn:
         st.session_state["ai_query_cp"] = ai_input.strip()
         st.rerun()
 
-# Wis-knop (Fix: was er niet in de vorige versie)
+# Wis-knop
 if st.session_state["ai_query_cp"]:
     if st.button("✕ Zoekopdracht wissen", type="secondary"):
         st.session_state["ai_query_cp"]      = ""
         st.session_state["ai_active_filters"] = []
         st.rerun()
 
-# ── SNELFILTER CHIPS ──────────────────────────────────────────────────────────
+# ── SNELFILTER CHIPS ───────────────────────────────────────────────────────────
 st.write("")
 c1, c2, c3, c4, _ = st.columns([1, 1, 1, 1, 3])
 
 def _quick_chip(col, label, key):
     with col:
         active = st.session_state[key]
-        if st.button(label,
-                     type="primary" if active else "secondary",
-                     use_container_width=True):
+        if st.button(
+            label,
+            type="primary" if active else "secondary",
+            use_container_width=True,
+        ):
             st.session_state[key] = not active
             st.rerun()
 
@@ -282,7 +338,7 @@ _quick_chip(c3, "⚡ Stroom",  "qf_stroom")
 _quick_chip(c4, "📶 Wifi",    "qf_wifi")
 
 
-# ── FILTERING PIPELINE ────────────────────────────────────────────────────────
+# ── FILTERING PIPELINE ─────────────────────────────────────────────────────────
 processed  = df.copy()
 ai_labels: list[str] = []
 
@@ -337,7 +393,7 @@ if f_sanitair and "sanitair" in processed.columns:
 if toon_favs:
     processed = processed[processed["naam"].isin(get_favorites())]
 
-# Stap 7: Sorteren (Fix: was niet aanwezig in vorige versie)
+# Stap 7: Sorteren
 if sort_keuze == "Naam A→Z":
     processed = processed.sort_values("naam", key=lambda s: s.str.lower())
 elif sort_keuze == "Prijs (gratis eerst)":
@@ -353,7 +409,7 @@ elif sort_keuze == "Beoordeling ↓":
     processed = processed.sort_values("_score", ascending=False).drop(columns=["_score"])
 
 
-# ── RESULTATEN HEADER ─────────────────────────────────────────────────────────
+# ── RESULTATEN HEADER ──────────────────────────────────────────────────────────
 st.markdown(
     f'<div style="font-family:DM Serif Display,serif;font-size:1.4rem;'
     f'color:{BRAND_DARK};margin-bottom:0.1rem;">{len(processed):,} camperplaatsen gevonden</div>'
@@ -378,9 +434,9 @@ if active_filters and active_query:
     )
 
 
-# ── FOLIUM KAART BOUWER ───────────────────────────────────────────────────────
+# ── FOLIUM KAART BOUWER ────────────────────────────────────────────────────────
 def _build_map(map_df: pd.DataFrame) -> folium.Map:
-    """Bouwt kaart met MarkerCluster (Fix: was individuele DivIcons → traag)."""
+    """Bouwt kaart met MarkerCluster voor performance."""
     if map_df.empty:
         center, zoom = [52.3, 5.3], 7
     else:
@@ -398,7 +454,6 @@ def _build_map(map_df: pd.DataFrame) -> folium.Map:
         max_zoom=19,
     ).add_to(m)
 
-    # Fix: MarkerCluster voor veel betere browserperformance
     try:
         from folium.plugins import MarkerCluster
         cluster = MarkerCluster(
@@ -427,7 +482,7 @@ def _build_map(map_df: pd.DataFrame) -> folium.Map:
             f'<strong style="color:{BRAND_DARK};font-size:0.95rem;">{naam_s}</strong><br>'
             f'<span style="color:#8A9DB5;font-size:0.78rem;">📍 {prov_s}</span><br><br>'
             f'<span style="font-size:0.78rem;">🐾 {honden} &nbsp; ⚡ {stroom}</span><br>'
-            f'<span style="color:{BRAND_PRIMARY};font-weight:600;font-size:0.85rem;">'
+            f'<span style="color:{BRAND_PRIMARY};font-weight:700;font-size:0.85rem;">'
             f'💶 {safe_html(prijs_s)}</span>'
             f'</div>'
         )
@@ -442,39 +497,44 @@ def _build_map(map_df: pd.DataFrame) -> folium.Map:
     return m
 
 
-# ── HOOFD LAYOUT ──────────────────────────────────────────────────────────────
-display_df = processed.head(200)
-
-# ── KAART + LIJST NAAST ELKAAR ────────────────────────────────────────────────
+# ── PREMIUM CARD RENDERER ──────────────────────────────────────────────────────
 def _render_card(container, row, idx):
-    """Rendert één locatiekaart incl. detail-knop en favoriet-toggle."""
-    img   = clean_val(row.get("afbeelding"), "")
+    """
+    Rendert één premium locatiekaart — Booking.com stijl.
+    - Grote afbeelding (200px breed, volledige kaardhoogte)
+    - Visuele sterren (★★★★☆)
+    - Vetgedrukte, gekleurde prijs
+    - Capaciteitsindicator
+    - Badges in nowrap-rij
+    - Detail-knop + favoriet-toggle
+    """
+    img = clean_val(row.get("afbeelding"), "")
     if not img:
-        img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=300&auto=format"
+        img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400&auto=format"
+
     naam_raw = clean_val(row.get("naam"), "Onbekend")
     naam_s   = safe_html(naam_raw)
     prov_s   = safe_html(clean_val(row.get("provincie"), "Onbekend"))
-    prijs    = clean_val(row.get("prijs"), "Onbekend")
+    prijs    = clean_val(row.get("prijs"), "")
     badges   = facility_badges_html(row)
-    price_b  = price_badge_html(prijs)
-    score_s  = format_score(row.get("beoordeling"))
-    score_html = (
-        f'<span class="vs-score-pill">⭐ {safe_html(score_s)}</span>'
-        if score_s else ""
-    )
+    stars    = _stars_html(row.get("beoordeling"))
+    price_html = _price_display_html(prijs)
+    cap_html   = _capacity_html(row)
 
     container.markdown(f"""
 <div class="vs-loc-card">
   <img class="vs-loc-card-img" src="{img}" alt="{naam_s}"
-       onerror="this.src='https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=300&auto=format'">
+       loading="lazy"
+       onerror="this.src='https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400&auto=format'">
   <div class="vs-loc-card-body">
     <div>
-      <div class="vs-loc-card-name">{naam_s}</div>
-      <div class="vs-loc-card-location">📍 {prov_s}</div>
-      <div style="margin-bottom:4px;">{badges}</div>
+      <div class="vs-loc-card-name" title="{naam_s}">{naam_s}</div>
+      <div class="vs-loc-card-location">📍 {prov_s}{cap_html}</div>
+      {f'<div style="margin-bottom:5px;">{stars}</div>' if stars else ''}
+      <div class="vs-badges-row">{badges}</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;">
-      {price_b} {score_html}
+    <div class="vs-loc-card-bottom">
+      {price_html}
     </div>
   </div>
 </div>
@@ -487,13 +547,19 @@ def _render_card(container, row, idx):
     with fav_col:
         is_fav  = naam_raw in get_favorites()
         fav_lbl = "❤️" if is_fav else "🤍"
-        if st.button(fav_lbl, key=f"fav_{idx}", use_container_width=True,
-                     help="Toevoegen/verwijderen uit favorieten"):
+        if st.button(
+            fav_lbl, key=f"fav_{idx}", use_container_width=True,
+            help="Toevoegen/verwijderen uit favorieten"
+        ):
             toggle_favorite(naam_raw)
             st.rerun()
 
 
+# ── HOOFD LAYOUT ───────────────────────────────────────────────────────────────
+display_df = processed.head(200)
+
 if st.session_state.show_map:
+    # ── KAART + LIJST NAAST ELKAAR ─────────────────────────────────────
     col_map, col_list = st.columns([1.1, 1])
 
     with col_map:
@@ -501,11 +567,10 @@ if st.session_state.show_map:
         if not display_df.empty:
             map_data = display_df.dropna(subset=["latitude", "longitude"]).head(200)
             f_map = _build_map(map_data)
-            
-            # VERVANG ST.HTML DOOR DIT:
             components.html(f_map._repr_html_(), height=580)
         else:
             st.info("Geen locaties om op de kaart te tonen.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_list:
         if display_df.empty:
@@ -516,7 +581,6 @@ if st.session_state.show_map:
   <span style="font-size:0.85rem;">Pas je filters aan of probeer een andere zoekopdracht.</span>
 </div>""", unsafe_allow_html=True)
         else:
-            # Fix: st.container(height=...) voor echte scroll — was onwerkende div
             try:
                 scroll = st.container(height=580, border=False)
             except TypeError:
@@ -526,13 +590,14 @@ if st.session_state.show_map:
                 for idx, row in display_df.iterrows():
                     _render_card(st, row, idx)
 else:
-    # Volledig scherm grid-view
+    # ── VOLLEDIG SCHERM GRID-VIEW ──────────────────────────────────────
     st.divider()
     if display_df.empty:
         st.markdown("""
 <div class="vs-no-results">
   <div style="font-size:2.5rem;margin-bottom:0.8rem;">🔭</div>
-  <strong>Geen camperplaatsen gevonden</strong>
+  <strong>Geen camperplaatsen gevonden</strong><br>
+  <span style="font-size:0.85rem;">Pas je filters aan of probeer een andere zoekopdracht.</span>
 </div>""", unsafe_allow_html=True)
     else:
         for i in range(0, len(display_df), 2):
@@ -542,7 +607,7 @@ else:
                     _render_card(col_w, display_df.iloc[j], display_df.index[j])
 
 
-# ── FOOTER ────────────────────────────────────────────────────────────────────
+# ── FOOTER ─────────────────────────────────────────────────────────────────────
 if len(processed) > 200:
     st.markdown(
         f"<p style='text-align:center;color:{TEXT_MUTED};font-size:0.8rem;margin-top:1rem;'>"
