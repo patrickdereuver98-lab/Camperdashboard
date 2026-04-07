@@ -1,40 +1,33 @@
 """
-utils/helpers.py — Gedeelde utility functies voor VrijStaan v4.
-Geen Streamlit-afhankelijkheden: puur Python.
-Uitgebreid met nieuwe helpers voor Booking.com-stijl UI.
+utils/helpers.py — Gedeelde utility functies voor VrijStaan v5.
+Crash-proof, type-hinted, PEP8. Geen Streamlit afhankelijkheden.
 """
 from __future__ import annotations
 
 import html as _html
+from math import radians, cos, sin, asin, sqrt
 from typing import Any
 
-# Alle waarden die als "leeg" worden beschouwd
+import pandas as pd
+
 _EMPTY = {"nan", "none", "", "onbekend", "unknown", "n/a", "null", "-", "–", "[]"}
 
 
 def clean_val(val: Any, fallback: str = "Onbekend") -> str:
-    """
-    Converteert élke waarde naar een bruikbare string.
-    Geeft `fallback` terug bij lege, nan, none of onbekende waarden.
-    """
+    """Converteert élke waarde naar bruikbare string, fallback bij lege/nan."""
     if val is None:
         return fallback
     s = str(val).strip()
-    if s.lower() in _EMPTY:
-        return fallback
-    return s
+    return fallback if s.lower() in _EMPTY else s
 
 
 def safe_html(val: Any) -> str:
-    """Escapet HTML-gevaarlijke tekens voor veilig gebruik in f-string HTML."""
+    """HTML-escape voor veilig gebruik in f-string HTML."""
     return _html.escape(str(val))
 
 
 def format_score(raw: Any) -> str:
-    """
-    Formatteert een beoordelingsscore correct.
-    Getal → '4.2/5' | Tekst → retourneer tekst | Leeg → ''
-    """
+    """Getal → '4.2/5' | Tekst → tekst | Leeg → ''"""
     val = clean_val(raw, "")
     if not val:
         return ""
@@ -46,23 +39,25 @@ def format_score(raw: Any) -> str:
 
 
 def is_ja(val: Any) -> bool:
-    """Geeft True als een veld 'Ja' (case-insensitive) bevat."""
+    """True als veld 'Ja' (case-insensitive)."""
     return str(val).strip().lower() == "ja"
 
 
 def safe_float(val: Any, default: float = 0.0) -> float:
-    """Converteert naar float, geeft default terug bij een fout."""
+    """Float conversie met fallback."""
     try:
         return float(str(val).replace(",", "."))
     except (ValueError, TypeError):
         return default
 
 
+def truncate(text: str, max_chars: int = 120) -> str:
+    """Verkort tekst tot max_chars."""
+    return text if len(text) <= max_chars else text[:max_chars].rsplit(" ", 1)[0] + "…"
+
+
 def facility_badges_html(row: Any) -> str:
-    """
-    Genereert HTML badge-string voor een locatierij.
-    Gebruikt door kaartcomponenten voor compacte weergave.
-    """
+    """HTML badge-string voor een locatierij."""
     badges = []
     mapping = [
         ("stroom",            "vs-badge-stroom", "⚡", "Stroom"),
@@ -74,9 +69,7 @@ def facility_badges_html(row: Any) -> str:
     ]
     for col, cls, icon, label in mapping:
         if is_ja(row.get(col, "")):
-            badges.append(
-                f'<span class="vs-badge {cls}">{icon} {label}</span>'
-            )
+            badges.append(f'<span class="vs-badge {cls}">{icon} {label}</span>')
     return "".join(badges)
 
 
@@ -85,51 +78,76 @@ def price_badge_html(prijs: Any) -> str:
     p = clean_val(prijs, "")
     if p.lower() == "gratis":
         return '<span class="vs-badge vs-badge-gratis">💰 Gratis</span>'
-    elif not p:
+    if not p:
         return '<span class="vs-badge vs-badge-onbekend">❓ Onbekend</span>'
-    else:
-        return f'<span class="vs-badge vs-badge-betaald">💶 {safe_html(p)}</span>'
+    return f'<span class="vs-badge vs-badge-betaald">💶 {safe_html(p)}</span>'
 
 
-def truncate(text: str, max_chars: int = 120) -> str:
-    """Verkort een tekst tot max_chars, voegt '…' toe als nodig."""
-    if len(text) <= max_chars:
-        return text
-    return text[:max_chars].rsplit(" ", 1)[0] + "…"
+# ── HAVERSINE AFSTAND ──────────────────────────────────────────────────────────
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Berekent afstand in km tussen twee GPS-coördinaten."""
+    R = 6371.0
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    a = sin((lat2 - lat1) / 2) ** 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ** 2
+    return R * 2 * asin(sqrt(a))
 
 
-def hybrid_search_df(
-    df: "pd.DataFrame",  # type: ignore
-    query: str,
-) -> tuple["pd.DataFrame", bool]:  # type: ignore
+def add_distances(
+    df: pd.DataFrame,
+    user_lat: float,
+    user_lon: float,
+) -> pd.DataFrame:
     """
-    Pijler 4: Hybride zoekfunctie.
+    Voegt 'afstand_km' en 'afstand_label' kolommen toe en sorteert op afstand.
+
+    Args:
+      df:       Dataset met 'latitude' en 'longitude' kolommen
+      user_lat: GPS latitude van de gebruiker
+      user_lon: GPS longitude van de gebruiker
+
+    Returns:
+      Gesorteerde DataFrame met afstandskolommen
+    """
+    df = df.copy()
+
+    def _dist(row: Any) -> float:
+        try:
+            return haversine_km(
+                user_lat, user_lon,
+                float(str(row["latitude"]).replace(",", ".")),
+                float(str(row["longitude"]).replace(",", ".")),
+            )
+        except (ValueError, TypeError):
+            return 9999.0
+
+    df["afstand_km"]    = df.apply(_dist, axis=1)
+    df["afstand_label"] = df["afstand_km"].apply(
+        lambda x: f"{x:.0f} km" if x < 9999 else ""
+    )
+    return df.sort_values("afstand_km").reset_index(drop=True)
+
+
+# ── HYBRIDE ZOEKFUNCTIE (Pijler 4) ────────────────────────────────────────────
+
+def hybrid_search_df(df: pd.DataFrame, query: str) -> tuple[pd.DataFrame, bool]:
+    """
     Stap 1: Exacte naam/provincie match (case-insensitive).
-    Stap 2: Als geen resultaten → geef origineel terug met use_ai=True.
+    Stap 2: Als geen match → retourneer origineel + use_ai=True.
 
     Returns:
       (gefilterde_df, use_ai)
-      use_ai=True betekent: schakel over naar AI-intentie zoekopdracht.
     """
-    import pandas as pd
-
     q = query.strip().lower()
     if not q:
         return df, False
 
-    # Exacte naam match
-    naam_match = df[
-        df["naam"].astype(str).str.lower().str.contains(q, na=False)
-    ]
+    naam_match = df[df["naam"].astype(str).str.lower().str.contains(q, na=False)]
     if not naam_match.empty:
         return naam_match, False
 
-    # Exacte provincie match
-    prov_match = df[
-        df["provincie"].astype(str).str.lower().str.contains(q, na=False)
-    ]
+    prov_match = df[df["provincie"].astype(str).str.lower().str.contains(q, na=False)]
     if not prov_match.empty:
         return prov_match, False
 
-    # Geen directe match → AI intent zoeken
     return df, True
