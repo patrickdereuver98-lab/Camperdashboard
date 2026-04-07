@@ -1,37 +1,33 @@
 """
-pages/3_🚐_Camperplaatsen.py — Premium Zoek & Ontdek Dashboard voor VrijStaan v3.
-Pijler 1: UI/UX op Booking.com / Trivago niveau.
+pages/3_🚐_Camperplaatsen.py — Premium Zoek & Ontdek Dashboard voor VrijStaan.
 
-Verbeteringen t.o.v. v2:
-  - Booking.com-stijl kaarten: grote afbeelding (200px), vetgedrukte prijs,
-    visuele sterren (★★★☆☆), capaciteitsindicator
-  - white-space:nowrap + text-overflow:ellipsis — geen afgebroken tekst op mobiel
-  - Prijsweergave prominent in dikgedrukte accentkleur
-  - Grid-view: 2 kolommen, gelijke kaarthoogte
-  - _render_card volledig herschreven voor premium look
-  - Alle session_state variabelen ongewijzigd
-  - Centrale helpers uit utils.helpers (ongewijzigd)
-  - Filter-sidebar ongewijzigd (werkt goed)
-  - Filtering pipeline ongewijzigd (correcte logica)
+Bevat:
+  - Volledige Booking.com / Trivago UI/UX
+  - Hybride Zoekfilter (Directe match + AI)
+  - Bugfix: Markdown HTML rendering (geen grijze blokken meer)
+  - Bugfix: Veilige Pandas vectorisaties
+  - Volledig herstelde show_detail() functie
 """
+import re
 import pandas as pd
 import streamlit as st
 import folium
 import streamlit.components.v1 as components
+from typing import Tuple, List
 
 from ui.theme import (
-    apply_theme, render_sidebar_header,
-    BRAND_PRIMARY, BRAND_DARK, BRAND_ACCENT, BORDER, TEXT_MUTED,
+    apply_theme, render_sidebar_header, 
+    BRAND_PRIMARY, BRAND_DARK, BRAND_ACCENT, BORDER, TEXT_MUTED
 )
 from utils.ai_helper import process_ai_query
 from utils.data_handler import load_data
 from utils.favorites import get_favorites, toggle_favorite, init_favorites
 from utils.helpers import (
     clean_val, safe_html, format_score,
-    facility_badges_html, price_badge_html, is_ja,
+    facility_badges_html, price_badge_html, is_ja
 )
 
-# ── CONFIGURATIE ───────────────────────────────────────────────────────────────
+# ── CONFIGURATIE ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="VrijStaan | Camperplaatsen",
     page_icon="🚐",
@@ -39,12 +35,11 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# apply_theme() EERST — zodat ook foutmeldingen gestyled zijn
 apply_theme()
 render_sidebar_header()
 init_favorites()
 
-# ── SESSIE STATE ───────────────────────────────────────────────────────────────
+# ── SESSIE STATE ──────────────────────────────────────────────────────────────
 _DEFAULTS = {
     "ai_query_cp":       "",
     "ai_active_filters": [],
@@ -60,9 +55,9 @@ for k, v in _DEFAULTS.items():
         st.session_state[k] = v
 
 
-# ── DATA LADEN ─────────────────────────────────────────────────────────────────
+# ── DATA LADEN ────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300, show_spinner=False)
-def _load():
+def _load() -> pd.DataFrame:
     return load_data()
 
 with st.spinner("📡 Database laden..."):
@@ -76,19 +71,64 @@ if df.empty:
     st.stop()
 
 
-# ── HELPER: STERREN HTML ───────────────────────────────────────────────────────
-def _stars_html(score_raw) -> str:
-    """
-    Genereert visuele sterren HTML op basis van score.
-    Score 4.2 → ★★★★☆ 4.2
-    Retourneert lege string bij ongeldige input.
-    """
+# ── HYBRIDE ZOEKFILTER ────────────────────────────────────────────────────────
+def _hybrid_filter(df_filter: pd.DataFrame, query: str) -> Tuple[pd.DataFrame, List[str]]:
+    query = query.strip()
+    if not query:
+        return df_filter, []
+
+    loc_cols = [c for c in ["naam", "plaats", "gemeente", "provincie"] if c in df_filter.columns]
+    
+    # ── Stap A: Directe match
+    direct_mask = pd.Series(False, index=df_filter.index)
+    for col in loc_cols:
+        direct_mask |= (
+            df_filter[col].fillna("")
+            .astype(str).str.lower()
+            .str.contains(re.escape(query.lower()), na=False)
+        )
+
+    if direct_mask.sum() > 0:
+        return df_filter[direct_mask], [f"📍 Locatie: '{query}'"]
+
+    # ── Stap B: Inperking per geografisch woord
+    words = [w for w in re.split(r"\s+", query) if len(w) >= 3]
+    geo_df = df_filter
+    geo_labels: List[str] = []
+    intent_words = list(words)
+
+    for word in words:
+        word_mask = pd.Series(False, index=geo_df.index)
+        for col in loc_cols:
+            word_mask |= (
+                geo_df[col].fillna("")
+                .astype(str).str.lower()
+                .str.contains(re.escape(word.lower()), na=False)
+            )
+
+        match_count = int(word_mask.sum())
+        if 0 < (match_count / max(len(geo_df), 1)) < 0.50:
+            geo_df = geo_df[word_mask]
+            geo_labels.append(f"📍 {word.capitalize()}")
+            intent_words = [w for w in intent_words if w.lower() != word.lower()]
+
+    # ── Stap C: AI Intentie
+    ai_labels: List[str] = []
+    ai_query = " ".join(intent_words).strip()
+    if len(ai_query) > 2:
+        geo_df, ai_labels = process_ai_query(geo_df, ai_query)
+
+    return geo_df, geo_labels + ai_labels or ["🔍 Geen specifieke filters herkend"]
+
+
+# ── HELPERS ───────────────────────────────────────────────────────────────────
+def _stars_html(score_raw: str) -> str:
     val = clean_val(score_raw, "")
     if not val:
         return ""
     try:
         score_f = float(val.replace(",", ".").split("/")[0])
-        full  = min(5, max(0, int(round(score_f))))
+        full = min(5, max(0, int(round(score_f))))
         empty = 5 - full
         stars = (
             f'<span class="vs-star-full">{"★" * full}</span>'
@@ -103,12 +143,7 @@ def _stars_html(score_raw) -> str:
     except (ValueError, TypeError):
         return ""
 
-
-def _price_display_html(prijs_raw) -> str:
-    """
-    Prominent prijsdisplay: dikgedrukt, accentkleur.
-    Gratis → groen. Onbekend → gedempte stijl. Betaald → donker/bold.
-    """
+def _price_display_html(prijs_raw: str) -> str:
     p = clean_val(prijs_raw, "")
     if p.lower() == "gratis":
         return '<span class="vs-price-main gratis">💰 Gratis</span>'
@@ -117,18 +152,16 @@ def _price_display_html(prijs_raw) -> str:
     else:
         return f'<span class="vs-price-main">💶 {safe_html(p)}</span>'
 
-
-def _capacity_html(row) -> str:
-    """Capaciteitsindicator als klein label."""
+def _capacity_html(row: pd.Series) -> str:
     cap = clean_val(row.get("aantal_plekken"), "")
     if cap and cap.isdigit():
-        return f' &nbsp;·&nbsp; <span style="font-size:0.72rem;color:{TEXT_MUTED};">{cap} plekken</span>'
+        return f'  ·  <span style="font-size:0.72rem;color:{TEXT_MUTED};">{cap} plekken</span>'
     return ""
 
 
-# ── DETAIL DIALOOG ─────────────────────────────────────────────────────────────
+# ── DETAIL DIALOOG (Volledig hersteld) ────────────────────────────────────────
 @st.dialog("📍 Locatiedetails", width="large")
-def show_detail(row):
+def show_detail(row: pd.Series):
     naam = safe_html(clean_val(row.get("naam"), "Onbekend"))
     prov = safe_html(clean_val(row.get("provincie"), "Onbekend"))
 
@@ -194,7 +227,7 @@ def show_detail(row):
         stars_detail = _stars_html(row.get("beoordeling"))
         st.markdown(
             f"### Score: {score_str if score_str else '–'} "
-            + (f"&nbsp; {stars_detail}" if stars_detail else ""),
+            + (f"  {stars_detail}" if stars_detail else ""),
             unsafe_allow_html=True,
         )
         samen = clean_val(row.get("samenvatting_reviews"), "Nog geen reviews verwerkt.")
@@ -220,7 +253,60 @@ def show_detail(row):
             st.warning("Geen geldige coördinaten voor deze locatie.")
 
 
-# ── SIDEBAR ────────────────────────────────────────────────────────────────────
+# ── CARD RENDERER (Bugfix HTML) ───────────────────────────────────────────────
+def _render_card(container, row: pd.Series, idx: int):
+    """
+    Rendert één premium locatiekaart — Booking.com stijl.
+    Bugfix toegepast: HTML string start strak tegen linkermarge, zodat
+    Streamlit het niet als een code-block interpreteert.
+    """
+    img = clean_val(row.get("afbeelding"), "")
+    if not img:
+        img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400&auto=format"
+
+    naam_raw   = clean_val(row.get("naam"), "Onbekend")
+    naam_s     = safe_html(naam_raw)
+    prov_s     = safe_html(clean_val(row.get("provincie"), "Onbekend"))
+    prijs      = clean_val(row.get("prijs"), "")
+    badges     = facility_badges_html(row)
+    stars      = _stars_html(row.get("beoordeling"))
+    price_html = _price_display_html(prijs)
+    cap_html   = _capacity_html(row)
+
+# LET OP: Deze inspringing is opzettelijk verwijderd om een Streamlit Markdown bug te voorkomen.
+    html_string = f"""<div class="vs-loc-card">
+<img class="vs-loc-card-img" src="{img}" alt="{naam_s}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400&auto=format'">
+<div class="vs-loc-card-body">
+<div>
+<div class="vs-loc-card-name" title="{naam_s}">{naam_s}</div>
+<div class="vs-loc-card-location">📍 {prov_s}{cap_html}</div>
+{f'<div style="margin-bottom:5px;">{stars}</div>' if stars else ''}
+<div class="vs-badges-row">{badges}</div>
+</div>
+<div class="vs-loc-card-bottom">
+{price_html}
+</div>
+</div>
+</div>"""
+
+    container.markdown(html_string, unsafe_allow_html=True)
+
+    btn_col, fav_col = container.columns([3, 1])
+    with btn_col:
+        if st.button("🔍 Bekijk details", key=f"det_{idx}", use_container_width=True):
+            show_detail(row)
+    with fav_col:
+        is_fav  = naam_raw in get_favorites()
+        fav_lbl = "❤️" if is_fav else "🤍"
+        if st.button(
+            fav_lbl, key=f"fav_{idx}", use_container_width=True,
+            help="Toevoegen/verwijderen uit favorieten"
+        ):
+            toggle_favorite(naam_raw)
+            st.rerun()
+
+
+# ── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown(
         f'<div class="vs-filter-header">🗂 Filters</div>',
@@ -235,7 +321,6 @@ with st.sidebar:
         if p.lower() not in ("onbekend", "", "nan")
     ])
 
-    # Province preset vanuit landing-pagina
     preset_prov = st.session_state.pop("_landing_province", None)
     default_provs = [preset_prov] if preset_prov and preset_prov in prov_opties else []
 
@@ -277,13 +362,11 @@ with st.sidebar:
     if st.button("🔄 Alle filters wissen", use_container_width=True):
         for k in ("ai_query_cp", "ai_active_filters", "qf_gratis",
                   "qf_honden", "qf_stroom", "qf_wifi"):
-            st.session_state[k] = [] if k == "ai_active_filters" else (
-                False if k.startswith("qf") else ""
-            )
+            st.session_state[k] = [] if k == "ai_active_filters" else False if k.startswith("qf") else ""
         st.rerun()
 
 
-# ── HERO SECTIE ────────────────────────────────────────────────────────────────
+# ── HERO SECTIE ───────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="vs-hero">
   <div style="position:relative;z-index:2;">
@@ -296,7 +379,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── AI ZOEKBALK ────────────────────────────────────────────────────────────────
+
+# ── AI ZOEKBALK ───────────────────────────────────────────────────────────────
 col_ai, col_btn = st.columns([5, 1])
 with col_ai:
     ai_input = st.text_input(
@@ -310,14 +394,14 @@ with col_btn:
         st.session_state["ai_query_cp"] = ai_input.strip()
         st.rerun()
 
-# Wis-knop
 if st.session_state["ai_query_cp"]:
     if st.button("✕ Zoekopdracht wissen", type="secondary"):
         st.session_state["ai_query_cp"]      = ""
         st.session_state["ai_active_filters"] = []
         st.rerun()
 
-# ── SNELFILTER CHIPS ───────────────────────────────────────────────────────────
+
+# ── SNELFILTER CHIPS ──────────────────────────────────────────────────────────
 st.write("")
 c1, c2, c3, c4, _ = st.columns([1, 1, 1, 1, 3])
 
@@ -338,22 +422,22 @@ _quick_chip(c3, "⚡ Stroom",  "qf_stroom")
 _quick_chip(c4, "📶 Wifi",    "qf_wifi")
 
 
-# ── FILTERING PIPELINE ─────────────────────────────────────────────────────────
+# ── FILTERING PIPELINE (Safe Vectorized) ──────────────────────────────────────
 processed  = df.copy()
-ai_labels: list[str] = []
+ai_labels: List[str] = []
 
 # Stap 1: AI zoekopdracht
 active_query = st.session_state["ai_query_cp"]
 if active_query:
-    with st.spinner("✨ AI interpreteert je zoekopdracht…"):
-        processed, ai_labels = process_ai_query(processed, active_query)
+    with st.spinner("✨ Zoeken…"):
+        processed, ai_labels = _hybrid_filter(processed, active_query)
     st.session_state["ai_active_filters"] = ai_labels
 
 # Stap 2: Naam zoekfilter
 if naam_query:
     processed = processed[
-        processed["naam"].astype(str).str.lower().str.contains(
-            naam_query.lower(), na=False
+        processed["naam"].fillna("").astype(str).str.lower().str.contains(
+            naam_query.lower(), na=False, regex=False
         )
     ]
 
@@ -365,29 +449,29 @@ if selected_provs:
 gratis_actief = prijs_cat == "Gratis" or st.session_state.qf_gratis or f_gratis
 if gratis_actief:
     processed = processed[
-        processed["prijs"].astype(str).str.lower().str.contains("gratis", na=False)
+        processed["prijs"].fillna("").astype(str).str.lower().str.contains("gratis", na=False)
     ]
 elif prijs_cat == "Betaald":
     processed = processed[
-        ~processed["prijs"].astype(str).str.lower().str.contains("gratis", na=False)
+        ~processed["prijs"].fillna("").astype(str).str.lower().str.contains("gratis", na=False)
     ]
 
 # Stap 5: Voorzieningen
 if f_stroom or st.session_state.qf_stroom:
-    processed = processed[processed["stroom"].astype(str).str.lower() == "ja"]
+    processed = processed[processed["stroom"].fillna("").astype(str).str.lower() == "ja"]
 if f_honden or st.session_state.qf_honden:
-    processed = processed[processed["honden_toegestaan"].astype(str).str.lower() == "ja"]
+    processed = processed[processed["honden_toegestaan"].fillna("").astype(str).str.lower() == "ja"]
 if f_wifi or st.session_state.qf_wifi:
     if "wifi" in processed.columns:
-        processed = processed[processed["wifi"].astype(str).str.lower() == "ja"]
+        processed = processed[processed["wifi"].fillna("").astype(str).str.lower() == "ja"]
 if f_water:
     mask = pd.Series(False, index=processed.index)
     for col in ("waterfront", "water_tanken"):
         if col in processed.columns:
-            mask |= processed[col].astype(str).str.lower() == "ja"
+            mask |= processed[col].fillna("").astype(str).str.lower() == "ja"
     processed = processed[mask]
 if f_sanitair and "sanitair" in processed.columns:
-    processed = processed[processed["sanitair"].astype(str).str.lower() == "ja"]
+    processed = processed[processed["sanitair"].fillna("").astype(str).str.lower() == "ja"]
 
 # Stap 6: Favorieten
 if toon_favs:
@@ -395,21 +479,21 @@ if toon_favs:
 
 # Stap 7: Sorteren
 if sort_keuze == "Naam A→Z":
-    processed = processed.sort_values("naam", key=lambda s: s.str.lower())
+    processed = processed.sort_values("naam", key=lambda s: s.fillna("").str.lower())
 elif sort_keuze == "Prijs (gratis eerst)":
     processed = processed.copy()
-    processed["_gratis"] = processed["prijs"].astype(str).str.lower() == "gratis"
+    processed["_gratis"] = processed["prijs"].fillna("").astype(str).str.lower() == "gratis"
     processed = processed.sort_values("_gratis", ascending=False).drop(columns=["_gratis"])
 elif sort_keuze == "Beoordeling ↓":
     processed = processed.copy()
     processed["_score"] = pd.to_numeric(
-        processed["beoordeling"].astype(str).str.replace(",", "."),
+        processed["beoordeling"].fillna("").astype(str).str.replace(",", "."),
         errors="coerce"
     )
     processed = processed.sort_values("_score", ascending=False).drop(columns=["_score"])
 
 
-# ── RESULTATEN HEADER ──────────────────────────────────────────────────────────
+# ── RESULTATEN HEADER ─────────────────────────────────────────────────────────
 st.markdown(
     f'<div style="font-family:DM Serif Display,serif;font-size:1.4rem;'
     f'color:{BRAND_DARK};margin-bottom:0.1rem;">{len(processed):,} camperplaatsen gevonden</div>'
@@ -419,7 +503,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# AI filter-tags tonen
 active_filters = st.session_state.get("ai_active_filters", [])
 if active_filters and active_query:
     tags = "".join(
@@ -428,13 +511,13 @@ if active_filters and active_query:
     )
     st.markdown(
         f'<div style="margin-bottom:0.8rem;">'
-        f'<span style="font-size:0.77rem;color:{TEXT_MUTED};margin-right:6px;">AI herkende:</span>'
+        f'<span style="font-size:0.77rem;color:{TEXT_MUTED};margin-right:6px;">Filters:</span>'
         f'{tags}</div>',
         unsafe_allow_html=True,
     )
 
 
-# ── FOLIUM KAART BOUWER ────────────────────────────────────────────────────────
+# ── FOLIUM KAART BOUWER ───────────────────────────────────────────────────────
 def _build_map(map_df: pd.DataFrame) -> folium.Map:
     """Bouwt kaart met MarkerCluster voor performance."""
     if map_df.empty:
@@ -449,7 +532,7 @@ def _build_map(map_df: pd.DataFrame) -> folium.Map:
             "https://{s}.basemaps.cartocdn.com/"
             "rastertiles/voyager/{z}/{x}/{y}{r}.png"
         ),
-        attr="&copy; OSM &copy; CARTO",
+        attr="© OSM © CARTO",
         name="Voyager",
         max_zoom=19,
     ).add_to(m)
@@ -459,9 +542,7 @@ def _build_map(map_df: pd.DataFrame) -> folium.Map:
         cluster = MarkerCluster(
             options={"maxClusterRadius": 50, "disableClusteringAtZoom": 13}
         ).add_to(m)
-        use_cluster = True
     except ImportError:
-        use_cluster = False
         cluster = m
 
     for _, row in map_df.iterrows():
@@ -481,7 +562,7 @@ def _build_map(map_df: pd.DataFrame) -> folium.Map:
             f'<div style="font-family:DM Sans,sans-serif;min-width:180px;">'
             f'<strong style="color:{BRAND_DARK};font-size:0.95rem;">{naam_s}</strong><br>'
             f'<span style="color:#8A9DB5;font-size:0.78rem;">📍 {prov_s}</span><br><br>'
-            f'<span style="font-size:0.78rem;">🐾 {honden} &nbsp; ⚡ {stroom}</span><br>'
+            f'<span style="font-size:0.78rem;">🐾 {honden}   ⚡ {stroom}</span><br>'
             f'<span style="color:{BRAND_PRIMARY};font-weight:700;font-size:0.85rem;">'
             f'💶 {safe_html(prijs_s)}</span>'
             f'</div>'
@@ -497,65 +578,7 @@ def _build_map(map_df: pd.DataFrame) -> folium.Map:
     return m
 
 
-# ── PREMIUM CARD RENDERER ──────────────────────────────────────────────────────
-def _render_card(container, row, idx):
-    """
-    Rendert één premium locatiekaart — Booking.com stijl.
-    - Grote afbeelding (200px breed, volledige kaardhoogte)
-    - Visuele sterren (★★★★☆)
-    - Vetgedrukte, gekleurde prijs
-    - Capaciteitsindicator
-    - Badges in nowrap-rij
-    - Detail-knop + favoriet-toggle
-    """
-    img = clean_val(row.get("afbeelding"), "")
-    if not img:
-        img = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400&auto=format"
-
-    naam_raw = clean_val(row.get("naam"), "Onbekend")
-    naam_s   = safe_html(naam_raw)
-    prov_s   = safe_html(clean_val(row.get("provincie"), "Onbekend"))
-    prijs    = clean_val(row.get("prijs"), "")
-    badges   = facility_badges_html(row)
-    stars    = _stars_html(row.get("beoordeling"))
-    price_html = _price_display_html(prijs)
-    cap_html   = _capacity_html(row)
-
-    container.markdown(f"""
-<div class="vs-loc-card">
-  <img class="vs-loc-card-img" src="{img}" alt="{naam_s}"
-       loading="lazy"
-       onerror="this.src='https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400&auto=format'">
-  <div class="vs-loc-card-body">
-    <div>
-      <div class="vs-loc-card-name" title="{naam_s}">{naam_s}</div>
-      <div class="vs-loc-card-location">📍 {prov_s}{cap_html}</div>
-      {f'<div style="margin-bottom:5px;">{stars}</div>' if stars else ''}
-      <div class="vs-badges-row">{badges}</div>
-    </div>
-    <div class="vs-loc-card-bottom">
-      {price_html}
-    </div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-    btn_col, fav_col = container.columns([3, 1])
-    with btn_col:
-        if st.button("🔍 Bekijk details", key=f"det_{idx}", use_container_width=True):
-            show_detail(row)
-    with fav_col:
-        is_fav  = naam_raw in get_favorites()
-        fav_lbl = "❤️" if is_fav else "🤍"
-        if st.button(
-            fav_lbl, key=f"fav_{idx}", use_container_width=True,
-            help="Toevoegen/verwijderen uit favorieten"
-        ):
-            toggle_favorite(naam_raw)
-            st.rerun()
-
-
-# ── HOOFD LAYOUT ───────────────────────────────────────────────────────────────
+# ── HOOFD LAYOUT ──────────────────────────────────────────────────────────────
 display_df = processed.head(200)
 
 if st.session_state.show_map:
@@ -584,7 +607,7 @@ if st.session_state.show_map:
             try:
                 scroll = st.container(height=580, border=False)
             except TypeError:
-                scroll = st.container()  # Fallback voor Streamlit < 1.32
+                scroll = st.container()
 
             with scroll:
                 for idx, row in display_df.iterrows():
@@ -607,7 +630,7 @@ else:
                     _render_card(col_w, display_df.iloc[j], display_df.index[j])
 
 
-# ── FOOTER ─────────────────────────────────────────────────────────────────────
+# ── FOOTER ────────────────────────────────────────────────────────────────────
 if len(processed) > 200:
     st.markdown(
         f"<p style='text-align:center;color:{TEXT_MUTED};font-size:0.8rem;margin-top:1rem;'>"
