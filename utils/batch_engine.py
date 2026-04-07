@@ -9,7 +9,6 @@ Nieuw in v4:
   - Auto-resume via checkpoint: start door na herstart
   - Photo-URLs meenemen in batch output
   - normalize_province() + normalize_phone() gedeeld met enrichment.py
-  - FIX: Robuuste retry-logica met Exponential Backoff, Jitter & Model Fallback Chain
 """
 from __future__ import annotations
 
@@ -17,7 +16,6 @@ import json
 import os
 import re
 import time
-import random
 import logging
 import requests
 import streamlit as st
@@ -228,10 +226,10 @@ def parallel_scrape(
 
 # ── STAP 2: GEMINI REST API ────────────────────────────────────────────────────
 
-def _direct_gemini_call(prompt: str, model_name: str = "gemini-2.5-flash") -> str:
+def _direct_gemini_call(prompt: str) -> str:
     """
-    Directe HTTP REST-aanroep naar Gemini.
-    Ondersteunt dynamische modelnamen voor fallback functionaliteit.
+    Directe HTTP REST-aanroep naar Gemini 2.5 Flash.
+    Bypast Google SDK volledig → geen gRPC deadlocks.
     """
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
@@ -240,7 +238,7 @@ def _direct_gemini_call(prompt: str, model_name: str = "gemini-2.5-flash") -> st
 
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model_name}:generateContent?key={api_key}"
+        f"gemini-2.5-flash:generateContent?key={api_key}"
     )
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -334,85 +332,56 @@ Retourneer UITSLUITEND JSON-array met exact {len(batch)} objecten:
 def ai_batch_enrich(
     batch: list[dict],
     status_cb: Callable | None = None,
-    max_retries_per_model: int = 4,
+    max_retries: int = 4,
 ) -> list[dict]:
     """
-    Verrijkt een batch van max 5 locaties sequentieel.
-    Implementeert Exponential Backoff, Random Jitter & een Model Fallback Chain.
+    Verrijkt een batch van max 5 locaties sequentieel via Gemini 2.5 Flash REST.
+    Past datahygiëne toe op elk resultaat.
     """
     if not batch:
         return []
-    
     prompt = _build_batch_prompt(batch)
-    
-    # Model degradatie keten: als primaire faalt, schuift hij door naar de volgende
-    fallback_models = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash-exp",
-        "gemini-1.5-flash"
-    ]
-
-    for model_name in fallback_models:
-        for poging in range(max_retries_per_model):
-            try:
-                if status_cb and (poging > 0 or model_name != fallback_models[0]):
-                    status_cb(f"⏳ {model_name} | Retry {poging}/{max_retries_per_model}…")
-                
-                response = _direct_gemini_call(prompt, model_name=model_name)
-                
-                clean = response.strip()
-                for fence in ("```json", "```"):
-                    clean = clean.replace(fence, "")
-                clean = clean.strip()
-                start = clean.find("[")
-                end   = clean.rfind("]") + 1
-                if start == -1 or end == 0:
-                    raise ValueError("Geen JSON-array gevonden in response")
-                
-                resultaten: list[dict] = json.loads(clean[start:end])
-                for i, res in enumerate(resultaten):
-                    if i < len(batch):
-                        res["_idx"] = batch[i].get("_idx")
-                        res.pop("_bronnen", None)
-                        bronnen = batch[i].get("_bronnen", {})
-                        photos  = bronnen.get("photos", [])
-                        if photos:
-                            res["photos"] = json.dumps(photos, ensure_ascii=False)
-                        _postprocess_result(res)
-                
-                # Succesvolle verrijking: return de data direct
-                return resultaten
-
-            except requests.exceptions.Timeout:
+    for poging in range(max_retries):
+        try:
+            if status_cb and poging > 0:
+                status_cb(f"⏳ Retry {poging}/{max_retries}…")
+            response = _direct_gemini_call(prompt)
+            clean = response.strip()
+            for fence in ("```json", "```"):
+                clean = clean.replace(fence, "")
+            clean = clean.strip()
+            start = clean.find("[")
+            end   = clean.rfind("]") + 1
+            if start == -1 or end == 0:
+                raise ValueError("Geen JSON-array gevonden")
+            resultaten: list[dict] = json.loads(clean[start:end])
+            for i, res in enumerate(resultaten):
+                if i < len(batch):
+                    res["_idx"] = batch[i].get("_idx")
+                    res.pop("_bronnen", None)
+                    # Photo's van scraper meenemen
+                    bronnen = batch[i].get("_bronnen", {})
+                    photos  = bronnen.get("photos", [])
+                    if photos:
+                        res["photos"] = json.dumps(photos, ensure_ascii=False)
+                    _postprocess_result(res)
+            return resultaten
+        except requests.exceptions.Timeout:
+            if status_cb:
+                status_cb("⚠️ API timeout. Retry over 5s…")
+            time.sleep(5)
+        except Exception as e:
+            msg = str(e).lower()
+            if "429" in msg or "quota" in msg:
+                wacht = (poging + 1) * 8
                 if status_cb:
-                    status_cb(f"⚠️ {model_name} API timeout. Retry over 5s…")
-                time.sleep(5)
-            except Exception as e:
-                msg = str(e).lower()
-                # Server/Capaciteit gerelateerde fouten
-                if any(k in msg for k in ("429", "quota", "503", "500", "unavailable", "high demand")):
-                    if poging < max_retries_per_model - 1:
-                        # Exponentiële wachttijd: 2, 4, 8 seconden + random jitter om thundering herds te voorkomen
-                        wacht = (2 ** poging) + random.uniform(0, 1)
-                        if status_cb:
-                            status_cb(f"⏳ {model_name} druk (503/429). Wacht {wacht:.1f}s…")
-                        time.sleep(wacht)
-                    else:
-                        if status_cb:
-                            status_cb(f"⚠️ {model_name} blijft falen. Overschakelen naar fallback...")
-                        break # Breekt de poging-loop af, gaat naar het volgende model in fallback_models
-                else:
-                    # Harde fout (bijv. syntax, of het model spuugt onbruikbare JSON)
-                    logger.warning(f"Batch AI harde fout via {model_name}: {e}")
-                    if status_cb:
-                        status_cb(f"⚠️ Fout bij {model_name}: {e}")
-                    break # Breekt af, probeer het wellicht met een fallback model dat zich beter aan de prompt houdt
-    
-    # Als we hier komen, hebben alle modellen en retries gefaald. 
-    # Return de onverrijkte batch zodat er geen data verloren gaat.
-    logger.error("Alle API fallback-modellen zijn gefaald.")
-    if status_cb:
-        status_cb("❌ Server structureel onbereikbaar. Batch overgeslagen.")
+                    status_cb(f"⏳ Rate limit. Wacht {wacht}s…")
+                time.sleep(wacht)
+            else:
+                logger.error(f"Batch AI fout: {e}")
+                if status_cb:
+                    status_cb(f"⚠️ Fout: {e}")
+                return batch
     return batch
 
 
@@ -537,7 +506,9 @@ def run_full_batch(
     totaal_batches = (len(rijen) + AI_BATCH_SIZE - 1) // AI_BATCH_SIZE
 
     # ── Volautomatische scrape + AI loop ──────────────────────────────
+    # Scrapen in blokken van AUTO_BATCH_SIZE, AI per AI_BATCH_SIZE
     for batch_nr in range(totaal_batches):
+        # Vroeg stoppen indien aangevraagd
         if stop_flag and stop_flag():
             if status_cb:
                 status_cb(f"🛑 Gestopt op verzoek bij {stats.verwerkt}/{stats.totaal}")
@@ -547,6 +518,7 @@ def run_full_batch(
         end_idx   = min(start_idx + AI_BATCH_SIZE, len(rijen))
         batch_rijen = rijen[start_idx:end_idx]
 
+        # ── Scrapen (parallel, kleine sub-batch) ──────────────────────
         sub_df = to_process.iloc[start_idx:end_idx]
         if status_cb:
             status_cb(
@@ -556,6 +528,7 @@ def run_full_batch(
 
         scrape_resultaten = parallel_scrape(sub_df)
 
+        # ── AI verrijking (sequentieel) ────────────────────────────────
         batch_input = []
         for idx, row in batch_rijen:
             bronnen = scrape_resultaten.get(idx, {})
@@ -575,6 +548,7 @@ def run_full_batch(
 
         batch_resultaten = ai_batch_enrich(batch_input, status_cb=status_cb)
 
+        # ── Resultaten opslaan ─────────────────────────────────────────
         for i, res in enumerate(batch_resultaten):
             if i < len(batch_rijen):
                 orig_idx = batch_rijen[i][0]
@@ -597,8 +571,10 @@ def run_full_batch(
                 f"Verstreken: {stats.elapsed}"
             )
 
+        # Rate-limit buffer
         time.sleep(RATE_LIMIT_DELAY)
 
+    # ── Finale opslag ──────────────────────────────────────────────────
     checkpoint.maybe_save(force=True)
 
     if status_cb:
@@ -613,6 +589,7 @@ def run_full_batch(
 # ── HULPFUNCTIES VOOR BEHEER-PAGINA ───────────────────────────────────────────
 
 def get_onbekend_stats(df: pd.DataFrame) -> dict:
+    """Telt 'Onbekend'-waarden per veld. Gebruikt door Beheer-pagina."""
     velden = [
         "prijs", "honden_toegestaan", "stroom", "sanitair", "wifi",
         "water_tanken", "afvalwater", "beoordeling", "beschrijving",
@@ -627,6 +604,7 @@ def get_onbekend_stats(df: pd.DataFrame) -> dict:
 
 
 def estimate_batch_time(n: int) -> str:
+    """Schatting van verwerkingstijd voor n locaties."""
     scrape  = (n / MAX_SCRAPE_WORKERS * 2) / 60
     ai      = (n / AI_BATCH_SIZE * 5)      / 60
     overhead = (n / AI_BATCH_SIZE * RATE_LIMIT_DELAY) / 60
