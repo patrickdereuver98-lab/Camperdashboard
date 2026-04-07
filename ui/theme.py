@@ -11,6 +11,7 @@ Wijzigingen t.o.v. v2:
   - Grotere kaarthoogte (176px) voor meer ademruimte
   - Prijs-weergave: dikgedrukt, accentkleur, direct zichtbaar
   - Grid-view vernieuwd: 2-koloms, kaarten even hoog
+  - BUGFIX: Streamlit Material Icons (keyboard_double_arrow) hersteld
 """
 import streamlit as st
 
@@ -49,6 +50,15 @@ def apply_theme():
         background-color: {BG_PAGE} !important;
         font-family: 'DM Sans', system-ui, sans-serif !important;
     }}
+    
+    /* ── FIX VOOR DE KEYBOARD DOUBLE ARROW BUG ─────────────────────────── */
+    .material-symbols-rounded, 
+    .material-icons, 
+    [data-testid="collapsedControl"] *, 
+    [data-testid="stSidebarCollapseButton"] * {{
+        font-family: "Material Symbols Rounded", "Material Icons", sans-serif !important;
+    }}
+
     [data-testid="stSidebarNav"] {{ display: none !important; }}
     [data-testid="stDecoration"]  {{ display: none !important; }}
 
