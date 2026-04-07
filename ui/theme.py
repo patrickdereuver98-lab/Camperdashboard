@@ -11,7 +11,7 @@ Wijzigingen t.o.v. v2:
   - Grotere kaarthoogte (176px) voor meer ademruimte
   - Prijs-weergave: dikgedrukt, accentkleur, direct zichtbaar
   - Grid-view vernieuwd: 2-koloms, kaarten even hoog
-  - BUGFIX: Streamlit Material Icons (keyboard_double_arrow) hersteld
+  - BUGFIX: Streamlit Material Icons (keyboard_double_arrow) definitief hersteld
 """
 import streamlit as st
 
@@ -29,6 +29,7 @@ _FONTS = (
     "https://fonts.googleapis.com/css2?"
     "family=DM+Serif+Display:ital@0;1"
     "&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700"
+    "&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0"
     "&display=swap"
 )
 
@@ -51,12 +52,17 @@ def apply_theme():
         font-family: 'DM Sans', system-ui, sans-serif !important;
     }}
     
-    /* ── FIX VOOR DE KEYBOARD DOUBLE ARROW BUG ─────────────────────────── */
-    .material-symbols-rounded, 
-    .material-icons, 
-    [data-testid="collapsedControl"] *, 
-    [data-testid="stSidebarCollapseButton"] * {{
-        font-family: "Material Symbols Rounded", "Material Icons", sans-serif !important;
+    /* ── ULTIEME FIX VOOR DE KEYBOARD DOUBLE ARROW BUG ─────────────────── */
+    span.material-symbols-rounded, 
+    span.material-icons, 
+    [class*="material-symbols"],
+    [data-testid="collapsedControl"] span, 
+    [data-testid="stSidebarCollapseButton"] span,
+    button[kind="header"] span,
+    div[data-testid="stHeader"] span {{
+        font-family: "Material Symbols Rounded", sans-serif !important;
+        font-weight: normal !important;
+        font-style: normal !important;
     }}
 
     [data-testid="stSidebarNav"] {{ display: none !important; }}
