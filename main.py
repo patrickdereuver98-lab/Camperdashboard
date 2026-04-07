@@ -1,12 +1,15 @@
 """
-main.py — VrijStaan Startpagina.
+main.py — VrijStaan Startpagina v3.
 Premium landing: hero, AI-zoekbalk, stats, features, provincie-shortcuts.
-Design: Dutch Coastal v2 — DM Serif + DM Sans, oceaanblauw + zandgeel.
+Design: Dutch Coastal v3 — DM Serif Display + DM Sans, oceaanblauw + zandgeel.
 """
 import streamlit as st
-from ui.theme import apply_theme, render_sidebar_header, BRAND_PRIMARY, BRAND_DARK, BRAND_ACCENT, BORDER, TEXT_MUTED
+from ui.theme import (
+    apply_theme, render_sidebar_header,
+    BRAND_PRIMARY, BRAND_DARK, BRAND_ACCENT, BORDER, TEXT_MUTED,
+)
 
-# ── CONFIGURATIE — altijd als allereerste ─────────────────────────────────────
+# ── CONFIGURATIE — altijd als allereerste ──────────────────────────────────────
 st.set_page_config(
     page_title="VrijStaan | Camperplaatsen",
     page_icon="🚐",
@@ -14,18 +17,18 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── THEME — altijd vóór data-laden zodat errors ook gestyled zijn ─────────────
+# ── THEME — altijd vóór data-laden zodat errors ook gestyled zijn ──────────────
 apply_theme()
 render_sidebar_header()
 
-# ── SESSIE STATE ──────────────────────────────────────────────────────────────
+# ── SESSIE STATE ───────────────────────────────────────────────────────────────
 if "ai_query_cp" not in st.session_state:
     st.session_state["ai_query_cp"] = ""
 for key in ("qf_gratis", "qf_honden", "qf_stroom", "qf_wifi"):
     if key not in st.session_state:
         st.session_state[key] = False
 
-# ── DATA (optioneel — voor stats op de landing) ───────────────────────────────
+# ── DATA (optioneel — voor stats op de landing) ────────────────────────────────
 @st.cache_data(ttl=3600, show_spinner=False)
 def _get_landing_stats():
     """Haal minimale stats op voor de landing. Geeft fallback bij fout."""
@@ -42,7 +45,7 @@ def _get_landing_stats():
 
 stats = _get_landing_stats()
 
-# ── HERO SECTIE ───────────────────────────────────────────────────────────────
+# ── HERO SECTIE ────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="vs-hero">
   <div style="position:relative;z-index:2;">
@@ -68,7 +71,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── AI ZOEKBALK ───────────────────────────────────────────────────────────────
+# ── AI ZOEKBALK ────────────────────────────────────────────────────────────────
 col_inp, col_btn = st.columns([5, 1])
 with col_inp:
     search_val = st.text_input(
@@ -84,11 +87,11 @@ if zoek_btn and search_val.strip():
     st.session_state["ai_query_cp"] = search_val.strip()
     st.switch_page("pages/3_🚐_Camperplaatsen.py")
 
-# ── SNELFILTER CHIPS ──────────────────────────────────────────────────────────
+# ── SNELFILTER CHIPS ───────────────────────────────────────────────────────────
 st.markdown(
     "<p style='font-family:DM Sans,sans-serif;font-size:0.82rem;"
     f"color:{TEXT_MUTED};margin:0.4rem 0 0.5rem;'>Of kies een snelfilter:</p>",
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 c1, c2, c3, c4, c_rest = st.columns([1, 1, 1, 1, 3])
 
@@ -99,25 +102,25 @@ def _chip(col, label, key, icon):
             f"{icon} {label}",
             key=f"landing_{key}",
             type="primary" if active else "secondary",
-            use_container_width=True
+            use_container_width=True,
         ):
             st.session_state[key] = not active
             st.switch_page("pages/3_🚐_Camperplaatsen.py")
 
-_chip(c1, "Gratis",  "qf_gratis", "💰")
-_chip(c2, "Honden",  "qf_honden", "🐾")
-_chip(c3, "Stroom",  "qf_stroom", "⚡")
-_chip(c4, "Wifi",    "qf_wifi",   "📶")
+_chip(c1, "Gratis", "qf_gratis", "💰")
+_chip(c2, "Honden", "qf_honden", "🐾")
+_chip(c3, "Stroom", "qf_stroom", "⚡")
+_chip(c4, "Wifi",   "qf_wifi",   "📶")
 
 st.write("")
 
-# ── STATS BALK ────────────────────────────────────────────────────────────────
+# ── STATS BALK ─────────────────────────────────────────────────────────────────
 s1, s2, s3, s4 = st.columns(4)
 for col, num, label, icon in [
-    (s1, f"{stats['total']:,}",    "Camperplaatsen",  "🗺️"),
-    (s2, f"{stats['gratis']:,}",   "Gratis plekken",  "💰"),
-    (s3, f"{stats['provincies']}", "Provincies",       "📍"),
-    (s4, "24/7",                   "Beschikbaar",      "🕐"),
+    (s1, f"{stats['total']:,}",    "Camperplaatsen", "🗺️"),
+    (s2, f"{stats['gratis']:,}",   "Gratis plekken", "💰"),
+    (s3, f"{stats['provincies']}", "Provincies",      "📍"),
+    (s4, "24/7",                   "Beschikbaar",     "🕐"),
 ]:
     col.markdown(f"""
 <div class="vs-stat-card">
@@ -130,7 +133,7 @@ for col, num, label, icon in [
 st.write("")
 st.markdown(f"<hr style='border-color:{BORDER};'>", unsafe_allow_html=True)
 
-# ── FEATURE HIGHLIGHTS ────────────────────────────────────────────────────────
+# ── FEATURE HIGHLIGHTS ─────────────────────────────────────────────────────────
 st.markdown(f"""
 <h2 style="font-family:'DM Serif Display',serif;font-size:1.7rem;
            color:{BRAND_DARK};margin-bottom:0.3rem;">
@@ -160,7 +163,7 @@ for icon, title, desc, col in features:
 
 st.write("")
 
-# ── PROVINCIE SHORTCUTS ───────────────────────────────────────────────────────
+# ── PROVINCIE SHORTCUTS ────────────────────────────────────────────────────────
 st.markdown(f"""
 <h2 style="font-family:'DM Serif Display',serif;font-size:1.4rem;
            color:{BRAND_DARK};margin-bottom:0.3rem;">
@@ -184,13 +187,12 @@ pc = st.columns(len(PROVINCIES))
 for col, (prov, icon) in zip(pc, PROVINCIES):
     with col:
         if st.button(f"{icon}\n{prov}", use_container_width=True, type="secondary"):
-            # Sla provincie-filter op en navigeer naar zoekpagina
             st.session_state["_landing_province"] = prov
             st.switch_page("pages/3_🚐_Camperplaatsen.py")
 
 st.write("")
 
-# ── CTA ───────────────────────────────────────────────────────────────────────
+# ── CTA ────────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div style="background:linear-gradient(135deg,{BRAND_DARK},{BRAND_PRIMARY});
             border-radius:18px; padding:2.2rem 2rem; text-align:center;
@@ -215,12 +217,12 @@ with cta_c:
     ):
         st.switch_page("pages/3_🚐_Camperplaatsen.py")
 
-# ── FOOTER ────────────────────────────────────────────────────────────────────
+# ── FOOTER ─────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <hr style="border-color:{BORDER}; margin-top:1.5rem;">
 <p style="text-align:center;font-family:'DM Sans',sans-serif;
           font-size:0.75rem;color:#B0BEC5;padding-bottom:1rem;">
-  © 2025 VrijStaan · Data: OpenStreetMap &amp; Google Gemini AI ·
-  <span style="color:{BRAND_PRIMARY};">v2.0</span>
+  © 2026 VrijStaan · Data: OpenStreetMap &amp; Google Gemini AI ·
+  <span style="color:{BRAND_PRIMARY};">v3.0</span>
 </p>
 """, unsafe_allow_html=True)
