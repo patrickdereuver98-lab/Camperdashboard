@@ -1,14 +1,11 @@
 """
-utils/ai_helper.py — Gemini Integratie v3 voor VrijStaan.
+utils/ai_helper.py — Gemini Integratie v4 voor VrijStaan.
 
-Verbeteringen t.o.v. v2:
-  - get_gemini_response_grounded() als aparte publieke functie
-    (enrichment.py roept dit nu direct aan)
-  - Betere Search Grounding: dynamic_retrieval_config met lage drempel
-    zodat de AI agressiever zoekt
-  - Fallback-keten: grounding → zonder grounding → foutmelding
-  - AI-query caching en lazy model-init blijven behouden
-  - FIX: Robuuste retry-logica met Exponential Backoff & Jitter voor 503 errors.
+Verbeteringen t.o.v. v3:
+  - Robuuste 503/429 architectuur: Exponential Backoff + Random Jitter.
+  - Model Fallback Chain: Schakelt automatisch naar oudere modellen bij serverdrukte.
+  - Dynamische model-initialisatie om fallbacks via de SDK mogelijk te maken.
+  - Search Grounding behouden met lage drempel voor agressieve zoekacties.
 """
 import json
 import time
@@ -23,119 +20,87 @@ except ImportError:
     logger = logging.getLogger("vrijstaan")
 
 
-# ── LAZY MODEL INITIALISATIE ──────────────────────────────────────────────────
-_MODEL_CACHE: dict = {}
-_MODEL_NAME = "gemini-2.5-flash"
+# ── INTERNE GENEREER-FUNCTIE (MET RETRY & FALLBACK) ───────────────────────────
 
-
-def _get_model():
-    """Geeft gecachede Gemini-instantie. Lazy init bij eerste aanroep."""
-    if "model" in _MODEL_CACHE:
-        return _MODEL_CACHE["model"], _MODEL_CACHE.get("error")
-
+def _generate(prompt: str, use_grounding: bool = False, max_retries_per_model: int = 3) -> str:
+    """
+    Roept Gemini aan via de officiële SDK. 
+    Beschermd door een Exponential Backoff + Jitter retry-loop en een Fallback Chain.
+    """
     try:
         import google.generativeai as genai
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(model_name=_MODEL_NAME)
-        _MODEL_CACHE["model"] = model
-        _MODEL_CACHE["error"] = None
-        logger.info(f"Gemini '{_MODEL_NAME}' geladen.")
-        return model, None
     except KeyError:
         err = "GEMINI_API_KEY ontbreekt in secrets.toml"
         logger.warning(err)
-        _MODEL_CACHE["model"] = None
-        _MODEL_CACHE["error"] = err
-        return None, err
+        return f"⚠️ AI configuratiefout: {err}"
     except Exception as e:
-        err = str(e)
-        logger.error(f"Gemini laad-fout: {err}")
-        _MODEL_CACHE["model"] = None
-        _MODEL_CACHE["error"] = err
-        return None, err
+        logger.error(f"Gemini configuratie-fout: {e}")
+        return f"⚠️ Fout bij laden AI: {str(e)}"
 
+    fallback_models = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-flash"
+    ]
 
-# ── INTERNE GENEREER-FUNCTIES ─────────────────────────────────────────────────
-
-def _generate(prompt: str, use_grounding: bool = False, max_retries: int = 4) -> str:
-    """
-    Roept Gemini aan. Grounding via dynamic_retrieval_config met lage drempel
-    zodat de AI actief zoekt ook bij gedeeltelijk bekende info.
-    Nu beschermd door een Exponential Backoff + Jitter retry-loop.
-    """
-    model, err = _get_model()
-    if model is None:
-        return f"⚠️ AI niet beschikbaar: {err}"
-
-    for attempt in range(max_retries):
-        try:
-            if use_grounding:
-                try:
-                    import google.generativeai as genai
-
-                    grounding_tool = genai.protos.Tool(
-                        google_search_retrieval=genai.protos.GoogleSearchRetrieval(
-                            dynamic_retrieval_config=genai.protos.DynamicRetrievalConfig(
-                                mode=genai.protos.DynamicRetrievalConfig.Mode.MODE_DYNAMIC,
-                                dynamic_threshold=0.1,  # Lage drempel = agressief zoeken
+    for model_name in fallback_models:
+        model = genai.GenerativeModel(model_name=model_name)
+        
+        for attempt in range(max_retries_per_model):
+            try:
+                if use_grounding:
+                    try:
+                        # Nieuwe SDK methode met Dynamic Threshold
+                        grounding_tool = genai.protos.Tool(
+                            google_search_retrieval=genai.protos.GoogleSearchRetrieval(
+                                dynamic_retrieval_config=genai.protos.DynamicRetrievalConfig(
+                                    mode=genai.protos.DynamicRetrievalConfig.Mode.MODE_DYNAMIC,
+                                    dynamic_threshold=0.1,  
+                                )
                             )
                         )
-                    )
-                    response = model.generate_content(
-                        prompt,
-                        tools=[grounding_tool],
-                        generation_config={"temperature": 0.1},
-                    )
-                    return response.text
+                        response = model.generate_content(
+                            prompt,
+                            tools=[grounding_tool],
+                            generation_config={"temperature": 0.1},
+                        )
+                        return response.text
 
-                except AttributeError:
-                    # Oudere versie google-generativeai zonder DynamicRetrievalConfig
-                    try:
-                        import google.generativeai as genai
+                    except AttributeError:
+                        # Oudere SDK versie fallback
                         grounding_tool = genai.protos.Tool(
                             google_search_retrieval=genai.protos.GoogleSearchRetrieval()
                         )
                         response = model.generate_content(prompt, tools=[grounding_tool])
                         return response.text
-                    except Exception:
-                        # Fallback: zonder grounding
-                        response = model.generate_content(
-                            prompt,
-                            generation_config={"temperature": 0.1},
-                        )
-                        return response.text
-
-                except Exception:
-                    # Generieke fallback
+                else:
+                    # Standaard (niet-grounded) aanroep
                     response = model.generate_content(
                         prompt,
                         generation_config={"temperature": 0.1},
                     )
                     return response.text
 
-            else:
-                response = model.generate_content(
-                    prompt,
-                    generation_config={"temperature": 0.1},
-                )
-                return response.text
-
-        except Exception as e:
-            msg = str(e).lower()
-            # Intercepteer 503 / 429 server fouten om te retryen
-            if any(k in msg for k in ("429", "quota", "503", "500", "unavailable", "high demand")):
-                if attempt < max_retries - 1:
-                    wacht = (2 ** attempt) + random.uniform(0, 1)
-                    logger.warning(f"AI API Druk (Poging {attempt+1}/{max_retries}). Wacht {wacht:.1f}s...")
-                    time.sleep(wacht)
-                    continue # Probeer opnieuw
-            
-            # Bij syntax-fouten of als het max aantal retries bereikt is, hard afbreken
-            logger.error(f"Gemini genereer-fout: {e}")
-            return f"⚠️ Fout bij genereren: {str(e)}"
+            except Exception as e:
+                msg = str(e).lower()
+                # Intercepteer tijdelijke server fouten
+                if any(k in msg for k in ("429", "quota", "503", "500", "unavailable", "high demand")):
+                    if attempt < max_retries_per_model - 1:
+                        wacht = (2 ** attempt) + random.uniform(0, 1)
+                        logger.warning(f"AI Druk ({model_name} | Poging {attempt+1}/{max_retries_per_model}). Wacht {wacht:.1f}s...")
+                        time.sleep(wacht)
+                        continue # Probeer hetzelfde model opnieuw
+                    else:
+                        logger.warning(f"Model {model_name} weigert dienst. Overschakelen naar fallback...")
+                        break # Verbreek attempt-loop, ga naar volgende model in fallback_models
+                else:
+                    # Bij syntax-fouten of content-filters, probeer direct het volgende model (soms is 1.5 minder streng)
+                    logger.error(f"Harde fout in {model_name}: {e}")
+                    break 
     
-    return "⚠️ Fout bij genereren: Server bleef onbereikbaar na meerdere pogingen."
+    return "⚠️ Fout bij genereren: Server bleef onbereikbaar na meerdere pogingen en fallbacks."
 
 
 # ── PUBLIEKE API ──────────────────────────────────────────────────────────────
@@ -150,7 +115,7 @@ def get_gemini_response(prompt: str) -> str:
 
 def get_gemini_response_grounded(prompt: str) -> str:
     """
-    Expliciete grounded variant — alias voor enrichment.py v3.
+    Expliciete grounded variant.
     Identiek aan get_gemini_response maar semantisch duidelijker.
     """
     return _generate(prompt, use_grounding=True)
@@ -158,13 +123,11 @@ def get_gemini_response_grounded(prompt: str) -> str:
 
 def get_batch_enrichment_results(locations_data: list) -> list:
     """
-    Camper-Politie batch verrijking.
-    Max 5 locaties per batch.
+    Camper-Politie UI check (max 5 locaties).
+    Dit is een lichte prompt (alleen boolean checks), dus context-overload 
+    is hier geen probleem vergeleken met de zware scraper-batch.
     """
     if not locations_data:
-        return []
-    model, err = _get_model()
-    if model is None:
         return []
 
     prompt = f"""
@@ -201,7 +164,7 @@ Output UITSLUITEND geldig JSON-array (geen uitleg):
             return []
         return json.loads(response[start:end])
     except Exception as e:
-        logger.error(f"Batch verrijking fout: {e}")
+        logger.error(f"Camper-Politie verrijking fout: {e}")
         return []
 
 
@@ -209,12 +172,8 @@ Output UITSLUITEND geldig JSON-array (geen uitleg):
 def _cached_ai_filter(query: str, df_hash: str) -> tuple[dict, list[str]]:
     """
     Gecachede AI-filteraanroep voor de zoekpagina.
-    Geen grounding nodig voor filter-extractie (structurele taak).
+    Geen grounding nodig voor filter-extractie (sneller).
     """
-    model, err = _get_model()
-    if model is None:
-        return {}, [f"⚠️ AI niet beschikbaar: {err}"]
-
     prompt = f"""
 Je bent een backend data-extractor voor een Nederlandse camper-app.
 Vertaal de zoekopdracht naar filters als strikte JSON.
