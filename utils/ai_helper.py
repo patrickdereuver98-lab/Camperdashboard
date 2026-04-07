@@ -8,8 +8,11 @@ Verbeteringen t.o.v. v2:
     zodat de AI agressiever zoekt
   - Fallback-keten: grounding → zonder grounding → foutmelding
   - AI-query caching en lazy model-init blijven behouden
+  - FIX: Robuuste retry-logica met Exponential Backoff & Jitter voor 503 errors.
 """
 import json
+import time
+import random
 import pandas as pd
 import streamlit as st
 
@@ -55,73 +58,84 @@ def _get_model():
 
 # ── INTERNE GENEREER-FUNCTIES ─────────────────────────────────────────────────
 
-def _generate(prompt: str, use_grounding: bool = False) -> str:
+def _generate(prompt: str, use_grounding: bool = False, max_retries: int = 4) -> str:
     """
     Roept Gemini aan. Grounding via dynamic_retrieval_config met lage drempel
     zodat de AI actief zoekt ook bij gedeeltelijk bekende info.
+    Nu beschermd door een Exponential Backoff + Jitter retry-loop.
     """
     model, err = _get_model()
     if model is None:
         return f"⚠️ AI niet beschikbaar: {err}"
 
-    try:
-        if use_grounding:
-            try:
-                import google.generativeai as genai
-
-                # dynamic_retrieval_config: threshold laag (0.1) zodat AI
-                # ALTIJD zoekt, ook als het denkt het al te weten.
-                # Zonder dit zoekt Gemini alleen bij hoge onzekerheid.
-                grounding_tool = genai.protos.Tool(
-                    google_search_retrieval=genai.protos.GoogleSearchRetrieval(
-                        dynamic_retrieval_config=genai.protos.DynamicRetrievalConfig(
-                            mode=genai.protos.DynamicRetrievalConfig.Mode.MODE_DYNAMIC,
-                            dynamic_threshold=0.1,  # Lage drempel = agressief zoeken
-                        )
-                    )
-                )
-                response = model.generate_content(
-                    prompt,
-                    tools=[grounding_tool],
-                    generation_config={"temperature": 0.1},  # Laag = feitelijker
-                )
-                return response.text
-
-            except AttributeError:
-                # Oudere versie google-generativeai zonder DynamicRetrievalConfig
+    for attempt in range(max_retries):
+        try:
+            if use_grounding:
                 try:
                     import google.generativeai as genai
+
                     grounding_tool = genai.protos.Tool(
-                        google_search_retrieval=genai.protos.GoogleSearchRetrieval()
+                        google_search_retrieval=genai.protos.GoogleSearchRetrieval(
+                            dynamic_retrieval_config=genai.protos.DynamicRetrievalConfig(
+                                mode=genai.protos.DynamicRetrievalConfig.Mode.MODE_DYNAMIC,
+                                dynamic_threshold=0.1,  # Lage drempel = agressief zoeken
+                            )
+                        )
                     )
-                    response = model.generate_content(prompt, tools=[grounding_tool])
+                    response = model.generate_content(
+                        prompt,
+                        tools=[grounding_tool],
+                        generation_config={"temperature": 0.1},
+                    )
                     return response.text
+
+                except AttributeError:
+                    # Oudere versie google-generativeai zonder DynamicRetrievalConfig
+                    try:
+                        import google.generativeai as genai
+                        grounding_tool = genai.protos.Tool(
+                            google_search_retrieval=genai.protos.GoogleSearchRetrieval()
+                        )
+                        response = model.generate_content(prompt, tools=[grounding_tool])
+                        return response.text
+                    except Exception:
+                        # Fallback: zonder grounding
+                        response = model.generate_content(
+                            prompt,
+                            generation_config={"temperature": 0.1},
+                        )
+                        return response.text
+
                 except Exception:
-                    # Fallback: zonder grounding
+                    # Generieke fallback
                     response = model.generate_content(
                         prompt,
                         generation_config={"temperature": 0.1},
                     )
                     return response.text
 
-            except Exception:
-                # Generieke fallback
+            else:
                 response = model.generate_content(
                     prompt,
                     generation_config={"temperature": 0.1},
                 )
                 return response.text
 
-        else:
-            response = model.generate_content(
-                prompt,
-                generation_config={"temperature": 0.1},
-            )
-            return response.text
-
-    except Exception as e:
-        logger.error(f"Gemini genereer-fout: {e}")
-        return f"⚠️ Fout bij genereren: {str(e)}"
+        except Exception as e:
+            msg = str(e).lower()
+            # Intercepteer 503 / 429 server fouten om te retryen
+            if any(k in msg for k in ("429", "quota", "503", "500", "unavailable", "high demand")):
+                if attempt < max_retries - 1:
+                    wacht = (2 ** attempt) + random.uniform(0, 1)
+                    logger.warning(f"AI API Druk (Poging {attempt+1}/{max_retries}). Wacht {wacht:.1f}s...")
+                    time.sleep(wacht)
+                    continue # Probeer opnieuw
+            
+            # Bij syntax-fouten of als het max aantal retries bereikt is, hard afbreken
+            logger.error(f"Gemini genereer-fout: {e}")
+            return f"⚠️ Fout bij genereren: {str(e)}"
+    
+    return "⚠️ Fout bij genereren: Server bleef onbereikbaar na meerdere pogingen."
 
 
 # ── PUBLIEKE API ──────────────────────────────────────────────────────────────
