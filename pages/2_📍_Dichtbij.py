@@ -1,30 +1,23 @@
 """
-pages/2_📍_Dichtbij.py — "Near Me" GPS pagina voor VrijStaan v5.
-Pijler 4: HTML/JS GPS-hack voor coördinaten, Haversine-afstand, radius-lijst.
-
-Architectuur:
-  - HTML/JS component haalt navigator.geolocation op
-  - JavaScript stuurt coördinaten terug via query_params
-  - Python berekent Haversine-afstand en sorteert
-  - Resultaten tonen via render_result_card()
+pages/2_📍_Dichtbij.py — VrijStaan v5 "Near Me" GPS Pagina.
+Pijler 4: HTML/JS hack voor GPS-coördinaten + Haversine afstandsberekening.
 """
 from __future__ import annotations
+
+import json
+from math import radians, cos, sin, asin, sqrt
 
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from ui.theme import (
-    apply_theme, render_sidebar_header,
-    P_BLUE, P_DARK, TEXT_MUTE, BORDER, BG_CARD,
-)
+from ui.theme import apply_theme, render_sidebar_header, BRAND_PRIMARY, BRAND_DARK, BORDER, TEXT_MUTED
 from ui.components import render_result_card, render_no_results
 from ui.map_view import render_map_section
 from utils.data_handler import load_data
 from utils.favorites import init_favorites
-from utils.helpers import add_distances, safe_float
+from utils.helpers import clean_val, safe_html
 
-# ── PAGINA CONFIG ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="VrijStaan | Dichtbij mij",
     page_icon="📍",
@@ -35,15 +28,19 @@ apply_theme()
 render_sidebar_header()
 init_favorites()
 
-# ── SESSION STATE ──────────────────────────────────────────────────────────────
-for k, v in {
-    "gps_lat": None, "gps_lon": None, "gps_error": None,
-    "show_map": False,
-}.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+
+# ── HAVERSINE AFSTANDSFUNCTIE ──────────────────────────────────────────────────
+
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Berekent afstand in km tussen twee GPS-coördinaten."""
+    R = 6371.0
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    a = sin((lat2 - lat1) / 2) ** 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ** 2
+    return R * 2 * asin(sqrt(a))
+
 
 # ── DATA LADEN ─────────────────────────────────────────────────────────────────
+
 @st.cache_data(ttl=300, show_spinner=False)
 def _load() -> pd.DataFrame:
     return load_data()
@@ -52,203 +49,192 @@ with st.spinner("📡 Locaties laden…"):
     df = _load()
 
 if df.empty:
-    st.warning("⚠️ Geen data gevonden. Ga naar Beheer.")
+    st.warning("⚠️ Geen data beschikbaar. Ga naar Beheer om de database te vullen.")
     st.stop()
 
-# ── PAGINA HEADER ──────────────────────────────────────────────────────────────
+
+# ── HERO ───────────────────────────────────────────────────────────────────────
 st.markdown(f"""
-<div style="background:linear-gradient(145deg,{P_DARK} 0%,{P_BLUE} 100%);
-padding:1.8rem 2rem 2.2rem;margin-bottom:1.2rem;">
-  <div style="font-family:'Syne',sans-serif;font-size:1.55rem;font-weight:800;
-color:white;margin-bottom:0.2rem;">📍 Camperplaatsen dichtbij</div>
-  <div style="color:rgba(255,255,255,0.7);font-size:0.9rem;">
-    Vind de dichtstbijzijnde plekken op basis van jouw huidige locatie.
+<div class="vs-gps-hero">
+  <div style="font-size:2.5rem;margin-bottom:0.5rem;">📍</div>
+  <div style="font-family:'DM Serif Display',serif;font-size:1.8rem;color:white;
+margin-bottom:0.4rem;">Camperplaatsen dichtbij jou</div>
+  <div style="color:rgba(255,255,255,0.72);font-size:0.92rem;">
+    We gebruiken je GPS-locatie om de dichtstbijzijnde plekken te vinden.
+    Je locatie wordt <strong style="color:white;">niet opgeslagen</strong>.
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── GPS JAVASCRIPT HACK (Pijler 4) ─────────────────────────────────────────────
-# Streamlit heeft geen native GPS-support. We gebruiken een HTML/JS component
-# dat navigator.geolocation aanroept en de coördinaten via query_params teruggeeft.
 
-GPS_JS = """
-<div id="gps-container" style="text-align:center;padding:1.5rem;">
-  <div id="gps-status" style="font-family:'Plus Jakarta Sans',sans-serif;
-    font-size:0.9rem;color:#6B7897;margin-bottom:1rem;">
-    📍 Klik op de knop om jouw locatie te delen...
-  </div>
-  <button onclick="getLocation()" style="
-    background:#006CE4;color:white;border:none;
-    border-radius:10px;padding:0.75rem 2rem;
-    font-size:1rem;font-weight:700;cursor:pointer;
-    font-family:'Plus Jakarta Sans',sans-serif;
-    box-shadow:0 3px 10px rgba(0,108,228,0.28);
-  ">📍 Deel mijn locatie</button>
-  <div id="gps-result" style="margin-top:1rem;font-size:0.85rem;color:#6B7897;"></div>
-</div>
+# ── GPS HACK (Pijler 4) ────────────────────────────────────────────────────────
+# HTML/JS geolocation API → schrijft coördinaten naar een verborgen Streamlit text field
+# We gebruiken een unieke session key om de coördinaten te communiceren.
+
+GPS_KEY = "vs_gps_coords"
+
+if GPS_KEY not in st.session_state:
+    st.session_state[GPS_KEY] = ""
+
+# Injecteer JS die de GPS-locatie opvraagt en injecteert via postMessage
+gps_html = """
+<div id="gps-status" style="font-family:Inter,sans-serif;font-size:0.85rem;
+color:#6B7897;margin-bottom:12px;min-height:24px;"></div>
+<button onclick="getGPS()" style="
+  background:#006CE4;color:white;border:none;border-radius:8px;
+  padding:10px 22px;font-size:0.9rem;font-weight:600;cursor:pointer;
+  font-family:Inter,sans-serif;box-shadow:0 2px 8px rgba(0,108,228,0.3);">
+  📍 Gebruik mijn locatie
+</button>
 
 <script>
-function getLocation() {
+function getGPS() {
   var status = document.getElementById('gps-status');
-  var result = document.getElementById('gps-result');
-  status.innerHTML = '⏳ Locatie ophalen...';
-
+  status.textContent = '⏳ Locatie ophalen...';
   if (!navigator.geolocation) {
-    status.innerHTML = '❌ Jouw browser ondersteunt geen GPS.';
+    status.textContent = '❌ GPS niet beschikbaar in deze browser.';
     return;
   }
-
   navigator.geolocation.getCurrentPosition(
     function(pos) {
       var lat = pos.coords.latitude.toFixed(6);
       var lon = pos.coords.longitude.toFixed(6);
-      status.innerHTML = '✅ Locatie gevonden! Kaart wordt geladen...';
-      result.innerHTML = '📍 Lat: ' + lat + ' · Lon: ' + lon;
-      // Stuur naar Streamlit via URL query params
-      var url = new URL(window.parent.location.href);
-      url.searchParams.set('gps_lat', lat);
-      url.searchParams.set('gps_lon', lon);
-      window.parent.location.href = url.toString();
+      status.textContent = '✅ Locatie gevonden: ' + lat + ', ' + lon;
+      // Stuur via postMessage naar Streamlit parent
+      window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        value: lat + ',' + lon
+      }, '*');
     },
     function(err) {
-      var msg = {
-        1: 'Locatiepermissie geweigerd. Sta GPS toe in de browserinstellingen.',
-        2: 'Locatie kon niet worden bepaald.',
-        3: 'Tijdslimiet overschreden. Probeer opnieuw.',
-      }[err.code] || 'Onbekende GPS-fout.';
-      status.innerHTML = '❌ ' + msg;
+      var msgs = {
+        1: 'Toegang geweigerd. Sta locatietoegang toe in je browser.',
+        2: 'Locatie onbeschikbaar (geen GPS-signaal).',
+        3: 'Timeout: locatie opvragen duurde te lang.'
+      };
+      document.getElementById('gps-status').textContent =
+        '❌ ' + (msgs[err.code] || 'Onbekende fout: ' + err.message);
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    {timeout: 10000, maximumAge: 60000}
   );
 }
 </script>
 """
 
-# ── GPS COÖRDINATEN LEZEN ─────────────────────────────────────────────────────
-# Controleer of GPS via query_params is binnengekomen
-params = st.query_params
-gps_lat_param = params.get("gps_lat", "")
-gps_lon_param = params.get("gps_lon", "")
+# Render GPS component
+gps_result = components.html(gps_html, height=100)
 
-if gps_lat_param and gps_lon_param:
+# Alternatief: handmatige coördinaten invoer als GPS faalt
+st.markdown("---")
+st.markdown(f"<span style='font-size:0.82rem;color:{TEXT_MUTED};'>Of voer handmatig je locatie in:</span>",
+            unsafe_allow_html=True)
+
+manual_col1, manual_col2 = st.columns(2)
+with manual_col1:
+    lat_input = st.text_input("Breedtegraad (lat)", placeholder="52.3784", label_visibility="visible")
+with manual_col2:
+    lon_input = st.text_input("Lengtegraad (lon)", placeholder="4.9009", label_visibility="visible")
+
+# Radius slider
+radius_km = st.slider("🔭 Zoekradius", min_value=5, max_value=100, value=25, step=5,
+                       format="%d km")
+
+# GPS coördinaten bepalen
+user_lat: float | None = None
+user_lon: float | None = None
+
+# Probeer handmatige invoer eerst
+if lat_input and lon_input:
     try:
-        st.session_state["gps_lat"] = float(gps_lat_param)
-        st.session_state["gps_lon"] = float(gps_lon_param)
-        # Verwijder params zodat reload clean is
-        st.query_params.clear()
-    except (ValueError, TypeError):
-        st.session_state["gps_error"] = "Ongeldige GPS-coördinaten ontvangen."
+        user_lat = float(lat_input.replace(",", "."))
+        user_lon = float(lon_input.replace(",", "."))
+    except ValueError:
+        st.error("❌ Ongeldige coördinaten. Gebruik decimale notatie (bijv. 52.3784).")
 
-# ── RADIUS INSTELLING ─────────────────────────────────────────────────────────
-col_rad, col_sort, _ = st.columns([1.5, 1.5, 4])
-with col_rad:
-    radius_km = st.select_slider(
-        "Zoekradius",
-        options=[5, 10, 15, 20, 30, 50, 75, 100],
-        value=25,
-        format_func=lambda x: f"{x} km",
-    )
-with col_sort:
-    sort_near = st.selectbox(
-        "Sorteren op",
-        ["Dichtstbij", "Beoordeling ↓", "Prijs (gratis eerst)"],
-        label_visibility="visible",
-    )
+# Probeer GPS session state (als postMessage werkt)
+if user_lat is None and st.session_state.get(GPS_KEY):
+    try:
+        parts = st.session_state[GPS_KEY].split(",")
+        user_lat = float(parts[0])
+        user_lon = float(parts[1])
+    except Exception:
+        pass
 
-# ── LOCATIE WEERGAVE ──────────────────────────────────────────────────────────
-if st.session_state["gps_lat"] is None:
-    # Nog geen GPS → toon de JS component
-    st.markdown(f"""
-<div style="background:{BG_CARD};border:1px solid {BORDER};border-radius:14px;
-padding:1rem;margin-bottom:1rem;">
-""", unsafe_allow_html=True)
-    components.html(GPS_JS, height=200)
-    st.markdown("</div>", unsafe_allow_html=True)
+# Populaire startpunten als snelkeuze
+st.markdown(f"<span style='font-size:0.82rem;color:{TEXT_MUTED};'>Of kies een startpunt:</span>",
+            unsafe_allow_html=True)
+sp_cols = st.columns(4)
+STARTPUNTEN = [
+    ("Amsterdam", 52.3676, 4.9041),
+    ("Utrecht",   52.0907, 5.1214),
+    ("Rotterdam", 51.9225, 4.4792),
+    ("Zwolle",    52.5168, 6.0830),
+]
+for col, (naam, slat, slon) in zip(sp_cols, STARTPUNTEN):
+    with col:
+        if st.button(f"📍 {naam}", use_container_width=True, type="secondary"):
+            user_lat, user_lon = slat, slon
 
-    st.info(
-        "💡 **Privacytip:** Jouw GPS-locatie wordt uitsluitend in jouw browser gebruikt "
-        "en nooit opgeslagen op onze servers."
-    )
+st.markdown("---")
 
-    # Handmatig invoeren als alternatief
-    with st.expander("📍 Of typ handmatig een locatie", expanded=False):
-        manual = st.text_input(
-            "Stad of postcode",
-            placeholder="Bijv. Amsterdam, Zeeland, 4501 AB…",
-        )
-        if st.button("🔍 Zoek op locatie") and manual.strip():
-            from utils.geo_logic import geocode_location
-            coords = geocode_location(manual.strip())
-            if coords:
-                st.session_state["gps_lat"] = coords[0]
-                st.session_state["gps_lon"] = coords[1]
-                st.rerun()
-            else:
-                st.error(f"'{manual}' niet gevonden. Probeer een andere naam.")
+# ── RESULTATEN ─────────────────────────────────────────────────────────────────
 
-elif st.session_state.get("gps_error"):
-    st.error(f"GPS-fout: {st.session_state['gps_error']}")
-    if st.button("🔄 Opnieuw proberen"):
-        st.session_state["gps_lat"] = None
-        st.session_state["gps_error"] = None
-        st.rerun()
-
+if user_lat is None or user_lon is None:
+    st.info("📍 Gebruik de GPS-knop of voer coördinaten in om locaties in de buurt te vinden.")
 else:
-    # ── GPS beschikbaar: bereken afstanden ──────────────────────────
-    user_lat = st.session_state["gps_lat"]
-    user_lon = st.session_state["gps_lon"]
-
-    st.success(
-        f"📍 Jouw locatie: {user_lat:.4f}°N, {user_lon:.4f}°O — "
-        f"zoekradius {radius_km} km"
-    )
-    if st.button("🔄 Locatie vergeten", type="secondary"):
-        st.session_state["gps_lat"] = None
-        st.session_state["gps_lon"] = None
-        st.rerun()
-
-    # Voeg afstanden toe en filter op radius
-    df_dist = add_distances(df, user_lat, user_lon)
-    df_near = df_dist[df_dist["afstand_km"] <= radius_km].copy()
-
-    # Sorteren
-    if sort_near == "Beoordeling ↓":
-        df_near["_s"] = pd.to_numeric(
-            df_near["beoordeling"].astype(str).str.replace(",", ".").str.split("/").str[0],
-            errors="coerce"
-        )
-        df_near = df_near.sort_values("_s", ascending=False).drop(columns=["_s"])
-    elif sort_near == "Prijs (gratis eerst)":
-        df_near["_g"] = df_near["prijs"].astype(str).str.lower().str.contains("gratis", na=False)
-        df_near = df_near.sort_values(["_g", "afstand_km"], ascending=[False, True]).drop(columns=["_g"])
-    # else: al gesorteerd op afstand_km
-
     st.markdown(f"""
-<div class="vs-results-header">
-  <div class="vs-results-count">{len(df_near)} camperplaatsen binnen {radius_km} km</div>
-  <div class="vs-results-sub">gesorteerd op {sort_near.lower()}</div>
+<div style="background:var(--vs-card);border:1px solid {BORDER};border-radius:10px;
+padding:0.8rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:1.3rem;">📍</span>
+  <div>
+    <div style="font-weight:600;font-size:0.88rem;">Jouw locatie</div>
+    <div style="font-size:0.78rem;color:{TEXT_MUTED};">{user_lat:.4f}°N, {user_lon:.4f}°E · Radius: {radius_km} km</div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
-    # Kaart toggle
-    toon_kaart = st.toggle("🗺️ Toon op kaart", value=False)
-    if toon_kaart and not df_near.empty:
-        render_map_section(df_near, height=420)
+    # Afstand berekenen voor alle locaties
+    dichtbij_df = df.copy()
+    afstanden = []
+    for _, row in dichtbij_df.iterrows():
+        try:
+            rlat = float(str(row.get("latitude", "")).replace(",", "."))
+            rlon = float(str(row.get("longitude", "")).replace(",", "."))
+            afst = haversine(user_lat, user_lon, rlat, rlon)
+            afstanden.append(afst)
+        except (ValueError, TypeError):
+            afstanden.append(9999.0)
 
-    # Lijst
-    if df_near.empty:
+    dichtbij_df["afstand_km"]   = afstanden
+    dichtbij_df["afstand_label"] = dichtbij_df["afstand_km"].apply(
+        lambda x: f"{x:.1f} km" if x < 9999 else "?"
+    )
+
+    # Filter op radius
+    dichtbij_df = dichtbij_df[dichtbij_df["afstand_km"] <= radius_km].sort_values("afstand_km")
+
+    st.markdown(f"""
+<div class="vs-results-header">
+  <div class="vs-results-count">{len(dichtbij_df):,} plekken binnen {radius_km} km</div>
+  <div class="vs-results-sub">gesorteerd op afstand</div>
+</div>
+""", unsafe_allow_html=True)
+
+    if dichtbij_df.empty:
         render_no_results()
-        st.info(
-            f"Geen camperplaatsen binnen {radius_km} km gevonden. "
-            f"Vergroot de zoekradius of kies een andere locatie."
-        )
+        st.info(f"💡 Vergroot de zoekradius (nu {radius_km} km) om meer resultaten te zien.")
     else:
-        for idx, row in df_near.head(100).iterrows():
-            render_result_card(row, f"near_{idx}")
+        # Kaart tonen
+        toon_kaart = st.toggle("🗺️ Toon op kaart", value=False)
+        if toon_kaart:
+            render_map_section(dichtbij_df.head(100), height=420)
 
-    if len(df_near) > 100:
-        st.markdown(
-            f"<p style='text-align:center;color:{TEXT_MUTE};font-size:0.8rem;'>"
-            f"Top 100 van {len(df_near)} getoond.</p>",
-            unsafe_allow_html=True,
-        )
+        for idx, row in dichtbij_df.head(50).iterrows():
+            render_result_card(row, idx)
+
+        if len(dichtbij_df) > 50:
+            st.markdown(
+                f"<p style='text-align:center;color:{TEXT_MUTED};font-size:0.78rem;'>"
+                f"Top 50 van {len(dichtbij_df)} plekken getoond.</p>",
+                unsafe_allow_html=True,
+            )
