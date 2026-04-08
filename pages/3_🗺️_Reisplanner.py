@@ -1,29 +1,23 @@
 """
-pages/3_🗺️_Reisplanner.py — Budget & Route Planner voor VrijStaan v5.
-Pijler 1: Planningspagina voor favorieten. Budget-tracker, dagindeling,
-route-export naar Google Maps.
-
-Carte Blanche toevoeging (Pijler 8):
-  - Multi-stop route in volgorde slepen
-  - Totaalkosten berekenen
-  - "Export naar Google Maps" met waypoints
+pages/3_🗺️_Reisplanner.py — VrijStaan v5 Reisplanner.
+Plan je route langs favoriete camperplaatsen met budgetberekening.
+Pijler 1: Nieuwe pagina. Pijler 8: Kaartroute + budget carte blanche.
 """
 from __future__ import annotations
 
+import json
+from math import radians, cos, sin, asin, sqrt
+
+import folium
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
-from ui.theme import (
-    apply_theme, render_sidebar_header,
-    P_BLUE, P_DARK, P_YELLOW, P_GREEN,
-    TEXT_H, TEXT_MUTE, BORDER, BG_CARD, BG_PAGE,
-)
-from ui.map_view import render_map_section
+from ui.theme import apply_theme, render_sidebar_header, BRAND_PRIMARY, BRAND_DARK, BORDER, TEXT_MUTED
 from utils.data_handler import load_data
-from utils.favorites import get_favorites, init_favorites
+from utils.favorites import get_favorites, init_favorites, toggle_favorite
 from utils.helpers import clean_val, safe_html, safe_float
 
-# ── PAGINA CONFIG ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="VrijStaan | Reisplanner",
     page_icon="🗺️",
@@ -34,11 +28,9 @@ apply_theme()
 render_sidebar_header()
 init_favorites()
 
-# ── SESSION STATE ──────────────────────────────────────────────────────────────
-if "planner_stops" not in st.session_state:
-    st.session_state["planner_stops"] = []
 
-# ── DATA LADEN ─────────────────────────────────────────────────────────────────
+# ── DATA ───────────────────────────────────────────────────────────────────────
+
 @st.cache_data(ttl=300, show_spinner=False)
 def _load() -> pd.DataFrame:
     return load_data()
@@ -46,224 +38,281 @@ def _load() -> pd.DataFrame:
 df = _load()
 favorieten = get_favorites()
 
-# ── PAGINA HEADER ──────────────────────────────────────────────────────────────
+
+# ── HAVERSINE ──────────────────────────────────────────────────────────────────
+
+def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371.0
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    a = sin((lat2 - lat1) / 2) ** 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ** 2
+    return R * 2 * asin(sqrt(a))
+
+
+def _prijs_per_nacht(prijs_raw: object) -> float:
+    """Schat prijs per nacht uit tekst. Gratis = 0, onbekend = 15."""
+    p = clean_val(prijs_raw, "").lower()
+    if p == "gratis":
+        return 0.0
+    if p in ("onbekend", ""):
+        return 15.0  # redelijk gemiddelde voor Nederland
+    # Probeer eerste getal te extraheren
+    import re
+    m = re.search(r"(\d+(?:[.,]\d+)?)", p)
+    if m:
+        return float(m.group(1).replace(",", "."))
+    return 15.0
+
+
+# ── HEADER ─────────────────────────────────────────────────────────────────────
+
 st.markdown(f"""
-<div style="background:linear-gradient(145deg,{P_DARK} 0%,{P_BLUE} 100%);
-padding:1.8rem 2rem 2.2rem;margin-bottom:1.4rem;">
-  <div style="font-family:'Syne',sans-serif;font-size:1.55rem;font-weight:800;
-color:white;margin-bottom:0.2rem;">🗺️ Reisplanner</div>
-  <div style="color:rgba(255,255,255,0.7);font-size:0.9rem;">
-    Plan jouw camperreis: stops selecteren, budget bijhouden, route exporteren.
+<div style="background:linear-gradient(135deg,{BRAND_DARK},{BRAND_PRIMARY});
+border-radius:14px;padding:1.8rem 2rem;margin-bottom:1.5rem;">
+  <div style="font-family:'DM Serif Display',serif;font-size:1.8rem;color:white;
+margin-bottom:4px;">🗺️ Reisplanner</div>
+  <div style="color:rgba(255,255,255,0.72);font-size:0.9rem;">
+    Plan je route langs je favoriete camperplaatsen en bereken je budget.
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── FAVORIETEN LADEN ───────────────────────────────────────────────────────────
 if not favorieten:
-    st.markdown(f"""
-<div style="text-align:center;padding:4rem 2rem;background:{BG_CARD};
-border-radius:14px;border:1px solid {BORDER};">
-  <div style="font-size:2.5rem;margin-bottom:1rem;">❤️</div>
-  <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;
-margin-bottom:0.5rem;">Nog geen favorieten</div>
-  <div style="font-size:0.88rem;color:{TEXT_MUTE};">
-    Ga naar <strong>Zoeken</strong>, sla locaties op als favoriet (🤍),
-    en plan dan hier jouw route.
-  </div>
-</div>
-""", unsafe_allow_html=True)
+    st.info("""
+**Geen favorieten opgeslagen.**
+
+Zoek camperplaatsen op de **Zoekpagina** en voeg ze toe via het ❤️-icoon.
+Je kunt dan hier je route plannen!
+    """)
+    if st.button("🔍 Ga naar Zoeken", type="primary"):
+        st.switch_page("pages/1_🔍_Zoeken.py")
     st.stop()
 
-fav_df = df[df["naam"].isin(favorieten)].copy()
 
-# ── TWEE KOLOMMEN: STOPS + BUDGET ─────────────────────────────────────────────
-col_plan, col_budget = st.columns([1.4, 1])
+# ── FAVORIETEN LADEN ───────────────────────────────────────────────────────────
 
-with col_plan:
-    st.markdown(f"""
-<div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
-margin-bottom:0.8rem;">📍 Jouw favorieten ({len(fav_df)})</div>
-""", unsafe_allow_html=True)
+# Haal DataFrame rijen op voor de favorieten
+fav_df = df[df["naam"].isin(favorieten)].copy() if not df.empty else pd.DataFrame()
 
-    # Stops toe-/afvoegen
-    planner_stops: list[str] = st.session_state["planner_stops"]
+if fav_df.empty:
+    st.warning("Je favorieten zijn niet gevonden in de database. Mogelijk is de data bijgewerkt.")
+    if st.button("🔄 Database vernieuwen"):
+        st.cache_data.clear()
+        st.rerun()
+    st.stop()
 
-    for _, row in fav_df.iterrows():
-        naam_raw = clean_val(row.get("naam"), "Onbekend")
-        naam_s   = safe_html(naam_raw)
-        prov_s   = safe_html(clean_val(row.get("provincie"), ""))
-        prijs_s  = clean_val(row.get("prijs"), "Onbekend")
-        is_stop  = naam_raw in planner_stops
 
-        # Compacte kaart-rij
-        in_plan_html = (
-            f'<span style="background:{P_GREEN};color:white;border-radius:5px;'
-            f'padding:2px 7px;font-size:0.7rem;font-weight:700;margin-left:6px;">'
-            f'In reisplan</span>'
-            if is_stop else ""
-        )
+# ── REISPLANNER LAYOUT ─────────────────────────────────────────────────────────
+
+plan_col, info_col = st.columns([1.5, 1])
+
+with plan_col:
+    st.markdown(f"""<div style="font-family:'DM Serif Display',serif;font-size:1.2rem;
+color:var(--vs-text);margin-bottom:0.8rem;">📋 Jouw reislijst ({len(fav_df)} plekken)</div>""",
+        unsafe_allow_html=True)
+
+    # Sorteerbare lijst van favorieten
+    ordered_names = []
+    for i, (idx, row) in enumerate(fav_df.iterrows()):
+        naam     = clean_val(row.get("naam"), "Onbekend")
+        prov     = clean_val(row.get("provincie"), "?")
+        prijs    = clean_val(row.get("prijs"), "Onbekend")
+        nights   = 1  # default
 
         st.markdown(f"""
-<div class="vs-planner-stop">
-  <div class="vs-planner-num">{planner_stops.index(naam_raw)+1 if is_stop else "+"}</div>
-  <div style="flex:1;min-width:0;">
-    <div style="font-weight:700;font-size:0.9rem;white-space:nowrap;
-overflow:hidden;text-overflow:ellipsis;">{naam_s}{in_plan_html}</div>
-    <div style="font-size:0.75rem;color:{TEXT_MUTE};">📍 {prov_s} · 💶 {safe_html(prijs_s)}</div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-        btn_add, btn_del = st.columns([3, 1])
-        with btn_add:
-            if not is_stop:
-                if st.button(f"+ Toevoegen aan reisplan", key=f"add_{naam_raw[:10]}",
-                             use_container_width=True, type="secondary"):
-                    if naam_raw not in planner_stops:
-                        planner_stops.append(naam_raw)
-                    st.rerun()
-            else:
-                st.button(f"✅ In reisplan", key=f"in_{naam_raw[:10]}",
-                          use_container_width=True, disabled=True)
-        with btn_del:
-            if is_stop:
-                if st.button("✕", key=f"del_{naam_raw[:10]}", use_container_width=True):
-                    planner_stops.remove(naam_raw)
-                    st.rerun()
-
-with col_budget:
-    st.markdown(f"""
-<div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;
-margin-bottom:0.8rem;">💶 Budget & Plan</div>
-""", unsafe_allow_html=True)
-
-    if not planner_stops:
-        st.markdown(f"""
-<div style="background:{BG_PAGE};border:1px dashed {BORDER};border-radius:12px;
-padding:2rem;text-align:center;color:{TEXT_MUTE};">
-  <div style="font-size:1.5rem;margin-bottom:0.5rem;">🗺️</div>
-  <div style="font-size:0.85rem;">Voeg stops toe om jouw budget te zien.</div>
-</div>""", unsafe_allow_html=True)
-    else:
-        # Budget per stop
-        totaal_kosten = 0.0
-        totaal_nachten = 0
-
-        st.markdown("**Stops in jouw reisplan:**")
-        for i, naam in enumerate(planner_stops, 1):
-            row_match = fav_df[fav_df["naam"] == naam]
-            if row_match.empty:
-                continue
-            row = row_match.iloc[0]
-            prijs_s = clean_val(row.get("prijs"), "Onbekend")
-
-            # Probeer prijs te parsen
-            prijs_num = 0.0
-            if "gratis" in prijs_s.lower():
-                prijs_num = 0.0
-            else:
-                import re
-                nrs = re.findall(r"[\d,\.]+", prijs_s)
-                if nrs:
-                    prijs_num = safe_float(nrs[0].replace(",", "."))
-
-            st.markdown(f"""
-<div style="display:flex;align-items:center;justify-content:space-between;
-padding:6px 0;border-bottom:1px solid {BORDER};">
-  <div>
-    <span style="background:{P_BLUE};color:white;border-radius:50%;
-width:22px;height:22px;display:inline-flex;align-items:center;
-justify-content:center;font-size:0.7rem;font-weight:800;margin-right:8px;">{i}</span>
-    <strong style="font-size:0.88rem;">{safe_html(naam[:28])}</strong>
-  </div>
-  <div style="font-size:0.85rem;color:{TEXT_MUTE};">
-    {'Gratis' if prijs_num == 0 else f'€{prijs_num:.0f}/nacht'}
+<div class="vs-trip-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;
+margin-bottom:6px;">
+    <div>
+      <div style="font-weight:600;font-size:0.9rem;">{safe_html(naam)}</div>
+      <div style="font-size:0.75rem;color:{TEXT_MUTED};">📍 {safe_html(prov)}</div>
+    </div>
+    <div style="font-size:0.85rem;font-weight:600;color:{BRAND_PRIMARY};">{safe_html(prijs)}</div>
   </div>
 </div>""", unsafe_allow_html=True)
 
-            nachten_key = f"nachten_{naam[:10]}"
-            nachten = st.number_input(
-                f"Nachten bij {naam[:20]}",
-                min_value=1, max_value=30, value=1,
-                key=nachten_key,
+        trip_col1, trip_col2, trip_col3 = st.columns([2, 1, 1])
+        with trip_col1:
+            nights_key = f"nights_{idx}"
+            if nights_key not in st.session_state:
+                st.session_state[nights_key] = 1
+            nights = st.number_input(
+                "Nachten",
+                min_value=1, max_value=30,
+                value=st.session_state[nights_key],
+                key=f"n_{idx}",
                 label_visibility="collapsed",
             )
-            totaal_nachten += nachten
-            totaal_kosten  += prijs_num * nachten
+            st.session_state[nights_key] = nights
+        with trip_col2:
+            st.caption(f"× {nights} nacht")
+        with trip_col3:
+            if st.button("🗑️", key=f"rm_{idx}", help="Verwijder uit favorieten"):
+                toggle_favorite(naam)
+                st.rerun()
 
-        st.divider()
+        ordered_names.append({
+            "naam":   naam,
+            "prov":   prov,
+            "prijs":  prijs,
+            "nights": nights,
+            "row":    row,
+        })
 
-        # Budget samenvatting
-        budget_max = st.number_input(
-            "💰 Jouw budget (€)",
-            min_value=0, value=int(max(totaal_kosten * 1.5, 100)),
-            step=50,
-        )
-        pct = min(totaal_kosten / max(budget_max, 1) * 100, 100)
-        kleur = P_GREEN if pct < 80 else ("#F59E0B" if pct < 100 else "#EF4444")
 
-        st.markdown(f"""
-<div style="margin:1rem 0;">
-  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-    <span style="font-size:0.82rem;font-weight:600;">Totaalkosten</span>
-    <span style="font-size:0.88rem;font-weight:800;color:{kleur};">
-      €{totaal_kosten:.0f} / €{budget_max}
-    </span>
+with info_col:
+    # ── BUDGET CALCULATOR ──────────────────────────────────────────────
+    st.markdown(f"""<div style="font-family:'DM Serif Display',serif;font-size:1.2rem;
+color:var(--vs-text);margin-bottom:0.8rem;">💶 Budget overzicht</div>""",
+        unsafe_allow_html=True)
+
+    # Brandstof instellingen
+    with st.expander("⛽ Brandstofkosten", expanded=True):
+        fuel_col1, fuel_col2 = st.columns(2)
+        with fuel_col1:
+            verbruik = st.number_input("Verbruik (L/100km)", 8.0, 25.0, 12.0, 0.5)
+        with fuel_col2:
+            prijs_liter = st.number_input("Prijs per liter (€)", 1.50, 3.00, 2.05, 0.05)
+
+    # Totale afstand berekenen (volgorde van favorieten)
+    totale_km = 0.0
+    route_items = ordered_names
+    if len(route_items) >= 2:
+        for j in range(len(route_items) - 1):
+            r1 = route_items[j]["row"]
+            r2 = route_items[j + 1]["row"]
+            try:
+                lat1 = float(str(r1.get("latitude", 0)).replace(",", "."))
+                lon1 = float(str(r1.get("longitude", 0)).replace(",", "."))
+                lat2 = float(str(r2.get("latitude", 0)).replace(",", "."))
+                lon2 = float(str(r2.get("longitude", 0)).replace(",", "."))
+                totale_km += _haversine(lat1, lon1, lat2, lon2)
+            except (ValueError, TypeError):
+                pass
+
+    # Budget items
+    totale_nachten = sum(item["nights"] for item in ordered_names)
+    verblijf_kosten = sum(
+        _prijs_per_nacht(item["prijs"]) * item["nights"]
+        for item in ordered_names
+    )
+    brandstof_kosten = (totale_km / 100) * verbruik * prijs_liter
+
+    totaal = verblijf_kosten + brandstof_kosten
+
+    st.markdown(f"""
+<div style="background:var(--vs-bg);border:1px solid {BORDER};border-radius:10px;
+padding:1rem;margin-bottom:0.8rem;">
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:0.84rem;">🏕️ Verblijf ({totale_nachten} nachten)</span>
+    <span style="font-weight:600;">€{verblijf_kosten:.0f}</span>
   </div>
-  <div class="vs-budget-bar-bg">
-    <div class="vs-budget-bar" style="width:{pct:.0f}%;background:{kleur};"></div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:0.84rem;">⛽ Brandstof (~{totale_km:.0f} km)</span>
+    <span style="font-weight:600;">€{brandstof_kosten:.0f}</span>
   </div>
-  <div style="font-size:0.72rem;color:{TEXT_MUTE};margin-top:4px;">
-    {totaal_nachten} nachten · €{totaal_kosten/max(totaal_nachten,1):.0f}/nacht gemiddeld
+  <hr style="border-color:{BORDER};margin:8px 0;">
+  <div style="display:flex;justify-content:space-between;">
+    <span style="font-size:0.95rem;font-weight:700;">Totaal geschat</span>
+    <span style="font-size:1.1rem;font-weight:700;color:{BRAND_PRIMARY};">€{totaal:.0f}</span>
+  </div>
+  <div style="font-size:0.7rem;color:{TEXT_MUTED};margin-top:4px;">
+    * Verblijfsprijzen zijn schattingen. Controleer altijd ter plekke.
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("")
+    # Reisstatistieken
+    totale_dagen = totale_nachten
+    st.metric("📅 Totaal reisdagen", f"{totale_dagen} nachten")
+    st.metric("🛣️ Geschatte afstand", f"{totale_km:.0f} km", help="Hemelsbreed via waypoints")
+    st.metric("💰 Budget per dag", f"€{totaal/max(totale_dagen,1):.0f}")
 
-        # Google Maps export
-        stop_rows = [fav_df[fav_df["naam"] == n].iloc[0]
-                     for n in planner_stops
-                     if not fav_df[fav_df["naam"] == n].empty]
 
-        if stop_rows:
-            waypoints = []
-            for r in stop_rows:
-                try:
-                    lat = float(str(r.get("latitude", "")).replace(",", "."))
-                    lon = float(str(r.get("longitude", "")).replace(",", "."))
-                    waypoints.append(f"{lat},{lon}")
-                except (ValueError, TypeError):
-                    pass
+# ── ROUTEKAART ─────────────────────────────────────────────────────────────────
 
-            if waypoints:
-                if len(waypoints) == 1:
-                    gmap_url = f"https://www.google.com/maps?q={waypoints[0]}"
-                else:
-                    origin = waypoints[0]
-                    dest   = waypoints[-1]
-                    via    = "|".join(waypoints[1:-1])
-                    gmap_url = (
-                        f"https://www.google.com/maps/dir/?api=1"
-                        f"&origin={origin}&destination={dest}"
-                        + (f"&waypoints={via}" if via else "")
-                        + "&travelmode=driving"
-                    )
-                st.link_button(
-                    "🗺️ Open route in Google Maps",
-                    gmap_url,
-                    use_container_width=True,
-                    type="primary",
-                )
+st.markdown("---")
+st.markdown(f"""<div style="font-family:'DM Serif Display',serif;font-size:1.2rem;
+color:var(--vs-text);margin-bottom:0.8rem;">🗺️ Routekaart</div>""",
+    unsafe_allow_html=True)
 
-        if st.button("🗑️ Reisplan wissen", use_container_width=True, type="secondary"):
-            st.session_state["planner_stops"] = []
-            st.rerun()
+if len(fav_df) >= 1:
+    try:
+        valid = []
+        for item in ordered_names:
+            row = item["row"]
+            try:
+                lat = float(str(row.get("latitude", "")).replace(",", "."))
+                lon = float(str(row.get("longitude", "")).replace(",", "."))
+                valid.append((item["naam"], lat, lon, item["prijs"]))
+            except (ValueError, TypeError):
+                continue
 
-# ── KAART VAN HET REISPLAN ─────────────────────────────────────────────────────
-if planner_stops:
-    st.divider()
-    st.markdown(f"### 🗺️ Kaart van jouw reisroute")
-    plan_df = fav_df[fav_df["naam"].isin(planner_stops)].copy()
-    if not plan_df.empty:
-        render_map_section(plan_df, height=440)
+        if valid:
+            center = [sum(v[1] for v in valid) / len(valid), sum(v[2] for v in valid) / len(valid)]
+            zoom   = 7 if len(valid) > 3 else 9
+
+            m = folium.Map(location=center, zoom_start=zoom, tiles="CartoDB Positron")
+
+            for i, (naam, lat, lon, prijs) in enumerate(valid):
+                prijs_label = "Gratis" if "gratis" in str(prijs).lower() else clean_val(prijs, "?")
+                folium.Marker(
+                    [lat, lon],
+                    popup=folium.Popup(
+                        f"<b>{safe_html(naam)}</b><br>Stop {i+1} · {safe_html(prijs_label)}",
+                        max_width=180,
+                    ),
+                    tooltip=f"{i+1}. {naam}",
+                    icon=folium.DivIcon(
+                        html=f"""<div style="background:#003580;color:white;
+border-radius:50%;width:24px;height:24px;display:flex;align-items:center;
+justify-content:center;font-weight:700;font-size:11px;
+box-shadow:0 2px 5px rgba(0,0,0,0.3);">{i+1}</div>""",
+                        icon_size=(24, 24),
+                        icon_anchor=(12, 12),
+                    ),
+                ).add_to(m)
+
+            # Teken route als lijnen
+            if len(valid) >= 2:
+                coords = [[lat, lon] for _, lat, lon, _ in valid]
+                folium.PolyLine(
+                    coords,
+                    color=BRAND_PRIMARY,
+                    weight=3,
+                    opacity=0.7,
+                    dash_array="8,6",
+                ).add_to(m)
+
+            components.html(m._repr_html_(), height=420)
+        else:
+            st.info("Geen locaties met geldige coördinaten in je reislijst.")
+
+    except Exception as e:
+        st.error(f"Fout bij kaartrendering: {e}")
+else:
+    st.info("Voeg minstens één favoriet toe om de routekaart te zien.")
+
+
+# ── EXPORT ─────────────────────────────────────────────────────────────────────
+st.markdown("---")
+if ordered_names:
+    export_data = [
+        {
+            "stop": i + 1,
+            "naam": item["naam"],
+            "provincie": item["prov"],
+            "prijs": item["prijs"],
+            "nachten": item["nights"],
+            "budget": f"€{_prijs_per_nacht(item['prijs']) * item['nights']:.0f}",
+        }
+        for i, item in enumerate(ordered_names)
+    ]
+    export_df  = pd.DataFrame(export_data)
+    csv_bytes  = export_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "📥 Download reisplan als CSV",
+        data=csv_bytes,
+        file_name="vrijstaan_reisplan.csv",
+        mime="text/csv",
+        type="secondary",
+    )
