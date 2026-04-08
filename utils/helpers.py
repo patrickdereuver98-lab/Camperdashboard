@@ -1,20 +1,18 @@
 """
-utils/helpers.py — Gedeelde utility functies voor VrijStaan v5.
-Crash-proof, type-hinted, PEP8. Geen Streamlit afhankelijkheden.
+utils/helpers.py — VrijStaan v5 Utility functies.
+Pijler 7: 100% crash-proof via safe .get() overal.
+Pijler 4: Hybride zoekfunctie (exacte match → AI fallback).
 """
 from __future__ import annotations
 
 import html as _html
-from math import radians, cos, sin, asin, sqrt
 from typing import Any
-
-import pandas as pd
 
 _EMPTY = {"nan", "none", "", "onbekend", "unknown", "n/a", "null", "-", "–", "[]"}
 
 
 def clean_val(val: Any, fallback: str = "Onbekend") -> str:
-    """Converteert élke waarde naar bruikbare string, fallback bij lege/nan."""
+    """Crash-proof waarde naar string. Lege/nan/onbekende → fallback."""
     if val is None:
         return fallback
     s = str(val).strip()
@@ -22,12 +20,12 @@ def clean_val(val: Any, fallback: str = "Onbekend") -> str:
 
 
 def safe_html(val: Any) -> str:
-    """HTML-escape voor veilig gebruik in f-string HTML."""
+    """Escape HTML-gevaarlijke tekens."""
     return _html.escape(str(val))
 
 
 def format_score(raw: Any) -> str:
-    """Getal → '4.2/5' | Tekst → tekst | Leeg → ''"""
+    """Getal → '4.2/5'. Leeg → ''."""
     val = clean_val(raw, "")
     if not val:
         return ""
@@ -39,12 +37,12 @@ def format_score(raw: Any) -> str:
 
 
 def is_ja(val: Any) -> bool:
-    """True als veld 'Ja' (case-insensitive)."""
+    """True als veld 'Ja' bevat (case-insensitive)."""
     return str(val).strip().lower() == "ja"
 
 
 def safe_float(val: Any, default: float = 0.0) -> float:
-    """Float conversie met fallback."""
+    """Crash-proof float conversie."""
     try:
         return float(str(val).replace(",", "."))
     except (ValueError, TypeError):
@@ -53,11 +51,13 @@ def safe_float(val: Any, default: float = 0.0) -> float:
 
 def truncate(text: str, max_chars: int = 120) -> str:
     """Verkort tekst tot max_chars."""
-    return text if len(text) <= max_chars else text[:max_chars].rsplit(" ", 1)[0] + "…"
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rsplit(" ", 1)[0] + "…"
 
 
 def facility_badges_html(row: Any) -> str:
-    """HTML badge-string voor een locatierij."""
+    """Compact badge-HTML voor alle aanwezige faciliteiten."""
     badges = []
     mapping = [
         ("stroom",            "vs-badge-stroom", "⚡", "Stroom"),
@@ -74,70 +74,28 @@ def facility_badges_html(row: Any) -> str:
 
 
 def price_badge_html(prijs: Any) -> str:
-    """HTML badge voor prijsweergave."""
+    """HTML price badge."""
     p = clean_val(prijs, "")
     if p.lower() == "gratis":
         return '<span class="vs-badge vs-badge-gratis">💰 Gratis</span>'
-    if not p:
+    elif not p:
         return '<span class="vs-badge vs-badge-onbekend">❓ Onbekend</span>'
     return f'<span class="vs-badge vs-badge-betaald">💶 {safe_html(p)}</span>'
 
 
-# ── HAVERSINE AFSTAND ──────────────────────────────────────────────────────────
-
-def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Berekent afstand in km tussen twee GPS-coördinaten."""
-    R = 6371.0
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-    a = sin((lat2 - lat1) / 2) ** 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ** 2
-    return R * 2 * asin(sqrt(a))
-
-
-def add_distances(
-    df: pd.DataFrame,
-    user_lat: float,
-    user_lon: float,
-) -> pd.DataFrame:
+def hybrid_search_df(
+    df: "pd.DataFrame",  # type: ignore[name-defined]
+    query: str,
+) -> "tuple[pd.DataFrame, bool]":  # type: ignore[name-defined]
     """
-    Voegt 'afstand_km' en 'afstand_label' kolommen toe en sorteert op afstand.
+    Pijler 4: Hybride zoekfunctie.
+    Stap 1: Exacte naam / provincie match.
+    Stap 2: Geen match → use_ai=True (AI-intentie zoeken).
 
-    Args:
-      df:       Dataset met 'latitude' en 'longitude' kolommen
-      user_lat: GPS latitude van de gebruiker
-      user_lon: GPS longitude van de gebruiker
-
-    Returns:
-      Gesorteerde DataFrame met afstandskolommen
+    Returns: (gefilterde_df, use_ai)
     """
-    df = df.copy()
+    import pandas as pd  # noqa: PLC0415
 
-    def _dist(row: Any) -> float:
-        try:
-            return haversine_km(
-                user_lat, user_lon,
-                float(str(row["latitude"]).replace(",", ".")),
-                float(str(row["longitude"]).replace(",", ".")),
-            )
-        except (ValueError, TypeError):
-            return 9999.0
-
-    df["afstand_km"]    = df.apply(_dist, axis=1)
-    df["afstand_label"] = df["afstand_km"].apply(
-        lambda x: f"{x:.0f} km" if x < 9999 else ""
-    )
-    return df.sort_values("afstand_km").reset_index(drop=True)
-
-
-# ── HYBRIDE ZOEKFUNCTIE (Pijler 4) ────────────────────────────────────────────
-
-def hybrid_search_df(df: pd.DataFrame, query: str) -> tuple[pd.DataFrame, bool]:
-    """
-    Stap 1: Exacte naam/provincie match (case-insensitive).
-    Stap 2: Als geen match → retourneer origineel + use_ai=True.
-
-    Returns:
-      (gefilterde_df, use_ai)
-    """
     q = query.strip().lower()
     if not q:
         return df, False
@@ -151,3 +109,39 @@ def hybrid_search_df(df: pd.DataFrame, query: str) -> tuple[pd.DataFrame, bool]:
         return prov_match, False
 
     return df, True
+
+
+def apply_vehicle_filters(
+    df: "pd.DataFrame",  # type: ignore[name-defined]
+    f_lange_camper: bool,
+    f_zwaar_voertuig: bool,
+) -> "pd.DataFrame":  # type: ignore[name-defined]
+    """
+    Pijler 3: Filter op voertuig-restricties.
+    f_lange_camper:   locaties geschikt voor >8m voertuigen.
+    f_zwaar_voertuig: locaties geschikt voor >3.5t voertuigen.
+    """
+    if f_lange_camper and "max_lengte" in df.columns:
+        def _accepts_long(v: Any) -> bool:
+            raw = clean_val(v, "0")
+            raw = raw.lower().replace("m", "").replace(">", "").replace("≥", "").strip()
+            try:
+                return float(raw) >= 8.0
+            except ValueError:
+                return False  # Onbekend → toon niet bij strikte filter
+
+        df = df[df["max_lengte"].apply(_accepts_long)]
+
+    if f_zwaar_voertuig and "max_gewicht" in df.columns:
+        def _accepts_heavy(v: Any) -> bool:
+            raw = clean_val(v, "0")
+            raw = (raw.lower().replace("t", "").replace("ton", "")
+                   .replace(">", "").replace("≥", "").strip())
+            try:
+                return float(raw) >= 3.5
+            except ValueError:
+                return False
+
+        df = df[df["max_gewicht"].apply(_accepts_heavy)]
+
+    return df

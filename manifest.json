@@ -1,0 +1,45 @@
+{
+  "name": "VrijStaan — Camperplaatsen Nederland",
+  "short_name": "VrijStaan",
+  "description": "Vind de perfecte camperplaats in Nederland. AI-aangedreven, altijd actueel.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#003580",
+  "background_color": "#F5F7FA",
+  "lang": "nl",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/svg/1f6d1.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/svg/1f6d1.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "navigation", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Zoeken",
+      "short_name": "Zoek",
+      "description": "Zoek camperplaatsen",
+      "url": "/1_%F0%9F%94%8D_Zoeken",
+      "icons": [{"src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/svg/1f50d.svg", "sizes": "96x96"}]
+    },
+    {
+      "name": "Dichtbij",
+      "short_name": "GPS",
+      "description": "Camperplaatsen dichtbij jou",
+      "url": "/2_%F0%9F%93%8D_Dichtbij",
+      "icons": [{"src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/svg/1f4cd.svg", "sizes": "96x96"}]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

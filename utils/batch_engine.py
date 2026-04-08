@@ -1,18 +1,11 @@
 """
-utils/batch_engine.py — VrijStaan High-Performance Batch Engine v5.
-Pijler 5: MD5 hash-check skip, Exponential Backoff OSM, full-auto batching,
-multi-photo, Pijler 6 camper-velden.
-
-Architectuur:
-  - ThreadPoolExecutor: parallelle HTTP-scraping
-  - Sequentiële AI (main thread): geen gRPC deadlocks
-  - MD5 hash-check: skip AI als websitetekst ongewijzigd
-  - Exponential Backoff + custom User-Agent voor OSM/Overpass
-  - normalize_province() + normalize_phone(): datahygiëne
-  - Checkpoint: elke 25 CSV, elke 50 Sheets
+utils/batch_engine.py — VrijStaan v5 High-Performance Batch Engine.
+Pijler 5: IO/Compute split, MD5 hash-check, agentic workflow, auto-pilot.
+Pijler 7: Exponential backoff voor OSM Overpass API.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -35,17 +28,41 @@ AI_BATCH_SIZE       = 5
 CHECKPOINT_CSV_N    = 25
 CHECKPOINT_SHEETS_N = 50
 SCRAPE_TIMEOUT      = 10
-RATE_LIMIT_DELAY    = 0.6
 CHECKPOINT_DIR      = "data/checkpoints"
 CHECKPOINT_FILE     = f"{CHECKPOINT_DIR}/batch_progress.csv"
+RATE_LIMIT_DELAY    = 0.6
 
-# OSM Exponential Backoff (Pijler 5)
-OSM_MAX_RETRIES   = 5
-OSM_BASE_DELAY    = 2.0
-OSM_USER_AGENT    = "VrijStaan/5.0 (vrijstaan.nl; contact@vrijstaan.nl)"
+# OSM Overpass endpoints met Exponential Backoff (Pijler 5/7)
+_OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://z.overpass-api.de/api/interpreter",
+]
+_OSM_USER_AGENT = (
+    "VrijStaan/5.0 (Streamlit; camperplaatsen-NL; "
+    "contact: admin@vrijstaan.nl)"
+)
 
 
 # ── PROVINCIE NORMALISATIE ─────────────────────────────────────────────────────
+
+_PROVINCE_MAP: dict[str, str] = {
+    "fryslân": "Friesland",        "fryslan": "Friesland",
+    "frisian": "Friesland",        "friesland": "Friesland",
+    "north holland": "Noord-Holland","north-holland": "Noord-Holland",
+    "noord holland": "Noord-Holland","noordholland": "Noord-Holland",
+    "south holland": "Zuid-Holland","south-holland": "Zuid-Holland",
+    "zuidholland": "Zuid-Holland",  "south holand": "Zuid-Holland",
+    "north brabant": "Noord-Brabant","north-brabant": "Noord-Brabant",
+    "noord brabant": "Noord-Brabant","noordbrabant": "Noord-Brabant",
+    "nb": "Noord-Brabant",
+    "groningen": "Groningen",       "drenthe": "Drenthe",
+    "overijssel": "Overijssel",     "flevoland": "Flevoland",
+    "gelderland": "Gelderland",     "guelders": "Gelderland",
+    "utrecht": "Utrecht",           "zeeland": "Zeeland",
+    "zealand": "Zeeland",           "limburg": "Limburg",
+    "sud-holland": "Zuid-Holland",  "sud holland": "Zuid-Holland",
+}
 
 _NL_PROVINCES = {
     "groningen", "friesland", "drenthe", "overijssel", "flevoland",
@@ -53,34 +70,19 @@ _NL_PROVINCES = {
     "zeeland", "noord-brabant", "limburg",
 }
 
-_PROVINCE_MAP: dict[str, str] = {
-    "fryslân":        "Friesland",    "fryslan":        "Friesland",
-    "frisian":        "Friesland",    "friesland":      "Friesland",
-    "north holland":  "Noord-Holland","north-holland":   "Noord-Holland",
-    "noord holland":  "Noord-Holland","noordholland":    "Noord-Holland",
-    "south holland":  "Zuid-Holland", "south-holland":   "Zuid-Holland",
-    "zuidholland":    "Zuid-Holland", "south holand":    "Zuid-Holland",
-    "sud-holland":    "Zuid-Holland", "sud holland":     "Zuid-Holland",
-    "north brabant":  "Noord-Brabant","north-brabant":   "Noord-Brabant",
-    "noord brabant":  "Noord-Brabant","noordbrabant":    "Noord-Brabant",
-    "nb":             "Noord-Brabant",
-    "groningen":      "Groningen",    "drenthe":         "Drenthe",
-    "overijssel":     "Overijssel",   "flevoland":       "Flevoland",
-    "gelderland":     "Gelderland",   "guelders":        "Gelderland",
-    "utrecht":        "Utrecht",      "zeeland":         "Zeeland",
-    "zealand":        "Zeeland",      "limburg":         "Limburg",
-}
-
 
 def normalize_province(raw: str) -> str:
-    """Normaliseer naar officiële Nederlandse provincienaam."""
+    """Officiële NL provincienaam normalisatie."""
     if not raw:
         return "Onbekend"
     s = str(raw).strip()
     if s.lower() in ("onbekend", "nan", "none", "", "-", "unknown"):
         return "Onbekend"
-    if m := _PROVINCE_MAP.get(s.lower()):
-        return m
+    mapped = _PROVINCE_MAP.get(s.lower())
+    if mapped:
+        return mapped
+    if s.lower() in _NL_PROVINCES:
+        return s.title()
     for variant, canonical in _PROVINCE_MAP.items():
         if variant in s.lower():
             return canonical
@@ -90,7 +92,7 @@ def normalize_province(raw: str) -> str:
 # ── TELEFOON NORMALISATIE ──────────────────────────────────────────────────────
 
 def normalize_phone(raw: str) -> str:
-    """Normaliseer NL telefoonnummer naar +31 formaat."""
+    """NL telefoonnummer → +31 formaat."""
     _EMPTY = {"onbekend", "nan", "none", "", "-", "–", "unknown", "n/a"}
     if not raw or str(raw).strip().lower() in _EMPTY:
         return "Onbekend"
@@ -106,16 +108,18 @@ def normalize_phone(raw: str) -> str:
     if national.startswith("6") and len(national) == 9:
         return f"+31 6 {national[1:5]} {national[5:]}"
     if len(national) == 9:
-        two_digit = {"20","10","30","70","40","45","46","50","55","58","73","76","77","78","79"}
+        two = {"20","10","30","70","40","45","46","50","55","58","73","76","77","78","79"}
         a2 = national[:2]
-        if a2 in two_digit:
+        if a2 in two:
             return f"+31 {a2} {national[2:5]} {national[5:]}"
         return f"+31 {national[:3]} {national[3:6]} {national[6:]}"
     return s
 
 
-def _postprocess(res: dict) -> dict:
-    """Pas datahygiëne toe + logische consistentie."""
+# ── POST-PROCESSOR ─────────────────────────────────────────────────────────────
+
+def _postprocess_result(res: dict) -> dict:
+    """Provincie + telefoon normalisatie + logische consistentie."""
     if not isinstance(res, dict):
         return res
     if "provincie" in res:
@@ -127,14 +131,16 @@ def _postprocess(res: dict) -> dict:
     return res
 
 
-# ── STATISTIEKEN ───────────────────────────────────────────────────────────────
+# ── STATS DATACLASS ────────────────────────────────────────────────────────────
 
 @dataclass
 class BatchStats:
     totaal:       int   = 0
     verwerkt:     int   = 0
     succesvol:    int   = 0
-    overgeslagen: int   = 0   # hash-match skip
+    mislukt:      int   = 0
+    overgeslagen: int   = 0
+    hash_skipped: int   = 0   # Pijler 5: MD5 skip
     start_tijd:   float = field(default_factory=time.time)
 
     @property
@@ -151,29 +157,23 @@ class BatchStats:
         m, s = divmod(int(rem), 60)
         return f"~{m}m {s}s"
 
-    @property
-    def pct(self) -> float:
-        return (self.verwerkt / self.totaal * 100) if self.totaal else 0.0
 
-
-# ── STAP 1: PARALLELLE SCRAPER ─────────────────────────────────────────────────
+# ── PARALLELLE SCRAPER ─────────────────────────────────────────────────────────
 
 def _scrape_one(row_tuple: tuple) -> tuple:
-    """Scrapet één locatie: tekst + foto's + CC + P4N."""
+    """Scrapet één locatie: tekst + foto's + externe bronnen."""
     from utils.enrichment import (
         scrape_website, scrape_photos,
         scrape_campercontact, scrape_park4night,
-        compute_text_hash,
+        website_changed,
     )
-    idx, naam, provincie, website, stored_hash = row_tuple
+    idx, naam, provincie, website = row_tuple
     ws     = scrape_website(website)
-    new_hsh = compute_text_hash(ws) if ws else ""
-    # MD5 hash-check: als identiek, markeer als skip
-    skip   = bool(stored_hash and stored_hash == new_hsh and new_hsh)
-    photos = scrape_photos(website, max_photos=8) if not skip else []
-    cc     = scrape_campercontact(naam, provincie) if not skip else ""
-    p4n    = scrape_park4night(naam, provincie)   if not skip else ""
-    return idx, naam, ws, photos, cc, p4n, new_hsh, skip
+    changed = website_changed(website, ws)
+    photos = scrape_photos(website, max_photos=6) if ws else []
+    cc     = scrape_campercontact(naam, provincie)
+    p4n    = scrape_park4night(naam, provincie)
+    return idx, naam, ws, photos, cc, p4n, changed
 
 
 def parallel_scrape(
@@ -181,22 +181,14 @@ def parallel_scrape(
     progress_cb: Callable | None = None,
 ) -> dict[int, dict]:
     """
-    Scrapet alle locaties parallel (20 workers).
-    Bevat MD5 hash-check per locatie.
-
-    Returns:
-      {idx: {"website": str, "photos": list, "campercontact": str,
-             "park4night": str, "text_hash": str, "skip": bool}}
+    IO-fase: Parallelle HTTP scraping (ThreadPoolExecutor, 20 workers).
+    Pijler 5: Bevat website_changed flag per locatie.
     """
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     taken = [
-        (
-            idx,
-            str(row.get("naam", "")),
-            str(row.get("provincie", "Nederland")),
-            str(row.get("website", "")),
-            str(row.get("text_hash", "")),  # opgeslagen hash
-        )
+        (idx, str(row.get("naam", "")),
+         str(row.get("provincie", "Nederland")),
+         str(row.get("website", "")))
         for idx, row in df.iterrows()
     ]
     resultaten: dict[int, dict] = {}
@@ -206,20 +198,21 @@ def parallel_scrape(
         futures = {executor.submit(_scrape_one, t): t for t in taken}
         for future in as_completed(futures):
             try:
-                idx, naam, ws, photos, cc, p4n, new_hsh, skip = future.result(
+                idx, naam, ws, photos, cc, p4n, changed = future.result(
                     timeout=SCRAPE_TIMEOUT + 5
                 )
                 resultaten[idx] = {
                     "website": ws, "photos": photos,
                     "campercontact": cc, "park4night": p4n,
-                    "text_hash": new_hsh, "skip": skip,
+                    "website_changed": changed,
                 }
             except Exception as e:
                 t = futures[future]
-                logger.warning(f"Scrape fout voor {t[1]}: {e}")
+                logger.warning(f"Scrape mislukt voor {t[1]}: {e}")
                 resultaten[t[0]] = {
-                    "website": "", "photos": [], "campercontact": "",
-                    "park4night": "", "text_hash": "", "skip": False,
+                    "website": "", "photos": [],
+                    "campercontact": "", "park4night": "",
+                    "website_changed": True,
                 }
             klaar += 1
             if progress_cb:
@@ -228,13 +221,13 @@ def parallel_scrape(
     return resultaten
 
 
-# ── STAP 2: GEMINI REST API ────────────────────────────────────────────────────
+# ── GEMINI REST AANROEP ────────────────────────────────────────────────────────
 
 def _direct_gemini_call(prompt: str) -> str:
-    """HTTP REST naar Gemini 2.5 Flash. Bypast SDK volledig → geen gRPC."""
+    """Directe REST-aanroep naar Gemini 2.5 Flash. Bypast gRPC."""
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
-    except Exception:
+    except (KeyError, Exception):
         raise ValueError("GEMINI_API_KEY ontbreekt in st.secrets")
 
     url = (
@@ -260,8 +253,10 @@ def _direct_gemini_call(prompt: str) -> str:
         raise ValueError(f"Onverwachte response: {e}")
 
 
+# ── AI BATCH PROMPT ────────────────────────────────────────────────────────────
+
 def _build_batch_prompt(batch: list[dict]) -> str:
-    """Batch-prompt voor Gemini met Pijler 6 velden."""
+    """Pijler 6: Bevat camper-specifieke velden in batch prompt."""
     locaties_json = json.dumps(
         [{k: v for k, v in loc.items() if not k.startswith("_")} for loc in batch],
         ensure_ascii=False, indent=2,
@@ -271,45 +266,69 @@ def _build_batch_prompt(batch: list[dict]) -> str:
         b = loc.get("_bronnen", {})
         bronnen_blok += (
             f"\n--- Locatie {i}: {loc.get('naam','?')} ---\n"
-            f"Website: {b.get('website','')[:2500] or '(niet beschikbaar)'}\n"
+            f"Website: {b.get('website','')[:2000] or '(niet beschikbaar)'}\n"
             f"Campercontact: {b.get('campercontact','')[:1500] or '(niet gevonden)'}\n"
             f"Park4Night: {b.get('park4night','')[:1500] or '(niet gevonden)'}\n"
         )
-    return f"""
-VrijStaan data-batch voor {len(batch)} camperplaatsen.
 
-BRONNEN:
+    return f"""
+Je bent expert data-analist voor VrijStaan (NL camperplatform).
+Verrijk {len(batch)} locaties met ACTUELE, ACCURATE data.
+
+BRONINHOUD:
 {bronnen_blok}
 
 DATA:
 {locaties_json}
 
 INSTRUCTIES:
-• Ja=aanwezig | Nee=afwezig (deductie) | Onbekend=echt onbekend
-• Parkeerplaatsen: stroom=Nee, sanitair=Nee tenzij bewijs
-• drukte_indicator: "Snel vol" / "Gemiddeld druk" / "Vaak een plek vrij"
-• max_lengte: voertuig max lengte (bijv. "9 meter" of "Geen beperking")
-• max_gewicht: max gewicht (bijv. "3.5 ton" of "Geen beperking")
-• remote_work_score: "Uitstekend (4G/5G)" / "Goed (4G)" / "Matig" / "Onbekend"
-• Provincie altijd officieel NL. Telefoon: +31 formaat.
+• Ja=aanwezig | Nee=afwezig (deductie) | Onbekend=echt niet te vinden
+• Parkeerplaatsen: stroom=Nee, sanitair=Nee (tenzij bewijs)
+• Jachthavens: water_tanken=Ja, sanitair=Ja (standaard)
+• Provincie OFFICIEEL NL: Fryslân→Friesland, North Holland→Noord-Holland etc.
+• Telefoon: +31 formaat
+• beschrijving: 2-4 sfeervolle zinnen
+• drukte_indicator: "Snel vol", "Druk", "Vaak plek", "Buiten seizoen rustig" etc.
+• max_lengte: maximale voertuiglengte (bijv. "8m", "12m", "Geen beperking")
+• max_gewicht: maximaal gewicht (bijv. "3.5t", "Geen beperking")
+• remote_work_score: 4G/5G kwaliteit omschrijving
 • loc_type: "Camping"/"Camperplaats"/"Parking"/"Jachthaven"/"Boerderij"
 
 Retourneer UITSLUITEND JSON-array met exact {len(batch)} objecten:
 [{{
-  "naam": "exacte naam", "provincie": "NL-provincie",
+  "naam": "exacte naam",
+  "provincie": "officiële NL-provincie",
   "prijs": "€X of Gratis of Onbekend",
-  "honden_toegestaan": "Ja/Nee/Onbekend", "stroom": "Ja/Nee/Onbekend",
-  "stroom_prijs": "...", "afvalwater": "Ja/Nee/Onbekend",
-  "chemisch_toilet": "Ja/Nee/Onbekend", "water_tanken": "Ja/Nee/Onbekend",
-  "aantal_plekken": "...", "check_in_out": "...",
-  "beschrijving": "2-4 zinnen", "ondergrond": "...", "toegankelijkheid": "...",
-  "rust": "...", "sanitair": "...", "wifi": "...", "waterfront": "...",
-  "beoordeling": "...", "samenvatting_reviews": "...", "reviews_tekst": "...",
-  "telefoonnummer": "+31 ...", "roken": "...", "feesten": "...",
-  "faciliteiten_extra": "...", "huisregels": "...",
-  "drukte_indicator": "...", "max_lengte": "...",
-  "max_gewicht": "...", "remote_work_score": "...",
-  "loc_type": "...", "ai_gecheckt": "Ja"
+  "honden_toegestaan": "Ja/Nee/Onbekend",
+  "stroom": "Ja/Nee/Onbekend",
+  "stroom_prijs": "€X/nacht of Inbegrepen of Nee (geen stroom) of Onbekend",
+  "afvalwater": "Ja/Nee/Onbekend",
+  "chemisch_toilet": "Ja/Nee/Onbekend",
+  "water_tanken": "Ja/Nee/Onbekend",
+  "aantal_plekken": "getal of Onbekend",
+  "check_in_out": "tijden of Vrij of Onbekend",
+  "beschrijving": "2-4 sfeervolle zinnen",
+  "ondergrond": "Gras/Asfalt/Grind/Verhard/Gemengd/Onbekend",
+  "toegankelijkheid": "Ja/Nee/Onbekend",
+  "rust": "Rustig/Gemiddeld/Druk/Onbekend",
+  "sanitair": "Ja/Nee/Onbekend",
+  "wifi": "Ja/Nee/Onbekend",
+  "waterfront": "Ja/Nee/Onbekend",
+  "beoordeling": "bijv. 4.3 of Onbekend",
+  "samenvatting_reviews": "Gasten-zin 20-40 woorden of Onbekend",
+  "telefoonnummer": "+31 X XXXX XXXX of Onbekend",
+  "roken": "Ja/Nee/Onbekend",
+  "feesten": "Ja/Nee/Onbekend",
+  "faciliteiten_extra": "CSV extra faciliteiten of Onbekend",
+  "huisregels": "tekst of Onbekend",
+  "loc_type": "Camping/Camperplaats/etc.",
+  "drukte_indicator": "omschrijving drukte of Onbekend",
+  "max_lengte": "bijv. '8m' of 'Geen beperking' of 'Onbekend'",
+  "max_gewicht": "bijv. '3.5t' of 'Geen beperking' of 'Onbekend'",
+  "remote_work_score": "bijv. 'Goed (4G LTE)' of 'Onbekend'",
+  "voertuig_types": "bijv. 'Campervan, Caravan' of 'Onbekend'",
+  "tarieftype": "Per nacht/Gratis/Onbekend",
+  "ai_gecheckt": "Ja"
 }}]
 """
 
@@ -320,24 +339,35 @@ def ai_batch_enrich(
     max_retries: int = 4,
 ) -> list[dict]:
     """
-    Verrijkt batch van max 5 locaties via Gemini REST (sequentieel).
-    MD5-skip locaties worden automatisch overgeslagen.
+    Compute-fase: Sequentieel AI verrijken (main thread, geen race conditions).
+    Pijler 5: Slaat AI over voor locaties waarbij website_changed=False EN al gecheckt.
     """
-    # Filter hash-skip locaties
-    to_process = [loc for loc in batch if not loc.get("_skip")]
-    skip_locs  = [loc for loc in batch if loc.get("_skip")]
+    if not batch:
+        return []
 
-    results: list[dict] = list(skip_locs)  # Voeg skips direct terug
+    # Pijler 5: Skip batch entries waarbij website niet veranderd is
+    to_process = []
+    skipped_results = []
+    for entry in batch:
+        bronnen = entry.get("_bronnen", {})
+        changed = bronnen.get("website_changed", True)
+        # Als website niet veranderd en al eerder verrijkt → skip AI
+        if not changed and entry.get("ai_gecheckt", "Nee") == "Ja":
+            skipped_results.append({**entry, "_skip": True})
+        else:
+            to_process.append(entry)
 
     if not to_process:
-        return results
+        return skipped_results
 
     prompt = _build_batch_prompt(to_process)
+
     for poging in range(max_retries):
         try:
             if status_cb and poging > 0:
                 status_cb(f"⏳ Retry {poging}/{max_retries}…")
             response = _direct_gemini_call(prompt)
+
             clean = response.strip()
             for fence in ("```json", "```"):
                 clean = clean.replace(fence, "")
@@ -345,33 +375,41 @@ def ai_batch_enrich(
             start = clean.find("[")
             end   = clean.rfind("]") + 1
             if start == -1 or end == 0:
-                raise ValueError("Geen JSON-array")
-            verrijkt: list[dict] = json.loads(clean[start:end])
-            for i, res in enumerate(verrijkt):
+                raise ValueError("Geen JSON-array gevonden")
+
+            resultaten: list[dict] = json.loads(clean[start:end])
+
+            for i, res in enumerate(resultaten):
                 if i < len(to_process):
-                    res["_idx"]       = to_process[i].get("_idx")
-                    res["text_hash"]  = to_process[i].get("_bronnen", {}).get("text_hash", "")
-                    bronnen           = to_process[i].get("_bronnen", {})
-                    photos            = bronnen.get("photos", [])
-                    res["photos"]     = json.dumps(photos, ensure_ascii=False) if photos else "[]"
+                    res["_idx"] = to_process[i].get("_idx")
                     res.pop("_bronnen", None)
-                    _postprocess(res)
-            results.extend(verrijkt)
-            return results
+                    # Photo's toevoegen
+                    photos = to_process[i].get("_bronnen", {}).get("photos", [])
+                    if photos:
+                        res["photos"] = json.dumps(photos, ensure_ascii=False)
+                    _postprocess_result(res)
+
+            return skipped_results + resultaten
+
         except requests.exceptions.Timeout:
-            if status_cb: status_cb("⚠️ Timeout. Retry over 5s…")
+            if status_cb:
+                status_cb("⚠️ Timeout. Retry over 5s…")
             time.sleep(5)
         except Exception as e:
             msg = str(e).lower()
             if "429" in msg or "quota" in msg:
-                wacht = (2 ** poging) + random.uniform(0, 2)
-                if status_cb: status_cb(f"⏳ Rate limit. Wacht {wacht:.0f}s…")
+                # Exponential backoff + jitter
+                wacht = (2 ** poging) * 5 + random.uniform(0, 3)
+                if status_cb:
+                    status_cb(f"⏳ Rate limit. Wacht {wacht:.0f}s…")
                 time.sleep(wacht)
             else:
                 logger.error(f"Batch AI fout: {e}")
-                return batch
+                if status_cb:
+                    status_cb(f"⚠️ Fout: {e}")
+                return skipped_results + to_process
 
-    return batch
+    return skipped_results + to_process
 
 
 # ── CHECKPOINT MANAGER ─────────────────────────────────────────────────────────
@@ -385,14 +423,16 @@ class CheckpointManager:
         self.verwerkt_sinds_start = 0
 
     def update(self, idx: int, data: dict) -> None:
-        if data:
+        if data and not data.get("_skip"):
             for key, val in data.items():
                 if key.startswith("_"):
                     continue
                 if key not in self.df.columns:
                     self.df[key] = "Onbekend"
-                if isinstance(val, (list, dict)):
+                if isinstance(val, list):
                     val = json.dumps(val, ensure_ascii=False)
+                elif isinstance(val, dict):
+                    val = str(val)
                 self.df.at[idx, key] = val
         self.df.at[idx, "ai_gecheckt"] = "Ja"
         self.verwerkt_sinds_start += 1
@@ -404,7 +444,8 @@ class CheckpointManager:
                 self.df.to_csv(CHECKPOINT_FILE, index=False)
                 self.laatste_csv_save = n
             except Exception as e:
-                logger.error(f"CSV checkpoint fout: {e}")
+                logger.error(f"CSV save fout: {e}")
+
         if force or (n - self.laatste_sheets_save) >= CHECKPOINT_SHEETS_N:
             try:
                 from utils.data_handler import save_data
@@ -412,7 +453,7 @@ class CheckpointManager:
                 self.laatste_sheets_save = n
                 return True
             except Exception as e:
-                logger.error(f"Sheets checkpoint fout: {e}")
+                logger.error(f"Sheets save fout: {e}")
         return False
 
     def load_checkpoint(self) -> pd.DataFrame | None:
@@ -424,7 +465,7 @@ class CheckpointManager:
         return None
 
 
-# ── VOLAUTOMATISCHE BATCH RUN ──────────────────────────────────────────────────
+# ── AUTO-PILOT BATCH RUN (Pijler 5) ───────────────────────────────────────────
 
 def run_full_batch(
     master_df:     pd.DataFrame,
@@ -434,30 +475,23 @@ def run_full_batch(
     stop_flag:     Callable | None = None,
 ) -> pd.DataFrame:
     """
-    Pijler 5: Volledig automatische batch voor alle 750 locaties.
-
-    Nieuw in v5:
-    - MD5 hash-check per locatie (skip als ongewijzigd)
-    - Foto-URLs worden meegenomen in batch output
-    - Pijler 6 velden in batch prompt
-    - Exponential backoff bij rate limits
-    - stop_flag voor graceful cancel
-
-    Returns:
-      Verrijkte DataFrame
+    Pijler 5: Volledig automatische batch-run.
+    IO/Compute split: scraping parallel (20 workers), AI sequentieel.
+    MD5 hash-check: slaat AI over voor ongewijzigde websites.
+    Exponential backoff bij rate limits.
+    Auto-resume via checkpoint.
     """
     stats      = BatchStats()
     checkpoint = CheckpointManager(master_df)
 
     vorig = checkpoint.load_checkpoint()
     if vorig is not None and len(vorig) == len(master_df):
-        if status_cb: status_cb("♻️ Checkpoint hersteld")
+        if status_cb:
+            status_cb("♻️ Checkpoint hersteld — hervatten")
         checkpoint.df = vorig
 
-    gecheckt_col = checkpoint.df.get(
-        "ai_gecheckt", pd.Series("Nee", index=checkpoint.df.index)
-    )
-    mask       = gecheckt_col != "Ja"
+    gecheckt = checkpoint.df.get("ai_gecheckt", pd.Series("Nee", index=checkpoint.df.index))
+    mask     = gecheckt != "Ja"
     to_process = checkpoint.df[mask]
     if max_locations > 0:
         to_process = to_process.head(max_locations)
@@ -466,166 +500,197 @@ def run_full_batch(
     stats.overgeslagen = int((~mask).sum())
 
     if stats.totaal == 0:
-        if status_cb: status_cb("✅ Alle locaties al verrijkt!")
+        if status_cb:
+            status_cb("✅ Alle locaties zijn al verrijkt!")
         return checkpoint.df
 
     if status_cb:
-        status_cb(
-            f"🚀 Start: {stats.totaal} te verwerken "
-            f"({stats.overgeslagen} al klaar)"
-        )
+        status_cb(f"🚀 Auto-pilot gestart: {stats.totaal} locaties te verwerken")
 
-    rijen          = list(to_process.iterrows())
+    rijen = list(to_process.iterrows())
     totaal_batches = (len(rijen) + AI_BATCH_SIZE - 1) // AI_BATCH_SIZE
 
     for batch_nr in range(totaal_batches):
         if stop_flag and stop_flag():
-            if status_cb: status_cb(f"🛑 Gestopt bij {stats.verwerkt}/{stats.totaal}")
+            if status_cb:
+                status_cb(f"🛑 Gestopt bij {stats.verwerkt}/{stats.totaal}")
             break
 
-        start_i     = batch_nr * AI_BATCH_SIZE
-        end_i       = min(start_i + AI_BATCH_SIZE, len(rijen))
+        start_i = batch_nr * AI_BATCH_SIZE
+        end_i   = min(start_i + AI_BATCH_SIZE, len(rijen))
         batch_rijen = rijen[start_i:end_i]
 
-        # Parallel scrapen
+        # IO-fase: parallel scrapen
         sub_df = to_process.iloc[start_i:end_i]
         if status_cb:
-            status_cb(f"🌐 Scraping batch {batch_nr+1}/{totaal_batches}…")
+            status_cb(f"🌐 Scraping batch {batch_nr + 1}/{totaal_batches}…")
         scrape_res = parallel_scrape(sub_df)
 
-        # AI-verrijking input
+        # Compute-fase: sequentieel AI verrijken
         batch_input = []
         for idx, row in batch_rijen:
             bronnen = scrape_res.get(idx, {})
-            skip    = bronnen.get("skip", False)
             batch_input.append({
                 "_idx":      idx,
-                "_skip":     skip,
                 "_bronnen":  bronnen,
                 "naam":      str(row.get("naam", "")),
                 "provincie": str(row.get("provincie", "Nederland")),
                 "website":   str(row.get("website", "")),
+                "ai_gecheckt": str(row.get("ai_gecheckt", "Nee")),
             })
-            if skip:
-                stats.overgeslagen += 1
 
         if status_cb:
-            status_cb(
-                f"🤖 AI batch {batch_nr+1}/{totaal_batches} · ETA {stats.eta}"
-            )
+            status_cb(f"🤖 AI batch {batch_nr + 1}/{totaal_batches} · ETA {stats.eta}")
 
         batch_resultaten = ai_batch_enrich(batch_input, status_cb=status_cb)
 
+        # Checkpoint updates
         for i, res in enumerate(batch_resultaten):
             if i < len(batch_rijen):
                 orig_idx = batch_rijen[i][0]
-                if res.get("_hash_skip") or res.get("_skip"):
-                    checkpoint.df.at[orig_idx, "ai_gecheckt"] = "Ja"
-                else:
-                    checkpoint.update(orig_idx, res)
+                if res.get("_skip"):
+                    stats.hash_skipped += 1
+                checkpoint.update(orig_idx, res)
                 stats.verwerkt  += 1
-                stats.succesvol += 1 if isinstance(res, dict) and res.get("naam") else 0
+                stats.succesvol += 1 if isinstance(res, dict) else 0
 
         if progress_cb:
             progress_cb(
                 stats.verwerkt, stats.totaal,
-                f"🤖 Batch {batch_nr+1}/{totaal_batches} · "
+                f"🤖 Batch {batch_nr + 1}/{totaal_batches} · "
                 f"{stats.verwerkt}/{stats.totaal} · ETA {stats.eta}",
             )
 
-        checkpoint.maybe_save()
+        saved = checkpoint.maybe_save()
+        if status_cb and saved:
+            status_cb(
+                f"💾 {stats.verwerkt}/{stats.totaal} opgeslagen · "
+                f"Hash-skipped: {stats.hash_skipped} · {stats.elapsed}"
+            )
+
         time.sleep(RATE_LIMIT_DELAY)
 
     checkpoint.maybe_save(force=True)
+
     if status_cb:
         status_cb(
-            f"🎉 Klaar! {stats.succesvol}/{stats.totaal} verrijkt in {stats.elapsed}. "
-            f"{stats.overgeslagen} overgeslagen (hash-match)."
+            f"🎉 Klaar! {stats.succesvol} verrijkt, {stats.hash_skipped} ongewijzigd "
+            f"overgeslagen in {stats.elapsed}."
         )
 
     return checkpoint.df
 
 
-# ── OSM SYNC MET EXPONENTIAL BACKOFF (Pijler 5) ───────────────────────────────
+# ── OSM SYNC MET EXPONENTIAL BACKOFF (Pijler 5/7) ────────────────────────────
 
-def fetch_osm_with_backoff(overpass_query: str) -> dict:
+def fetch_osm_with_backoff(query: str, max_retries: int = 5) -> dict:
     """
-    Haalt OSM-data op met Exponential Backoff + custom User-Agent.
-    Pijler 5: robuuste Overpass API aanroep.
-
-    Returns:
-      Parsed JSON response of lege dict bij aanhoudende fout.
+    Pijler 5/7: Fetch OSM Overpass met:
+    - Custom User-Agent (voorkomt blokkades)
+    - Rotation over meerdere endpoints
+    - Exponential Backoff + Jitter
     """
     headers = {
-        "User-Agent":    OSM_USER_AGENT,
-        "Accept":        "application/json",
-        "Content-Type":  "application/x-www-form-urlencoded",
+        "User-Agent": _OSM_USER_AGENT,
+        "Accept": "application/json",
     }
-    endpoints = [
-        "https://overpass-api.de/api/interpreter",
-        "https://lz4.overpass-api.de/api/interpreter",
-        "https://z.overpass-api.de/api/interpreter",
-    ]
-
-    for attempt in range(OSM_MAX_RETRIES):
-        endpoint = endpoints[attempt % len(endpoints)]
-        delay    = OSM_BASE_DELAY * (2 ** attempt) + random.uniform(0, 1)
-
+    for attempt in range(max_retries):
+        endpoint = _OVERPASS_ENDPOINTS[attempt % len(_OVERPASS_ENDPOINTS)]
         try:
             resp = requests.post(
                 endpoint,
-                data={"data": overpass_query},
+                data={"data": query},
                 headers=headers,
-                timeout=130,
+                timeout=120,
             )
             if resp.status_code == 200:
                 return resp.json()
-            elif resp.status_code == 429:
-                logger.warning(f"OSM rate limit (429). Wacht {delay:.1f}s…")
-                time.sleep(delay)
-            elif resp.status_code in (500, 503, 504):
-                logger.warning(f"OSM server fout {resp.status_code}. Wacht {delay:.1f}s…")
-                time.sleep(delay)
-            else:
-                logger.error(f"OSM onverwacht: {resp.status_code}")
-                break
+            if resp.status_code in (429, 503):
+                wacht = (2 ** attempt) * 5 + random.uniform(0, 5)
+                logger.warning(
+                    f"OSM {endpoint} status {resp.status_code}. "
+                    f"Wacht {wacht:.0f}s (poging {attempt + 1}/{max_retries})"
+                )
+                time.sleep(wacht)
+                continue
+            resp.raise_for_status()
         except requests.exceptions.Timeout:
-            logger.warning(f"OSM timeout (poging {attempt+1}). Wacht {delay:.1f}s…")
-            time.sleep(delay)
+            wacht = (2 ** attempt) * 3 + random.uniform(0, 2)
+            logger.warning(f"OSM timeout op {endpoint}. Wacht {wacht:.0f}s")
+            time.sleep(wacht)
         except Exception as e:
-            logger.error(f"OSM verbindingsfout: {e}")
-            time.sleep(delay)
+            logger.error(f"OSM fout op {endpoint}: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
 
-    logger.error("OSM: alle pogingen mislukt")
-    return {}
+    raise RuntimeError("OSM Overpass API onbereikbaar na meerdere pogingen")
 
 
 # ── HULPFUNCTIES ───────────────────────────────────────────────────────────────
 
 def get_onbekend_stats(df: pd.DataFrame) -> dict:
-    """Telt 'Onbekend'-waarden per veld."""
     velden = [
         "prijs", "honden_toegestaan", "stroom", "sanitair", "wifi",
         "water_tanken", "afvalwater", "beoordeling", "beschrijving",
         "telefoonnummer", "provincie", "drukte_indicator",
-        "max_lengte", "max_gewicht", "remote_work_score",
+        "max_lengte", "remote_work_score",
     ]
-    return {
-        veld: {
-            "onbekend": int((df[veld].astype(str).str.lower() == "onbekend").sum()),
-            "pct": round(
-                int((df[veld].astype(str).str.lower() == "onbekend").sum())
-                / max(len(df), 1) * 100, 1
-            ),
-        }
-        for veld in velden
-        if veld in df.columns
-    }
+    result = {}
+    for veld in velden:
+        if veld in df.columns:
+            n = int((df[veld].astype(str).str.lower() == "onbekend").sum())
+            result[veld] = {"onbekend": n, "pct": round(n / max(len(df), 1) * 100, 1)}
+    return result
 
 
 def estimate_batch_time(n: int) -> str:
-    scrape  = (n / MAX_SCRAPE_WORKERS * 2) / 60
-    ai      = (n / AI_BATCH_SIZE * 5)      / 60
-    overhead = n * RATE_LIMIT_DELAY         / 60
-    totaal  = scrape + ai + overhead
-    return f"~{int(totaal)} – {int(totaal * 1.4)} minuten"
+    scrape  = (n / MAX_SCRAPE_WORKERS * 2.5) / 60
+    ai      = (n / AI_BATCH_SIZE * 5)        / 60
+    overhead = (n / AI_BATCH_SIZE * RATE_LIMIT_DELAY) / 60
+    t = scrape + ai + overhead
+    return f"~{int(t)} – {int(t * 1.4)} minuten"
+
+
+def check_api_health() -> dict[str, bool]:
+    """
+    Pijler 5: Controleer gezondheid van Gemini API en OSM Overpass.
+    Retourneert {service: is_healthy}.
+    """
+    result: dict[str, bool] = {}
+
+    # Gemini check
+    try:
+        api_key = st.secrets.get("GEMINI_API_KEY", "")
+        if not api_key:
+            result["Gemini API"] = False
+        else:
+            url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                f"gemini-2.5-flash:generateContent?key={api_key}"
+            )
+            payload = {"contents": [{"parts": [{"text": "test"}]}]}
+            resp = requests.post(url, json=payload, timeout=8)
+            result["Gemini API"] = resp.status_code == 200
+    except Exception:
+        result["Gemini API"] = False
+
+    # OSM check
+    try:
+        resp = requests.get(
+            "https://overpass-api.de/api/status",
+            headers={"User-Agent": _OSM_USER_AGENT},
+            timeout=8,
+        )
+        result["OSM Overpass"] = resp.status_code == 200
+    except Exception:
+        result["OSM Overpass"] = False
+
+    # Google Sheets (connection test via data_handler)
+    try:
+        from utils.data_handler import get_connection
+        conn = get_connection()
+        result["Google Sheets"] = conn is not None
+    except Exception:
+        result["Google Sheets"] = False
+
+    return result

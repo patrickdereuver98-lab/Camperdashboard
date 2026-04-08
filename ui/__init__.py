@@ -1,1 +1,1 @@
-"""ui — VrijStaan UI component package."""
+"""ui — VrijStaan v5 UI component package."""

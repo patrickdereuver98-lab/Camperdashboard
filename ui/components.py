@@ -1,47 +1,35 @@
 """
-ui/components.py — Herbruikbare UI-componenten voor VrijStaan v5.
-
-Exports:
-  render_result_card()    — Booking.com resultaatkaart met drukte-indicator
-  show_detail_dialog()    — Rijke detail met fotogalerij + crowdsource formulier
-  render_no_results()     — Anti-clutter lege staat
-  render_photo_grid()     — Booking.com foto-grid (hoofd + thumbnails)
-  score_label()           — Numerieke score → tekstlabel
+ui/components.py — VrijStaan v5 UI componenten.
+Booking.com-stijl resultaatkaart + Airbnb detail-pagina + Crowdsource formulier.
+Pijler 3: Crowdsource "Foutje gezien?". Pijler 6: Drukte/voertuig/remote indicators.
 """
 from __future__ import annotations
 
-import json
 import html as _html
+import json
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
-import streamlit as st
 import folium
+import pandas as pd
+import streamlit as st
 import streamlit.components.v1 as components
 
 from ui.theme import (
-    P_BLUE, P_DARK, P_YELLOW, P_GREEN,
-    TEXT_H, TEXT_MUTE, BORDER, BG_CARD,
+    BRAND_PRIMARY, BRAND_DARK, TEXT_MUTED, BORDER,
 )
-from utils.helpers import clean_val, safe_html, is_ja, safe_float
+from utils.helpers import clean_val, safe_html, is_ja
 from utils.favorites import get_favorites, toggle_favorite
-from utils.logger import logger
+
+# Path voor crowdsource meldingen
+REPORT_PATH = Path("data/meldingen.json")
 
 
-# ── SCORE HELPERS ──────────────────────────────────────────────────────────────
-
-def score_label(score: float) -> str:
-    """Booking.com-stijl score label."""
-    if score >= 9.0:  return "Uitzonderlijk"
-    if score >= 8.5:  return "Geweldig"
-    if score >= 8.0:  return "Heel goed"
-    if score >= 7.5:  return "Goed"
-    if score >= 7.0:  return "Prima"
-    if score >= 6.0:  return "Redelijk"
-    return "Matig"
-
+# ── HELPERS ────────────────────────────────────────────────────────────────────
 
 def _parse_score(raw: Any) -> float | None:
-    """Parseer score naar float op 10.0-schaal."""
+    """Parseer score naar float (0-10 schaal)."""
     val = clean_val(raw, "")
     if not val:
         return None
@@ -52,131 +40,141 @@ def _parse_score(raw: Any) -> float | None:
         return None
 
 
+def _score_label(score: float) -> str:
+    if score >= 9.0:   return "Uitzonderlijk"
+    if score >= 8.5:   return "Geweldig"
+    if score >= 8.0:   return "Heel goed"
+    if score >= 7.5:   return "Goed"
+    if score >= 7.0:   return "Prima"
+    return "Redelijk"
+
+
 def _score_html(raw: Any) -> str:
-    """Genereert het blauwe Booking.com score-badge HTML."""
     score = _parse_score(raw)
-    if score is None:
-        return "<div></div>"
-    label  = score_label(score)
-    css_cls = "high" if score >= 8.0 else ""
+    if not score:
+        return ""
+    label = _score_label(score)
     return f"""
-<div class="vs-score-wrap">
-  <div class="vs-score-label-stack">
-    <span class="vs-score-label-word">{safe_html(label)}</span>
-    <span class="vs-score-label-count">recensies</span>
+<div class="vs-score-block">
+  <div class="vs-score-label">{safe_html(label)}<br>
+    <span style="font-size:0.62rem;color:#aaa;">beoordeling</span>
   </div>
-  <div class="vs-score-box {css_cls}">{score:.1f}</div>
+  <div class="vs-score-badge">{score:.1f}</div>
 </div>"""
 
 
 def _price_html(prijs: Any) -> str:
-    """Prijs-sectie HTML voor de kaart."""
     p = clean_val(prijs, "")
     if p.lower() == "gratis":
-        return """
-<div class="vs-price-wrap">
-  <div class="vs-price-label">per nacht</div>
-  <div class="vs-price-value gratis">Gratis</div>
-  <div class="vs-price-note">geen vertrektijd</div>
-</div>"""
+        return '<div class="vs-price-block"><div class="vs-price-from">per nacht</div><div class="vs-price-main gratis">Gratis</div><div class="vs-price-sub">geen vertrektijd</div></div>'
     elif not p:
-        return """
-<div class="vs-price-wrap">
-  <div class="vs-price-value onbekend">Prijs onbekend</div>
-</div>"""
-    return f"""
-<div class="vs-price-wrap">
-  <div class="vs-price-label">per nacht</div>
-  <div class="vs-price-value">{safe_html(p)}</div>
-  <div class="vs-price-note">incl. lokale belasting</div>
-</div>"""
+        return '<div class="vs-price-block"><div class="vs-price-main onbekend">Prijs onbekend</div></div>'
+    return f'<div class="vs-price-block"><div class="vs-price-from">per nacht</div><div class="vs-price-main">{safe_html(p)}</div><div class="vs-price-sub">incl. toeristenbelasting</div></div>'
 
 
-def _drukte_badge(row: Any) -> str:
-    """Drukte-indicator badge op de foto (Pijler 6)."""
-    drukte = clean_val(row.get("drukte_indicator"), "")
+def _drukte_html(row: Any) -> str:
+    """Pijler 6: Drukte-indicator chip."""
+    drukte = clean_val(row.get("drukte_indicator", ""), "")
     if not drukte or drukte == "Onbekend":
         return ""
-    drukte_l = drukte.lower()
-    if "snel" in drukte_l or "vol" in drukte_l:
-        return f'<div class="vs-drukte-badge vs-drukte-snel">🔴 {safe_html(drukte)}</div>'
-    if "gemiddeld" in drukte_l or "druk" in drukte_l:
-        return f'<div class="vs-drukte-badge vs-drukte-medium">🟡 {safe_html(drukte)}</div>'
-    return f'<div class="vs-drukte-badge vs-drukte-plek">🟢 {safe_html(drukte)}</div>'
+    d_lower = drukte.lower()
+    if "snel vol" in d_lower or "vol" in d_lower:
+        return '<span class="vs-drukte-pill vs-drukte-vol">🔴 Snel vol</span>'
+    if "druk" in d_lower:
+        return '<span class="vs-drukte-pill vs-drukte-druk">🟠 Druk</span>'
+    if "plek" in d_lower or "vrij" in d_lower or "ruim" in d_lower:
+        return '<span class="vs-drukte-pill vs-drukte-plek">🟢 Vaak plek</span>'
+    return f'<span class="vs-drukte-pill vs-drukte-plek">{safe_html(drukte)}</span>'
 
 
-def _chip_row(row: Any) -> str:
-    """Faciliteiten chip-rij voor de kaart (Booking.com stijl)."""
+def _facilities_chips(row: Any) -> str:
     chips = []
     mapping = [
         ("stroom",            "⚡", "Stroom",    True),
         ("wifi",              "📶", "Wifi",      True),
-        ("honden_toegestaan", "🐾", "Honden",    True),
-        ("sanitair",          "🚿", "Sanitair",  False),
+        ("honden_toegestaan", "🐾", "Honden ok", True),
         ("water_tanken",      "🚰", "Water",     False),
+        ("sanitair",          "🚿", "Sanitair",  False),
+        ("afvalwater",        "🗑️", "Afval",    False),
     ]
-    for col, icon, label, is_ok in mapping:
+    for col, icon, label, hl in mapping:
         if is_ja(row.get(col, "")):
-            cls = "ok" if is_ok else ""
-            chips.append(f'<span class="vs-chip {cls}">{icon} {label}</span>')
+            cls = "highlight" if hl else ""
+            chips.append(f'<span class="vs-facility-chip {cls}">{icon} {label}</span>')
+    # Voertuig restricties (Pijler 6)
+    max_len = clean_val(row.get("max_lengte", ""), "")
+    if max_len and max_len != "Onbekend":
+        chips.append(f'<span class="vs-facility-chip">📏 max {safe_html(max_len)}</span>')
     return "".join(chips)
 
 
-def _restrictions_html(row: Any) -> str:
-    """Voertuig-restricties (Pijler 6)."""
-    parts = []
-    max_len = clean_val(row.get("max_lengte"), "")
-    max_ton = clean_val(row.get("max_gewicht"), "")
-    if max_len and max_len != "Onbekend":
-        parts.append(f'<span class="vs-restriction">📏 Max {safe_html(max_len)}</span>')
-    if max_ton and max_ton != "Onbekend":
-        parts.append(f'<span class="vs-restriction">⚖️ Max {safe_html(max_ton)}</span>')
-    return f'<div class="vs-card-restrictions">{"".join(parts)}</div>' if parts else ""
-
-
-def _get_photos(row: Any) -> list[str]:
-    """Haal lijst van foto-URLs op uit de rij."""
-    fallback = "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=600&q=80&auto=format"
-    photos_raw = row.get("photos", "")
-    if photos_raw and str(photos_raw) not in ("", "nan", "Onbekend", "[]"):
+def _get_photo(row: Any) -> str:
+    photos = row.get("photos", "")
+    if photos and str(photos) not in ("", "nan", "Onbekend", "[]"):
         try:
-            pl = json.loads(str(photos_raw)) if isinstance(photos_raw, str) else photos_raw
+            pl = json.loads(str(photos)) if isinstance(photos, str) else photos
             if isinstance(pl, list) and pl:
-                return [str(p) for p in pl if str(p).startswith("http")]
+                return str(pl[0])
         except Exception:
             pass
-    single = clean_val(row.get("afbeelding"), "")
-    return [single] if single else [fallback]
+    img = clean_val(row.get("afbeelding", ""), "")
+    return img or "https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=500&q=80&auto=format"
 
 
-# ── FOTO GRID ──────────────────────────────────────────────────────────────────
+# ── RESULTAATKAART ─────────────────────────────────────────────────────────────
 
-def render_photo_grid(photos: list[str]) -> None:
+def render_result_card(row: Any, idx: int | str) -> None:
     """
-    Booking.com-stijl fotogalerij: 1 groot + max 4 thumbnails.
-    Wanneer er <2 foto's zijn → toon breed.
+    Booking.com-stijl resultaatkaart.
+    [Foto] | [Info: naam, loc, afstand, chips, drukte] | [Score + Prijs]
     """
-    if not photos:
-        return
-
-    main_photo  = photos[0]
-    thumb_photos = photos[1:5]
-
-    if not thumb_photos:
-        st.image(main_photo, use_container_width=True)
-        return
-
-    # Grid via HTML
-    thumbs_html = ""
-    for t in thumb_photos[:4]:
-        thumbs_html += f'<img class="vs-detail-photo-thumb" src="{safe_html(t)}" alt="foto" loading="lazy">'
+    naam_raw  = clean_val(row.get("naam"), "Onbekend")
+    naam_s    = safe_html(naam_raw)
+    prov_s    = safe_html(clean_val(row.get("provincie"), "Onbekend"))
+    desc      = clean_val(row.get("beschrijving"), "")
+    afstand   = clean_val(row.get("afstand_label", ""), "")
+    img_url   = _get_photo(row)
+    chips     = _facilities_chips(row)
+    drukte    = _drukte_html(row)
+    score_blk = _score_html(row.get("beoordeling"))
+    price_blk = _price_html(row.get("prijs"))
+    is_fav    = naam_raw in get_favorites()
+    fav_icon  = "❤️" if is_fav else "🤍"
 
     st.markdown(f"""
-<div class="vs-detail-photo-grid">
-  <img class="vs-detail-photo-main" src="{safe_html(main_photo)}" alt="hoofdfoto" loading="lazy">
-  {thumbs_html}
+<div class="vs-result-card">
+  <div class="vs-card-img-col">
+    <img class="vs-card-img"
+         src="{safe_html(img_url)}"
+         alt="{naam_s}"
+         loading="lazy"
+         onerror="this.src='https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=400&q=80&auto=format'">
+  </div>
+  <div class="vs-card-info-col">
+    <div>
+      <div class="vs-card-name" title="{naam_s}">{naam_s}</div>
+      <div class="vs-card-location">📍 {prov_s}{f" · {safe_html(afstand)}" if afstand else ""}</div>
+      {f'<div class="vs-card-desc">{safe_html(desc)}</div>' if desc else ''}
+      <div class="vs-facilities-row">{chips}</div>
+      {drukte}
+    </div>
+  </div>
+  <div class="vs-card-price-col">
+    {score_blk}
+    {price_blk}
+  </div>
 </div>
 """, unsafe_allow_html=True)
+
+    btn_col, fav_col = st.columns([4, 1])
+    with btn_col:
+        if st.button("🔍 Bekijk details", key=f"det_{idx}", type="primary", use_container_width=True):
+            show_detail_dialog(row)
+    with fav_col:
+        if st.button(fav_icon, key=f"fav_{idx}", use_container_width=True,
+                     help="Favoriet aan/uitschakelen"):
+            toggle_favorite(naam_raw)
+            st.rerun()
 
 
 # ── DETAIL DIALOG ──────────────────────────────────────────────────────────────
@@ -184,113 +182,103 @@ def render_photo_grid(photos: list[str]) -> None:
 @st.dialog("📍 Locatiedetails", width="large")
 def show_detail_dialog(row: Any) -> None:
     """
-    Rijke Booking.com-stijl detail modal.
-    Tabbladen: Overzicht | Faciliteiten | Huisregels | Reviews | Kaart
-    Inclusief: fotogalerij, navigatie-knop, deel-knop, crowdsource formulier.
+    Rijke detailpagina in Booking.com-stijl.
+    Tabbladen: Overzicht | Faciliteiten | Camper Info | Reviews | Kaart
+    + Crowdsource "Foutje gezien?" formulier (Pijler 3).
+    + Deel-knop + Navigeer-knop (Pijler 3).
     """
     naam  = safe_html(clean_val(row.get("naam"), "Onbekend"))
     prov  = safe_html(clean_val(row.get("provincie"), "Onbekend"))
     score = _parse_score(row.get("beoordeling"))
 
-    # Header balk
     score_badge = (
-        f'<span style="background:{P_DARK};color:white;border-radius:8px 8px 8px 0;'
-        f'padding:6px 12px;font-size:1.1rem;font-weight:800;">{score:.1f}</span>'
+        f'<div class="vs-score-badge" style="font-size:1.4rem;padding:8px 14px;">'
+        f'{score:.1f}</div>'
         if score else ""
     )
+
     st.markdown(f"""
-<div style="background:linear-gradient(135deg,{P_DARK},{P_BLUE});border-radius:12px;
-padding:1.2rem 1.5rem;margin-bottom:1rem;">
+<div class="vs-detail-hero">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;">
     <div>
-      <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;
-color:white;margin-bottom:3px;">{naam}</div>
-      <div style="font-size:0.82rem;color:rgba(255,255,255,0.7);">📍 {prov} · 🚐 Camperplaats</div>
+      <div class="vs-detail-name">{naam}</div>
+      <div class="vs-detail-loc">📍 {prov} &nbsp;·&nbsp; 🚐 Camperplaats</div>
     </div>
-    <div>{score_badge}</div>
+    {score_badge}
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-    # Navigatie + deel knoppen
-    nav_lat = clean_val(row.get("latitude"), "")
-    nav_lon = clean_val(row.get("longitude"), "")
-    nav_url = f"https://www.google.com/maps?q={nav_lat},{nav_lon}" if nav_lat and nav_lon else ""
-    naam_raw = clean_val(row.get("naam"), "Camperplaats")
+    # Actie-knoppen (Navigeer + Deel)
+    try:
+        lat_f = float(str(row.get("latitude", "")).replace(",", "."))
+        lon_f = float(str(row.get("longitude", "")).replace(",", "."))
+        maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat_f},{lon_f}"
+        share_url = f"https://www.google.com/maps?q={lat_f},{lon_f}"
+    except (ValueError, TypeError):
+        maps_url = share_url = ""
 
-    btn_nav, btn_deel, _ = st.columns([1, 1, 3])
-    with btn_nav:
-        if nav_url:
-            st.link_button("📍 Navigeer", nav_url, use_container_width=True)
-    with btn_deel:
-        share_text = f"Check deze camperplaats: {naam_raw} in {clean_val(row.get('provincie'), '')} | VrijStaan"
-        st.button("🔗 Deel", key=f"deel_{naam_raw[:10]}", use_container_width=True,
-                  help=share_text)
+    act_cols = st.columns([2, 2, 3])
+    with act_cols[0]:
+        if maps_url:
+            st.link_button("🧭 Navigeer", maps_url, use_container_width=True)
+    with act_cols[1]:
+        if share_url:
+            st.link_button("🔗 Deel plek", share_url, use_container_width=True)
 
-    # Tabbladen
-    tab_ov, tab_fac, tab_regels, tab_rev, tab_kaart = st.tabs(
-        ["📋 Overzicht", "🔌 Faciliteiten", "📜 Huisregels", "⭐ Reviews", "🗺️ Kaart"]
-    )
+    st.markdown("---")
 
-    # ── OVERZICHT ────────────────────────────────────────────────────
+    tab_ov, tab_fac, tab_camper, tab_rev, tab_kaart = st.tabs([
+        "📋 Overzicht", "🔌 Faciliteiten", "🚐 Camper Info", "⭐ Reviews", "🗺️ Kaart"
+    ])
+
+    # ── TAB 1: OVERZICHT ───────────────────────────────────────────────
     with tab_ov:
-        photos = _get_photos(row)
-        render_photo_grid(photos)
-
-        col_desc, col_side = st.columns([1.7, 1])
-        with col_desc:
-            desc = clean_val(row.get("beschrijving"), "Geen beschrijving beschikbaar.")
-            st.markdown(f"*{desc}*")
-            st.markdown("---")
-            rows_info = [
-                ("💶", "Prijs",           "prijs"),
-                ("🏕️", "Plekken",         "aantal_plekken"),
-                ("⛰️", "Ondergrond",      "ondergrond"),
-                ("🤫", "Rust",            "rust"),
-                ("🕐", "Check-in/out",    "check_in_out"),
-                ("📞", "Telefoon",        "telefoonnummer"),
-                ("♿", "Toegankelijk",    "toegankelijkheid"),
-                ("📏", "Max. voertuig",   "max_lengte"),
-                ("⚖️", "Max. gewicht",    "max_gewicht"),
-                ("📶", "4G/5G kwaliteit", "remote_work_score"),
-                ("📅", "Drukte",          "drukte_indicator"),
-            ]
-            for emoji, label, col_key in rows_info:
-                val = clean_val(row.get(col_key), "Onbekend")
-                st.markdown(f"**{emoji} {label}:** {val}")
-
-        with col_side:
-            # Highlights box
-            st.markdown(f"""
-<div class="vs-detail-highlight-box">
-  <div style="font-weight:700;margin-bottom:8px;">✨ Hoogtepunten</div>
-""", unsafe_allow_html=True)
-            highlights = []
-            if is_ja(row.get("stroom")):     highlights.append("⚡ Stroom beschikbaar")
-            if is_ja(row.get("wifi")):       highlights.append("📶 Wifi aanwezig")
-            if is_ja(row.get("sanitair")):   highlights.append("🚿 Sanitaire voorzieningen")
-            if is_ja(row.get("water_tanken")): highlights.append("🚰 Water tanken")
-            if is_ja(row.get("waterfront")): highlights.append("🌊 Waterfront locatie")
-            drukte = clean_val(row.get("drukte_indicator"), "")
-            if "plek" in drukte.lower() or "altijd" in drukte.lower():
-                highlights.append("✅ Vaak een plek vrij")
-            for h in highlights[:6]:
-                st.markdown(f"✓ {h}")
-            st.markdown("</div>", unsafe_allow_html=True)
-
+        col_img, col_info = st.columns([1, 1.5])
+        with col_img:
+            img = _get_photo(row)
+            st.image(img, use_container_width=True)
+            # Extra foto's
+            photos = row.get("photos", "")
+            if photos and str(photos) not in ("", "nan", "Onbekend", "[]"):
+                try:
+                    pl = json.loads(str(photos)) if isinstance(photos, str) else photos
+                    if isinstance(pl, list) and len(pl) > 1:
+                        for p in pl[1:3]:
+                            st.image(str(p), use_container_width=True)
+                        if len(pl) > 3:
+                            st.caption(f"📸 {len(pl)} foto's beschikbaar")
+                except Exception:
+                    pass
             site = clean_val(row.get("website"), "")
             if site:
                 if not site.startswith("http"):
                     site = "https://" + site
-                st.link_button("🌐 Bezoek website", site, use_container_width=True)
+                st.markdown(f"[🌐 Bezoek website]({site})")
 
-    # ── FACILITEITEN (GRID) ───────────────────────────────────────────
+        with col_info:
+            desc = clean_val(row.get("beschrijving"), "Geen beschrijving beschikbaar.")
+            st.markdown(f"*{desc}*")
+            st.markdown("---")
+            for emoji, label, col_key in [
+                ("💶", "Prijs",          "prijs"),
+                ("🏕️", "Aantal plekken", "aantal_plekken"),
+                ("⛰️", "Ondergrond",     "ondergrond"),
+                ("🤫", "Rust",           "rust"),
+                ("🕐", "Check-in/out",   "check_in_out"),
+                ("♿", "Toegankelijk",   "toegankelijkheid"),
+                ("📞", "Telefoon",       "telefoonnummer"),
+            ]:
+                val = clean_val(row.get(col_key), "Onbekend")
+                st.markdown(f"**{emoji} {label}:** {val}")
+
+    # ── TAB 2: FACILITEITEN GRID ───────────────────────────────────────
     with tab_fac:
-        st.markdown("""<div style="font-family:'Syne',sans-serif;font-size:1rem;
-font-weight:700;margin-bottom:0.8rem;">Alle faciliteiten</div>""",
-            unsafe_allow_html=True)
+        st.markdown("""<div style="font-family:'DM Serif Display',serif;
+font-size:1.1rem;margin-bottom:0.8rem;color:var(--vs-text);">
+Faciliteiten & Voorzieningen</div>""", unsafe_allow_html=True)
 
-        ALL_FAC = [
+        all_fac = [
             ("⚡", "Stroom",             "stroom"),
             ("💡", "Stroomprijs",        "stroom_prijs"),
             ("📶", "Wifi",               "wifi"),
@@ -301,252 +289,153 @@ font-weight:700;margin-bottom:0.8rem;">Alle faciliteiten</div>""",
             ("🚽", "Chemisch toilet",    "chemisch_toilet"),
             ("♿", "Toegankelijk",       "toegankelijkheid"),
             ("🌊", "Waterfront",         "waterfront"),
-            ("📏", "Max. voertuiglengte","max_lengte"),
-            ("⚖️", "Max. gewicht",       "max_gewicht"),
-            ("📶", "Remote work score",  "remote_work_score"),
-            ("📅", "Drukte-indicator",   "drukte_indicator"),
         ]
-
-        items_html = ""
-        for icon, label, col_key in ALL_FAC:
-            val = clean_val(row.get(col_key), "Onbekend")
+        items = ""
+        for icon, label, key in all_fac:
+            val = clean_val(row.get(key), "Onbekend")
             vl  = val.lower()
-            if vl == "ja":
-                cls  = "ja"
-                disp = f"{icon} {label}"
-            elif vl == "nee":
-                cls  = "nee"
-                disp = f"{icon} {label}"
-            else:
-                cls  = ""
-                disp = f"{icon} {label}: {safe_html(val)}"
-            items_html += f'<div class="vs-facility-item {cls}">{disp}</div>'
+            cls = "ja" if vl == "ja" else ("nee" if vl == "nee" else "")
+            disp = f"{icon} {label}" if vl in ("ja", "nee") else f"{icon} {label}: {safe_html(val)}"
+            items += f'<div class="vs-facility-item {cls}">{disp}</div>'
+        st.markdown(f'<div class="vs-facility-grid">{items}</div>', unsafe_allow_html=True)
 
-        st.markdown(
-            f'<div class="vs-facility-grid">{items_html}</div>',
-            unsafe_allow_html=True,
-        )
-
-        extra = clean_val(row.get("faciliteiten_extra"), "")
+        extra = clean_val(row.get("faciliteiten_extra", ""), "")
         if extra and extra != "Onbekend":
-            st.markdown(f"**Extra faciliteiten:** {extra}")
+            st.markdown(f"**Extra:** {extra}")
 
-    # ── HUISREGELS ────────────────────────────────────────────────────
-    with tab_regels:
-        st.markdown("""<div style="font-family:'Syne',sans-serif;font-size:1rem;
-font-weight:700;margin-bottom:0.8rem;">Huisregels & beleid</div>""",
+    # ── TAB 3: CAMPER-SPECIFIEKE INFO (Pijler 6) ─────────────────────
+    with tab_camper:
+        st.markdown("""<div style="font-family:'DM Serif Display',serif;
+font-size:1.1rem;margin-bottom:0.8rem;">Camper-specifieke informatie</div>""",
             unsafe_allow_html=True)
 
-        for icon, label, col_key in [
-            ("🕐", "Check-in / Check-out",  "check_in_out"),
-            ("🐾", "Huisdieren",            "honden_toegestaan"),
-            ("🚬", "Roken",                 "roken"),
-            ("🎉", "Feesten / lawaai",      "feesten"),
-            ("🔇", "Stilteplicht",          "stilteplicht"),
-            ("♿", "Toegankelijkheid",      "toegankelijkheid"),
-        ]:
-            val = clean_val(row.get(col_key), "Onbekend")
+        camper_info = [
+            ("📏", "Max voertuiglengte",    "max_lengte"),
+            ("⚖️", "Max gewicht",           "max_gewicht"),
+            ("🔴", "Drukte-indicator",      "drukte_indicator"),
+            ("📱", "4G/5G kwaliteit",       "remote_work_score"),
+            ("🚗", "Voertuigtypes",         "voertuig_types"),
+            ("🏷️", "Tarieftype",            "tarieftype"),
+        ]
+        for emoji, label, key in camper_info:
+            val = clean_val(row.get(key), "Onbekend")
+            st.markdown(f"**{emoji} {label}:** {val}")
+
+        # Remote work score visueel (Pijler 6)
+        rws = clean_val(row.get("remote_work_score", ""), "")
+        if rws and rws != "Onbekend":
+            st.markdown("---")
+            st.markdown("**📱 Remote Work Score:**")
+            rws_lower = rws.lower()
+            if "uitstekend" in rws_lower or "goed" in rws_lower:
+                st.success(f"✅ {rws}")
+            elif "matig" in rws_lower or "slecht" in rws_lower:
+                st.warning(f"⚠️ {rws}")
+            else:
+                st.info(f"ℹ️ {rws}")
+
+        # Huisregels
+        st.markdown("---")
+        st.markdown("**📜 Huisregels:**")
+        regels = [
+            ("🐾", "Honden",       "honden_toegestaan"),
+            ("🚬", "Roken",        "roken"),
+            ("🎉", "Feesten",      "feesten"),
+            ("🔇", "Stilteplicht", "stilteplicht"),
+        ]
+        for icon, label, key in regels:
+            val = clean_val(row.get(key), "Onbekend")
             vl  = val.lower()
-            disp = ("✅ Toegestaan" if vl == "ja" else "❌ Niet toegestaan" if vl == "nee"
-                    else safe_html(val))
-            st.markdown(f"**{icon} {label}:** {disp}")
+            ico = "✅" if vl == "ja" else ("❌" if vl == "nee" else "❓")
+            st.markdown(f"**{icon} {label}:** {ico} {val}")
 
-        regels = clean_val(row.get("huisregels"), "")
-        if regels and regels != "Onbekend":
-            st.info(f"📋 {regels}")
-
-        # ── CROWDSOURCING: "Foutje gezien?" ────────────────────────
-        with st.expander("✏️ Foutje gezien? Stel een wijziging voor", expanded=False):
-            st.markdown(f"""
-<div class="vs-crowdsource-box">
-  <div style="font-weight:700;margin-bottom:6px;">📝 Verbeter deze informatie</div>
-  <div style="font-size:0.82rem;color:{TEXT_MUTE};">
-    Jouw correctie wordt door onze beheerders bekeken voordat deze live gaat.
-  </div>
-</div>
-""", unsafe_allow_html=True)
-            with st.form(f"crowdsource_{naam[:8]}"):
-                veld = st.selectbox(
-                    "Welk veld is onjuist?",
-                    ["Prijs", "Stroom", "Honden", "Wifi", "Sanitair", "Water",
-                     "Telefoonnummer", "Website", "Beschrijving", "Anders"],
-                )
-                correctie = st.text_area(
-                    "Correcte waarde / omschrijving",
-                    placeholder="Bijv: De prijs is €8,- per nacht, niet gratis.",
-                    max_chars=500,
-                )
-                submit_cs = st.form_submit_button(
-                    "📨 Stuur correctie", use_container_width=True
-                )
-            if submit_cs and correctie.strip():
-                _log_crowdsource(naam, veld, correctie)
-                st.success("✅ Bedankt! We bekijken jouw correctie.")
-
-    # ── REVIEWS ───────────────────────────────────────────────────────
+    # ── TAB 4: REVIEWS ────────────────────────────────────────────────
     with tab_rev:
         score_p = _parse_score(row.get("beoordeling"))
         if score_p:
             st.markdown(f"""
 <div style="display:flex;align-items:center;gap:16px;margin-bottom:1rem;">
-  <div style="background:{P_DARK};color:white;border-radius:12px 12px 12px 0;
-padding:14px 18px;font-size:2rem;font-weight:800;">{score_p:.1f}</div>
+  <div style="background:{BRAND_DARK};color:white;border-radius:10px 10px 10px 0;
+              padding:10px 14px;font-size:1.8rem;font-weight:700;">{score_p:.1f}</div>
   <div>
-    <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;">
-      {score_label(score_p)}
+    <div style="font-family:'DM Serif Display',serif;font-size:1.1rem;">
+      {_score_label(score_p)}
     </div>
-    <div style="font-size:0.8rem;color:{TEXT_MUTE};">Op basis van gastbeoordelingen</div>
+    <div style="font-size:0.78rem;color:{TEXT_MUTED};">Gebaseerd op beoordelingen</div>
   </div>
 </div>""", unsafe_allow_html=True)
 
-        samen = clean_val(row.get("samenvatting_reviews"), "Nog geen reviews verwerkt.")
+        samen = clean_val(row.get("samenvatting_reviews"), "Nog geen reviews beschikbaar.")
         st.info(f"💬 {samen}")
-        rev_ext = clean_val(row.get("reviews_tekst"), "")
-        if rev_ext and rev_ext != "Onbekend":
-            with st.expander("Lees meer reviews"):
-                st.markdown(rev_ext)
+        rev_extra = clean_val(row.get("reviews_tekst", ""), "")
+        if rev_extra and rev_extra != "Onbekend":
+            with st.expander("Meer reviews lezen"):
+                st.markdown(rev_extra)
 
-    # ── KAART ─────────────────────────────────────────────────────────
+    # ── TAB 5: KAART ──────────────────────────────────────────────────
     with tab_kaart:
         try:
             lat_f = float(str(row.get("latitude", "")).replace(",", "."))
             lon_f = float(str(row.get("longitude", "")).replace(",", "."))
-            m = folium.Map(location=[lat_f, lon_f], zoom_start=14,
-                           tiles="CartoDB Positron")
+            m = folium.Map(location=[lat_f, lon_f], zoom_start=14, tiles="CartoDB Positron")
             folium.Marker(
                 [lat_f, lon_f],
                 popup=clean_val(row.get("naam"), "Camperplaats"),
                 icon=folium.Icon(color="blue", icon="home", prefix="fa"),
             ).add_to(m)
-            components.html(m._repr_html_(), height=360)
-            if nav_url:
-                st.markdown(f"[📍 Open in Google Maps]({nav_url})")
+            components.html(m._repr_html_(), height=340)
+            st.markdown(f"[📍 Open in Google Maps](https://www.google.com/maps?q={lat_f},{lon_f})")
         except (TypeError, ValueError):
             st.warning("⚠️ Geen geldige coördinaten voor deze locatie.")
 
+    # ── CROWDSOURCE FORMULIER (Pijler 3) ──────────────────────────────
+    st.markdown("---")
+    st.markdown("""<div class="vs-report-box">
+<div class="vs-report-title">🔧 Foutje gezien? Help ons verbeteren!</div>
+</div>""", unsafe_allow_html=True)
 
-def _log_crowdsource(naam: str, veld: str, correctie: str) -> None:
-    """Sla crowdsource-suggestie op in een lokaal JSON-bestand."""
-    import json, os
-    from datetime import datetime
-    path = "data/crowdsource.json"
-    entry = {
-        "ts": datetime.now().isoformat(),
-        "naam": naam,
-        "veld": veld,
-        "correctie": correctie,
-    }
+    with st.expander("Geef een correctie door ›", expanded=False):
+        with st.form(f"report_form_{naam}"):
+            veld = st.selectbox("Welk veld klopt niet?", [
+                "prijs", "honden_toegestaan", "stroom", "wifi", "sanitair",
+                "water_tanken", "telefoonnummer", "beschrijving", "anders"
+            ])
+            correctie = st.text_area("Wat is de juiste waarde?", max_chars=500)
+            opmerking = st.text_input("Optioneel: bron of toelichting", max_chars=200)
+            submitted = st.form_submit_button("📤 Correctie insturen", type="primary")
+            if submitted and correctie.strip():
+                _save_report(naam, veld, correctie, opmerking)
+                st.success("✅ Bedankt! We bekijken je correctie zo snel mogelijk.")
+
+
+def _save_report(naam: str, veld: str, correctie: str, opmerking: str) -> None:
+    """Sla een crowdsource melding op als JSON."""
+    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     try:
-        bestaand = []
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                bestaand = json.load(f)
-        bestaand.append(entry)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(bestaand, f, ensure_ascii=False, indent=2)
-        logger.info(f"Crowdsource entry: {naam} | {veld}")
-    except Exception as e:
-        logger.error(f"Crowdsource opslaan mislukt: {e}")
-
-
-# ── HOOFD KAART COMPONENT ──────────────────────────────────────────────────────
-
-def render_result_card(row: Any, idx: int | str) -> None:
-    """
-    Rendert één Booking.com-stijl resultaatkaart.
-    Foto (links) | Info (midden) | Score + Prijs (rechts)
-    Inclusief: drukte-badge, voertuig-restricties, Airbnb-stijl chips.
-    """
-    naam_raw = clean_val(row.get("naam"), "Onbekend")
-    naam_s   = safe_html(naam_raw)
-    prov_s   = safe_html(clean_val(row.get("provincie"), "Onbekend"))
-    desc     = clean_val(row.get("beschrijving"), "")
-    loc_type = clean_val(row.get("loc_type"), "Camperplaats")
-    photos   = _get_photos(row)
-    img_url  = safe_html(photos[0])
-    chips    = _chip_row(row)
-    restr    = _restrictions_html(row)
-    drukte   = _drukte_badge(row)
-    score_b  = _score_html(row.get("beoordeling"))
-    price_b  = _price_html(row.get("prijs"))
-    is_fav   = naam_raw in get_favorites()
-    fav_ico  = "❤️" if is_fav else "🤍"
-
-    # Afstand (indien beschikbaar)
-    afstand = clean_val(row.get("afstand_label"), "")
-    afstand_html = (
-        f'<span class="vs-distance-badge">📍 {safe_html(afstand)}</span>'
-        if afstand else ""
-    )
-
-    st.markdown(f"""
-<div class="vs-result-card">
-
-  <!-- FOTO KOLOM -->
-  <div class="vs-card-img-wrap">
-    <img class="vs-card-img"
-         src="{img_url}"
-         alt="{naam_s}"
-         loading="lazy"
-         onerror="this.src='https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=600&q=80&auto=format'">
-    <button class="vs-fav-btn" title="Favoriet">{fav_ico}</button>
-    {drukte}
-  </div>
-
-  <!-- INFO KOLOM -->
-  <div class="vs-card-info">
-    <div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">
-        <span class="vs-type-pill">🚐 {safe_html(loc_type)}</span>
-        {afstand_html}
-      </div>
-      <div class="vs-card-name" title="{naam_s}">{naam_s}</div>
-      <div class="vs-card-meta">📍 {prov_s}</div>
-      {f'<div class="vs-card-desc">{safe_html(desc)}</div>' if desc else ''}
-      <div class="vs-chip-row">{chips}</div>
-      {restr}
-    </div>
-  </div>
-
-  <!-- PRIJS KOLOM -->
-  <div class="vs-card-price-col">
-    {score_b}
-    {price_b}
-  </div>
-
-</div>
-""", unsafe_allow_html=True)
-
-    btn_c, fav_c = st.columns([4, 1])
-    with btn_c:
-        if st.button(
-            "Bekijk details →",
-            key=f"det_{idx}",
-            type="primary",
-            use_container_width=True,
-        ):
-            show_detail_dialog(row)
-    with fav_c:
-        if st.button(fav_ico, key=f"fav_{idx}", use_container_width=True,
-                     help="Favoriet aan/uit"):
-            toggle_favorite(naam_raw)
-            st.rerun()
+        existing = json.loads(REPORT_PATH.read_text(encoding="utf-8")) if REPORT_PATH.exists() else []
+    except Exception:
+        existing = []
+    existing.append({
+        "timestamp": datetime.now().isoformat(),
+        "naam":      naam,
+        "veld":      veld,
+        "correctie": correctie,
+        "opmerking": opmerking,
+        "status":    "nieuw",
+    })
+    REPORT_PATH.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 # ── LEGE STAAT ─────────────────────────────────────────────────────────────────
 
 def render_no_results(query: str = "") -> None:
-    """Anti-clutter lege staat."""
     msg = (
         f"Geen resultaten voor <strong>'{safe_html(query)}'</strong>"
         if query else "Geen camperplaatsen gevonden"
     )
     st.markdown(f"""
-<div class="vs-empty-state">
-  <div style="font-size:3rem;margin-bottom:1rem;">🔭</div>
-  <div style="font-size:1.2rem;font-weight:700;color:#2D3748;margin-bottom:0.5rem;">{msg}</div>
-  <div style="font-size:0.88rem;">
-    Verwijder een paar filters of probeer een andere zoekterm.
-  </div>
-</div>
-""", unsafe_allow_html=True)
+<div class="vs-no-results">
+  <div class="vs-no-results-icon">🔭</div>
+  <div style="font-size:1.15rem;font-weight:600;margin-bottom:0.5rem;">{msg}</div>
+  <div style="font-size:0.88rem;">Probeer andere zoektermen of verwijder filters.</div>
+</div>""", unsafe_allow_html=True)
