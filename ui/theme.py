@@ -28,7 +28,17 @@ _FONTS = (
 
 
 def apply_theme() -> None:
-    """Injecteer het volledige VrijStaan v5 design systeem. Dark-mode aware."""
+    """
+    Injecteer het volledige VrijStaan v5 design systeem. Dark-mode aware.
+    Roept ook inject_global_css() aan voor de volledige CSS-overhaul (bug-fixes).
+    """
+    # Importeer en injecteer de globale CSS fix (repareert dark-mode, card-bloat, etc.)
+    try:
+        from ui.css_fix import inject_global_css
+        inject_global_css()
+    except ImportError:
+        pass  # Graceful fallback als css_fix.py ontbreekt
+
     st.html(f"""
     <style>
     @import url('{_FONTS}');
