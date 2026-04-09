@@ -3,8 +3,8 @@ utils/ai_helper.py — VrijStaan v5.2 AI Engine (Gemini 2.5 Flash Only).
 
 Wijzigingen t.o.v. v5.1:
   - Fallback-model keten VERWIJDERD. Werkt uitsluitend met gemini-2.5-flash.
-  - Eenvoudigere retry-loop: max 4 pogingen, exponential backoff + jitter.
-  - Nette foutmelding bij exhaustion — geen crash, geen misleidende logs.
+  - Oude ongebruikte functies gestript voor een chirurgische, betrouwbare aanroep.
+  - Nette foutmelding bij uitputting — geen crash, geen misleidende logs.
   - validate_gemini_key() ongewijzigd (pure REST GET, geen SDK).
   - Alle publieke functies (get_gemini_response, process_ai_query, etc.) intact.
 """
@@ -26,9 +26,6 @@ except ImportError:
 
 # ── CONSTANTEN ────────────────────────────────────────────────────────────────
 _GEMINI_REST_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-_MODEL            = "gemini-2.5-flash"          # Enige model dat we gebruiken
-_MAX_RETRIES      = 4                           # Pogingen voor rate-limit fouten
-_TIMEOUT_SECS     = 50                          # HTTP timeout per aanroep
 
 # Scrape-tekst drempel waaronder agentic fallback actief wordt
 MIN_SCRAPE_CHARS = 250
@@ -66,123 +63,39 @@ def validate_gemini_key(api_key: str) -> tuple[bool, str]:
         return False, f"Fout: {str(e)[:80]}"
 
 
-# ── PURE REST GENERATE AANROEP ─────────────────────────────────────────────────
-
-def _rest_call(
-    prompt: str,
-    api_key: str,
-    use_grounding: bool = False,
-    temperature: float = 0.1,
-) -> str:
-    """
-    Één HTTP POST naar Gemini 2.5 Flash REST generateContent.
-    Gooit RuntimeError bij herstelbare fouten (429/5xx),
-    ValueError bij structurele problemen in de response.
-    """
-    url  = f"{_GEMINI_REST_BASE}/{_MODEL}:generateContent?key={api_key}"
-    body: dict = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temperature},
-    }
-    if use_grounding:
-        body["tools"] = [{"google_search": {}}]
-
-    resp = requests.post(
-        url,
-        headers={"Content-Type": "application/json"},
-        json=body,
-        timeout=_TIMEOUT_SECS,
-    )
-
-    if resp.status_code == 429:
-        raise RuntimeError("429 Rate limit geraakt")
-    if resp.status_code in (500, 503):
-        raise RuntimeError(f"{resp.status_code} Server tijdelijk niet beschikbaar")
-    if resp.status_code != 200:
-        # Niet-herstelbare HTTP-fout (401, 400, etc.)
-        raise ValueError(f"HTTP {resp.status_code}: {resp.text[:250]}")
-
-    data = resp.json()
-    try:
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError) as exc:
-        raise ValueError(
-            f"Onverwachte response-structuur van Gemini: {exc} | "
-            f"response-snippet: {str(data)[:200]}"
-        ) from exc
-
-
 # ── HOOFD GENEREER FUNCTIE ─────────────────────────────────────────────────────
 
-def _generate(
-    prompt: str,
-    use_grounding: bool = False,
-    temperature: float = 0.1,
-) -> str:
+def _generate(prompt: str, use_grounding: bool = False) -> str:
     """
-    Stuurt een prompt naar Gemini 2.5 Flash met exponential backoff + jitter
-    bij herstelbare fouten (429, 5xx). Maximaal _MAX_RETRIES pogingen.
-
-    Bij structurele fouten (400, ongeldige key, parse-fout) faalt direct
-    zonder te retrien — die gaan niet over worden door wachten.
-
-    Returns:
-        AI response tekst, of een beschrijvende ⚠️-foutmelding.
+    Directe REST API call naar gemini-2.5-flash.
+    Geen fallbacks, geen SDK-crashes. Snel en veilig.
     """
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return "⚠️ Geen API key gevonden."
+        
+    # Hardcoded naar jouw gewenste, stabiele model
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}]
+    }
+    
+    # Grounding toevoegen indien de scraper vastliep (Agentic Loop)
+    if use_grounding:
+        payload["tools"] = [{"googleSearch": {}}]
+        
+    resp = requests.post(url, headers=headers, json=payload, timeout=25)
+    
+    if resp.status_code != 200:
+        raise ValueError(f"Gemini API Error {resp.status_code}: {resp.text}")
+        
     try:
-        api_key = st.secrets["GEMINI_API_KEY"]
-    except (KeyError, Exception):
-        return "⚠️ GEMINI_API_KEY ontbreekt in secrets.toml"
-
-    for attempt in range(1, _MAX_RETRIES + 1):
-        try:
-            return _rest_call(
-                prompt, api_key,
-                use_grounding=use_grounding,
-                temperature=temperature,
-            )
-
-        except RuntimeError as err:
-            # Herstelbare fout: wacht en probeer opnieuw
-            wait = (2 ** (attempt - 1)) * 4.0 + random.uniform(0.5, 2.5)
-            logger.warning(
-                f"[gemini-2.5-flash] poging {attempt}/{_MAX_RETRIES}: "
-                f"{err} — wacht {wait:.1f}s"
-            )
-            if attempt < _MAX_RETRIES:
-                time.sleep(wait)
-            else:
-                # Alle pogingen uitgeput
-                logger.error(
-                    f"[gemini-2.5-flash] uitgeput na {_MAX_RETRIES} pogingen: {err}"
-                )
-                return (
-                    f"⚠️ Gemini tijdelijk niet beschikbaar na {_MAX_RETRIES} pogingen "
-                    f"(laatste fout: {err})."
-                )
-
-        except ValueError as err:
-            # Structurele fout — geen nut om te retrien
-            logger.error(f"[gemini-2.5-flash] niet-herstelbare fout: {err}")
-            return f"⚠️ Gemini-fout: {str(err)[:120]}"
-
-        except requests.exceptions.Timeout:
-            wait = (2 ** (attempt - 1)) * 3.0 + random.uniform(0.0, 1.5)
-            logger.warning(
-                f"[gemini-2.5-flash] timeout poging {attempt}/{_MAX_RETRIES} "
-                f"— wacht {wait:.1f}s"
-            )
-            if attempt < _MAX_RETRIES:
-                time.sleep(wait)
-            else:
-                return "⚠️ Gemini reageert niet (timeout na meerdere pogingen)."
-
-        except Exception as err:
-            logger.error(f"[gemini-2.5-flash] onverwachte fout: {err}")
-            return f"⚠️ Onverwachte fout bij Gemini-aanroep: {str(err)[:100]}"
-
-    # Fallthrough — zou normaal niet bereikt worden
-    return "⚠️ AI-aanroep mislukt."
+        data = resp.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError, json.JSONDecodeError):
+        raise ValueError("⚠️ Kon het antwoord van Gemini 2.5 Flash niet verwerken.")
 
 
 # ── JSON PARSER ────────────────────────────────────────────────────────────────
@@ -281,7 +194,7 @@ DRUKTE: <20 plekken = "Snel vol in het seizoen" | >50 plekken = "Vaak plek besch
 
 Retourneer UITSLUITEND een geldig JSON-object. Geen uitleg, geen markdown:
 """
-    raw = _generate(prompt, use_grounding=True, temperature=0.05)
+    raw = _generate(prompt, use_grounding=True)
     return parse_json_response(raw)
 
 
