@@ -1,15 +1,4 @@
-"""
-utils/batch_engine.py — VrijStaan v5.1 High-Performance Batch Engine.
-
-Verbeteringen t.o.v. v5.0:
-  - I/O Split: ThreadPoolExecutor met max 10 workers voor parallel scrapen.
-    Compute (AI) blijft strikt sequentieel op de main thread.
-  - Rate-limit buffer: time.sleep(1.5) na elke Gemini-aanroep.
-  - MD5 hash-check: identieke website + al gecheckt → sla AI over.
-  - Agentic fallback: <250 tekens of >4 onbekend → Google Search Grounding.
-  - Provincie + telefoon normalisatie in post-processing.
-  - Exponential Backoff voor OSM Overpass API (3 endpoints, jitter).
-  - check_api_health() via pure REST (geen SDK init).
+_api_health() via pure REST (geen SDK init).
 """
 from __future__ import annotations
 
@@ -385,7 +374,7 @@ def ai_batch_enrich(
         return skip_results
 
     # ── Batch AI aanroep ──────────────────────────────────────────────────
-    from utils.ai_helper import _generate, _FALLBACK_MODELS  # noqa: PLC0415
+    from utils.ai_helper import _generate
 
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
