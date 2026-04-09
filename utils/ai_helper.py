@@ -1,14 +1,12 @@
 """
-utils/ai_helper.py — VrijStaan v5.1 Agentic AI Engine.
+utils/ai_helper.py — VrijStaan v5.2 AI Engine (Gemini 2.5 Flash Only).
 
-Verbeteringen t.o.v. v5.0:
-  - Agentic Fallback Loop: als normale scrape < 250 tekens geeft of AI
-    meer dan 4 velden op "Onbekend" zet, schakelt automatisch over naar
-    Google Search Grounding gefocust op 2024/2025 bronnen.
-  - Pure REST aanroepen — geen Google SDK, geen gRPC deadlocks.
-  - REST-gebaseerde API-key validatie voor Beheer health-monitor.
-  - Exponential Backoff + Jitter + model-fallback keten.
-  - Gecachede filter-extractie voor de zoekpagina.
+Wijzigingen t.o.v. v5.1:
+  - Fallback-model keten VERWIJDERD. Werkt uitsluitend met gemini-2.5-flash.
+  - Eenvoudigere retry-loop: max 4 pogingen, exponential backoff + jitter.
+  - Nette foutmelding bij exhaustion — geen crash, geen misleidende logs.
+  - validate_gemini_key() ongewijzigd (pure REST GET, geen SDK).
+  - Alle publieke functies (get_gemini_response, process_ai_query, etc.) intact.
 """
 from __future__ import annotations
 
@@ -28,21 +26,19 @@ except ImportError:
 
 # ── CONSTANTEN ────────────────────────────────────────────────────────────────
 _GEMINI_REST_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-_FALLBACK_MODELS  = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash-exp",
-    "gemini-1.5-flash",
-]
-_MAX_RETRIES_PER_MODEL = 3
+_MODEL            = "gemini-2.5-flash"          # Enige model dat we gebruiken
+_MAX_RETRIES      = 4                           # Pogingen voor rate-limit fouten
+_TIMEOUT_SECS     = 50                          # HTTP timeout per aanroep
+
 # Scrape-tekst drempel waaronder agentic fallback actief wordt
 MIN_SCRAPE_CHARS = 250
 
 
-# ── REST API KEY VALIDATIE (geen SDK init) ────────────────────────────────────
+# ── REST API KEY VALIDATIE (geen SDK init) ─────────────────────────────────────
 
 def validate_gemini_key(api_key: str) -> tuple[bool, str]:
     """
-    Valideert Gemini API-sleutel via lichte REST GET op het models-endpoint.
+    Valideert Gemini API-sleutel via een lichte REST GET op het models-endpoint.
     Gebruikt GEEN google-generativeai SDK — veilig als health-check.
 
     Returns:
@@ -60,7 +56,6 @@ def validate_gemini_key(api_key: str) -> tuple[bool, str]:
         if resp.status_code == 403:
             return False, "Toegang geweigerd (403 Forbidden)"
         if resp.status_code == 429:
-            # Key werkt, maar rate-limited
             return True, "Bereikbaar maar rate-limited (429) ⚠️"
         return False, f"HTTP {resp.status_code}"
     except requests.exceptions.Timeout:
@@ -71,25 +66,24 @@ def validate_gemini_key(api_key: str) -> tuple[bool, str]:
         return False, f"Fout: {str(e)[:80]}"
 
 
-# ── PURE REST GENERATE AANROEP ────────────────────────────────────────────────
+# ── PURE REST GENERATE AANROEP ─────────────────────────────────────────────────
 
-def _rest_generate(
+def _rest_call(
     prompt: str,
-    model: str,
     api_key: str,
     use_grounding: bool = False,
     temperature: float = 0.1,
 ) -> str:
     """
-    HTTP POST naar Gemini REST generateContent endpoint.
-    Bypast Google SDK volledig. Ondersteunt optioneel Google Search Grounding.
+    Één HTTP POST naar Gemini 2.5 Flash REST generateContent.
+    Gooit RuntimeError bij herstelbare fouten (429/5xx),
+    ValueError bij structurele problemen in de response.
     """
-    url  = f"{_GEMINI_REST_BASE}/{model}:generateContent?key={api_key}"
+    url  = f"{_GEMINI_REST_BASE}/{_MODEL}:generateContent?key={api_key}"
     body: dict = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": temperature},
     }
-    # Voeg Google Search Grounding toe voor de agentic fallback
     if use_grounding:
         body["tools"] = [{"google_search": {}}]
 
@@ -97,20 +91,25 @@ def _rest_generate(
         url,
         headers={"Content-Type": "application/json"},
         json=body,
-        timeout=45,
+        timeout=_TIMEOUT_SECS,
     )
+
     if resp.status_code == 429:
         raise RuntimeError("429 Rate limit geraakt")
     if resp.status_code in (500, 503):
-        raise RuntimeError(f"{resp.status_code} Server unavailable")
+        raise RuntimeError(f"{resp.status_code} Server tijdelijk niet beschikbaar")
     if resp.status_code != 200:
-        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:300]}")
+        # Niet-herstelbare HTTP-fout (401, 400, etc.)
+        raise ValueError(f"HTTP {resp.status_code}: {resp.text[:250]}")
 
     data = resp.json()
     try:
         return data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError) as e:
-        raise ValueError(f"Onverwachte response structuur: {e} | {str(data)[:200]}")
+    except (KeyError, IndexError) as exc:
+        raise ValueError(
+            f"Onverwachte response-structuur van Gemini: {exc} | "
+            f"response-snippet: {str(data)[:200]}"
+        ) from exc
 
 
 # ── HOOFD GENEREER FUNCTIE ─────────────────────────────────────────────────────
@@ -121,55 +120,79 @@ def _generate(
     temperature: float = 0.1,
 ) -> str:
     """
-    Roept Gemini aan via REST met:
-      - Exponential Backoff + Jitter per poging
-      - Automatische model-fallback keten bij aanhoudende fouten
+    Stuurt een prompt naar Gemini 2.5 Flash met exponential backoff + jitter
+    bij herstelbare fouten (429, 5xx). Maximaal _MAX_RETRIES pogingen.
+
+    Bij structurele fouten (400, ongeldige key, parse-fout) faalt direct
+    zonder te retrien — die gaan niet over worden door wachten.
+
+    Returns:
+        AI response tekst, of een beschrijvende ⚠️-foutmelding.
     """
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
     except (KeyError, Exception):
         return "⚠️ GEMINI_API_KEY ontbreekt in secrets.toml"
 
-    for model in _FALLBACK_MODELS:
-        for attempt in range(_MAX_RETRIES_PER_MODEL):
-            try:
-                return _rest_generate(
-                    prompt, model, api_key,
-                    use_grounding=use_grounding,
-                    temperature=temperature,
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            return _rest_call(
+                prompt, api_key,
+                use_grounding=use_grounding,
+                temperature=temperature,
+            )
+
+        except RuntimeError as err:
+            # Herstelbare fout: wacht en probeer opnieuw
+            wait = (2 ** (attempt - 1)) * 4.0 + random.uniform(0.5, 2.5)
+            logger.warning(
+                f"[gemini-2.5-flash] poging {attempt}/{_MAX_RETRIES}: "
+                f"{err} — wacht {wait:.1f}s"
+            )
+            if attempt < _MAX_RETRIES:
+                time.sleep(wait)
+            else:
+                # Alle pogingen uitgeput
+                logger.error(
+                    f"[gemini-2.5-flash] uitgeput na {_MAX_RETRIES} pogingen: {err}"
                 )
-            except RuntimeError as e:
-                msg = str(e).lower()
-                is_retryable = any(
-                    k in msg for k in ("429", "500", "503", "unavailable", "rate limit")
+                return (
+                    f"⚠️ Gemini tijdelijk niet beschikbaar na {_MAX_RETRIES} pogingen "
+                    f"(laatste fout: {err})."
                 )
-                if is_retryable and attempt < _MAX_RETRIES_PER_MODEL - 1:
-                    wait = (2 ** attempt) * 3.0 + random.uniform(0.0, 2.0)
-                    logger.warning(
-                        f"[{model}] poging {attempt + 1}/{_MAX_RETRIES_PER_MODEL}: "
-                        f"{e}. Wacht {wait:.1f}s…"
-                    )
-                    time.sleep(wait)
-                else:
-                    # Niet-herhaalbare fout of retries uitgeput → volgend model
-                    logger.warning(f"[{model}] geeft op na {attempt + 1} poging(en): {e}")
-                    break
-            except Exception as e:
-                logger.error(f"[{model}] onverwachte fout: {e}")
-                break  # Probeer volgend model
 
-    logger.error("Alle Gemini-modellen onbereikbaar.")
-    return "⚠️ AI onbereikbaar na meerdere pogingen en model-fallbacks."
+        except ValueError as err:
+            # Structurele fout — geen nut om te retrien
+            logger.error(f"[gemini-2.5-flash] niet-herstelbare fout: {err}")
+            return f"⚠️ Gemini-fout: {str(err)[:120]}"
+
+        except requests.exceptions.Timeout:
+            wait = (2 ** (attempt - 1)) * 3.0 + random.uniform(0.0, 1.5)
+            logger.warning(
+                f"[gemini-2.5-flash] timeout poging {attempt}/{_MAX_RETRIES} "
+                f"— wacht {wait:.1f}s"
+            )
+            if attempt < _MAX_RETRIES:
+                time.sleep(wait)
+            else:
+                return "⚠️ Gemini reageert niet (timeout na meerdere pogingen)."
+
+        except Exception as err:
+            logger.error(f"[gemini-2.5-flash] onverwachte fout: {err}")
+            return f"⚠️ Onverwachte fout bij Gemini-aanroep: {str(err)[:100]}"
+
+    # Fallthrough — zou normaal niet bereikt worden
+    return "⚠️ AI-aanroep mislukt."
 
 
-# ── JSON PARSER ───────────────────────────────────────────────────────────────
+# ── JSON PARSER ────────────────────────────────────────────────────────────────
 
 def parse_json_response(text: str) -> dict | list | None:
     """
     Robuust JSON parsen uit AI response.
-    Tolereert markdown-fences (```json ... ```) en surrounding tekst.
+    Tolereert markdown-fences (```json ... ```) en omringende tekst.
     """
-    if not text:
+    if not text or text.startswith("⚠️"):
         return None
     try:
         clean = text.strip()
@@ -194,12 +217,12 @@ def parse_json_response(text: str) -> dict | list | None:
             return json.loads(clean[start:end])
 
         return None
-    except (json.JSONDecodeError, Exception) as e:
-        logger.debug(f"JSON parse mislukt: {e} | snippet: {text[:120]}")
+    except (json.JSONDecodeError, Exception) as exc:
+        logger.debug(f"JSON parse mislukt: {exc} | snippet: {text[:120]}")
         return None
 
 
-# ── AGENTIC FALLBACK LOOP ─────────────────────────────────────────────────────
+# ── AGENTIC FALLBACK LOOP ──────────────────────────────────────────────────────
 
 def run_agentic_fallback(
     naam: str,
@@ -212,10 +235,7 @@ def run_agentic_fallback(
       - De scraper < MIN_SCRAPE_CHARS tekens opleverde (site geblokkeerd), OF
       - De AI meer dan 4 velden op "Onbekend" heeft gezet.
 
-    Stuurt een gerichte zoekopdracht naar Gemini met focus op 2024/2025.
-
-    Returns:
-        Verbeterd dict, of None bij parse-fout.
+    Returns: verbeterd dict of None bij parse-fout.
     """
     onbekende_velden = [
         k for k, v in current_data.items()
@@ -229,7 +249,7 @@ def run_agentic_fallback(
     prompt = f"""
 Je bent een expert data-analist voor VrijStaan (NL camperplatform).
 De reguliere webscraper heeft onvoldoende data opgehaald voor '{naam}' in {provincie}.
-Scrape-tekst: {scrape_text_len} tekens (te weinig voor betrouwbare analyse).
+Scrape-tekst: {scrape_text_len} tekens.
 
 GEBRUIK GOOGLE ZOEKEN om ACTUELE informatie te vinden, gefocust op 2024 en 2025:
 1. "{naam} camperplaats {provincie} 2024 2025 ervaringen reviews"
@@ -241,33 +261,25 @@ GEBRUIK GOOGLE ZOEKEN om ACTUELE informatie te vinden, gefocust op 2024 en 2025:
 Velden die ONTBREKEN of ONBEKEND zijn:
 {', '.join(onbekende_velden) if onbekende_velden else '(zie huidige data)'}
 
-Huidige (onvolledige) data ter referentie:
+Huidige (onvolledige) data:
 {json.dumps(
     {k: v for k, v in current_data.items() if not k.startswith('_')},
     ensure_ascii=False, indent=2
 )}
 
 VERPLICHTE DEDUCTIE-REGELS — pas toe VOORDAT je "Onbekend" schrijft:
-• "parking" / "parkeer" in naam → stroom=Nee, sanitair=Nee (tenzij bewijs)
-• "jachthaven" / "marina" → water_tanken=Ja, afvalwater=Ja, sanitair=Ja
-• "camping" / "vakantiepark" → sanitair=Ja, water_tanken=Ja
-• Reviews met "muntjes", "douchemunten", "betalen voor douche" → sanitair=Ja
-• "24u/7d", "altijd open" → check_in_out="Vrij, geen vaste tijden"
-• Stroom-aansluitingen beschreven → stroom=Ja (ook zonder prijs vermeld)
-• Honden expliciet welkom in naam of beschrijving → honden_toegestaan=Ja
-• Gebruik "Nee" als logisch afgeleid kan worden dat iets afwezig is
-• Gebruik "Onbekend" ALLEEN als intensief zoeken niets oplevert
+• "parking"/"parkeer" in naam → stroom=Nee, sanitair=Nee (tenzij bewijs)
+• "jachthaven"/"marina" → water_tanken=Ja, afvalwater=Ja, sanitair=Ja
+• "camping"/"vakantiepark" → sanitair=Ja, water_tanken=Ja
+• Reviews: "muntjes douche" → sanitair=Ja
+• "24u/7d"/"altijd open" → check_in_out="Vrij, geen vaste tijden"
+• Stroom-aansluitingen beschreven → stroom=Ja
+• Honden welkom in naam/beschrijving → honden_toegestaan=Ja
+• Gebruik "Nee" bij logische afwezigheid; "Onbekend" alleen als echt niets te vinden
 
-DRUKTE DEDUCTIE (drukte_indicator):
-• <20 plekken + geen reservering → "Snel vol in het seizoen"
-• >50 plekken of altijd plek → "Vaak plek beschikbaar"
-• Populair + veel reviews → "Druk in zomer, rustig buiten seizoen"
+DRUKTE: <20 plekken = "Snel vol in het seizoen" | >50 plekken = "Vaak plek beschikbaar"
 
-REMOTE WORK SCORE — zoek op Opensignal, KPN/T-Mobile coverage maps:
-• Sterk 4G/5G signaal → "Goed (4G LTE)"
-• Zwak signaal of platteland → "Matig (beperkte dekking)"
-
-Retourneer UITSLUITEND een geldig JSON-object. Geen uitleg, geen markdown-fences:
+Retourneer UITSLUITEND een geldig JSON-object. Geen uitleg, geen markdown:
 """
     raw = _generate(prompt, use_grounding=True, temperature=0.05)
     return parse_json_response(raw)
@@ -276,24 +288,22 @@ Retourneer UITSLUITEND een geldig JSON-object. Geen uitleg, geen markdown-fences
 # ── PUBLIEKE API ──────────────────────────────────────────────────────────────
 
 def get_gemini_response(prompt: str) -> str:
-    """Standaard aanroep zonder grounding."""
+    """Standaard aanroep zonder Search Grounding."""
     return _generate(prompt, use_grounding=False)
 
 
 def get_gemini_response_grounded(prompt: str) -> str:
-    """Aanroep MET Google Search Grounding."""
+    """Aanroep met Google Search Grounding actief."""
     return _generate(prompt, use_grounding=True)
 
 
-# ── AI FILTER EXTRACTIE VOOR ZOEKPAGINA ──────────────────────────────────────
+# ── AI FILTER EXTRACTIE VOOR ZOEKPAGINA ───────────────────────────────────────
 
 @st.cache_data(ttl=600, show_spinner=False)
 def _cached_ai_filter(
     query: str, df_hash: str
 ) -> tuple[dict, list[str]]:
-    """
-    Gecachede AI-filteraanroep voor de zoekpagina (geen grounding nodig).
-    """
+    """Gecachede AI-filteraanroep (geen grounding — sneller voor UX)."""
     prompt = f"""
 Je bent een backend data-extractor voor een Nederlandse camper-app.
 Vertaal de zoekopdracht naar datafilters als strikte JSON.
@@ -312,14 +322,14 @@ Antwoord UITSLUITEND met dit JSON-object (geen uitleg, geen markdown):
 }}
 """
     try:
-        raw     = _generate(prompt, use_grounding=False)
-        parsed  = parse_json_response(raw)
+        raw    = _generate(prompt, use_grounding=False)
+        parsed = parse_json_response(raw)
         if isinstance(parsed, dict):
             return parsed, []
         return {}, ["⚠️ AI kon de zoekvraag niet vertalen naar filters."]
-    except Exception as e:
-        logger.error(f"AI filter extractie fout: {e}")
-        return {}, [f"⚠️ AI fout: {str(e)[:80]}"]
+    except Exception as exc:
+        logger.error(f"AI filter extractie fout: {exc}")
+        return {}, [f"⚠️ AI fout: {str(exc)[:80]}"]
 
 
 def process_ai_query(
@@ -329,11 +339,13 @@ def process_ai_query(
     """
     Vertaalt een vrije-tekst zoekopdracht naar DataFrame-filters.
     Gecached per query + data-hash voor snelheid.
+    Alle originele filterstappen (provincie, honden, gratis, stroom,
+    water, sanitair, wifi) volledig behouden.
     """
     if not user_query or df.empty:
         return df, []
 
-    df_hash  = f"{len(df)}-{'-'.join(sorted(df.columns.tolist()))}"
+    df_hash = f"{len(df)}-{'-'.join(sorted(df.columns.tolist()))}"
     filters, init_errors = _cached_ai_filter(user_query, df_hash)
 
     if init_errors and not filters:
