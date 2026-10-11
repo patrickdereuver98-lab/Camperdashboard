@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { applyFilters, filtersToQuery, parseFilters, refinementCount, type Filters, type SortKey } from "@/lib/search";
 import { usePlaces } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media";
@@ -111,9 +112,19 @@ export function SearchApp() {
             </label>
           </div>
           {chips.length > 0 && (
+            <MotionConfig reducedMotion="user">
             <ul className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:px-0">
+              <AnimatePresence initial={false}>
               {chips.map((c) => (
-                <li key={c.label} className="shrink-0">
+                <motion.li
+                  key={c.label}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.16 }}
+                  className="shrink-0"
+                >
                   <button
                     type="button"
                     onClick={() => update(c.without)}
@@ -123,9 +134,11 @@ export function SearchApp() {
                     {c.label}
                     <Icon name="x" size={15} />
                   </button>
-                </li>
+                </motion.li>
               ))}
+              </AnimatePresence>
             </ul>
+            </MotionConfig>
           )}
         </div>
 
