@@ -49,7 +49,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   if (state === "geen-admin")
     return (
       <Gate>
-        <h1 className="font-sign text-2xl font-bold">Geen beheertoegang</h1>
+        <h1 className="font-display text-2xl font-semibold">Geen beheertoegang</h1>
         <p className="mt-2 text-ink-2">
           Je bent ingelogd als {session?.user.email}, maar dit account heeft geen beheerrechten.
         </p>
@@ -68,7 +68,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             href={n.href}
             onClick={() => setMenu(false)}
             aria-current={isActive(n.href) ? "page" : undefined}
-            className="flex h-11 items-center gap-3 rounded-xl px-3 font-semibold text-ink-2 hover:bg-sunken aria-[current=page]:bg-road-tint aria-[current=page]:text-road"
+            className="flex h-11 items-center gap-3 rounded-xl px-3 font-semibold text-ink-2 hover:bg-sunken aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
           >
             <Icon name={n.icon} size={20} /> {n.label}
           </Link>
@@ -84,14 +84,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <Icon name={menu ? "x" : "menu"} size={22} />
         </button>
         <Logo size={28} />
-        <span className="font-sign font-extrabold text-road">Beheer</span>
-        <Link href="/" className="ml-auto text-sm font-semibold text-road">Naar de site</Link>
+        <span className="font-display font-semibold text-forest">Beheer</span>
+        <Link href="/" className="ml-auto text-sm font-semibold text-forest">Naar de site</Link>
       </header>
       {menu && <nav className="border-b border-line bg-surface p-3 lg:hidden" aria-label="Beheermenu">{nav}</nav>}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface p-4 lg:flex">
         <Link href="/admin" className="mb-6 flex items-center gap-2.5 px-2">
           <Logo size={30} />
-          <span className="font-sign text-lg font-extrabold text-road">Beheer</span>
+          <span className="font-display text-lg font-semibold text-forest">Beheer</span>
         </Link>
         <nav aria-label="Beheermenu">{nav}</nav>
         <div className="mt-auto space-y-2 border-t border-line pt-4 text-sm">
@@ -114,7 +114,7 @@ function Gate({ children }: { children: ReactNode }) {
     <main className="mx-auto w-full max-w-sm px-4 pt-14 pb-16">
       <div className="mb-6 flex items-center gap-2.5">
         <Logo />
-        <span className="font-sign text-xl font-extrabold text-road">VrijStaan beheer</span>
+        <span className="font-display text-xl font-semibold text-forest">VrijStaan beheer</span>
       </div>
       {children}
     </main>
@@ -151,7 +151,7 @@ function Login() {
 
   return (
     <Gate>
-      <h1 className="font-sign text-2xl font-bold">
+      <h1 className="font-display text-2xl font-semibold">
         {mode === "inloggen" ? "Inloggen" : mode === "registreren" ? "Beheeraccount aanmaken" : "Wachtwoord vergeten"}
       </h1>
       <form onSubmit={submit} className="mt-6 space-y-4">
@@ -174,12 +174,12 @@ function Login() {
           </label>
         )}
         <ErrorNote message={err} />
-        {note && <p role="status" className="rounded-xl bg-polder-tint px-4 py-3 font-semibold text-polder">{note}</p>}
+        {note && <p role="status" className="rounded-xl bg-forest-tint px-4 py-3 font-semibold text-forest">{note}</p>}
         <button disabled={busy} className={`${primary} h-12 w-full`}>
           {busy ? "Bezig…" : mode === "inloggen" ? "Inloggen" : mode === "registreren" ? "Account aanmaken" : "Stuur herstellink"}
         </button>
       </form>
-      <div className="mt-6 flex flex-col items-start font-semibold text-road [&>button]:min-h-11 [&>button]:text-left">
+      <div className="mt-6 flex flex-col items-start font-semibold text-forest [&>button]:min-h-11 [&>button]:text-left">
         {mode !== "inloggen" && <button onClick={() => setMode("inloggen")}>Terug naar inloggen</button>}
         {mode === "inloggen" && <button onClick={() => setMode("vergeten")}>Wachtwoord vergeten?</button>}
         {mode === "inloggen" && <button onClick={() => setMode("registreren")}>Nog geen account? Aanmaken met je uitgenodigde e-mailadres</button>}
@@ -201,7 +201,7 @@ function NewPassword({ onDone }: { onDone: () => void }) {
   }
   return (
     <Gate>
-      <h1 className="font-sign text-2xl font-bold">Nieuw wachtwoord</h1>
+      <h1 className="font-display text-2xl font-semibold">Nieuw wachtwoord</h1>
       <form onSubmit={submit} className="mt-6 space-y-4">
         <label className="block">
           <span className="mb-1.5 block font-semibold">Nieuw wachtwoord</span>

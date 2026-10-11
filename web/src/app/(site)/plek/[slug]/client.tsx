@@ -8,7 +8,7 @@ import { track } from "@/lib/track";
 import type { Photo, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
-import { KIND_SIGN, Sign } from "@/components/sign";
+import { Landscape } from "@/components/landscape";
 import { Sheet } from "@/components/sheet";
 
 // ── Fotogalerij met vegen ───────────────────────────────────────────────────
@@ -27,11 +27,10 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
   if (!visible.length)
     return (
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
-        <div className="flex h-28 items-center gap-4 bg-road-tint px-5 sm:h-36 sm:rounded-2xl sm:px-8" role="img" aria-label={`Nog geen foto van ${name}`}>
-          <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={56} />
-          <span className="text-road">
-            <span className="block font-sign text-xl font-bold">{town}</span>
-            <span className="block text-sm">Nog geen foto van deze plek</span>
+        <div className="relative h-32 overflow-hidden sm:h-44 sm:rounded-2xl" role="img" aria-label={`Nog geen foto van ${name}`}>
+          <Landscape seed={`Foto van ${name}`} water={kind === "jachthaven"} van wide className="absolute inset-0 h-full w-full" />
+          <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-3 py-1 text-sm font-semibold text-ink-2">
+            Nog geen foto van deze plek
           </span>
         </div>
       </ViewTransition>
@@ -77,7 +76,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       </div>
       {visible.length > 1 && (
         <>
-          <span className="animate-fade-in-late absolute right-3 bottom-3 rounded-full bg-black/60 px-3 py-1 font-sign text-sm font-bold text-white">
+          <span className="animate-fade-in-late absolute right-3 bottom-3 rounded-full bg-black/60 px-3 py-1 font-display text-sm font-semibold text-white">
             {Math.min(index, visible.length - 1) + 1} / {visible.length}
           </span>
           <div className="absolute inset-y-0 left-2 hidden items-center sm:flex">
@@ -137,10 +136,10 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
 
   return (
     <div className="rounded-2xl bg-surface p-5 outline-1 outline-line outline">
-      <h2 className="font-sign text-xl font-bold">Hoe ver is het?</h2>
+      <h2 className="font-display text-xl font-semibold">Hoe ver is het?</h2>
       {state.s === "ok" ? (
         <p className="mt-2 text-lg">
-          <span className="font-sign text-3xl font-extrabold">{formatDuration(state.seconds)}</span>
+          <span className="font-display text-3xl font-semibold">{formatDuration(state.seconds)}</span>
           <span className="ml-2 text-ink-2">rijden, {formatKm(state.km)} over de weg</span>
         </p>
       ) : (
@@ -153,7 +152,7 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
             type="button"
             onClick={calculate}
             disabled={state.s === "locating"}
-            className="flex h-12 items-center gap-2 rounded-xl bg-road px-5 font-semibold text-on-road disabled:opacity-60"
+            className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest disabled:opacity-60"
           >
             <Icon name="locate" size={19} />
             {state.s === "locating" ? "Bezig…" : "Bereken vanaf mijn locatie"}
@@ -164,7 +163,7 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => track("outbound", { soort: "route", naar: name })}
-          className="flex h-12 items-center gap-2 rounded-xl border-2 border-line px-5 font-semibold hover:border-road"
+          className="flex h-12 items-center gap-2 rounded-xl border-2 border-line px-5 font-semibold hover:border-forest"
         >
           <Icon name="route" size={19} /> Open in navigatie
         </a>
@@ -194,10 +193,10 @@ export function ReviewSummary({ reviews }: { reviews: Review[] }) {
           <div key={s.key}>
             <div className="flex justify-between">
               <dt>{s.label}</dt>
-              <dd className="font-sign font-bold">{scoreLabel(avg)}</dd>
+              <dd className="font-display font-semibold">{scoreLabel(avg)}</dd>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-sunken">
-              <div className="h-full rounded-full bg-road" style={{ width: `${avg * 10}%` }} />
+              <div className="h-full rounded-full bg-forest" style={{ width: `${avg * 10}%` }} />
             </div>
           </div>
         );
@@ -222,17 +221,17 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
                   {r.vehicle ? `, met een ${r.vehicle}` : ""}
                 </p>
               </div>
-              <span className="grid h-9 min-w-9 place-items-center rounded-lg rounded-bl-none bg-road px-1.5 font-sign font-bold text-on-road">
+              <span className="grid h-9 min-w-9 place-items-center rounded-lg rounded-bl-none bg-forest px-1.5 font-display font-semibold text-on-forest">
                 {r.rating}
               </span>
             </div>
-            {r.title && <p className="mt-3 font-sign text-lg font-bold">{r.title}</p>}
+            {r.title && <p className="mt-3 font-display text-lg font-semibold">{r.title}</p>}
             <p className="mt-1 whitespace-pre-line text-ink-2">{r.body}</p>
           </li>
         ))}
       </ul>
       {reviews.length > 3 && !all && (
-        <button type="button" onClick={() => setAll(true)} className="mt-3 h-12 rounded-xl border-2 border-line px-5 font-semibold hover:border-road">
+        <button type="button" onClick={() => setAll(true)} className="mt-3 h-12 rounded-xl border-2 border-line px-5 font-semibold hover:border-forest">
           Toon alle {pluralize(reviews.length, "review", "reviews")}
         </button>
       )}
@@ -254,7 +253,7 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
             type="button"
             aria-pressed={value === n}
             onClick={() => onChange(n)}
-            className="h-11 rounded-lg border-2 border-line font-sign font-bold aria-pressed:border-road aria-pressed:bg-road aria-pressed:text-on-road"
+            className="h-11 rounded-lg border-2 border-line font-display font-semibold aria-pressed:border-forest aria-pressed:bg-forest aria-pressed:text-on-forest"
           >
             {n}
           </button>
@@ -264,7 +263,7 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
   );
 }
 
-const input = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-road focus:outline-none";
+const input = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
 export function WriteReview({ placeId, placeName }: { placeId: string; placeName: string }) {
   const [open, setOpen] = useState(false);
@@ -305,14 +304,14 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-12 items-center gap-2 rounded-xl bg-road px-5 font-semibold text-on-road">
+      <button type="button" onClick={() => setOpen(true)} className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
         <Icon name="edit" size={19} /> Schrijf een review
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt!" : `Review voor ${placeName}`}>
         {done ? (
           <div className="pb-4">
             <p className="text-lg">Je review is ontvangen. We controleren hem en plaatsen hem meestal binnen twee werkdagen.</p>
-            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-xl bg-road font-semibold text-on-road">
+            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-xl bg-forest font-semibold text-on-forest">
               Sluiten
             </button>
           </div>
@@ -368,7 +367,7 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
             </label>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-road font-sign text-lg font-bold text-on-road disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
               {busy ? "Versturen…" : "Review versturen"}
             </button>
           </form>
@@ -406,14 +405,14 @@ export function ReportProblem({ placeId, placeName }: { placeId: string; placeNa
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-road underline">
+      <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
         <Icon name="alert" size={18} /> Klopt er iets niet? Meld het
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je melding" : "Gegevens aanpassen"}>
         {done ? (
           <div className="pb-4">
             <p className="text-lg">We controleren je melding en passen de gegevens zo nodig aan.</p>
-            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-xl bg-road font-semibold text-on-road">
+            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-xl bg-forest font-semibold text-on-forest">
               Sluiten
             </button>
           </div>
@@ -436,7 +435,7 @@ export function ReportProblem({ placeId, placeName }: { placeId: string; placeNa
               <textarea name="details" required minLength={5} rows={4} className={`${input} h-auto py-2`} />
             </label>
             <label className="flex items-center gap-3">
-              <input type="checkbox" name="owner" className="h-5 w-5 accent-[var(--road)]" /> Ik ben de eigenaar of beheerder
+              <input type="checkbox" name="owner" className="h-5 w-5 accent-[var(--forest)]" /> Ik ben de eigenaar of beheerder
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
@@ -450,7 +449,7 @@ export function ReportProblem({ placeId, placeName }: { placeId: string; placeNa
             </div>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-road font-sign text-lg font-bold text-on-road disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
               {busy ? "Versturen…" : "Melding versturen"}
             </button>
           </form>
@@ -484,7 +483,7 @@ export function ShareButton({ title, className = "" }: { title: string; classNam
           setTimeout(() => setCopied(false), 2000);
         }
       }}
-      className={`flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road ${className}`}
+      className={`flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest ${className}`}
     >
       <Icon name={copied ? "check" : "share"} size={19} />
       {copied ? "Link gekopieerd" : "Delen"}

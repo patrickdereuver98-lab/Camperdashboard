@@ -51,11 +51,11 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <PageTitle title="Instellingen" />
       <ErrorNote message={error ?? err} />
-      {msg && <p role="status" className="rounded-xl bg-polder-tint px-4 py-3 font-semibold text-polder">{msg}</p>}
+      {msg && <p role="status" className="rounded-xl bg-forest-tint px-4 py-3 font-semibold text-forest">{msg}</p>}
       {s && (
         <form onSubmit={save} className="space-y-6">
           <Card className="space-y-3">
-            <h2 className="font-sign text-lg font-bold">Contact</h2>
+            <h2 className="font-display text-lg font-semibold">Contact</h2>
             <label className="block">
               <span className="mb-1 block text-sm font-semibold">E-mailadres op de site</span>
               <input type="email" className={input} value={s.contact.email} onChange={(e) => setS({ ...s, contact: { ...s.contact, email: e.target.value } })} />
@@ -66,21 +66,21 @@ export default function SettingsPage() {
             </label>
           </Card>
           <Card className="space-y-3">
-            <h2 className="font-sign text-lg font-bold">Mededeling bovenaan de site</h2>
+            <h2 className="font-display text-lg font-semibold">Mededeling bovenaan de site</h2>
             <textarea rows={2} maxLength={200} className={textarea} value={s.announcement.text} onChange={(e) => setS({ ...s, announcement: { ...s.announcement, text: e.target.value } })} />
             <label className="flex items-center gap-2">
-              <input type="checkbox" className="h-5 w-5 accent-[var(--road)]" checked={s.announcement.enabled} onChange={(e) => setS({ ...s, announcement: { ...s.announcement, enabled: e.target.checked } })} />
+              <input type="checkbox" className="h-5 w-5 accent-[var(--forest)]" checked={s.announcement.enabled} onChange={(e) => setS({ ...s, announcement: { ...s.announcement, enabled: e.target.checked } })} />
               Tonen
             </label>
           </Card>
           <Card className="space-y-3">
-            <h2 className="font-sign text-lg font-bold">Publicatiedrempel</h2>
+            <h2 className="font-display text-lg font-semibold">Publicatiedrempel</h2>
             <p className="text-sm text-muted">
               Een plek gaat automatisch online als minstens dit deel van de 15 kernvelden met echte data is ingevuld. Plekken die je handmatig hebt vastgezet blijven zoals ze zijn.
             </p>
             <label className="flex items-center gap-3">
-              <input type="range" min={0.6} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--road)]" />
-              <span className="w-14 text-right font-sign text-xl font-bold tabular-nums">{Math.round(s.publish_threshold * 100)}%</span>
+              <input type="range" min={0.6} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--forest)]" />
+              <span className="w-14 text-right font-display text-xl font-semibold tabular-nums">{Math.round(s.publish_threshold * 100)}%</span>
             </label>
             <p className="text-sm text-muted">Na opslaan: klik op &quot;Drempel toepassen&quot; hieronder om bestaande plekken bij te werken.</p>
           </Card>
@@ -88,7 +88,7 @@ export default function SettingsPage() {
         </form>
       )}
       <Card className="space-y-3">
-        <h2 className="font-sign text-lg font-bold">Data-pipeline</h2>
+        <h2 className="font-display text-lg font-semibold">Data-pipeline</h2>
         <p className="text-sm text-muted">
           De pipeline draait automatisch: OpenStreetMap wordt per provincie wekelijks ververst, nieuwe websites worden elk half uur ingepland en continu gelezen. Gebruik deze knoppen alleen als je niet wilt wachten.
         </p>

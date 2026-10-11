@@ -25,7 +25,7 @@ function Toggle({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className="flex min-h-12 items-center gap-2.5 rounded-xl border-2 border-line bg-surface px-3 text-left font-semibold transition-colors aria-pressed:border-road aria-pressed:bg-road-tint aria-pressed:text-road"
+      className="flex min-h-12 items-center gap-2.5 rounded-xl border-2 border-line bg-surface px-3 text-left font-semibold transition-colors aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
     >
       {children}
     </button>
@@ -36,7 +36,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     // Een zwevende legend gedraagt zich als gewone kop binnen de padding van de fieldset
     <fieldset className="border-b border-line py-5 first:pt-1 last:border-0">
-      <legend className="float-left mb-3 w-full font-sign text-lg font-bold">{title}</legend>
+      <legend className="float-left mb-3 w-full font-display text-lg font-semibold">{title}</legend>
       <div className="clear-both">{children}</div>
     </fieldset>
   );
@@ -96,7 +96,7 @@ export function FilterSheet({
             {suggestion && (
               <>
                 {" "}
-                <button type="button" onClick={() => setDraft(suggestion.next)} className="font-semibold text-road underline">
+                <button type="button" onClick={() => setDraft(suggestion.next)} className="font-semibold text-forest underline">
                   Zonder &quot;{suggestion.label}&quot;: {suggestion.n} {suggestion.n === 1 ? "plek" : "plekken"}
                 </button>
               </>
@@ -109,7 +109,7 @@ export function FilterSheet({
             onClick={() =>
               setDraft({ ...DEFAULT_FILTERS, where: draft.where, center: draft.center, province: draft.province, radiusKm: draft.radiusKm })
             }
-            className="h-12 rounded-xl px-4 font-semibold text-road underline"
+            className="h-12 rounded-xl px-4 font-semibold text-forest underline"
           >
             Wis filters
           </button>
@@ -120,7 +120,7 @@ export function FilterSheet({
               onClose();
             }}
             disabled={count === 0}
-            className="h-12 flex-1 rounded-xl bg-road font-sign text-lg font-bold text-on-road disabled:opacity-50"
+            className="h-12 flex-1 rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-50"
           >
             {count === null ? "Toon plekken" : count === 0 ? "Geen plekken" : `Toon ${count} ${count === 1 ? "plek" : "plekken"}`}
           </button>

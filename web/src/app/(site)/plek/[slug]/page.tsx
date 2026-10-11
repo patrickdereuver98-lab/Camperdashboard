@@ -100,9 +100,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 
       <div className="mx-auto max-w-6xl sm:px-6 sm:pt-4">
         <nav aria-label="Kruimelpad" className="hidden items-center gap-1 pb-3 text-sm text-muted sm:flex">
-          <Link href="/zoeken" className="hover:text-road hover:underline">Zoeken</Link>
+          <Link href="/zoeken" className="hover:text-forest hover:underline">Zoeken</Link>
           <Icon name="chevronRight" size={14} />
-          <Link href={searchHref({ province: place.province, where: place.province })} className="hover:text-road hover:underline">
+          <Link href={searchHref({ province: place.province, where: place.province })} className="hover:text-forest hover:underline">
             {place.province}
           </Link>
           <Icon name="chevronRight" size={14} />
@@ -119,12 +119,12 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <Sign name={KIND_SIGN[place.kind ?? "camperplaats"]} size={26} />
               {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}
             </p>
-            <h1 className="mt-2 font-sign text-3xl leading-tight font-extrabold sm:text-4xl">{place.name}</h1>
+            <h1 className="mt-2 font-display text-3xl leading-tight font-semibold sm:text-4xl">{place.name}</h1>
             <p className="mt-2 flex items-start gap-1.5 text-ink-2">
               <Icon name="pin" size={18} className="mt-1 shrink-0 text-muted" />
               <span>
                 {address || place.town}, {place.province}{" "}
-                <a href="#ligging" className="-my-2 inline-block py-2 font-semibold text-road underline">
+                <a href="#ligging" className="-my-2 inline-block py-2 font-semibold text-forest underline">
                   Toon op kaart
                 </a>
               </span>
@@ -152,7 +152,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <Sign name={f.sign} size={34} state={f.known ? "on" : "unknown"} />
               <div className="min-w-0">
                 <dt className="text-sm text-muted">{f.label}</dt>
-                <dd className={`font-sign text-lg leading-tight font-bold ${f.known ? "" : "text-muted"}`}>{f.value}</dd>
+                <dd className={`font-display text-lg leading-tight font-semibold ${f.known ? "" : "text-muted"}`}>{f.value}</dd>
               </div>
             </div>
           ))}
@@ -186,7 +186,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-1">
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">
-              <h2 id="voorzieningen" className="font-sign text-2xl font-bold">Voorzieningen</h2>
+              <h2 id="voorzieningen" className="font-display text-2xl font-semibold">Voorzieningen</h2>
               <ul className="mt-4 grid grid-cols-2 gap-2">
                 {FACILITY_ROWS.map((f) => {
                   const v = place[f.key] as boolean | undefined;
@@ -208,8 +208,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Over deze plek */}
             {place.description && (
               <section aria-labelledby="over">
-                <h2 id="over" className="font-sign text-2xl font-bold">Over deze plek</h2>
-                <blockquote className="mt-3 border-l-4 border-road pl-4 text-lg text-ink-2">{place.description}</blockquote>
+                <h2 id="over" className="font-display text-2xl font-semibold">Over deze plek</h2>
+                <blockquote className="mt-3 border-l-4 border-forest pl-4 text-lg text-ink-2">{place.description}</blockquote>
                 <p className="mt-2 text-sm text-muted">
                   {place.descriptionSource === "website" ? "Volgens de website van de plek" : "Uit OpenStreetMap"}
                 </p>
@@ -226,7 +226,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-2">
             {/* Praktisch */}
             <section aria-labelledby="praktisch">
-              <h2 id="praktisch" className="font-sign text-2xl font-bold">Praktisch</h2>
+              <h2 id="praktisch" className="font-display text-2xl font-semibold">Praktisch</h2>
               <dl className="mt-3 divide-y divide-line rounded-2xl bg-surface outline-1 outline-line outline">
                 {[
                   ["Reserveren", place.reservation === undefined ? "Onbekend" : place.reservation ? "Ja" : "Nee"],
@@ -247,7 +247,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <section aria-labelledby="reviews">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <h2 id="reviews" className="font-sign text-2xl font-bold">Ervaringen van camperaars</h2>
+                  <h2 id="reviews" className="font-display text-2xl font-semibold">Ervaringen van camperaars</h2>
                   {place.ratingCount > 0 && (
                     <div className="mt-2">
                       <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} size="lg" />
@@ -273,7 +273,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 
         {nearby.length > 0 && (
           <section className="mt-12" aria-labelledby="buurt">
-            <h2 id="buurt" className="font-sign text-2xl font-bold">In de buurt</h2>
+            <h2 id="buurt" className="font-display text-2xl font-semibold">In de buurt</h2>
             <ul className="no-scrollbar -mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
               {nearby.map(({ place: p, km }) => (
                 <li key={p.id} className="w-[80vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
@@ -289,7 +289,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className={`font-sign leading-none font-extrabold ${place.priceEur === undefined ? "text-base text-muted" : "text-xl"}`}>
+            <p className={`font-display leading-none font-semibold ${place.priceEur === undefined ? "text-base text-muted" : "text-xl"}`}>
               {priceLabel(place.priceEur, place.priceFrom)}
             </p>
             {!!place.priceEur && <p className="text-xs text-muted">per nacht</p>}
@@ -301,11 +301,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             </a>
           )}
           {place.website ? (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center rounded-xl bg-road px-5 font-semibold text-on-road">
+            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
               Website
             </a>
           ) : (
-            <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center gap-2 rounded-xl bg-road px-5 font-semibold text-on-road">
+            <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
               <Icon name="route" size={19} /> Route
             </a>
           )}
@@ -319,23 +319,23 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
   return (
     <>
       <div className="hidden rounded-2xl bg-surface p-5 outline-1 outline-line outline md:block">
-        <p className="font-sign text-3xl font-extrabold">
+        <p className="font-display text-3xl font-semibold">
           {priceLabel(place.priceEur, place.priceFrom)}
           {place.priceEur ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
         </p>
         <div className="mt-4 grid gap-2">
           {place.website && (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-road font-semibold text-on-road hover:bg-road-deep">
+            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep">
               <Icon name="globe" size={19} /> {place.reservation ? "Reserveren op de website" : "Naar de website"}
             </a>
           )}
           {tel && (
-            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-road">
+            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-forest">
               <Icon name="phone" size={19} /> {tel}
             </a>
           )}
           {place.email && (
-            <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-road">
+            <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-forest">
               <Icon name="mail" size={19} /> E-mail sturen
             </a>
           )}
@@ -357,7 +357,7 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
 
       <div className="rounded-2xl bg-surface p-5 text-sm text-ink-2 outline-1 outline-line outline">
         <p className="flex items-center gap-2 font-semibold text-ink">
-          <Icon name="shield" size={18} className="text-polder" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
+          <Icon name="shield" size={18} className="text-forest" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
         </p>
         <p className="mt-1">
           Bronnen: OpenStreetMap{place.verifiedAt ? " en de website van de plek" : ""}.

@@ -80,7 +80,7 @@ export default function SupportAdmin() {
                   <button
                     onClick={() => setOpenId(t.id)}
                     aria-current={t.id === openId ? "true" : undefined}
-                    className="block w-full px-4 py-3 text-left hover:bg-sunken aria-[current=true]:bg-road-tint"
+                    className="block w-full px-4 py-3 text-left hover:bg-sunken aria-[current=true]:bg-forest-tint"
                   >
                     <span className="flex items-center justify-between gap-2 text-sm text-muted">
                       <span>#{t.number} {CATEGORY[t.category] ?? t.category}</span>
@@ -163,14 +163,14 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
 
   return (
     <section className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 font-semibold text-road lg:hidden">
+      <button onClick={onBack} className="flex items-center gap-1 font-semibold text-forest lg:hidden">
         <Icon name="chevronLeft" size={18} /> Alle berichten
       </button>
       <div className="rounded-2xl bg-surface p-4 outline-1 outline-line outline">
         <p className="text-sm text-muted">#{ticket.number}, {CATEGORY[ticket.category]}, {when(ticket.created_at)}</p>
-        <h2 className="mt-1 font-sign text-xl font-bold">{ticket.subject}</h2>
+        <h2 className="mt-1 font-display text-xl font-semibold">{ticket.subject}</h2>
         <p className="mt-1 text-sm">
-          {ticket.name}, <a className="font-semibold text-road underline" href={`mailto:${ticket.email}`}>{ticket.email}</a>
+          {ticket.name}, <a className="font-semibold text-forest underline" href={`mailto:${ticket.email}`}>{ticket.email}</a>
         </p>
         {ticket.place_id && <p className="mt-1 text-sm text-muted">Gaat over plek {ticket.place_id}</p>}
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -193,7 +193,7 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
         {(messages ?? []).map((m) => (
           <li
             key={m.id}
-            className={`rounded-2xl p-4 ${m.internal ? "border-2 border-dashed border-signal bg-surface" : m.author === "support" ? "bg-road-tint" : "bg-surface outline-1 outline-line outline"}`}
+            className={`rounded-2xl p-4 ${m.internal ? "border-2 border-dashed border-ember bg-surface" : m.author === "support" ? "bg-forest-tint" : "bg-surface outline-1 outline-line outline"}`}
           >
             <p className="text-sm font-semibold">
               {m.internal ? "Interne notitie" : m.author === "support" ? "Support" : ticket.name}
@@ -207,7 +207,7 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
       <form onSubmit={send} className="space-y-3 rounded-2xl bg-surface p-4 outline-1 outline-line outline">
         <div className="flex flex-wrap gap-2">
           {TEMPLATES.map(([label, text]) => (
-            <button type="button" key={label} onClick={() => setBody(text)} className="h-9 rounded-full bg-sunken px-3 text-sm font-semibold hover:bg-road-tint">
+            <button type="button" key={label} onClick={() => setBody(text)} className="h-9 rounded-full bg-sunken px-3 text-sm font-semibold hover:bg-forest-tint">
               {label}
             </button>
           ))}
@@ -217,7 +217,7 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} maxLength={5000} className={textarea} placeholder={internal ? "Notitie, alleen zichtbaar voor beheerders" : "Je antwoord aan de klant"} />
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} className="h-5 w-5 accent-[var(--road)]" />
+          <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} className="h-5 w-5 accent-[var(--forest)]" />
           Interne notitie (niet zichtbaar voor de klant)
         </label>
         {!internal && (

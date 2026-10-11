@@ -8,7 +8,7 @@ import { PROVINCES } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 
-const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-road focus:outline-none";
+const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
 export function SubmitForm() {
   const params = useSearchParams();
@@ -52,8 +52,8 @@ export function SubmitForm() {
 
   if (done)
     return (
-      <div className="mt-8 rounded-2xl bg-polder-tint p-6">
-        <p className="flex items-center gap-2 font-sign text-xl font-bold text-polder">
+      <div className="mt-8 rounded-2xl bg-forest-tint p-6">
+        <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
         <p className="mt-2 text-ink-2">We controleren de gegevens en zetten de plek online zodra alles klopt. Dat duurt meestal een paar werkdagen.</p>
@@ -73,7 +73,7 @@ export function SubmitForm() {
             role="radio"
             aria-checked={owner === v}
             onClick={() => setOwner(v as boolean)}
-            className="h-12 rounded-xl border-2 border-line font-semibold aria-checked:border-road aria-checked:bg-road-tint aria-checked:text-road"
+            className="h-12 rounded-xl border-2 border-line font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
           >
             {l as string}
           </button>
@@ -81,7 +81,7 @@ export function SubmitForm() {
       </div>
 
       <fieldset className="space-y-4">
-        <legend className="mb-2 font-sign text-xl font-bold">De plek</legend>
+        <legend className="mb-2 font-display text-xl font-semibold">De plek</legend>
         <p className="text-sm text-muted">Velden met <span className="text-alert">*</span> zijn verplicht.</p>
         <label className="block">
           <span className="mb-1.5 block font-semibold">Naam van de plek <span className="text-alert" aria-hidden="true">*</span></span>
@@ -119,7 +119,7 @@ export function SubmitForm() {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="mb-2 font-sign text-xl font-bold">Wat je zeker weet</legend>
+        <legend className="mb-2 font-display text-xl font-semibold">Wat je zeker weet</legend>
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block">
             <span className="mb-1.5 block font-semibold">Prijs per nacht (€)</span>
@@ -141,7 +141,7 @@ export function SubmitForm() {
             return (
               <label
                 key={fac.key}
-                className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border-2 border-line px-3 font-semibold has-[:checked]:border-road has-[:checked]:bg-road-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+                className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border-2 border-line px-3 font-semibold has-[:checked]:border-forest has-[:checked]:bg-forest-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
               >
                 <input
                   type="checkbox"
@@ -152,7 +152,7 @@ export function SubmitForm() {
                 />
                 <Sign name={fac.icon as SignName} size={28} state={on ? "on" : "unknown"} />
                 <span className="flex-1">{fac.label}</span>
-                {on && <Icon name="check" size={18} className="shrink-0 text-road" />}
+                {on && <Icon name="check" size={18} className="shrink-0 text-forest" />}
               </label>
             );
           })}
@@ -164,7 +164,7 @@ export function SubmitForm() {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="mb-2 font-sign text-xl font-bold">Jouw gegevens</legend>
+        <legend className="mb-2 font-display text-xl font-semibold">Jouw gegevens</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block font-semibold">Naam</span>
@@ -180,7 +180,7 @@ export function SubmitForm() {
 
       <input name="website_hp" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-xl bg-road font-sign text-lg font-bold text-on-road disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Plek aanmelden"}
       </button>
     </form>

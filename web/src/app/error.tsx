@@ -12,15 +12,15 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
 
   return (
     <main className="mx-auto w-full max-w-md px-4 pt-10 pb-16">
-      <div className="rounded-2xl border-2 border-signal bg-surface p-6">
+      <div className="rounded-2xl border-2 border-ember bg-surface p-6">
         <Icon name="alert" size={28} className="text-alert" />
-        <h1 className="mt-3 font-sign text-2xl font-bold">Er ging iets mis</h1>
+        <h1 className="mt-3 font-display text-2xl font-semibold">Er ging iets mis</h1>
         <p className="mt-2 text-ink-2">
           Deze pagina kon niet worden geladen. We hebben de fout automatisch gemeld. Probeer het nog een keer.
         </p>
       </div>
       <div className="mt-6 grid gap-3">
-        <button onClick={reset} className="flex h-14 items-center justify-center gap-2 rounded-xl bg-road font-semibold text-on-road">
+        <button onClick={reset} className="flex h-14 items-center justify-center gap-2 rounded-xl bg-forest font-semibold text-on-forest">
           <Icon name="refresh" size={20} /> Opnieuw proberen
         </button>
         <Link href="/" className="flex h-14 items-center justify-center rounded-xl border-2 border-line bg-surface font-semibold">

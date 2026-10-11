@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * Pictogrammen in de stijl van Nederlandse campingborden: wit op verkeersblauw,
- * vierkant met afgeronde hoeken en een witte binnenrand.
+ * Voorzieningen als kleine, afgeronde pictogrammen in bosgroen.
+ * Aanwezig = gevuld groen, niet aanwezig = doorgestreept, onbekend = zandkleurig.
  */
 
 const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round" } as const;
@@ -78,11 +78,10 @@ export function Sign({
       aria-label={title}
       aria-hidden={title ? undefined : true}
       className={`shrink-0 ${className}`}
-      style={{ ["--sign-bg" as string]: on ? "var(--sign)" : "var(--sunken)" }}
+      style={{ ["--sign-bg" as string]: on ? "var(--forest)" : "var(--sunken)" }}
     >
-      <rect width="32" height="32" rx="7" fill={on ? "var(--sign)" : "var(--sunken)"} />
-      <rect x="1.6" y="1.6" width="28.8" height="28.8" rx="5.6" fill="none" stroke={on ? "#fff" : "var(--line)"} strokeWidth="1.2" />
-      <g transform="translate(4 4)" color={on ? "#fff" : "var(--muted)"}>
+      <rect width="32" height="32" rx="10" fill={on ? "var(--forest)" : "var(--sunken)"} />
+      <g transform="translate(4 4)" color={on ? "var(--on-forest)" : "var(--muted)"}>
         {GLYPHS[name]}
       </g>
       {state === "off" && <path d="M7 25 25 7" stroke="var(--alert)" strokeWidth="2.4" strokeLinecap="round" />}

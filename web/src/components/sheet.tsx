@@ -88,7 +88,7 @@ export function Sheet({
           >
             <div className="mx-auto mt-2.5 h-1.5 w-12 shrink-0 rounded-full bg-line sm:hidden" aria-hidden="true" />
             <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line px-5 py-3">
-              <h2 id={id} className="font-sign text-xl font-bold">
+              <h2 id={id} className="font-display text-xl font-semibold">
                 {title}
               </h2>
               <button

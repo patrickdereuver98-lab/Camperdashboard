@@ -10,7 +10,8 @@ import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
-import { KIND_SIGN, Sign, type SignName } from "./sign";
+import { Landscape } from "./landscape";
+import { Sign, type SignName } from "./sign";
 
 // ── Foto met nette terugval ─────────────────────────────────────────────────
 
@@ -43,10 +44,15 @@ export function PlacePhoto({
     if (img?.complete && img.naturalWidth === 0) fail();
   }, [fail]);
   if (!src || failed) {
+    // Geen foto: een getekend landschap (duidelijk een illustratie, geen nepfoto)
     return (
-      <div className={`flex flex-col items-center justify-center gap-2 bg-road-tint text-road ${className}`} role="img" aria-label={alt}>
-        <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={sizes === "large" ? 64 : 40} />
-        {town && sizes === "large" && <span className="font-sign text-lg font-bold">{town}</span>}
+      <div className={`relative overflow-hidden ${className}`} role="img" aria-label={`${alt} (nog geen foto)`}>
+        <Landscape seed={alt} water={kind === "jachthaven"} van={sizes === "large"} className="absolute inset-0 h-full w-full" />
+        {sizes === "large" && (
+          <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-3 py-1 text-sm font-semibold text-ink-2">
+            Nog geen foto{town ? ` van deze plek in ${town}` : ""}
+          </span>
+        )}
       </div>
     );
   }
@@ -73,7 +79,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
   return (
     <span className="flex items-center gap-2">
       <span
-        className={`grid place-items-center rounded-lg rounded-bl-none bg-road font-sign font-bold text-on-road ${
+        className={`grid place-items-center rounded-lg rounded-bl-none bg-forest font-display font-semibold text-on-forest ${
           size === "lg" ? "h-11 min-w-11 px-2 text-lg" : "h-8 min-w-8 px-1.5 text-sm"
         }`}
       >
@@ -109,7 +115,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
         type="button"
         onClick={toggle}
         aria-pressed={saved}
-        className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold transition-colors hover:border-road aria-pressed:border-road aria-pressed:bg-road-tint aria-pressed:text-road"
+        className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
       >
         <Icon name="heart" size={20} filled={saved} className={saved ? "animate-pop text-alert" : ""} />
         {saved ? "Bewaard" : "Bewaar"}
@@ -155,8 +161,8 @@ export function OpenChip({ place }: { place: Pick<PlaceSummary, "openAllYear" | 
   const status = hydrated ? openStatus(place) : undefined;
   if (!status) return null;
   return (
-    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${status.open ? "text-polder" : "text-alert"}`}>
-      <span className={`h-2 w-2 rounded-full ${status.open ? "bg-polder" : "bg-alert"}`} aria-hidden="true" />
+    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${status.open ? "text-forest" : "text-alert"}`}>
+      <span className={`h-2 w-2 rounded-full ${status.open ? "bg-forest" : "bg-alert"}`} aria-hidden="true" />
       {status.label}
     </span>
   );
@@ -193,7 +199,7 @@ export function PlaceCard({
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
       className={`group relative flex overflow-hidden rounded-2xl bg-surface transition-[box-shadow,outline-color] ${
-        active ? "outline-2 outline-road" : "outline-1 outline-line"
+        active ? "outline-2 outline-forest" : "outline-1 outline-line"
       } outline hover:shadow-lift ${stack ? "flex-col" : "flex-row"}`}
     >
       <div
@@ -205,7 +211,7 @@ export function PlaceCard({
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
         </ViewTransition>
         {place.priceEur === 0 && (
-          <span className="absolute top-2 left-2 rounded-md bg-signal px-2 py-0.5 font-sign text-sm font-bold text-on-signal">Gratis</span>
+          <span className="absolute top-2 left-2 rounded-md bg-ember px-2 py-0.5 font-display text-sm font-semibold text-on-ember">Gratis</span>
         )}
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
@@ -215,7 +221,7 @@ export function PlaceCard({
       <div className={`flex min-w-0 flex-1 flex-col gap-2 ${stack ? "p-4" : "p-3 sm:p-4"}`}>
         <div className={`min-w-0 ${stack ? "pr-12" : "pr-11"}`}>
           <p className="text-sm text-muted">{place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}</p>
-          <h3 className={`font-sign leading-snug font-bold text-ink ${stack ? "text-xl" : "text-lg sm:text-xl"}`}>
+          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-lg sm:text-xl"}`}>
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
@@ -226,7 +232,7 @@ export function PlaceCard({
               {place.town}, {place.province}
             </span>
           </p>
-          {distance && <p className="mt-0.5 text-sm font-semibold text-road">{distance}</p>}
+          {distance && <p className="mt-0.5 text-sm font-semibold text-forest">{distance}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <OpenChip place={place} />
@@ -236,7 +242,7 @@ export function PlaceCard({
           <FacilitySigns place={place} max={stack ? 5 : 4} size={stack ? 28 : 26} />
           <div className="ml-auto shrink-0 text-right">
             {place.priceFrom && <p className="text-xs text-muted">vanaf</p>}
-            <p className={`font-sign leading-none font-extrabold ${place.priceEur === undefined ? "text-base text-muted" : "text-2xl text-ink"}`}>
+            <p className={`font-display leading-none font-semibold ${place.priceEur === undefined ? "text-base text-muted" : "text-2xl text-ink"}`}>
               {priceLabel(place.priceEur)}
             </p>
             {place.priceEur !== undefined && place.priceEur > 0 && <p className="mt-1 text-xs text-muted">per nacht</p>}

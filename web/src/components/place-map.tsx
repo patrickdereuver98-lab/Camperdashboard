@@ -36,8 +36,8 @@ function toGeoJSON(places: MapPlace[]) {
 /** Basiskaart in de tinten van de site: koel wit, zacht groen, meerblauw */
 function tint(map: MlMap, dark: boolean) {
   const colors = dark
-    ? { bg: "#0d1726", water: "#14324d", green: "#13261f" }
-    : { bg: "#f3f5f4", water: "#cfe1ee", green: "#e1ece2" };
+    ? { bg: "#141b16", water: "#17303a", green: "#1a2a20" }
+    : { bg: "#f1ebdf", water: "#cfe3e4", green: "#dde7d6" };
   for (const layer of map.getStyle().layers ?? []) {
     try {
       if (layer.type === "background") map.setPaintProperty(layer.id, "background-color", colors.bg);
@@ -67,13 +67,13 @@ function popupNode(p: { slug: string; name: string; town: string; price: string;
   body.style.cssText = "padding:10px 12px 12px";
   const name = document.createElement("div");
   name.textContent = p.name;
-  name.style.cssText = "font-family:var(--font-sign);font-weight:700;font-size:16px;line-height:1.25;padding-right:24px";
+  name.style.cssText = "font-family:var(--font-display);font-weight:700;font-size:16px;line-height:1.25;padding-right:24px";
   const meta = document.createElement("div");
   meta.textContent = p.price ? `${p.town}, ${p.price}` : p.town;
   meta.style.cssText = "margin-top:4px;font-size:14px;color:var(--muted)";
   const cta = document.createElement("div");
   cta.textContent = "Bekijk plek";
-  cta.style.cssText = "margin-top:8px;font-weight:700;color:var(--road);font-size:14px;text-decoration:underline";
+  cta.style.cssText = "margin-top:8px;font-weight:700;color:var(--forest);font-size:14px;text-decoration:underline";
   body.append(name, meta, cta);
   a.append(body);
   return a;
@@ -120,10 +120,12 @@ export function PlaceMap({
       if (cancelled || !el.current) return;
       const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const css = getComputedStyle(document.documentElement);
-      const signal = css.getPropertyValue("--signal").trim() || "#ffc629";
-      const surface = css.getPropertyValue("--surface").trim() || "#ffffff";
-      const ink = css.getPropertyValue("--ink").trim() || "#122033";
-      const road = dark ? "#2f6db3" : css.getPropertyValue("--road").trim() || "#0f4c8a";
+      // Bosgroen voor plekken, avondzon voor gratis plekken en de geselecteerde plek, meerblauw voor de route
+      const ember = dark ? "#d9783f" : "#b9592a";
+      const forest = dark ? "#3f7a5a" : "#2d5a43";
+      const lake = dark ? "#82bcc8" : "#2f6f7e";
+      const surface = css.getPropertyValue("--surface").trim() || "#fffcf6";
+      const ink = css.getPropertyValue("--ink").trim() || "#1f2b24";
 
       map = new maplibregl.Map({
         container: el.current,
@@ -160,7 +162,7 @@ export function PlaceMap({
           id: "route",
           type: "line",
           source: "route",
-          paint: { "line-color": road, "line-width": 4.5 },
+          paint: { "line-color": lake, "line-width": 4.5 },
           layout: { "line-cap": "round", "line-join": "round" },
         });
         map.addLayer({
@@ -169,10 +171,10 @@ export function PlaceMap({
           source: "places",
           filter: ["has", "point_count"],
           paint: {
-            "circle-color": road,
+            "circle-color": forest,
             "circle-radius": ["step", ["get", "point_count"], 16, 20, 20, 100, 26],
             "circle-stroke-width": 3,
-            "circle-stroke-color": "#ffffff",
+            "circle-stroke-color": surface,
           },
         });
         map.addLayer({
@@ -189,10 +191,10 @@ export function PlaceMap({
           source: "places",
           filter: ["!", ["has", "point_count"]],
           paint: {
-            "circle-color": ["case", ["get", "free"], signal, road],
+            "circle-color": ["case", ["get", "free"], ember, forest],
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 6, 13, 9],
             "circle-stroke-width": 2.5,
-            "circle-stroke-color": "#ffffff",
+            "circle-stroke-color": surface,
           },
         });
         map.addLayer({
@@ -215,7 +217,7 @@ export function PlaceMap({
           type: "circle",
           source: "places",
           filter: ["==", ["get", "slug"], ""],
-          paint: { "circle-color": signal, "circle-radius": 13, "circle-stroke-width": 4, "circle-stroke-color": road },
+          paint: { "circle-color": ember, "circle-radius": 13, "circle-stroke-width": 4, "circle-stroke-color": surface },
         });
 
         map.on("click", "clusters", async (e) => {

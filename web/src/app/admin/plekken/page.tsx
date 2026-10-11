@@ -74,7 +74,7 @@ export default function PlacesAdmin() {
     <div className="mx-auto max-w-6xl space-y-4">
       <PageTitle title="Plekken" />
       <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
-        <label className="flex h-12 items-center gap-2 rounded-xl border-2 border-line bg-surface px-3 focus-within:border-road">
+        <label className="flex h-12 items-center gap-2 rounded-xl border-2 border-line bg-surface px-3 focus-within:border-forest">
           <Icon name="search" size={20} className="text-muted" />
           <span className="sr-only">Zoek op naam of plaats</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek op naam of plaats" className="h-full flex-1 bg-transparent focus:outline-none" />
@@ -133,9 +133,9 @@ export default function PlacesAdmin() {
 
 function Meter({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = value >= 0.8 ? "text-polder" : value >= 0.7 ? "text-road" : "text-muted";
+  const color = value >= 0.8 ? "text-forest" : value >= 0.7 ? "text-forest" : "text-muted";
   return (
-    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full bg-sunken font-sign text-sm font-bold tabular-nums ${color}`} title={`${pct}% compleet`}>
+    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full bg-sunken font-display text-sm font-semibold tabular-nums ${color}`} title={`${pct}% compleet`}>
       {pct}
     </span>
   );
@@ -193,7 +193,7 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge tone="road">{Math.round(place.completeness * 100)}% compleet</Badge>
             <span className="text-muted">bijgewerkt {when(place.updated_at)}</span>
-            <a href={`/plek/${place.slug}`} target="_blank" rel="noreferrer" className="font-semibold text-road underline">Bekijk op de site</a>
+            <a href={`/plek/${place.slug}`} target="_blank" rel="noreferrer" className="font-semibold text-forest underline">Bekijk op de site</a>
           </div>
 
           <fieldset className="space-y-3 rounded-2xl bg-sunken p-4">
@@ -207,7 +207,7 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
               </select>
             </label>
             <label className="flex items-start gap-3">
-              <input type="checkbox" className="mt-1 h-5 w-5 accent-[var(--road)]" checked={Boolean(v("status_locked"))} onChange={(e) => set("status_locked", e.target.checked)} />
+              <input type="checkbox" className="mt-1 h-5 w-5 accent-[var(--forest)]" checked={Boolean(v("status_locked"))} onChange={(e) => set("status_locked", e.target.checked)} />
               <span>
                 <span className="font-semibold">Status handmatig vastzetten</span>
                 <span className="block text-sm text-muted">Uit: de plek gaat automatisch online zodra de data compleet genoeg is.</span>
@@ -295,7 +295,7 @@ function TriState({ value, onChange }: { value: boolean | null; onChange: (v: bo
           type="button"
           aria-pressed={value === o}
           onClick={() => onChange(o)}
-          className="h-9 w-11 text-sm font-semibold aria-pressed:bg-road aria-pressed:text-on-road"
+          className="h-9 w-11 text-sm font-semibold aria-pressed:bg-forest aria-pressed:text-on-forest"
         >
           {l}
         </button>

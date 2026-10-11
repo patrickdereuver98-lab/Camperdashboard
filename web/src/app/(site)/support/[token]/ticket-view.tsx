@@ -57,7 +57,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   if (ticket === null)
     return (
       <div className="mx-auto max-w-xl px-4 pt-12 text-center">
-        <h1 className="font-sign text-2xl font-bold">Bericht niet gevonden</h1>
+        <h1 className="font-display text-2xl font-semibold">Bericht niet gevonden</h1>
         <p className="mt-2 text-ink-2">Controleer of je de volledige link hebt gebruikt.</p>
       </div>
     );
@@ -65,11 +65,11 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   return (
     <div className="mx-auto max-w-2xl px-4 pt-8 sm:px-6">
       <p className="text-sm text-muted">Bericht #{ticket.number}</p>
-      <h1 className="font-sign text-2xl font-extrabold sm:text-3xl">{ticket.subject}</h1>
-      <p className="mt-2 inline-flex rounded-full bg-road-tint px-3 py-1 text-sm font-semibold text-road">{STATUS[ticket.status] ?? ticket.status}</p>
+      <h1 className="font-display text-2xl font-semibold sm:text-3xl">{ticket.subject}</h1>
+      <p className="mt-2 inline-flex rounded-full bg-forest-tint px-3 py-1 text-sm font-semibold text-forest">{STATUS[ticket.status] ?? ticket.status}</p>
       <ol className="mt-6 space-y-3">
         {ticket.messages.map((m, i) => (
-          <li key={i} className={`rounded-2xl p-4 ${m.author === "support" ? "bg-road-tint" : "bg-surface outline-1 outline-line outline"}`}>
+          <li key={i} className={`rounded-2xl p-4 ${m.author === "support" ? "bg-forest-tint" : "bg-surface outline-1 outline-line outline"}`}>
             <p className="text-sm font-semibold">{m.author === "support" ? "VrijStaan support" : ticket.name}</p>
             <p className="text-xs text-muted">{formatDate(m.created_at)}</p>
             <p className="mt-2 whitespace-pre-line">{m.body}</p>
@@ -80,10 +80,10 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
         <form onSubmit={reply} className="mt-6 space-y-3">
           <label className="block">
             <span className="mb-1.5 block font-semibold">Reageren</span>
-            <textarea name="body" required minLength={1} maxLength={5000} rows={4} className="w-full rounded-xl border-2 border-line bg-surface px-3 py-2 focus:border-road focus:outline-none" />
+            <textarea name="body" required minLength={1} maxLength={5000} rows={4} className="w-full rounded-xl border-2 border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none" />
           </label>
           {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-          <button type="submit" disabled={busy} className="h-12 rounded-xl bg-road px-6 font-semibold text-on-road disabled:opacity-60">
+          <button type="submit" disabled={busy} className="h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest disabled:opacity-60">
             {busy ? "Versturen…" : "Reactie versturen"}
           </button>
         </form>

@@ -66,7 +66,7 @@ export default function CookiePage() {
       </Section>
       <Section title="Je keuze wijzigen">
         <p>Je kunt je keuze altijd aanpassen.</p>
-        <CookieSettingsLink className="!font-semibold !text-road underline" />
+        <CookieSettingsLink className="!font-semibold !text-forest underline" />
       </Section>
     </ProsePage>
   );

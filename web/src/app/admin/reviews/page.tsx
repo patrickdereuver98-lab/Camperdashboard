@@ -63,11 +63,11 @@ export default function Reviews() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="road">{r.rating}/10</Badge>
               {r.places && (
-                <Link href={`/plek/${r.places.slug}`} target="_blank" className="font-semibold text-road underline">{r.places.name}</Link>
+                <Link href={`/plek/${r.places.slug}`} target="_blank" className="font-semibold text-forest underline">{r.places.name}</Link>
               )}
               <span className="text-sm text-muted">{when(r.created_at)}</span>
             </div>
-            {r.title && <p className="font-sign font-bold">{r.title}</p>}
+            {r.title && <p className="font-display font-semibold">{r.title}</p>}
             <p className="whitespace-pre-line">{r.body}</p>
             <p className="text-sm text-muted">
               {r.author_name}

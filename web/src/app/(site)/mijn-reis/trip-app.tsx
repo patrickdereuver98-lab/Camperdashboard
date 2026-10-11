@@ -9,6 +9,7 @@ import { eur, formatDuration, pluralize } from "@/lib/format";
 import { usePlaces, useTrip, useTripSettings, type TripStop } from "@/lib/store";
 import type { PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
+import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
 import { PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
@@ -89,10 +90,10 @@ export function TripApp() {
   if (incomingStops && incomingStops.length) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-10 text-center">
-        <h1 className="font-sign text-3xl font-extrabold">Gedeelde reis openen</h1>
+        <h1 className="font-display text-3xl font-semibold">Gedeelde reis openen</h1>
         <p className="mt-3 text-lg text-ink-2">Iemand heeft een reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld.</p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-xl bg-road px-6 font-semibold text-on-road">
+          <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
             {trip.stops.length ? "Vervang mijn reis" : "Open deze reis"}
           </button>
           <button type="button" onClick={() => router.replace("/mijn-reis")} className="h-12 rounded-xl border-2 border-line px-6 font-semibold">
@@ -106,14 +107,14 @@ export function TripApp() {
   if (trip.stops.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-10 text-center sm:pt-14">
-        <div className="sign-panel mx-auto grid h-28 w-28 place-items-center">
-          <Icon name="heart" size={52} />
+        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-[1.75rem] shadow-lift">
+          <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-8 font-sign text-3xl font-extrabold sm:text-4xl">Je reis is nog leeg</h1>
+        <h1 className="mt-8 font-display text-3xl font-semibold sm:text-4xl">Je reis is nog leeg</h1>
         <p className="mt-3 text-lg text-ink-2">
           Tik op het hartje bij een plek om hem te bewaren. Hier zet je ze op volgorde en zie je de echte rijtijd en wat de reis ongeveer kost.
         </p>
-        <Link href="/zoeken" className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-road px-7 font-sign text-lg font-bold text-on-road">
+        <Link href="/zoeken" className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-forest px-7 font-display text-lg font-semibold text-on-forest">
           <Icon name="search" size={21} /> Plekken zoeken
         </Link>
       </div>
@@ -148,7 +149,7 @@ export function TripApp() {
     <div className="mx-auto max-w-6xl px-3 pt-5 pb-10 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-sign text-3xl font-extrabold">Mijn reis</h1>
+          <h1 className="font-display text-3xl font-semibold">Mijn reis</h1>
           <p className="text-ink-2">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
@@ -157,7 +158,7 @@ export function TripApp() {
           <button
             type="button"
             onClick={() => trip.replace(optimize(stops, start).map(({ slug, nights: n }) => ({ slug, nights: n })))}
-            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road"
+            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest"
           >
             <Icon name="route" size={18} /> Slimste volgorde
           </button>
@@ -171,7 +172,7 @@ export function TripApp() {
                 setTimeout(() => setShared(false), 2500);
               }
             }}
-            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road"
+            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest"
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
@@ -190,7 +191,7 @@ export function TripApp() {
               <p className="text-sm text-muted">{start ? "Je huidige locatie" : "Eerste stop"}</p>
             </div>
             {start ? (
-              <button type="button" onClick={() => setStart(null)} className="h-11 px-3 font-semibold text-road underline">
+              <button type="button" onClick={() => setStart(null)} className="h-11 px-3 font-semibold text-forest underline">
                 Wissen
               </button>
             ) : (
@@ -210,7 +211,7 @@ export function TripApp() {
                     { timeout: 12000 },
                   );
                 }}
-                className="h-11 rounded-xl border-2 border-line px-3 font-semibold hover:border-road"
+                className="h-11 rounded-xl border-2 border-line px-3 font-semibold hover:border-forest"
               >
                 Mijn locatie
               </button>
@@ -231,7 +232,7 @@ export function TripApp() {
                 <motion.li key={s.slug} layout="position" transition={{ type: "spring", stiffness: 520, damping: 42 }}>
                   {(i > 0 || start) && (
                     <div className="flex items-center gap-3 py-2 pl-5 text-sm text-ink-2">
-                      <span className="h-8 border-l-[3px] border-dotted border-road" aria-hidden="true" />
+                      <span className="h-8 border-l-[3px] border-dotted border-forest" aria-hidden="true" />
                       {leg
                         ? `${formatDuration(leg.durationS)} rijden, ${formatKm(leg.distanceM / 1000)}`
                         : routeState === "loading"
@@ -243,12 +244,12 @@ export function TripApp() {
                     <div className="flex gap-3">
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
                         <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
-                        <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-road font-sign text-xs font-bold text-on-road">
+                        <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-forest font-display text-xs font-semibold text-on-forest">
                           {i + 1}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-sign text-lg font-bold hover:text-road">
+                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-display text-lg font-semibold hover:text-forest">
                           {s.place.name}
                         </Link>
                         <p className="truncate text-sm text-muted">
@@ -289,14 +290,14 @@ export function TripApp() {
             })}
           </ol>
           </MotionConfig>
-          <Link href="/zoeken" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line font-semibold text-road hover:border-road">
+          <Link href="/zoeken" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line font-semibold text-forest hover:border-forest">
             <Icon name="plus" size={19} /> Plek toevoegen
           </Link>
         </div>
 
         <aside className="min-w-0 space-y-4">
           <div className="rounded-2xl bg-surface p-5 outline-1 outline-line outline">
-            <h2 className="font-sign text-xl font-bold">Overzicht</h2>
+            <h2 className="font-display text-xl font-semibold">Overzicht</h2>
             <dl className="mt-3 space-y-2">
               <div className="flex justify-between">
                 <dt className="text-ink-2">Rijden</dt>
@@ -324,8 +325,8 @@ export function TripApp() {
                 <dd className="font-semibold">{eur(tax, true)}</dd>
               </div>
               <div className="flex justify-between border-t border-line pt-2">
-                <dt className="font-sign text-lg font-bold">Bekende kosten</dt>
-                <dd className="font-sign text-2xl font-extrabold">{eur(total, true)}</dd>
+                <dt className="font-display text-lg font-semibold">Bekende kosten</dt>
+                <dd className="font-display text-2xl font-semibold">{eur(total, true)}</dd>
               </div>
             </dl>
             <p className="mt-2 text-sm text-muted">
@@ -360,7 +361,7 @@ export function TripApp() {
               </div>
             </details>
 
-            <a href={gmaps} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl bg-road font-semibold text-on-road">
+            <a href={gmaps} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl bg-forest font-semibold text-on-forest">
               <Icon name="route" size={19} /> Open route in Google Maps
             </a>
           </div>

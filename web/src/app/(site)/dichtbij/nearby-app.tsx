@@ -10,6 +10,7 @@ import type { PlaceSummary } from "@/lib/types";
 import { CardSkeleton, PlaceCard } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
+import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 
 type Status = "idle" | "locating" | "denied" | "unavailable" | "ready";
@@ -82,10 +83,10 @@ export function NearbyApp() {
   if (status !== "ready" || !pos) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 text-center sm:pt-14">
-        <div className="sign-panel mx-auto grid h-28 w-28 place-items-center">
-          <Icon name="locate" size={56} />
+        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-[1.75rem] shadow-lift">
+          <Landscape seed="dichtbij" variant={0} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-8 font-sign text-3xl font-extrabold sm:text-4xl">Waar kun je vannacht staan?</h1>
+        <h1 className="mt-8 font-display text-3xl font-semibold sm:text-4xl">Waar kun je vannacht staan?</h1>
         <p className="mt-3 text-lg text-ink-2">
           Deel je locatie en we zetten de plekken om je heen op een rij, gesorteerd op echte rijtijd.
         </p>
@@ -93,7 +94,7 @@ export function NearbyApp() {
           type="button"
           onClick={locate}
           disabled={status === "locating"}
-          className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-road px-7 font-sign text-lg font-bold text-on-road disabled:opacity-70"
+          className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-forest px-7 font-display text-lg font-semibold text-on-forest disabled:opacity-70"
         >
           <Icon name="locate" size={22} />
           {status === "locating" ? "Locatie bepalen…" : "Gebruik mijn locatie"}
@@ -118,8 +119,8 @@ export function NearbyApp() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <section className="min-w-0 px-3 pt-5 pb-8 sm:px-6">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="font-sign text-2xl font-extrabold sm:text-3xl">Dichtbij jou</h1>
-          <button type="button" onClick={locate} className="flex h-11 items-center gap-1.5 font-semibold text-road">
+          <h1 className="font-display text-2xl font-semibold sm:text-3xl">Dichtbij jou</h1>
+          <button type="button" onClick={locate} className="flex h-11 items-center gap-1.5 font-semibold text-forest">
             <Icon name="refresh" size={18} /> Opnieuw
           </button>
         </div>
@@ -129,7 +130,7 @@ export function NearbyApp() {
               type="button"
               aria-pressed={openNow}
               onClick={() => setOpenNow((o) => !o)}
-              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-road aria-pressed:bg-road-tint aria-pressed:text-road"
+              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
             >
               <Sign name="calendar" size={28} state={openNow ? "on" : "unknown"} />
               Nu open
@@ -143,7 +144,7 @@ export function NearbyApp() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => setFacilities((x) => (on ? x.filter((k) => k !== f.key) : [...x, f.key]))}
-                  className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-road aria-pressed:bg-road-tint aria-pressed:text-road"
+                  className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
                 >
                   <Sign name={f.icon as SignName} size={28} state={on ? "on" : "unknown"} />
                   {f.label}

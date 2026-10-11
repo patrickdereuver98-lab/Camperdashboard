@@ -64,7 +64,7 @@ function Item({ s, onChange }: { s: Submission; onChange: () => void }) {
         <Badge tone={s.kind === "nieuw" ? "green" : s.kind === "eigenaar" ? "yellow" : "road"}>{KIND[s.kind]}</Badge>
         <span className="text-sm text-muted">{when(s.created_at)}</span>
         {s.places && (
-          <Link href={`/plek/${s.places.slug}`} target="_blank" className="text-sm font-semibold text-road underline">
+          <Link href={`/plek/${s.places.slug}`} target="_blank" className="text-sm font-semibold text-forest underline">
             {s.places.name}
           </Link>
         )}
@@ -83,7 +83,7 @@ function Item({ s, onChange }: { s: Submission; onChange: () => void }) {
           {s.contact_email && (
             <>
               {", "}
-              <a className="font-semibold text-road underline" href={`mailto:${s.contact_email}`}>{s.contact_email}</a>
+              <a className="font-semibold text-forest underline" href={`mailto:${s.contact_email}`}>{s.contact_email}</a>
             </>
           )}
         </p>

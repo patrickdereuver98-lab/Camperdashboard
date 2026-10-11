@@ -10,7 +10,7 @@ export default function AccessibilityPage() {
       <Section title="Wat we doen">
         <ul>
           <li>We volgen de richtlijnen van WCAG 2.2 op niveau AA.</li>
-          <li>Tekst in het lettertype Atkinson Hyperlegible, ontworpen voor mensen met een visuele beperking.</li>
+          <li>Goed leesbare tekst in Inter op minimaal 17 pixels, met voldoende contrast in licht en donker.</li>
           <li>Grote knoppen (minimaal 44 bij 44 pixels) en hoog contrast, ook in donkere modus.</li>
           <li>Alles is met het toetsenbord te bedienen; de focus is altijd zichtbaar.</li>
           <li>Animaties staan uit als je apparaat is ingesteld op &quot;minder beweging&quot;.</li>

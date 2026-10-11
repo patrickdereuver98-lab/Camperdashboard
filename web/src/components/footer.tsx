@@ -43,7 +43,7 @@ export function Footer() {
         <div className="col-span-2 md:col-span-1">
           <Link href="/" className="flex items-center gap-2.5">
             <Logo />
-            <span className="font-sign text-xl font-extrabold text-road">VrijStaan</span>
+            <span className="font-display text-xl font-semibold text-forest">VrijStaan</span>
           </Link>
           <p className="mt-4 max-w-xs text-ink-2">
             Onafhankelijke gids voor camperplaatsen in Nederland. We tonen alleen plekken waarvan de belangrijkste
@@ -52,11 +52,11 @@ export function Footer() {
         </div>
         {COLUMNS.map((c) => (
           <nav key={c.title} aria-label={c.title} className={c.title === "Over VrijStaan" ? "col-span-2 md:col-span-1" : ""}>
-            <h2 className="font-sign text-base font-bold text-ink">{c.title}</h2>
+            <h2 className="font-display text-base font-semibold text-ink">{c.title}</h2>
             <ul className={`mt-2 ${c.title === "Over VrijStaan" ? "grid grid-cols-2 gap-x-6 md:block" : ""}`}>
               {c.links.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="inline-block py-2.5 text-ink-2 hover:text-road hover:underline md:py-1.5">
+                  <Link href={l.href} className="inline-block py-2.5 text-ink-2 hover:text-forest hover:underline md:py-1.5">
                     {l.label}
                   </Link>
                 </li>
@@ -78,7 +78,7 @@ export function Footer() {
               <li key={p}>
                 <Link
                   href={`/camperplaatsen/${p.toLowerCase()}`}
-                  className="inline-flex h-11 items-center rounded-full bg-sunken px-4 text-sm font-semibold text-ink-2 hover:text-road md:h-9"
+                  className="inline-flex h-11 items-center rounded-full bg-sunken px-4 text-sm font-semibold text-ink-2 hover:text-forest md:h-9"
                 >
                   {p}
                 </Link>

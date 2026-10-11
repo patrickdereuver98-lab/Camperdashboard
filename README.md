@@ -9,7 +9,7 @@ gebouwd voor de telefoon (installeerbaar als app) en met alleen echte, gecontrol
 | [`web/supabase/`](web/supabase) | Database (`schema.sql`, `seed.sql`) en de data-pipeline (edge function `pipeline`) |
 | [`docs/HANDLEIDING.md`](docs/HANDLEIDING.md) | Stap voor stap: lokaal draaien, online zetten, beheer, data-pipeline |
 | [`docs/onderzoek.md`](docs/onderzoek.md) | Doelgroep- en marktonderzoek (booking.com, trivago, park4night, ACSI, NKC) |
-| [`docs/design.md`](docs/design.md) | Ontwerpsysteem "Wegwijzer" |
+| [`docs/design.md`](docs/design.md) | Ontwerpsysteem "natuur & vrijheid" |
 
 Snel starten:
 

@@ -86,15 +86,15 @@ export function SearchApp() {
             <button
               type="button"
               onClick={() => setFiltersOpen(true)}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest"
             >
               <Icon name="sliders" size={19} />
               Filters
               {count > 0 && (
-                <span className="grid h-6 min-w-6 place-items-center rounded-full bg-road px-1.5 text-sm text-on-road">{count}</span>
+                <span className="grid h-6 min-w-6 place-items-center rounded-full bg-forest px-1.5 text-sm text-on-forest">{count}</span>
               )}
             </button>
-            <label className="relative flex h-11 min-w-0 flex-1 items-center rounded-xl border-2 border-line bg-surface pr-9 pl-3 font-semibold hover:border-road sm:flex-none">
+            <label className="relative flex h-11 min-w-0 flex-1 items-center rounded-xl border-2 border-line bg-surface pr-9 pl-3 font-semibold hover:border-forest sm:flex-none">
               <Icon name="sort" size={18} className="mr-2 shrink-0 text-muted" />
               <select
                 aria-label="Sorteren"
@@ -128,7 +128,7 @@ export function SearchApp() {
                   <button
                     type="button"
                     onClick={() => update(c.without)}
-                    className="flex h-9 items-center gap-1.5 rounded-full bg-road-tint pr-2.5 pl-3.5 text-sm font-semibold text-road"
+                    className="flex h-9 items-center gap-1.5 rounded-full bg-forest-tint pr-2.5 pl-3.5 text-sm font-semibold text-forest"
                     aria-label={`Filter ${c.label} verwijderen`}
                   >
                     {c.label}
@@ -146,7 +146,7 @@ export function SearchApp() {
         {!wide && mapOpen && <div className="animate-fade-in h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] min-h-80">{map}</div>}
 
         <section className={`px-3 pt-4 pb-24 sm:px-6 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
-          <h1 className="font-sign text-2xl font-bold">
+          <h1 className="font-display text-2xl font-semibold">
             <span key={results?.length} className="animate-fade-in inline-block">
               {results ? pluralize(results.length, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
@@ -218,7 +218,7 @@ function Results({
           <button
             type="button"
             onClick={() => setLimit((l) => l + PAGE)}
-            className="h-12 rounded-xl border-2 border-line bg-surface px-6 font-semibold hover:border-road"
+            className="h-12 rounded-xl border-2 border-line bg-surface px-6 font-semibold hover:border-forest"
           >
             Toon meer plekken
           </button>
@@ -242,7 +242,7 @@ function Empty({ filters, onChange }: { filters: Filters; onChange: (f: Filters)
   if (filters.province || filters.center) options.push({ label: "Zoek in heel Nederland", next: { ...filters, where: undefined, center: undefined, province: undefined } });
   return (
     <div className="mt-6 rounded-2xl bg-surface p-6 outline-1 outline-line outline">
-      <h2 className="font-sign text-xl font-bold">Geen plekken die aan alles voldoen</h2>
+      <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
       <p className="mt-2 text-ink-2">We tonen alleen plekken waarvan de gegevens compleet zijn. Met minder filters of een grotere afstand vind je vaak wel iets.</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {options.map((o) => (
@@ -250,7 +250,7 @@ function Empty({ filters, onChange }: { filters: Filters; onChange: (f: Filters)
             key={o.label}
             type="button"
             onClick={() => onChange(o.next)}
-            className="h-11 rounded-xl border-2 border-line px-4 font-semibold hover:border-road hover:text-road"
+            className="h-11 rounded-xl border-2 border-line px-4 font-semibold hover:border-forest hover:text-forest"
           >
             {o.label}
           </button>

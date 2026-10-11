@@ -143,12 +143,12 @@ export function DestinationSearch({
         }}
         className={hero ? "space-y-3" : "flex items-center gap-2"}
       >
-        <label htmlFor={`${id}-q`} className={hero ? "block font-semibold text-on-sign" : "sr-only"}>
+        <label htmlFor={`${id}-q`} className={hero ? "block font-semibold text-ink" : "sr-only"}>
           Waar wil je staan?
         </label>
         <div
-          className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface text-ink ring-2 transition-shadow focus-within:ring-signal ${
-            hero ? "h-14 px-4 ring-transparent" : "h-12 px-3 ring-line"
+          className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl text-ink ring-2 ring-line transition-shadow focus-within:ring-forest ${
+            hero ? "h-14 bg-paper px-4" : "h-12 bg-surface px-3"
           }`}
         >
           <Icon name="search" size={hero ? 22 : 20} className="shrink-0 text-muted" />
@@ -199,19 +199,19 @@ export function DestinationSearch({
         </div>
         <button
           type="submit"
-          className={`font-sign font-bold transition-colors ${
+          className={`font-semibold transition-colors ${
             hero
-              ? "flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-signal text-lg text-on-signal hover:brightness-95"
-              : "h-12 shrink-0 rounded-xl bg-road px-5 text-on-road hover:bg-road-deep"
+              ? "flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ember text-lg text-on-ember hover:brightness-95"
+              : "h-12 shrink-0 rounded-xl bg-forest px-5 text-on-forest hover:bg-forest-deep"
           }`}
         >
           {hero ? "Zoek een camperplaats" : "Zoek"}
         </button>
       </form>
 
-      {locating && <p className={`mt-2 text-sm ${hero ? "text-on-sign" : "text-muted"}`}>Locatie bepalen…</p>}
+      {locating && <p className="mt-2 text-sm text-muted">Locatie bepalen…</p>}
       {geoError && (
-        <p role="alert" className={`mt-2 rounded-lg px-3 py-2 text-sm ${hero ? "bg-surface text-alert" : "bg-alert-tint text-alert"}`}>
+        <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert">
           {geoError}
         </p>
       )}
@@ -235,15 +235,15 @@ export function DestinationSearch({
                 pick(o);
               }}
               onMouseEnter={() => setActive(i)}
-              className="flex min-h-12 cursor-pointer items-center gap-3 px-4 py-2 aria-selected:bg-road-tint"
+              className="flex min-h-12 cursor-pointer items-center gap-3 px-4 py-2 aria-selected:bg-forest-tint"
             >
               <Icon
                 name={o.type === "near" ? "locate" : o.type === "place" ? "home" : "pin"}
                 size={20}
-                className={o.type === "near" ? "text-road" : "text-muted"}
+                className={o.type === "near" ? "text-forest" : "text-muted"}
               />
               <span className="min-w-0">
-                <span className={`block truncate ${o.type === "near" ? "font-semibold text-road" : "font-semibold"}`}>{o.label}</span>
+                <span className={`block truncate ${o.type === "near" ? "font-semibold text-forest" : "font-semibold"}`}>{o.label}</span>
                 {"sub" in o && <span className="block truncate text-sm text-muted">{o.sub}</span>}
                 {o.type === "province" && <span className="block text-sm text-muted">Provincie</span>}
               </span>

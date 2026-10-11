@@ -49,7 +49,7 @@ function TripBadge({ className = "" }: { className?: string }) {
   return (
     <span
       key={stops.length}
-      className={`animate-pop grid h-5 min-w-5 place-items-center rounded-full bg-signal px-1 font-sign text-xs font-bold text-on-signal ${className}`}
+      className={`animate-pop grid h-5 min-w-5 place-items-center rounded-full bg-ember px-1 font-display text-xs font-semibold text-on-ember ${className}`}
     >
       {stops.length}
     </span>
@@ -61,13 +61,13 @@ function HeaderView({ pathname }: { pathname: string }) {
   if (pathname.startsWith("/admin")) return null;
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
-      <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 rounded-lg bg-signal px-3 py-2 font-semibold text-on-signal">
+      <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 rounded-lg bg-ember px-3 py-2 font-semibold text-on-ember">
         Naar de inhoud
       </a>
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
           <Logo />
-          <span className="font-sign text-xl font-extrabold tracking-tight text-road">VrijStaan</span>
+          <span className="font-display text-xl font-semibold tracking-tight text-forest">VrijStaan</span>
         </Link>
         <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Hoofdmenu">
           {NAV.map((n) => (
@@ -75,7 +75,7 @@ function HeaderView({ pathname }: { pathname: string }) {
               key={n.href}
               href={n.href}
               aria-current={isActive(n.href) ? "page" : undefined}
-              className="flex h-11 items-center gap-2 rounded-xl px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-road-tint aria-[current=page]:text-road"
+              className="flex h-11 items-center gap-2 rounded-xl px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
             >
               <Icon name={n.icon} size={19} />
               {n.label}
@@ -84,7 +84,7 @@ function HeaderView({ pathname }: { pathname: string }) {
           ))}
           <Link
             href="/plek-aanmelden"
-            className="ml-2 flex h-11 items-center rounded-xl border border-line px-4 font-semibold text-ink-2 transition-colors hover:border-road hover:text-road"
+            className="ml-2 flex h-11 items-center rounded-xl border border-line px-4 font-semibold text-ink-2 transition-colors hover:border-forest hover:text-forest"
           >
             Plek aanmelden
           </Link>
@@ -133,9 +133,9 @@ function TabBarView({ pathname }: { pathname: string }) {
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
-                className="relative flex h-16 flex-col items-center justify-center gap-0.5 text-[13px] font-semibold text-muted aria-[current=page]:text-road"
+                className="relative flex h-16 flex-col items-center justify-center gap-0.5 text-[13px] font-semibold text-muted aria-[current=page]:text-forest"
               >
-                {active && <span className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-road" />}
+                {active && <span className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-forest" />}
                 <Icon name={t.icon} size={24} strokeWidth={active ? 2.3 : 1.9} />
                 {t.label}
                 {t.href === "/mijn-reis" && <TripBadge className="absolute top-2 left-[calc(50%+6px)]" />}
@@ -208,9 +208,9 @@ function SaveToastLive() {
         onDetail ? "bottom-[calc(88px+env(safe-area-inset-bottom))]" : "bottom-[calc(76px+env(safe-area-inset-bottom))]"
       }`}
     >
-      <Icon name="heart" size={20} filled className="shrink-0 text-signal" />
+      <Icon name="heart" size={20} filled className="shrink-0 text-ember" />
       <span className="min-w-0 flex-1 truncate font-semibold">Bewaard in Mijn reis</span>
-      <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-xl px-3 font-semibold text-signal underline">
+      <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-xl px-3 font-semibold text-ember underline">
         Bekijk
       </Link>
     </div>

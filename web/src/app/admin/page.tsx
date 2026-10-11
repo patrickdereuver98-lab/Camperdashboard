@@ -60,7 +60,7 @@ export default function Dashboard() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="font-sign text-lg font-bold">Volledigheid van de data</h2>
+              <h2 className="font-display text-lg font-semibold">Volledigheid van de data</h2>
               <p className="text-sm text-muted">Een plek gaat automatisch online vanaf de drempel in Instellingen.</p>
               <ul className="mt-4 space-y-2">
                 {[...o.buckets].reverse().map((b) => (
@@ -69,7 +69,7 @@ export default function Dashboard() {
               </ul>
             </Card>
             <Card>
-              <h2 className="font-sign text-lg font-bold">Welke velden zijn bekend</h2>
+              <h2 className="font-display text-lg font-semibold">Welke velden zijn bekend</h2>
               <p className="text-sm text-muted">Over alle {o.coverage.total.toLocaleString("nl-NL")} plekken, alleen uit echte bronnen.</p>
               <ul className="mt-4 space-y-2">
                 {Object.entries(FIELDS).map(([k, label]) => (
@@ -81,7 +81,7 @@ export default function Dashboard() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="font-sign text-lg font-bold">Bezoek, laatste 14 dagen</h2>
+              <h2 className="font-display text-lg font-semibold">Bezoek, laatste 14 dagen</h2>
               <p className="text-sm text-muted">Alleen bezoekers die analytische cookies accepteerden.</p>
               {o.traffic.length === 0 ? (
                 <p className="mt-4 text-muted">Nog geen metingen.</p>
@@ -102,7 +102,7 @@ export default function Dashboard() {
               )}
             </Card>
             <Card>
-              <h2 className="font-sign text-lg font-bold">Meest bekeken pagina&apos;s (30 dagen)</h2>
+              <h2 className="font-display text-lg font-semibold">Meest bekeken pagina&apos;s (30 dagen)</h2>
               {o.top_pages.length === 0 ? (
                 <p className="mt-4 text-muted">Nog geen metingen.</p>
               ) : (
@@ -120,7 +120,7 @@ export default function Dashboard() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="font-sign text-lg font-bold">Gepubliceerd per provincie</h2>
+              <h2 className="font-display text-lg font-semibold">Gepubliceerd per provincie</h2>
               <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
                 {Object.entries(o.provinces ?? {}).sort((a, b) => b[1] - a[1]).map(([p, c]) => (
                   <li key={p} className="flex justify-between"><span>{p}</span><span className="tabular-nums text-muted">{c}</span></li>
@@ -128,7 +128,7 @@ export default function Dashboard() {
               </ul>
             </Card>
             <Card>
-              <h2 className="font-sign text-lg font-bold">OpenStreetMap-import per provincie</h2>
+              <h2 className="font-display text-lg font-semibold">OpenStreetMap-import per provincie</h2>
               <p className="text-sm text-muted">Elke provincie wordt wekelijks automatisch ververst.</p>
               <ul className="mt-3 space-y-1.5 text-sm">
                 {o.osm.map((r) => (
@@ -150,17 +150,17 @@ function Stat({ label, value, sub, href, alert }: { label: string; value: number
   const body = (
     <>
       <p className="text-sm font-semibold text-muted">{label}</p>
-      <p className={`mt-1 font-sign text-3xl font-extrabold tabular-nums ${alert ? "text-road" : ""}`}>{value.toLocaleString("nl-NL")}</p>
+      <p className={`mt-1 font-display text-3xl font-semibold tabular-nums ${alert ? "text-forest" : ""}`}>{value.toLocaleString("nl-NL")}</p>
       {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
     </>
   );
   const cls = "block rounded-2xl bg-surface p-4 outline-1 outline-line outline";
-  return href ? <Link href={href} className={`${cls} hover:outline-road`}>{body}</Link> : <div className={cls}>{body}</div>;
+  return href ? <Link href={href} className={`${cls} hover:outline-forest`}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
 function Bar({ label, value, max, tone = "road", percent }: { label: string; value: number; max: number; tone?: "road" | "green" | "yellow" | "muted"; percent?: boolean }) {
   const pct = max ? (value / max) * 100 : 0;
-  const color = { road: "bg-road", green: "bg-polder", yellow: "bg-signal", muted: "bg-line" }[tone];
+  const color = { road: "bg-forest", green: "bg-forest", yellow: "bg-ember", muted: "bg-line" }[tone];
   return (
     <li className="grid grid-cols-[7.5rem_1fr_4rem] items-center gap-3 text-sm">
       <span className="truncate">{label}</span>
