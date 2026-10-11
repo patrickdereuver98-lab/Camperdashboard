@@ -105,7 +105,7 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 
 1. **OpenStreetMap** (wekelijks, per provincie): alle campings, camperplaatsen en camperparkeerplaatsen met
    naam, ligging, contact en voorzieningen zoals ze op de kaart staan, plus losse loos- en waterpunten.
-2. **Website van de plek** (continu, ±20 sites per minuut): de scraper leest de homepage en maximaal vijf
+2. **Website van de plek** (continu, ±14 sites per minuut): de scraper leest de homepage en maximaal zes
    relevante subpagina's (tarieven, faciliteiten, info) en haalt alleen letterlijk genoemde feiten op:
    prijs per nacht, voorzieningen, aantal plekken, maximale lengte, seizoen, honden, reserveren, foto's.
    Ontkenningen ("geen honden") gaan altijd voor. `robots.txt` wordt gerespecteerd.
