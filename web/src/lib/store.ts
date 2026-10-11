@@ -155,3 +155,24 @@ const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 
 export const usePlaces = () => useLoader(getPlaces);
 export const useTowns = () => useLoader(getTowns);
+
+// ── Reisplekken lokaal bewaren, zodat Mijn reis ook zonder bereik werkt ──────
+
+const TRIP_PLACES = "vrijstaan:reis-plekken";
+
+export function rememberTripPlaces(places: PlaceSummary[], slugs: string[]) {
+  try {
+    localStorage.setItem(TRIP_PLACES, JSON.stringify(places.filter((p) => slugs.includes(p.slug))));
+  } catch {
+    /* opslag vol of geblokkeerd: niet erg, dan alleen online */
+  }
+}
+
+export function readTripPlaces(): PlaceSummary[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(TRIP_PLACES) ?? "[]");
+    return Array.isArray(v) ? (v as PlaceSummary[]) : [];
+  } catch {
+    return [];
+  }
+}

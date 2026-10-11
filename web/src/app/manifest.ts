@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "VrijStaan: camperplaatsen in Nederland",
     short_name: "VrijStaan",
-    description: "Vind een camperplaats in Nederland met gecontroleerde prijzen, voorzieningen en echte rijtijden.",
+    description: "Vind een camperplaats in Nederland met echte prijzen, voorzieningen en rijtijden, zonder gokwerk.",
     start_url: "/?bron=app",
     scope: "/",
     display: "standalone",

@@ -24,6 +24,7 @@ const STATUS: Record<string, string> = {
 export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [ticket, setTicket] = useState<Ticket | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -34,7 +35,15 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
     let live = true;
     supabase()
       .rpc("get_ticket", { p_token: token })
-      .then(({ data }) => live && setTicket((data as Ticket | null) ?? null));
+      .then(({ data, error }) => {
+        if (!live) return;
+        // Geen verbinding is iets anders dan een onbekende link
+        if (error) setLoadError(errorMessage(error));
+        else {
+          setLoadError(null);
+          setTicket((data as Ticket | null) ?? null);
+        }
+      });
     return () => {
       live = false;
     };
@@ -53,6 +62,16 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
     load();
   }
 
+  if (loadError && ticket === undefined)
+    return (
+      <div className="mx-auto max-w-xl px-4 pt-12 text-center">
+        <h1 className="font-display text-2xl font-semibold">Je bericht kon niet worden geladen</h1>
+        <p className="mt-2 text-ink-2">{loadError}</p>
+        <button type="button" onClick={load} className="mt-6 h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
+          Opnieuw proberen
+        </button>
+      </div>
+    );
   if (ticket === undefined) return <p className="px-4 pt-12 text-center text-muted">Bericht laden…</p>;
   if (ticket === null)
     return (

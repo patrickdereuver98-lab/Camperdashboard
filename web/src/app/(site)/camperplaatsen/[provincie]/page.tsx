@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/camperplaatsen/[p
   if (!prov) return {};
   return {
     title: `Camperplaatsen in ${prov}`,
-    description: `Alle gecontroleerde camperplaatsen in ${prov}: prijzen, voorzieningen, foto's en reviews. Vind je plek voor vannacht.`,
+    description: `Camperplaatsen in ${prov} met prijzen, voorzieningen, openingsperiode en route, uit echte bronnen. Vind je plek voor vannacht.`,
     alternates: { canonical: `/camperplaatsen/${prov.toLowerCase()}` },
   };
 }
@@ -51,9 +51,15 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
         <Link href={`${searchHref({ province: prov, where: prov })}&kaart=1`} className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
           <Icon name="map" size={19} /> Bekijk op de kaart
         </Link>
-        <Link href={searchHref({ province: prov, where: prov, free: true })} className="flex h-12 items-center rounded-xl border-2 border-line bg-surface px-5 font-semibold hover:border-forest">
-          Alleen gratis plekken
-        </Link>
+        {free > 0 ? (
+          <Link href={searchHref({ province: prov, where: prov, free: true })} className="flex h-12 items-center rounded-xl border-2 border-line bg-surface px-5 font-semibold hover:border-forest">
+            Gratis plekken ({free})
+          </Link>
+        ) : (
+          <Link href={searchHref({ province: prov, where: prov, sort: "prijs" })} className="flex h-12 items-center rounded-xl border-2 border-line bg-surface px-5 font-semibold hover:border-forest">
+            Goedkoopste eerst
+          </Link>
+        )}
       </div>
 
       {top.length > 0 && (

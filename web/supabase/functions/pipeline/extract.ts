@@ -174,7 +174,11 @@ export function extract(pages: string[], base: URL) {
   // ── Prijs per nacht ─────────────────────────────────────────────────────
   const AMOUNT = "(\\d{1,2}(?:[.,]\\d{2})?)(?:\\s*,-|\\s*[-–](?=\\s))?";
   const PER = "(?:per|p\\.?|\\/|pro)\\s*(?:nacht|night|dag|camper|plaats|plek|overnachting|24\\s*uur|etmaal|stellplatz|standplaats|kampeerplaats|kampeermiddel|staanplaats|pitch|motorhome|kampeerauto)";
-  const prices: number[] = [];
+  // Elk gevonden bedrag met de zin ervoor, zodat we toeslagen kunnen herkennen
+  const prices: { amount: number; pitch: boolean }[] = [];
+  const PITCH = /camper|caravan|kampeerplaats|standplaats|staanplaats|stellplatz|kampeermiddel|tent|2 personen|twee personen|plaats incl|plek incl/;
+  const SURCHARGE =
+    /\bextra\b|campinggast|\bgast(en)?\b|bezoek|\bkind(eren)?\b|volwassene|\bbaby|\bhond(en)?\b|huisdier|\bauto\b|\bboot\b|fiets|wasmachine|droger|toeslag|\bborg\b|annulering|reserveringskosten|administratie/;
   for (const re of [
     new RegExp(`€\\s?${AMOUNT}\\s*(?:euro\\s*)?${PER}`, "g"),
     new RegExp(`${AMOUNT}\\s*(?:euro|eur|€)\\s*${PER}`, "g"),
@@ -190,15 +194,21 @@ export function extract(pages: string[], base: URL) {
       if (/week|maand|seizoen|jaar|monat|saison|month|year/.test(m[0])) continue;
       if (/^\s*(?:euro\s*)?(?:per|p\.?|\/|pro)\s*(?:persoon|pers|p\.?p|person|uur|hour|stunde|kwh|week|maand|hond|dog|kind)/.test(after)) continue;
       if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test(m[0])) continue;
-      prices.push(money(m[1]));
+      // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
+      const before = text.slice(Math.max(0, m.index! - 50), m.index!);
+      const sentence = before.slice(before.lastIndexOf(".") + 1);
+      if (SURCHARGE.test(sentence + m[0])) continue;
+      prices.push({ amount: money(m[1]), pitch: PITCH.test(sentence + m[0]) });
     }
   // schema.org priceRange alleen als er expliciet een nachtprijs staat ("€ 22 per nacht")
   for (const item of jsonLd(pages[0])) {
     const range = typeof item.priceRange === "string" ? item.priceRange.toLowerCase() : "";
     const m = /€\s?(\d{1,2}(?:[.,]\d{2})?)\s*(?:,-\s*)?(?:per|p\.?|\/)\s*(?:nacht|night)/.exec(range);
-    if (m) prices.push(money(m[1]));
+    if (m) prices.push({ amount: money(m[1]), pitch: true });
   }
-  const valid = prices.filter((p) => p >= 5 && p <= 75);
+  // Bedragen bij een kampeerplek gaan voor; alleen als die er niet zijn, de losse nachtprijzen
+  const inRange = prices.filter((p) => p.amount >= 5 && p.amount <= 75);
+  const valid = (inRange.some((p) => p.pitch) ? inRange.filter((p) => p.pitch) : inRange).map((p) => p.amount);
   if (valid.length) {
     const sorted = [...valid].sort((a, b) => a - b);
     out.price_eur = sorted[0];

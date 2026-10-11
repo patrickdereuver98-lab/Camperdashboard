@@ -6,12 +6,12 @@ import { useEffect, useMemo, useState } from "react";
 import { MotionConfig, motion } from "motion/react";
 import { distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { eur, formatDuration, pluralize } from "@/lib/format";
-import { usePlaces, useTrip, useTripSettings, type TripStop } from "@/lib/store";
+import { readTripPlaces, rememberTripPlaces, usePlaces, useTrip, useTripSettings, type TripStop } from "@/lib/store";
 import type { PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
-import { PlacePhoto } from "@/components/place-ui";
+import { OpenChip, PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
@@ -37,7 +37,13 @@ export function TripApp() {
   const trip = useTrip();
   const router = useRouter();
   const params = useSearchParams();
-  const { data: places } = usePlaces();
+  const { data: livePlaces, error: placesError } = usePlaces();
+  // Zonder bereik: de plekken van je reis zoals ze de vorige keer zijn bewaard
+  const places = useMemo(() => livePlaces ?? (placesError ? readTripPlaces() : null), [livePlaces, placesError]);
+  const slugsKey = trip.stops.map((s) => s.slug).join(",");
+  useEffect(() => {
+    if (livePlaces) rememberTripPlaces(livePlaces, slugsKey.split(","));
+  }, [livePlaces, slugsKey]);
   const [settings, setSettings] = useTripSettings();
   const [start, setStart] = useState<LatLng | null>(null);
   const [routeResult, setRouteResult] = useState<{ key: string; data: RouteData | null; failed: boolean }>({ key: "", data: null, failed: false });
@@ -88,16 +94,48 @@ export function TripApp() {
   const routeState = !routeKey ? "idle" : routeResult.key !== routeKey ? "loading" : routeResult.failed ? "error" : "idle";
 
   if (incomingStops && incomingStops.length) {
+    // Eerst laten zien wat er gedeeld is; pas daarna toevoegen of vervangen
+    const bySlug = new Map((places ?? []).map((p) => [p.slug, p]));
+    const merged = [...trip.stops, ...incomingStops.filter((s) => !trip.has(s.slug))];
     return (
-      <div className="mx-auto max-w-xl px-4 pt-10 text-center">
-        <h1 className="font-display text-3xl font-semibold">Gedeelde reis openen</h1>
-        <p className="mt-3 text-lg text-ink-2">Iemand heeft een reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld.</p>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
-            {trip.stops.length ? "Vervang mijn reis" : "Open deze reis"}
-          </button>
-          <button type="button" onClick={() => router.replace("/mijn-reis")} className="h-12 rounded-xl border-2 border-line px-6 font-semibold">
-            Annuleren
+      <div className="mx-auto max-w-xl px-4 pt-8 pb-10">
+        <h1 className="font-display text-3xl font-semibold">Gedeelde reis</h1>
+        <p className="mt-2 text-ink-2">Iemand heeft deze reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld.</p>
+        <ol className="mt-5 space-y-2">
+          {incomingStops.map((s, i) => {
+            const p = bySlug.get(s.slug);
+            return (
+              <li key={s.slug} className="flex items-center gap-3 rounded-2xl bg-surface p-3 outline-1 outline-line outline">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">{i + 1}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{p?.name ?? s.slug}</span>
+                  <span className="block truncate text-sm text-muted">
+                    {p ? `${p.town}, ` : ""}
+                    {pluralize(s.nights, "nacht", "nachten")}
+                    {p?.priceEur !== undefined ? `, ${p.priceEur === 0 ? "gratis" : `${p.priceFrom ? "vanaf " : ""}${eur(p.priceEur)} per nacht`}` : ""}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="mt-6 grid gap-2">
+          {trip.stops.length > 0 ? (
+            <>
+              <button type="button" onClick={() => { trip.replace(merged); router.replace("/mijn-reis"); }} className="h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
+                Toevoegen aan mijn reis
+              </button>
+              <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-xl border-2 border-line px-6 font-semibold">
+                Mijn reis vervangen ({pluralize(trip.stops.length, "stop", "stops")} gaan weg)
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
+              Bewaar deze reis
+            </button>
+          )}
+          <button type="button" onClick={() => router.replace("/mijn-reis")} className="h-12 rounded-xl px-6 font-semibold text-forest underline">
+            Niet bewaren
           </button>
         </div>
       </div>
@@ -154,6 +192,11 @@ export function TripApp() {
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
         </div>
+        {placesError && (
+          <p role="status" className="w-full rounded-xl bg-sunken px-4 py-3 text-sm text-ink-2">
+            Geen verbinding. Je ziet de gegevens van je reis zoals ze de vorige keer zijn bewaard.
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -252,6 +295,7 @@ export function TripApp() {
                         <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-display text-lg font-semibold hover:text-forest">
                           {s.place.name}
                         </Link>
+                        <OpenChip place={s.place} />
                         <p className="truncate text-sm text-muted">
                           {s.place.town},{" "}
                           {s.place.priceEur === undefined
@@ -325,7 +369,7 @@ export function TripApp() {
                 <dd className="font-semibold">{eur(tax, true)}</dd>
               </div>
               <div className="flex justify-between border-t border-line pt-2">
-                <dt className="font-display text-lg font-semibold">Bekende kosten</dt>
+                <dt className="font-display text-lg font-semibold">{fuel === null ? "Totaal, zonder brandstof*" : "Totaal met jouw schatting*"}</dt>
                 <dd className="font-display text-2xl font-semibold">{eur(total, true)}</dd>
               </div>
             </dl>

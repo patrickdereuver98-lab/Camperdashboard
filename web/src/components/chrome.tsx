@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useOffline } from "next/offline";
 import { Suspense, useEffect, useState } from "react";
 import { useTrip } from "@/lib/store";
@@ -65,6 +65,7 @@ function HeaderView({ pathname }: { pathname: string }) {
         Naar de inhoud
       </a>
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
+        {pathname.startsWith("/plek/") && <BackButton />}
         <Link href="/" className="flex items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
           <Logo />
           <span className="font-display text-xl font-semibold tracking-tight text-forest">VrijStaan</span>
@@ -214,5 +215,20 @@ function SaveToastLive() {
         Bekijk
       </Link>
     </div>
+  );
+}
+
+/** Terug naar de resultaten; ook in de geïnstalleerde app, waar geen browserknop is */
+function BackButton() {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={() => (window.history.length > 1 ? router.back() : router.push("/zoeken"))}
+      aria-label="Terug"
+      className="-ml-2 grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken"
+    >
+      <Icon name="arrowLeft" size={22} />
+    </button>
   );
 }

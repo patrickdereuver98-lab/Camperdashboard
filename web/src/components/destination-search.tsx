@@ -2,17 +2,40 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState } from "react";
-import { DEFAULT_FILTERS, filtersToQuery, normalize, type Filters } from "@/lib/search";
+import { closeEnough, DEFAULT_FILTERS, filtersToQuery, normalize, searchForm, type Filters } from "@/lib/search";
 import { usePlaces, useTowns } from "@/lib/store";
 import { track } from "@/lib/track";
 import { PROVINCES, type Town } from "@/lib/types";
 import { distanceKm } from "@/lib/geo";
 import { Icon } from "./icons";
 
+/** Eilanden en streken waar camperaars op zoeken; middelpunt en straal bij benadering */
+const REGIONS: { name: string; lat: number; lng: number; radiusKm: number }[] = [
+  { name: "Texel", lat: 53.07, lng: 4.8, radiusKm: 15 },
+  { name: "Vlieland", lat: 53.27, lng: 5.0, radiusKm: 10 },
+  { name: "Terschelling", lat: 53.4, lng: 5.35, radiusKm: 15 },
+  { name: "Ameland", lat: 53.45, lng: 5.77, radiusKm: 12 },
+  { name: "Schiermonnikoog", lat: 53.48, lng: 6.17, radiusKm: 8 },
+  { name: "Veluwe", lat: 52.2, lng: 5.85, radiusKm: 30 },
+  { name: "Walcheren", lat: 51.53, lng: 3.55, radiusKm: 15 },
+  { name: "Zeeuws-Vlaanderen", lat: 51.3, lng: 3.85, radiusKm: 30 },
+  { name: "Schouwen-Duiveland", lat: 51.68, lng: 3.92, radiusKm: 15 },
+  { name: "Goeree-Overflakkee", lat: 51.78, lng: 4.15, radiusKm: 15 },
+  { name: "Achterhoek", lat: 51.98, lng: 6.5, radiusKm: 30 },
+  { name: "Twente", lat: 52.3, lng: 6.75, radiusKm: 30 },
+  { name: "Salland", lat: 52.38, lng: 6.25, radiusKm: 20 },
+  { name: "Zuid-Limburg", lat: 50.87, lng: 5.85, radiusKm: 25 },
+  { name: "De Peel", lat: 51.45, lng: 5.85, radiusKm: 25 },
+  { name: "Utrechtse Heuvelrug", lat: 52.05, lng: 5.4, radiusKm: 20 },
+  { name: "Biesbosch", lat: 51.75, lng: 4.8, radiusKm: 15 },
+  { name: "Kop van Noord-Holland", lat: 52.9, lng: 4.8, radiusKm: 20 },
+  { name: "Waddenkust", lat: 53.35, lng: 6.2, radiusKm: 35 },
+];
+
 type Option =
   | { type: "near"; label: string }
   | { type: "province"; label: string }
-  | { type: "town"; label: string; sub: string; lat: number; lng: number }
+  | { type: "town"; label: string; sub: string; lat: number; lng: number; radiusKm?: number }
   | { type: "place"; label: string; sub: string; slug: string };
 
 export function DestinationSearch({
@@ -35,26 +58,45 @@ export function DestinationSearch({
   const [active, setActive] = useState(0);
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState<string | null>(null);
   const { data: towns } = useTowns();
   const { data: places } = usePlaces();
 
   const options = useMemo<Option[]>(() => {
-    const q = normalize(text);
+    const q = searchForm(text);
     const out: Option[] = [{ type: "near", label: "Dichtbij mijn locatie" }];
     if (!q) {
       for (const p of ["Zeeland", "Gelderland", "Friesland", "Limburg"]) out.push({ type: "province", label: p });
       return out;
     }
-    for (const p of PROVINCES) if (normalize(p).includes(q)) out.push({ type: "province", label: p });
-    // Plaatsen: exacte match, dan begint-met, dan bevat; daarbinnen de plaats met de meeste plekken in de buurt
-    const seen = new Set<string>();
+    // Overeenkomst: exact (0), begint met (1), bevat (2), bijna goed gespeld (3)
+    const rankOf = (name: string) => {
+      const n = normalize(name);
+      if (n === q) return 0;
+      if (n.startsWith(q)) return 1;
+      if (q.length > 2 && n.includes(q)) return 2;
+      if (q.length >= 5 && closeEnough(q, n, q.length >= 8 ? 2 : 1)) return 3;
+      return -1;
+    };
+    const nearbyCount = (c: { lat: number; lng: number }, r = 25) => (places ?? []).filter((p) => distanceKm(c, p) <= r).length;
+
+    for (const p of PROVINCES) if (rankOf(p) >= 0) out.push({ type: "province", label: p });
+    // Eilanden en streken met hun eigen zoekstraal
+    for (const r of REGIONS)
+      if (rankOf(r.name) >= 0) {
+        const n = nearbyCount(r, r.radiusKm);
+        if (!places || n > 0)
+          out.push({ type: "town", label: r.name, sub: places ? `Streek, ${n} ${n === 1 ? "plek" : "plekken"}` : "Streek", lat: r.lat, lng: r.lng, radiusKm: r.radiusKm });
+      }
+    // Woonplaatsen, plus plaatsnamen die alleen bij plekken voorkomen (zoals Domburg)
+    const all = new Map<string, Town>();
+    for (const t of towns ?? []) all.set(t.name, t);
+    for (const p of places ?? []) if (!all.has(p.town)) all.set(p.town, { name: p.town, province: p.province, lat: p.lat, lng: p.lng });
     const matches: { t: Town; rank: number; nearby: number }[] = [];
-    for (const t of towns ?? []) {
-      const n = normalize(t.name);
-      const rank = n === q ? 0 : n.startsWith(q) ? 1 : q.length > 2 && n.includes(q) ? 2 : -1;
-      if (rank < 0 || seen.has(t.name)) continue;
-      seen.add(t.name);
-      const nearby = (places ?? []).filter((p) => distanceKm(t, p) <= 25).length;
+    for (const t of all.values()) {
+      const rank = rankOf(t.name);
+      if (rank < 0) continue;
+      const nearby = nearbyCount(t);
       if (places && nearby === 0) continue;
       matches.push({ t, rank, nearby });
     }
@@ -95,7 +137,7 @@ export function DestinationSearch({
     }
     if (o.type === "town") {
       setText(o.label);
-      go({ ...keep, where: o.label, center: { lat: o.lat, lng: o.lng } });
+      go({ ...keep, where: o.label, center: { lat: o.lat, lng: o.lng }, radiusKm: o.radiusKm ?? keep.radiusKm });
       return;
     }
     if (!("geolocation" in navigator)) {
@@ -124,9 +166,13 @@ export function DestinationSearch({
 
   function submit() {
     const first = options.find((o) => o.type !== "near");
+    setNotFound(null);
     if (text.trim() && first) pick(first);
     else if (!text.trim()) go({ ...(base ?? DEFAULT_FILTERS), where: undefined, center: undefined, province: undefined });
-    else inputRef.current?.focus();
+    else {
+      setNotFound(text.trim());
+      inputRef.current?.focus();
+    }
   }
 
   const hero = variant === "hero";
@@ -165,6 +211,7 @@ export function DestinationSearch({
             value={text}
             placeholder="Plaats, provincie of naam van de plek"
             onChange={(e) => {
+              setNotFound(null);
               setText(e.target.value);
               setOpen(true);
               setActive(e.target.value ? 1 : 0);
@@ -210,6 +257,11 @@ export function DestinationSearch({
       </form>
 
       {locating && <p className="mt-2 text-sm text-muted">Locatie bepalen…</p>}
+      {notFound && (
+        <p role="status" className="mt-2 rounded-lg bg-sunken px-3 py-2 text-sm text-ink-2">
+          Geen plaats, streek of plek gevonden voor &quot;{notFound}&quot;. Probeer een andere schrijfwijze of een plaats in de buurt.
+        </p>
+      )}
       {geoError && (
         <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert">
           {geoError}

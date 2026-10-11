@@ -1,8 +1,9 @@
 // VrijStaan service worker: app-shell offline, eerder bekeken pagina's en kaarttegels uit de cache.
-const VERSION = "vs-1";
+const VERSION = "vs-2";
 const SHELL = `${VERSION}-shell`;
 const PAGES = `${VERSION}-pages`;
 const TILES = `${VERSION}-tiles`;
+const DATA = `${VERSION}-data`;
 const PRECACHE = ["/", "/zoeken", "/mijn-reis", "/icon.svg", "/icon-192.png"];
 
 self.addEventListener("install", (event) => {
@@ -52,7 +53,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.origin !== self.location.origin || url.pathname.startsWith("/admin") || url.pathname.startsWith("/api/")) return;
+  if (url.origin !== self.location.origin || url.pathname.startsWith("/admin")) return;
+
+  // Plekken en woonplaatsen: direct uit de cache, op de achtergrond verversen (werkt ook zonder bereik)
+  if (url.pathname === "/api/places" || url.pathname === "/api/towns") {
+    event.respondWith(
+      caches.open(DATA).then(async (cache) => {
+        const hit = await cache.match(req);
+        const fresh = fetch(req)
+          .then((res) => {
+            if (res.ok) cache.put(req, res.clone());
+            return res;
+          })
+          .catch(() => hit ?? Response.error());
+        if (hit) {
+          event.waitUntil(fresh.then(() => undefined, () => undefined));
+          return hit;
+        }
+        return fresh;
+      }),
+    );
+    return;
+  }
+  if (url.pathname.startsWith("/api/")) return;
 
   // Gebouwde bestanden zijn onveranderlijk
   if (url.pathname.startsWith("/_next/static/")) {
@@ -79,7 +102,10 @@ self.addEventListener("fetch", (event) => {
           }
           return res;
         })
-        .catch(async () => (await caches.match(req)) ?? (await caches.match("/mijn-reis")) ?? Response.error()),
+        .catch(
+          async () =>
+            (await caches.match(req, { ignoreSearch: true })) ?? (await caches.match("/mijn-reis")) ?? Response.error(),
+        ),
     );
   }
 });

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { formatDuration } from "@/lib/format";
-import { applyFilters, DEFAULT_FILTERS, FACILITIES, type FacilityKey } from "@/lib/search";
+import { applyFilters, DEFAULT_FILTERS, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
 import { usePlaces } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media";
 import type { PlaceSummary } from "@/lib/types";
@@ -17,13 +17,16 @@ type Status = "idle" | "locating" | "denied" | "unavailable" | "ready";
 type Drive = { km: number; seconds: number };
 
 const MAX = 30;
+// Wat je onderweg het eerst wilt weten staat vooraan
+const NEARBY_ORDER: FacilityKey[] = ["power", "dogs", "water", "dumpStation", "toilet", "shower", "wifi"];
 
 export function NearbyApp() {
   const { data: places } = usePlaces();
   const [status, setStatus] = useState<Status>("idle");
   const [pos, setPos] = useState<LatLng | null>(null);
   const [facilities, setFacilities] = useState<FacilityKey[]>([]);
-  const [openNow, setOpenNow] = useState(false);
+  // Voor "vannacht" standaard aan: verbergt alleen plekken die nu zeker dicht zijn
+  const [openNow, setOpenNow] = useState(true);
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -40,6 +43,18 @@ export function NearbyApp() {
       { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
     );
   }
+
+  // Locatie al eerder toegestaan: meteen zoeken, zonder extra tik
+  const locateRef = useRef(locate);
+  useEffect(() => {
+    locateRef.current = locate;
+  });
+  useEffect(() => {
+    navigator.permissions
+      ?.query({ name: "geolocation" as PermissionName })
+      .then((r) => r.state === "granted" && locateRef.current())
+      .catch(() => undefined);
+  }, []);
 
   // Dichtstbijzijnde plekken hemelsbreed, daarna echte rijafstand
   const nearest = useMemo(() => {
@@ -76,8 +91,10 @@ export function NearbyApp() {
 
   const sorted = useMemo(() => {
     if (!nearest) return null;
-    if (!drives) return nearest;
-    return [...nearest].sort((a, b) => (drives[a.place.slug]?.seconds ?? 1e9) - (drives[b.place.slug]?.seconds ?? 1e9));
+    const now = new Date();
+    const byDrive = drives ? [...nearest].sort((a, b) => (drives[a.place.slug]?.seconds ?? 1e9) - (drives[b.place.slug]?.seconds ?? 1e9)) : nearest;
+    // Zeker gesloten plekken onderaan
+    return [...byDrive.filter((r) => isOpenOn(r.place, now) !== false), ...byDrive.filter((r) => isOpenOn(r.place, now) === false)];
   }, [nearest, drives]);
 
   if (status !== "ready" || !pos) {
@@ -124,7 +141,7 @@ export function NearbyApp() {
             <Icon name="refresh" size={18} /> Opnieuw
           </button>
         </div>
-        <ul className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:px-0">
+        <ul className="mt-3 flex flex-wrap gap-2">
           <li className="shrink-0">
             <button
               type="button"
@@ -136,7 +153,7 @@ export function NearbyApp() {
               Nu open
             </button>
           </li>
-          {FACILITIES.map((f) => {
+          {NEARBY_ORDER.map((key) => FACILITIES.find((f) => f.key === key)!).map((f) => {
             const on = facilities.includes(f.key);
             return (
               <li key={f.key} className="shrink-0">
@@ -168,6 +185,7 @@ export function NearbyApp() {
                 : driveError
                   ? `${list.length} dichtstbijzijnde plekken. Rijtijden zijn even niet beschikbaar; we tonen de afstand hemelsbreed.`
                   : `${list.length} plekken gevonden. Rijtijden berekenen…`}
+          {openNow && list.length > 0 && " Plekken die nu dicht zijn, laten we weg."}
         </p>
         {!places && <CardSkeleton />}
         <ul className="mt-3 space-y-3">

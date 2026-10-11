@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { applyFilters, DEFAULT_FILTERS, FACILITIES, type Filters } from "@/lib/search";
+import { applyFilters, DEFAULT_FILTERS, FACILITIES, relaxations, type Filters } from "@/lib/search";
 import { KIND_LABEL, type PlaceKind, type PlaceSummary } from "@/lib/types";
 import { Sheet } from "./sheet";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
@@ -66,21 +66,12 @@ export function FilterSheet({
   const count = useMemo(() => (places ? applyFilters(places, draft).length : null), [places, draft]);
   const set = (patch: Partial<Filters>) => setDraft((d) => ({ ...d, ...patch }));
   const knownLength = useMemo(() => places?.filter((p) => p.maxLengthM !== undefined).length ?? 0, [places]);
-  // Bij nul resultaten: welk ene filter levert het meeste op als je het weghaalt?
-  const suggestion = useMemo(() => {
-    if (!places || count !== 0) return null;
-    const options: { label: string; next: Filters }[] = [
-      ...draft.facilities.map((f) => ({ label: FACILITIES.find((x) => x.key === f)!.label, next: { ...draft, facilities: draft.facilities.filter((x) => x !== f) } })),
-      ...draft.kinds.map((k) => ({ label: KIND_LABEL[k], next: { ...draft, kinds: draft.kinds.filter((x) => x !== k) } })),
-      ...(draft.free ? [{ label: "Gratis", next: { ...draft, free: false } }] : []),
-      ...(draft.maxPrice ? [{ label: `Tot € ${draft.maxPrice}`, next: { ...draft, maxPrice: undefined } }] : []),
-      ...(draft.minLength ? [{ label: `${draft.minLength} m`, next: { ...draft, minLength: undefined } }] : []),
-      ...(draft.openNow ? [{ label: "Nu open", next: { ...draft, openNow: false } }] : []),
-      ...(draft.minScore ? [{ label: `Score ${draft.minScore}+`, next: { ...draft, minScore: undefined } }] : []),
-    ];
-    const best = options.map((o) => ({ ...o, n: applyFilters(places, o.next).length })).sort((a, b) => b.n - a.n)[0];
-    return best && best.n > 0 ? best : null;
-  }, [places, draft, count]);
+  // Bij nul resultaten: welke ene verruiming levert het meeste op?
+  const suggestion = useMemo(() => (places && count === 0 ? (relaxations(places, draft)[0] ?? null) : null), [places, draft, count]);
+  const unknownPriceCount = useMemo(
+    () => (places && (draft.free || draft.maxPrice) ? applyFilters(places, { ...draft, priceUnknown: true }).length - applyFilters(places, { ...draft, priceUnknown: false }).length : 0),
+    [places, draft],
+  );
   const toggleIn = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
   return (
@@ -97,7 +88,7 @@ export function FilterSheet({
               <>
                 {" "}
                 <button type="button" onClick={() => setDraft(suggestion.next)} className="font-semibold text-forest underline">
-                  Zonder &quot;{suggestion.label}&quot;: {suggestion.n} {suggestion.n === 1 ? "plek" : "plekken"}
+                  {suggestion.label}: {suggestion.count} {suggestion.count === 1 ? "plek" : "plekken"}
                 </button>
               </>
             )}
@@ -162,6 +153,20 @@ export function FilterSheet({
             </Toggle>
           ))}
         </div>
+        {(draft.free || draft.maxPrice) && (
+          <label className="mt-3 flex min-h-11 items-center gap-3">
+            <input
+              type="checkbox"
+              checked={draft.priceUnknown}
+              onChange={(e) => set({ priceUnknown: e.target.checked })}
+              className="h-5 w-5 accent-[var(--forest)]"
+            />
+            <span>
+              Ook plekken waarvan de prijs onbekend is
+              {unknownPriceCount > 0 && <span className="text-muted"> ({unknownPriceCount})</span>}
+            </span>
+          </label>
+        )}
       </Section>
 
       <Section title="Soort plek">
@@ -192,7 +197,7 @@ export function FilterSheet({
         <div className="grid gap-2">
           <Toggle pressed={draft.openNow} onClick={() => set({ openNow: !draft.openNow })}>
             <Sign name="calendar" size={30} state={draft.openNow ? "on" : "unknown"} />
-            Nu open (volgens seizoen)
+            Verberg plekken die nu dicht zijn
           </Toggle>
           {showScore && (
             <div className="grid grid-cols-3 gap-2">

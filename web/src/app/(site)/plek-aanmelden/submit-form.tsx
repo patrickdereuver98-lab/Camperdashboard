@@ -34,7 +34,11 @@ export function SubmitForm() {
         plaats: f.get("town"),
         provincie: f.get("province"),
         adres: f.get("address"),
-        website: f.get("website"),
+        website: (() => {
+          // "www.camping.nl" is ook goed: we zetten er zelf https:// voor
+          const w = String(f.get("website") ?? "").trim();
+          return w && !/^https?:\/\//i.test(w) ? `https://${w}` : w;
+        })(),
         telefoon: f.get("phone"),
         prijs_per_nacht: f.get("price"),
         aantal_plekken: f.get("capacity"),
@@ -109,7 +113,7 @@ export function SubmitForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block font-semibold">Website</span>
-            <input name="website" type="url" placeholder="https://" className={field} />
+            <input name="website" type="text" inputMode="url" autoCapitalize="off" placeholder="www.voorbeeld.nl" className={field} />
           </label>
           <label className="block">
             <span className="mb-1.5 block font-semibold">Telefoon</span>

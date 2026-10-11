@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { applyFilters, filtersToQuery, parseFilters, refinementCount, type Filters, type SortKey } from "@/lib/search";
+import { applyFilters, filtersToQuery, parseFilters, refinementCount, relaxations, type Filters, type SortKey } from "@/lib/search";
 import { usePlaces } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
@@ -13,7 +13,7 @@ import { CardSkeleton, PlaceCard } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { FACILITIES } from "@/lib/search";
-import { KIND_LABEL } from "@/lib/types";
+import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 
 const PAGE = 20;
 
@@ -33,7 +33,8 @@ function activeChips(f: Filters): { label: string; without: Filters }[] {
   if (f.free) chips.push({ label: "Gratis", without: { ...f, free: false } });
   if (f.maxPrice) chips.push({ label: `Tot € ${f.maxPrice}`, without: { ...f, maxPrice: undefined } });
   if (f.minLength) chips.push({ label: `Camper ${f.minLength} m`, without: { ...f, minLength: undefined } });
-  if (f.openNow) chips.push({ label: "Nu open", without: { ...f, openNow: false } });
+  if (f.openNow) chips.push({ label: "Zonder gesloten plekken", without: { ...f, openNow: false } });
+  if (f.priceUnknown && (f.free || f.maxPrice)) chips.push({ label: "Ook onbekende prijs", without: { ...f, priceUnknown: false } });
   if (f.minScore) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
   return chips;
 }
@@ -167,7 +168,7 @@ export function SearchApp() {
               ))}
             </div>
           )}
-          {results && results.length === 0 && <Empty filters={filters} onChange={update} />}
+          {results && places && results.length === 0 && <Empty filters={filters} places={places} onChange={update} />}
           {results && results.length > 0 && <Results key={key} results={results} hovered={hovered} onHover={setHovered} />}
         </section>
       </div>
@@ -231,28 +232,22 @@ function Results({
   );
 }
 
-function Empty({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
-  const options: { label: string; next: Filters }[] = [];
-  if (filters.center && filters.radiusKm < 100) options.push({ label: `Zoek binnen ${filters.radiusKm * 2} km`, next: { ...filters, radiusKm: filters.radiusKm * 2 } });
-  if (refinementCount(filters) > 0)
-    options.push({
-      label: "Wis alle filters",
-      next: { ...filters, facilities: [], kinds: [], free: false, maxPrice: undefined, minLength: undefined, openNow: false, minScore: undefined },
-    });
-  if (filters.province || filters.center) options.push({ label: "Zoek in heel Nederland", next: { ...filters, where: undefined, center: undefined, province: undefined } });
+function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceSummary[]; onChange: (f: Filters) => void }) {
+  // Concrete alternatieven met het aantal plekken dat ze opleveren
+  const options = relaxations(places, filters).slice(0, 4);
   return (
     <div className="mt-6 rounded-2xl bg-surface p-6 outline-1 outline-line outline">
       <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
-      <p className="mt-2 text-ink-2">We tonen alleen plekken waarvan de gegevens compleet zijn. Met minder filters of een grotere afstand vind je vaak wel iets.</p>
+      <p className="mt-2 text-ink-2">{options.length ? "Met één aanpassing vind je wel iets:" : "Probeer een andere plaats of streek."}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {options.map((o) => (
           <button
             key={o.label}
             type="button"
             onClick={() => onChange(o.next)}
-            className="h-11 rounded-xl border-2 border-line px-4 font-semibold hover:border-forest hover:text-forest"
+            className="min-h-11 rounded-xl border-2 border-line px-4 font-semibold hover:border-forest hover:text-forest"
           >
-            {o.label}
+            {o.label} <span className="font-normal text-muted">({o.count})</span>
           </button>
         ))}
       </div>

@@ -30,7 +30,7 @@ export default async function AboutPage() {
           <li>De website van de plek zelf. We lezen openbare informatie en respecteren robots.txt.</li>
           <li>Meldingen en reviews van camperaars en eigenaren, die we eerst controleren.</li>
         </ul>
-        <p>Bij elke plek staat wanneer de gegevens voor het laatst zijn gecontroleerd.</p>
+        <p>Bij elke plek staat waar de gegevens vandaan komen en wanneer ze voor het laatst zijn opgehaald.</p>
       </Section>
       <Section title="Onafhankelijk">
         <p>

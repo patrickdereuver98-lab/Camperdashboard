@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
   const { slug } = await params;
   const place = await getPlace(slug);
   if (!place) return { title: "Plek niet gevonden" };
-  const price = place.priceEur === undefined ? "" : place.priceEur === 0 ? "Gratis. " : `Vanaf ${eur(place.priceEur)} per nacht. `;
+  const price = place.priceEur === undefined ? "" : place.priceEur === 0 ? "Gratis. " : `${place.priceFrom ? "Vanaf " : ""}${eur(place.priceEur)} per nacht. `;
   return {
     title: `${place.name}, ${place.town}`,
     description: `${place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in ${place.town} (${place.province}). ${price}Bekijk voorzieningen, foto's, reviews en de route.`,
@@ -46,7 +46,7 @@ function keyFacts(p: Place): Fact[] {
       sign: "calendar",
       label: "Open",
       value: p.openAllYear ? "Hele jaar" : (p.season ?? "Onbekend"),
-      known: p.openAllYear !== undefined || !!p.season,
+      known: p.openAllYear === true || !!p.season,
     },
     {
       sign: "length",
@@ -300,15 +300,14 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <Icon name="phone" size={20} />
             </a>
           )}
-          {place.website ? (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
-              Website
-            </a>
-          ) : (
-            <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
-              <Icon name="route" size={19} /> Route
+          {place.website && (
+            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`Website van ${place.name}`} className="grid h-12 w-12 place-items-center rounded-xl border-2 border-line">
+              <Icon name="globe" size={20} />
             </a>
           )}
+          <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center gap-2 rounded-xl bg-forest px-4 font-semibold text-on-forest">
+            <Icon name="route" size={19} /> Route
+          </a>
         </div>
       </div>
     </article>
