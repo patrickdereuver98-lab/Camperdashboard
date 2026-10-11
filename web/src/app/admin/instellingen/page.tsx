@@ -18,7 +18,7 @@ export default function SettingsPage() {
     return {
       contact: (map.contact as Settings["contact"]) ?? { email: "", response_days: 2 },
       announcement: (map.announcement as Settings["announcement"]) ?? { text: "", enabled: false },
-      publish_threshold: Number(map.publish_threshold ?? 0.8),
+      publish_threshold: Number(map.publish_threshold ?? 0.7),
     };
   }, [data]);
   const [edited, setS] = useState<Settings | null>(null);
@@ -76,10 +76,10 @@ export default function SettingsPage() {
           <Card className="space-y-3">
             <h2 className="font-display text-lg font-semibold">Publicatiedrempel</h2>
             <p className="text-sm text-muted">
-              Een plek gaat automatisch online als minstens dit deel van de 15 kernvelden met echte data is ingevuld. Plekken die je handmatig hebt vastgezet blijven zoals ze zijn.
+              Een plek gaat automatisch online als de harde eisen kloppen (website of telefoon, en minstens twee van prijs, openingsperiode en stroom) en de gewogen score minstens deze drempel haalt. Gewichten: prijs en openingsperiode 3, stroom, contact en foto 2, water en lozen 1,5, toilet, honden, beschrijving en echte naam 1, douche en aantal plekken 0,5. Plekken die je handmatig hebt vastgezet blijven zoals ze zijn.
             </p>
             <label className="flex items-center gap-3">
-              <input type="range" min={0.6} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--forest)]" />
+              <input type="range" min={0.5} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--forest)]" />
               <span className="w-14 text-right font-display text-xl font-semibold tabular-nums">{Math.round(s.publish_threshold * 100)}%</span>
             </label>
             <p className="text-sm text-muted">Na opslaan: klik op &quot;Drempel toepassen&quot; hieronder om bestaande plekken bij te werken.</p>

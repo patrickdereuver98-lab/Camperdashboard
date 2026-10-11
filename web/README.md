@@ -34,7 +34,8 @@ Zonder internet (bijvoorbeeld in CI) bouwen met de meegeleverde snapshot: `VRIJS
 
 Alle plekken komen uit OpenStreetMap en worden aangevuld met feiten van de eigen website van de plek.
 Er wordt niets geschat of verzonnen: een veld zonder bron blijft leeg en de site toont "onbekend".
-Een plek gaat pas online als minstens 80% van de 15 kernvelden bekend is (instelbaar in `/admin/instellingen`).
+Een plek gaat pas online als er contact is, minstens twee van prijs/openingsperiode/stroom bekend zijn en de
+gewogen score minstens 70% is (instelbaar in `/admin/instellingen`, uitleg in de handleiding).
 Meer uitleg: [`../docs/HANDLEIDING.md`](../docs/HANDLEIDING.md).
 
 Snapshot verversen (na een `select public.export_snapshot();` in de Supabase SQL-editor, uitvoer opgeslagen als bestand):

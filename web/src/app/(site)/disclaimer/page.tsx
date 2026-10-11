@@ -9,7 +9,7 @@ export default function DisclaimerPage() {
       <Section title="Informatie">
         <p>
           De gegevens op VrijStaan komen uit OpenStreetMap, van de websites van de plekken en van gebruikers. We controleren
-          ze zo goed mogelijk en tonen alleen plekken waarvan minstens 80% van de belangrijkste gegevens bekend is. Toch
+          ze zo goed mogelijk en tonen alleen plekken waarvan de belangrijkste gegevens bekend zijn. Toch
           kunnen prijzen, openingstijden en voorzieningen afwijken.
         </p>
       </Section>

@@ -110,9 +110,12 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
    Ontkenningen ("geen honden") gaan altijd voor. `robots.txt` wordt gerespecteerd.
 3. **Volgorde van gezag**: wat jij in beheer invult > de eigen website (voor prijs en seizoen) > OpenStreetMap.
    Komt een waarde van een website en staat die er bij een volgende controle niet meer, dan wordt hij gewist.
-4. **Publiceren**: een plek gaat automatisch online zodra minstens 80% van de 15 kernvelden bekend is
-   (naam, soort, plaats, prijs, stroom, water, lozen, toilet, douche, honden, aantal plekken, seizoen,
-   contact, foto, beschrijving). Drempel aanpassen kan in **Instellingen**.
+4. **Publiceren**: een plek gaat automatisch online als:
+   - er een website of telefoonnummer is, én
+   - minstens twee van de drie beslisfeiten bekend zijn: prijs, openingsperiode en stroom, én
+   - de gewogen score minstens 70% is. Gewichten (20 punten): prijs 3, openingsperiode 3, stroom 2, contact 2,
+     foto 2, water 1,5, lozen 1,5, toilet 1, honden 1, beschrijving 1, echte naam 1, douche 0,5, aantal plekken 0,5.
+   Wifi, maximale lengte, ondergrond en reserveren worden getoond maar tellen niet mee. Drempel aanpassen kan in **Instellingen**.
 
 Automatische taken (pg_cron in Supabase):
 

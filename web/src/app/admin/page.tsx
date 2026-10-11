@@ -4,7 +4,18 @@ import Link from "next/link";
 import { Badge, Card, ErrorNote, PageTitle, db, secondary, useQuery, when } from "./ui";
 
 type Overview = {
-  places: { total: number; published: number; draft: number; hidden: number; locked: number; near: number; with_website: number };
+  places: {
+    total: number;
+    published: number;
+    draft: number;
+    hidden: number;
+    locked: number;
+    near: number;
+    with_website: number;
+    blocked_contact: number;
+    blocked_facts: number;
+    blocked_score: number;
+  };
   buckets: { from: number; count: number }[];
   coverage: Record<string, number>;
   kinds: Record<string, number> | null;
@@ -49,7 +60,7 @@ export default function Dashboard() {
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Gepubliceerd" value={o.places.published} sub={`van ${o.places.total.toLocaleString("nl-NL")} in de database`} />
-            <Stat label="Bijna compleet" value={o.places.near} sub="70 tot 80% ingevuld" />
+            <Stat label="Bijna online" value={o.places.near} sub="score 60%+, nog niet gepubliceerd" />
             <Stat label="Open tickets" value={o.support.open_tickets} href="/admin/support" alert={o.support.open_tickets > 0} />
             <Stat label="Reviews te keuren" value={o.support.pending_reviews} href="/admin/reviews" alert={o.support.pending_reviews > 0} />
             <Stat label="Nieuwe inzendingen" value={o.support.new_submissions} href="/admin/inzendingen" alert={o.support.new_submissions > 0} />
@@ -61,10 +72,15 @@ export default function Dashboard() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <h2 className="font-display text-lg font-semibold">Volledigheid van de data</h2>
-              <p className="text-sm text-muted">Een plek gaat automatisch online vanaf de drempel in Instellingen.</p>
+              <p className="text-sm text-muted">Gewogen score; een plek gaat online vanaf de drempel in Instellingen en als de harde eisen kloppen.</p>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
+                <div className="rounded-xl bg-sunken p-2"><dt className="text-muted">Geen contact</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_contact}</dd></div>
+                <div className="rounded-xl bg-sunken p-2"><dt className="text-muted">Mist beslisfeiten</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_facts}</dd></div>
+                <div className="rounded-xl bg-sunken p-2"><dt className="text-muted">Score te laag</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_score}</dd></div>
+              </dl>
               <ul className="mt-4 space-y-2">
                 {[...o.buckets].reverse().map((b) => (
-                  <Bar key={b.from} label={`${Math.round(b.from * 100)}%+`} value={b.count} max={o.places.total} tone={b.from >= 0.8 ? "green" : b.from >= 0.7 ? "yellow" : "muted"} />
+                  <Bar key={b.from} label={`${Math.round(b.from * 100)}%+`} value={b.count} max={o.places.total} tone={b.from >= 0.7 ? "green" : b.from >= 0.6 ? "yellow" : "muted"} />
                 ))}
               </ul>
             </Card>

@@ -18,9 +18,10 @@ export default async function AboutPage() {
       </Section>
       <Section title="Alleen complete plekken">
         <p>
-          We tonen op dit moment {stats.total.toLocaleString("nl-NL")} plekken. Een plek komt pas online als minstens 80% van de 15
-          belangrijkste gegevens bekend is, zoals prijs, voorzieningen, seizoen, contact en een foto. Wat we niet zeker
-          weten, laten we leeg. We vullen nooit iets in op basis van een aanname.
+          We tonen op dit moment {stats.total.toLocaleString("nl-NL")} plekken. Een plek komt pas online als we een website of
+          telefoonnummer hebben, minstens twee van de drie beslisfeiten kennen (prijs, openingsperiode en stroom) en in totaal
+          minstens 70% weten van wat camperaars willen weten. Prijs en openingsperiode tellen daarbij het zwaarst. Wat we niet
+          zeker weten, laten we leeg. We vullen nooit iets in op basis van een aanname.
         </p>
       </Section>
       <Section title="Waar de gegevens vandaan komen">

@@ -124,7 +124,7 @@ export default async function Home() {
             {
               sign: "reserve" as SignName,
               title: "Alleen complete plekken",
-              text: "We tonen een plek pas als minstens 80% van de belangrijkste gegevens bekend is, uit OpenStreetMap en de eigen website van de plek. Wat we niet weten, zetten we er eerlijk bij.",
+              text: "We tonen een plek pas als contact en minstens twee van prijs, openingsperiode en stroom bekend zijn, uit OpenStreetMap en de eigen website van de plek. Wat we niet weten, zetten we er eerlijk bij.",
             },
             {
               sign: "length" as SignName,
