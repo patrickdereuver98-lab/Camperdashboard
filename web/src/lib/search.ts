@@ -114,7 +114,7 @@ export function refinementCount(f: Filters): number {
 const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 /** Is de plek op `date` open volgens het seizoen? `undefined` = onbekend. */
-function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): boolean | undefined {
+export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): boolean | undefined {
   if (p.openAllYear) return true;
   if (!p.season) return undefined;
   const m = /(?:(\d{1,2}) )?([a-z]+) – (?:(\d{1,2}) )?([a-z]+)/.exec(p.season.toLowerCase());
@@ -125,6 +125,19 @@ function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Da
   const start = new Date(date.getFullYear(), from, Number(m[1] ?? 1));
   const end = new Date(date.getFullYear(), to, Number(m[3] ?? new Date(date.getFullYear(), to + 1, 0).getDate()), 23, 59);
   return start <= end ? date >= start && date <= end : date >= start || date <= end;
+}
+
+const MONTH_SHORT = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+
+/** Korte status voor kaarten: alleen als het seizoen bekend is */
+export function openStatus(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): { open: boolean; label: string } | undefined {
+  if (p.openAllYear) return { open: true, label: "Hele jaar open" };
+  const open = isOpenOn(p, date);
+  if (open === undefined || !p.season) return undefined;
+  const [from, to] = p.season.split(" – ");
+  if (open) return { open: true, label: `Open t/m ${to}` };
+  const month = MONTH_SHORT.find((m) => from.toLowerCase().includes(m));
+  return { open: false, label: month ? `Gesloten tot ${month}` : "Nu gesloten" };
 }
 
 // ── Toepassen ───────────────────────────────────────────────────────────────

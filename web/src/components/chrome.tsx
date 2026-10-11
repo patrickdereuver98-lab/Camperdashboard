@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useOffline } from "next/offline";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useTrip } from "@/lib/store";
 import { track } from "@/lib/track";
 import { Icon, Logo, type IconName } from "./icons";
@@ -60,7 +60,7 @@ function HeaderView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
   if (pathname.startsWith("/admin")) return null;
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface">
       <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 rounded-lg bg-signal px-3 py-2 font-semibold text-on-signal">
         Naar de inhoud
       </a>
@@ -114,9 +114,13 @@ function OfflineBar() {
 
 function TabBarView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
-  if (pathname.startsWith("/admin")) return null;
+  // Op een plekpagina neemt de actiebalk (prijs, bewaren, website) de onderrand over
+  if (pathname.startsWith("/admin") || pathname.startsWith("/plek/")) return null;
   const tabs: { href: string; label: string; icon: IconName }[] = [{ href: "/", label: "Start", icon: "home" }, ...NAV];
   return (
+    <>
+    {/* Ruimte zodat de vaste tabbalk geen inhoud bedekt */}
+    <div aria-hidden="true" className="h-[calc(64px+env(safe-area-inset-bottom))] shrink-0 md:hidden" />
     <nav
       aria-label="Hoofdmenu"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
@@ -141,6 +145,7 @@ function TabBarView({ pathname }: { pathname: string }) {
         })}
       </ul>
     </nav>
+    </>
   );
 }
 
@@ -164,4 +169,50 @@ function RuntimeLive() {
     }
   }, []);
   return null;
+}
+
+/** Korte bevestiging na bewaren, met een link naar Mijn reis */
+export const SAVED_EVENT = "vrijstaan:bewaard";
+
+export function SaveToast() {
+  return (
+    <Suspense fallback={null}>
+      <SaveToastLive />
+    </Suspense>
+  );
+}
+
+function SaveToastLive() {
+  const [toast, setToast] = useState<{ id: number; name?: string } | null>(null);
+  const pathname = usePathname();
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const show = (e: Event) => {
+      setToast({ id: Date.now(), name: (e as CustomEvent<{ name?: string }>).detail?.name });
+      clearTimeout(timer);
+      timer = setTimeout(() => setToast(null), 3200);
+    };
+    window.addEventListener(SAVED_EVENT, show);
+    return () => {
+      window.removeEventListener(SAVED_EVENT, show);
+      clearTimeout(timer);
+    };
+  }, []);
+  if (!toast || pathname.startsWith("/mijn-reis")) return null;
+  const onDetail = pathname.startsWith("/plek/");
+  return (
+    <div
+      key={toast.id}
+      role="status"
+      className={`animate-toast fixed left-1/2 z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-2xl bg-ink py-2 pr-2 pl-4 text-surface shadow-lift md:bottom-6 ${
+        onDetail ? "bottom-[calc(88px+env(safe-area-inset-bottom))]" : "bottom-[calc(76px+env(safe-area-inset-bottom))]"
+      }`}
+    >
+      <Icon name="heart" size={20} filled className="shrink-0 text-signal" />
+      <span className="min-w-0 flex-1 truncate font-semibold">Bewaard in Mijn reis</span>
+      <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-xl px-3 font-semibold text-signal underline">
+        Bekijk
+      </Link>
+    </div>
+  );
 }

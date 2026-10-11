@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, ViewTransition } from "react";
-import { FACILITIES } from "@/lib/search";
+import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
+import { FACILITIES, openStatus } from "@/lib/search";
 import { formatKm } from "@/lib/geo";
 import { priceLabel, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
+import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
@@ -20,6 +21,7 @@ export function PlacePhoto({
   town,
   className = "",
   sizes = "small",
+  onFail,
 }: {
   src?: string;
   alt: string;
@@ -27,12 +29,23 @@ export function PlacePhoto({
   town?: string;
   className?: string;
   sizes?: "small" | "large";
+  onFail?: () => void;
 }) {
   const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  const fail = useCallback(() => {
+    setFailed(true);
+    onFail?.();
+  }, [onFail]);
+  // Een foto die al vóór de hydratatie faalde, mist het onError-event
+  useEffect(() => {
+    const img = ref.current;
+    if (img?.complete && img.naturalWidth === 0) fail();
+  }, [fail]);
   if (!src || failed) {
     return (
       <div className={`flex flex-col items-center justify-center gap-2 bg-road-tint text-road ${className}`} role="img" aria-label={alt}>
-        <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={sizes === "large" ? 72 : 44} />
+        <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={sizes === "large" ? 64 : 40} />
         {town && sizes === "large" && <span className="font-sign text-lg font-bold">{town}</span>}
       </div>
     );
@@ -41,12 +54,13 @@ export function PlacePhoto({
     // Externe foto's van de plek zelf; geen optimalisatieproxy zodat de bron zichtbaar blijft
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      ref={ref}
       src={src}
       alt={alt}
       loading="lazy"
       decoding="async"
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={fail}
       className={`object-cover ${className}`}
     />
   );
@@ -55,8 +69,7 @@ export function PlacePhoto({
 // ── Score ───────────────────────────────────────────────────────────────────
 
 export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: number; size?: "md" | "lg" }) {
-  if (!avg || !count)
-    return <span className="text-sm text-muted">{size === "lg" ? "Nog geen reviews" : "Nieuw"}</span>;
+  if (!avg || !count) return size === "lg" ? <span className="text-sm text-muted">Nog geen reviews</span> : null;
   return (
     <span className="flex items-center gap-2">
       <span
@@ -85,7 +98,10 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
     e.preventDefault();
     e.stopPropagation();
     trip.toggle(slug);
-    if (!saved) track("save", { slug });
+    if (!saved) {
+      track("save", { slug });
+      window.dispatchEvent(new CustomEvent("vrijstaan:bewaard"));
+    }
   };
   if (variant === "full")
     return (
@@ -132,69 +148,97 @@ function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max
 
 // ── Resultaatkaart ──────────────────────────────────────────────────────────
 
+/** Seizoensstatus als klein label; alleen als het seizoen bekend is */
+export function OpenChip({ place }: { place: Pick<PlaceSummary, "openAllYear" | "season"> }) {
+  // "Nu open" hangt af van de datum van de bezoeker: pas na hydratatie berekenen
+  const hydrated = useHydrated();
+  const status = hydrated ? openStatus(place) : undefined;
+  if (!status) return null;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${status.open ? "text-polder" : "text-alert"}`}>
+      <span className={`h-2 w-2 rounded-full ${status.open ? "bg-polder" : "bg-alert"}`} aria-hidden="true" />
+      {status.label}
+    </span>
+  );
+}
+
 export function PlaceCard({
   place,
   km,
+  distanceLabel,
   active,
   onHover,
   layout = "row",
 }: {
   place: PlaceSummary;
   km?: number;
+  /** Eigen afstandstekst (bijv. echte rijtijd); vervangt de hemelsbrede afstand */
+  distanceLabel?: React.ReactNode;
   active?: boolean;
   onHover?: (slug: string | null) => void;
   layout?: "row" | "stack";
 }) {
   const stack = layout === "stack";
+  const hasPhoto = Boolean(place.imageUrl);
+  const distance =
+    distanceLabel ??
+    (km !== undefined && (
+      <span className="inline-flex items-center gap-1">
+        <Icon name="locate" size={15} className="shrink-0" /> {formatKm(km)} hemelsbreed
+      </span>
+    ));
   return (
     <article
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      className={`group relative overflow-hidden rounded-2xl bg-surface transition-[box-shadow,outline-color] ${
+      className={`group relative flex overflow-hidden rounded-2xl bg-surface transition-[box-shadow,outline-color] ${
         active ? "outline-2 outline-road" : "outline-1 outline-line"
-      } outline hover:shadow-lift ${stack ? "" : "sm:flex"}`}
+      } outline hover:shadow-lift ${stack ? "flex-col" : "flex-row"}`}
     >
-      <div className={`relative shrink-0 ${stack ? "aspect-[16/10]" : "aspect-[16/10] sm:aspect-auto sm:w-64"}`}>
+      <div
+        className={`relative shrink-0 ${
+          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-28 self-stretch min-[400px]:w-32 sm:w-60"
+        }`}
+      >
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
         </ViewTransition>
-        <div className="absolute top-3 right-3">
-          <SaveButton slug={place.slug} />
-        </div>
         {place.priceEur === 0 && (
-          <span className="absolute top-3 left-3 rounded-md bg-signal px-2 py-1 font-sign text-sm font-bold text-on-signal">Gratis</span>
+          <span className="absolute top-2 left-2 rounded-md bg-signal px-2 py-0.5 font-sign text-sm font-bold text-on-signal">Gratis</span>
         )}
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-muted">{place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}</p>
-            <h3 className="font-sign text-xl leading-snug font-bold text-ink">
-              <Link
-                href={`/plek/${place.slug}`}
-                className="after:absolute after:inset-0 focus-visible:outline-none"
-                prefetch={false}
-              >
-                {place.name}
-              </Link>
-            </h3>
-            <p className="mt-0.5 flex items-center gap-1 text-ink-2">
-              <Icon name="pin" size={16} className="shrink-0 text-muted" />
-              <span className="truncate">
-                {place.town}, {place.province}
-              </span>
-            </p>
-            {km !== undefined && <p className="mt-0.5 text-sm font-semibold text-road">{formatKm(km)} hemelsbreed</p>}
-          </div>
-          <div className="shrink-0">
-            <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />
-          </div>
+      {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
+      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-2 right-2"}`}>
+        <SaveButton slug={place.slug} />
+      </div>
+      <div className={`flex min-w-0 flex-1 flex-col gap-2 ${stack ? "p-4" : "p-3 sm:p-4"}`}>
+        <div className={`min-w-0 ${stack ? "pr-12" : "pr-11"}`}>
+          <p className="text-sm text-muted">{place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}</p>
+          <h3 className={`font-sign leading-snug font-bold text-ink ${stack ? "text-xl" : "text-lg sm:text-xl"}`}>
+            <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
+              {place.name}
+            </Link>
+          </h3>
+          <p className="mt-0.5 flex items-center gap-1 text-sm text-ink-2 sm:text-base">
+            <Icon name="pin" size={15} className="shrink-0 text-muted" />
+            <span className="truncate">
+              {place.town}, {place.province}
+            </span>
+          </p>
+          {distance && <p className="mt-0.5 text-sm font-semibold text-road">{distance}</p>}
         </div>
-        <div className="mt-auto flex items-end justify-between gap-3">
-          <FacilitySigns place={place} />
-          <div className="ml-auto text-right">
-            <p className="font-sign text-2xl leading-none font-extrabold text-ink">{priceLabel(place.priceEur)}</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <OpenChip place={place} />
+          <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />
+        </div>
+        <div className="mt-auto flex items-end justify-between gap-2">
+          <FacilitySigns place={place} max={stack ? 5 : 4} size={stack ? 28 : 26} />
+          <div className="ml-auto shrink-0 text-right">
+            {place.priceFrom && <p className="text-xs text-muted">vanaf</p>}
+            <p className={`font-sign leading-none font-extrabold ${place.priceEur === undefined ? "text-base text-muted" : "text-2xl text-ink"}`}>
+              {priceLabel(place.priceEur)}
+            </p>
             {place.priceEur !== undefined && place.priceEur > 0 && <p className="mt-1 text-xs text-muted">per nacht</p>}
           </div>
         </div>
@@ -205,9 +249,9 @@ export function PlaceCard({
 
 export function CardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl bg-surface outline-1 outline-line outline sm:flex">
-      <div className="aspect-[16/10] animate-pulse bg-sunken sm:aspect-auto sm:h-48 sm:w-64" />
-      <div className="flex-1 space-y-3 p-4">
+    <div className="flex overflow-hidden rounded-2xl bg-surface outline-1 outline-line outline">
+      <div className="h-40 w-28 shrink-0 animate-pulse bg-sunken min-[400px]:w-32 sm:h-48 sm:w-60" />
+      <div className="flex-1 space-y-3 p-3 sm:p-4">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
         <div className="h-6 w-3/4 animate-pulse rounded bg-sunken" />
         <div className="h-4 w-1/2 animate-pulse rounded bg-sunken" />

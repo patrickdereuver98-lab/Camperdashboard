@@ -22,6 +22,7 @@ export function NearbyApp() {
   const [status, setStatus] = useState<Status>("idle");
   const [pos, setPos] = useState<LatLng | null>(null);
   const [facilities, setFacilities] = useState<FacilityKey[]>([]);
+  const [openNow, setOpenNow] = useState(false);
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -42,12 +43,12 @@ export function NearbyApp() {
   // Dichtstbijzijnde plekken hemelsbreed, daarna echte rijafstand
   const nearest = useMemo(() => {
     if (!places || !pos) return null;
-    return applyFilters(places, { ...DEFAULT_FILTERS, facilities })
+    return applyFilters(places, { ...DEFAULT_FILTERS, facilities, openNow })
       .map((r) => ({ place: r.place, km: distanceKm(pos, r.place) }))
       .filter((r) => r.km < 80)
       .sort((a, b) => a.km - b.km)
       .slice(0, MAX);
-  }, [places, pos, facilities]);
+  }, [places, pos, facilities, openNow]);
 
   useEffect(() => {
     if (!pos || !nearest?.length) return;
@@ -123,6 +124,17 @@ export function NearbyApp() {
           </button>
         </div>
         <ul className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:px-0">
+          <li className="shrink-0">
+            <button
+              type="button"
+              aria-pressed={openNow}
+              onClick={() => setOpenNow((o) => !o)}
+              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-road aria-pressed:bg-road-tint aria-pressed:text-road"
+            >
+              <Sign name="calendar" size={28} state={openNow ? "on" : "unknown"} />
+              Nu open
+            </button>
+          </li>
           {FACILITIES.map((f) => {
             const on = facilities.includes(f.key);
             return (
@@ -149,7 +161,7 @@ export function NearbyApp() {
           {!places
             ? "Plekken laden…"
             : list.length === 0
-              ? "Geen plekken binnen 80 km met deze voorzieningen."
+              ? "Geen plekken binnen 80 km met deze keuzes."
               : drives
                 ? `${list.length} dichtstbijzijnde plekken, gesorteerd op rijtijd.`
                 : driveError
@@ -160,8 +172,7 @@ export function NearbyApp() {
         <ul className="mt-3 space-y-3">
           {list.map(({ place, km }) => (
             <li key={place.id}>
-              <DriveLabel drive={drives?.[place.slug]} km={km} />
-              <PlaceCard place={place as PlaceSummary} />
+              <PlaceCard place={place as PlaceSummary} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />
             </li>
           ))}
         </ul>
@@ -175,11 +186,12 @@ export function NearbyApp() {
   );
 }
 
+/** Echte rijtijd met het route-icoon; zolang die er niet is de hemelsbrede afstand met een kompaspictogram */
 function DriveLabel({ drive, km }: { drive?: Drive; km: number }) {
   return (
-    <p className="mb-1.5 flex items-center gap-1.5 pl-1 text-sm font-semibold text-road">
-      <Icon name="route" size={16} />
+    <span className="inline-flex items-center gap-1.5">
+      <Icon name={drive ? "route" : "locate"} size={15} className="shrink-0" />
       {drive ? `${formatDuration(drive.seconds)} rijden, ${formatKm(drive.km)}` : `${formatKm(km)} hemelsbreed`}
-    </p>
+    </span>
   );
 }

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible_Next, Overpass } from "next/font/google";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
-import { Header, Runtime, TabBar } from "@/components/chrome";
+import { Header, Runtime, SaveToast, TabBar } from "@/components/chrome";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SITE_URL } from "@/lib/env";
 
@@ -33,10 +33,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="nl" className={`${atkinson.variable} ${overpass.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <Header />
-        <div id="inhoud" className="flex flex-1 flex-col pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
+        <div id="inhoud" className="flex flex-1 flex-col">
           {children}
         </div>
         <TabBar />
+        <SaveToast />
         <CookieBanner />
         <Runtime />
       </body>

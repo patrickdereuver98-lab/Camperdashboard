@@ -13,7 +13,7 @@ const NL_BOUNDS: [[number, number], [number, number]] = [
 const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
 const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 
-type MapPlace = Pick<PlaceSummary, "slug" | "name" | "lat" | "lng" | "town" | "priceEur" | "imageUrl">;
+type MapPlace = Pick<PlaceSummary, "slug" | "name" | "lat" | "lng" | "town" | "priceEur" | "priceFrom" | "imageUrl">;
 
 function toGeoJSON(places: MapPlace[]) {
   return {
@@ -26,7 +26,7 @@ function toGeoJSON(places: MapPlace[]) {
         name: p.name,
         town: p.town,
         free: p.priceEur === 0,
-        price: p.priceEur === undefined ? "" : priceLabel(p.priceEur),
+        price: p.priceEur === undefined ? "" : `${priceLabel(p.priceEur)}${p.priceFrom ? "+" : ""}`,
         image: p.imageUrl ?? "",
       },
     })),

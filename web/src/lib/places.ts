@@ -2,6 +2,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
+import { isOpenOn } from "./search";
 import type { Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
@@ -65,16 +66,32 @@ export async function getPlaces(): Promise<Place[]> {
   return withFallback(
     async () =>
       (await rest<Record<string, unknown>>(`places?select=${PLACE_COLUMNS}&status=eq.published&order=slug`)).map(
-        (r) => toCamel<Place>(r),
+        (r) => normalize(toCamel<Place>(r)),
       ),
-    () => SNAP.places,
+    () => SNAP.places.map(normalize),
   );
+}
+
+/** Sommige sites geven foto-URL's met HTML-entiteiten (https&#x3A;&#x2F;…) */
+const decodeEntities = (s: string) =>
+  s.replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCharCode(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d: string) => String.fromCharCode(Number(d))).replace(/&amp;/g, "&");
+
+function normalize(p: Place): Place {
+  const photos = (p.photos ?? []).map((ph) => ({ ...ph, url: decodeEntities(ph.url) })).filter((ph) => /^https:\/\//.test(ph.url));
+  const imageUrl = p.imageUrl ? decodeEntities(p.imageUrl) : undefined;
+  return {
+    ...p,
+    photos,
+    imageUrl: imageUrl && /^https:\/\//.test(imageUrl) ? imageUrl : undefined,
+    // "vanaf € x": de laagste genoemde prijs, er zijn duurdere tarieven
+    priceFrom: p.priceEur !== undefined && p.priceEur > 0 && /^vanaf/i.test(p.priceNote ?? "") ? true : undefined,
+  };
 }
 
 const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
   "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
-  "ratingCount", "completeness",
+  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded",
 ];
 
 export function toSummary(p: Place): PlaceSummary {
@@ -144,6 +161,7 @@ export async function getStats() {
   return {
     total: places.length,
     free: places.filter((p) => p.priceEur === 0).length,
+    openNow: places.filter((p) => isOpenOn(p) === true).length,
     power: places.filter((p) => p.power).length,
     dump: places.filter((p) => p.dumpStation).length,
     dogs: places.filter((p) => p.dogs).length,

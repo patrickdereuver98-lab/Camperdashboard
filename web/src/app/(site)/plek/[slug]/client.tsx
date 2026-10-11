@@ -8,6 +8,7 @@ import { track } from "@/lib/track";
 import type { Photo, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
+import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
 
 // ── Fotogalerij met vegen ───────────────────────────────────────────────────
@@ -15,15 +16,24 @@ import { Sheet } from "@/components/sheet";
 export function Gallery({ slug, name, photos, kind, town }: { slug: string; name: string; photos: Photo[]; kind?: string; town: string }) {
   const track_ = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  // Foto's die niet laden verdwijnen uit de carrousel (geen lege dia's met "1 / 4")
+  const [failed, setFailed] = useState<string[]>([]);
+  const visible = photos.filter((p) => !failed.includes(p.url));
   const go = (i: number) => {
     const el = track_.current;
     if (!el) return;
     el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
   };
-  if (!photos.length)
+  if (!visible.length)
     return (
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
-        <PlacePhoto alt={`Geen foto van ${name}`} kind={kind} town={town} sizes="large" className="aspect-[16/10] w-full sm:aspect-[21/9] sm:rounded-2xl" />
+        <div className="flex h-28 items-center gap-4 bg-road-tint px-5 sm:h-36 sm:rounded-2xl sm:px-8" role="img" aria-label={`Nog geen foto van ${name}`}>
+          <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={56} />
+          <span className="text-road">
+            <span className="block font-sign text-xl font-bold">{town}</span>
+            <span className="block text-sm">Nog geen foto van deze plek</span>
+          </span>
+        </div>
       </ViewTransition>
     );
   return (
@@ -35,25 +45,40 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
         aria-roledescription="carrousel"
         aria-label={`Foto's van ${name}`}
       >
-        {photos.map((p, i) => (
-          <figure key={p.url} className="relative h-full w-full shrink-0 snap-center" aria-label={`Foto ${i + 1} van ${photos.length}`}>
-            {i === 0 ? (
-              <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
-                <PlacePhoto src={p.url} alt={`Foto van ${name}`} kind={kind} town={town} sizes="large" className="h-full w-full" />
-              </ViewTransition>
-            ) : (
-              <PlacePhoto src={p.url} alt={`Foto ${i + 1} van ${name}`} kind={kind} town={town} sizes="large" className="h-full w-full" />
-            )}
-            {p.credit && (
-              <figcaption className="absolute bottom-2 left-2 rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">Foto: {p.credit}</figcaption>
-            )}
-          </figure>
-        ))}
+        {visible.map((p, i) => {
+          const photo = (
+            <PlacePhoto
+              src={p.url}
+              alt={i === 0 ? `Foto van ${name}` : `Foto ${i + 1} van ${name}`}
+              kind={kind}
+              town={town}
+              sizes="large"
+              className="h-full w-full"
+              onFail={() => setFailed((f) => [...f, p.url])}
+            />
+          );
+          return (
+            <figure key={p.url} className="relative h-full w-full shrink-0 snap-center" aria-label={`Foto ${i + 1} van ${visible.length}`}>
+              {i === 0 ? (
+                <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
+                  {photo}
+                </ViewTransition>
+              ) : (
+                photo
+              )}
+              {p.credit && (
+                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">
+                  Foto: {p.credit}
+                </figcaption>
+              )}
+            </figure>
+          );
+        })}
       </div>
-      {photos.length > 1 && (
+      {visible.length > 1 && (
         <>
-          <span className="absolute right-3 bottom-3 rounded-full bg-black/60 px-3 py-1 font-sign text-sm font-bold text-white">
-            {index + 1} / {photos.length}
+          <span className="animate-fade-in-late absolute right-3 bottom-3 rounded-full bg-black/60 px-3 py-1 font-sign text-sm font-bold text-white">
+            {Math.min(index, visible.length - 1) + 1} / {visible.length}
           </span>
           <div className="absolute inset-y-0 left-2 hidden items-center sm:flex">
             <button type="button" onClick={() => go(Math.max(0, index - 1))} aria-label="Vorige foto" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-lift">
@@ -61,7 +86,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
             </button>
           </div>
           <div className="absolute inset-y-0 right-2 hidden items-center sm:flex">
-            <button type="button" onClick={() => go(Math.min(photos.length - 1, index + 1))} aria-label="Volgende foto" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-lift">
+            <button type="button" onClick={() => go(Math.min(visible.length - 1, index + 1))} aria-label="Volgende foto" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-lift">
               <Icon name="chevronRight" />
             </button>
           </div>
@@ -440,7 +465,7 @@ export function TrackView({ slug }: { slug: string }) {
   return null;
 }
 
-export function ShareButton({ title }: { title: string }) {
+export function ShareButton({ title, className = "" }: { title: string; className?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -459,7 +484,7 @@ export function ShareButton({ title }: { title: string }) {
           setTimeout(() => setCopied(false), 2000);
         }
       }}
-      className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road"
+      className={`flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road ${className}`}
     >
       <Icon name={copied ? "check" : "share"} size={19} />
       {copied ? "Link gekopieerd" : "Delen"}

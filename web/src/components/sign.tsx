@@ -78,9 +78,9 @@ export function Sign({
       aria-label={title}
       aria-hidden={title ? undefined : true}
       className={`shrink-0 ${className}`}
-      style={{ ["--sign-bg" as string]: on ? "var(--road)" : "var(--sunken)" }}
+      style={{ ["--sign-bg" as string]: on ? "var(--sign)" : "var(--sunken)" }}
     >
-      <rect width="32" height="32" rx="7" fill={on ? "var(--road)" : "var(--sunken)"} />
+      <rect width="32" height="32" rx="7" fill={on ? "var(--sign)" : "var(--sunken)"} />
       <rect x="1.6" y="1.6" width="28.8" height="28.8" rx="5.6" fill="none" stroke={on ? "#fff" : "var(--line)"} strokeWidth="1.2" />
       <g transform="translate(4 4)" color={on ? "#fff" : "var(--muted)"}>
         {GLYPHS[name]}

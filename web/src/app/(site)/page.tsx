@@ -21,28 +21,36 @@ export default async function Home() {
     .map(toSummary);
 
   const quick: { href: string; sign: SignName; label: string; count: number }[] = [
-    { href: searchHref({ free: true }), sign: "euro", label: "Gratis staan", count: stats.free },
+    { href: searchHref({ openNow: true }), sign: "calendar", label: "Nu open", count: stats.openNow },
     { href: searchHref({ facilities: ["power"] }), sign: "power", label: "Met stroom", count: stats.power },
     { href: searchHref({ facilities: ["dumpStation"] }), sign: "dump", label: "Lozen mogelijk", count: stats.dump },
     { href: searchHref({ facilities: ["dogs"] }), sign: "dog", label: "Honden welkom", count: stats.dogs },
+    { href: searchHref({ free: true }), sign: "euro", label: "Gratis staan", count: stats.free },
   ];
+  const quickShown = quick.filter((q) => q.count > 0);
 
   return (
     <>
       {/* Het bord */}
       <section className="mx-auto max-w-6xl px-3 pt-4 sm:px-6 sm:pt-8">
-        <div className="sign-panel animate-sign-in relative px-5 pt-7 pb-6 sm:px-10 sm:pt-10 sm:pb-10">
+        <div className="sign-panel animate-sign-in relative px-5 pt-5 pb-5 sm:px-10 sm:pt-10 sm:pb-10">
           <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr] lg:items-end">
             <div>
-              <h1 className="font-sign text-[2.1rem] leading-[1.08] font-extrabold sm:text-5xl lg:text-[3.4rem]">
+              <h1 className="font-sign text-[1.85rem] leading-[1.08] font-extrabold sm:text-5xl lg:text-[3.4rem]">
                 Camperplaatsen in Nederland
               </h1>
-              <p className="mt-3 max-w-xl text-lg text-on-road/90 sm:text-xl">
-                {nf.format(stats.total)} plekken met gecontroleerde prijs, voorzieningen en route. Kies waar je wilt staan.
+              <p className="mt-2 max-w-xl text-on-sign/90 sm:mt-3 sm:text-xl">
+                {nf.format(stats.total)} plekken, alleen met echte gegevens.
               </p>
             </div>
             <div className="lg:pb-1">
               <DestinationSearch />
+              <Link
+                href="/dichtbij"
+                className="mt-3 flex h-12 items-center justify-center gap-2 rounded-xl font-semibold text-on-sign ring-2 ring-white/70 transition-colors ring-inset hover:bg-white/10"
+              >
+                <Icon name="locate" size={20} /> Plekken dichtbij mij
+              </Link>
             </div>
           </div>
         </div>
@@ -50,8 +58,8 @@ export default async function Home() {
 
       {/* Snelle ingangen */}
       <section aria-label="Snel zoeken" className="mx-auto max-w-6xl px-3 pt-4 sm:px-6">
-        <ul className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:px-0">
-          {quick.map((q) => (
+        <ul className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-5">
+          {quickShown.map((q) => (
             <li key={q.label} className="shrink-0">
               <Link
                 href={q.href}
@@ -59,7 +67,7 @@ export default async function Home() {
               >
                 <Sign name={q.sign} size={38} />
                 <span>
-                  <span className="block font-semibold leading-tight">{q.label}</span>
+                  <span className="block font-semibold leading-tight whitespace-nowrap">{q.label}</span>
                   <span className="block text-sm text-muted">{nf.format(q.count)} plekken</span>
                 </span>
               </Link>
@@ -72,8 +80,8 @@ export default async function Home() {
       {featured.length > 0 && (
         <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
           <div className="mb-4 flex items-end justify-between gap-4">
-            <h2 className="font-sign text-2xl font-bold sm:text-3xl">Volledig gecontroleerd</h2>
-            <Link href="/zoeken" className="flex h-11 items-center gap-1 font-semibold text-road hover:underline">
+            <h2 className="font-sign text-2xl font-bold sm:text-3xl">Meest complete informatie</h2>
+            <Link href="/zoeken" className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-road hover:underline">
               Alle plekken <Icon name="chevronRight" size={18} />
             </Link>
           </div>
@@ -114,7 +122,7 @@ export default async function Home() {
             {
               sign: "reserve" as SignName,
               title: "Alleen complete plekken",
-              text: "We tonen een plek pas als minstens 80% van de belangrijke informatie bekend is: prijs, voorzieningen, seizoen, contact en een foto.",
+              text: "We tonen een plek pas als minstens 80% van de belangrijkste gegevens bekend is, uit OpenStreetMap en de eigen website van de plek. Wat we niet weten, zetten we er eerlijk bij.",
             },
             {
               sign: "length" as SignName,

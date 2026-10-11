@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getNearby, getPlace, getPlaces, getReviews } from "@/lib/places";
 import { searchHref } from "@/lib/search";
-import { eur, formatDate, pluralize, websiteLabel } from "@/lib/format";
+import { eur, formatDate, pluralize, priceLabel, websiteLabel } from "@/lib/format";
+import { directionsUrl } from "@/lib/geo";
 import { SITE_URL } from "@/lib/env";
-import { KIND_LABEL, type Place } from "@/lib/types";
+import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
-import { PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
+import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 
@@ -37,7 +38,7 @@ function keyFacts(p: Place): Fact[] {
     {
       sign: "euro",
       label: "Per nacht",
-      value: p.priceEur === undefined ? "Onbekend" : p.priceEur === 0 ? "Gratis" : eur(p.priceEur),
+      value: p.priceEur === undefined ? "Onbekend" : priceLabel(p.priceEur, p.priceFrom),
       known: p.priceEur !== undefined,
     },
     { sign: "spots", label: "Plekken", value: p.capacity ? String(p.capacity) : "Onbekend", known: !!p.capacity },
@@ -50,7 +51,7 @@ function keyFacts(p: Place): Fact[] {
     {
       sign: "length",
       label: "Max. lengte",
-      value: p.maxLengthM ? `${String(p.maxLengthM).replace(".", ",")} m` : "Niet vermeld",
+      value: p.maxLengthM ? `${String(p.maxLengthM).replace(".", ",")} m` : "Onbekend",
       known: !!p.maxLengthM,
     },
   ];
@@ -59,7 +60,7 @@ function keyFacts(p: Place): Fact[] {
 const FACILITY_ROWS: { key: keyof Place; sign: SignName; label: string; yes: string; no: string }[] = [
   { key: "power", sign: "power", label: "Stroom", yes: "Aanwezig", no: "Niet aanwezig" },
   { key: "water", sign: "water", label: "Water innemen", yes: "Mogelijk", no: "Niet mogelijk" },
-  { key: "dumpStation", sign: "dump", label: "Lozen", yes: "Grijs/zwart water en chemisch toilet", no: "Niet mogelijk" },
+  { key: "dumpStation", sign: "dump", label: "Lozen", yes: "Mogelijk", no: "Niet mogelijk" },
   { key: "toilet", sign: "toilet", label: "Toilet", yes: "Aanwezig", no: "Niet aanwezig" },
   { key: "shower", sign: "shower", label: "Douche", yes: "Aanwezig", no: "Niet aanwezig" },
   { key: "wifi", sign: "wifi", label: "Wifi", yes: "Aanwezig", no: "Niet aanwezig" },
@@ -93,7 +94,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   };
 
   return (
-    <article className="pb-28 md:pb-8">
+    <article className="pb-24 md:pb-8">
       <TrackView slug={place.slug} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
 
@@ -123,15 +124,20 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <Icon name="pin" size={18} className="mt-1 shrink-0 text-muted" />
               <span>
                 {address || place.town}, {place.province}{" "}
-                <a href="#ligging" className="font-semibold text-road underline">
+                <a href="#ligging" className="-my-2 inline-block py-2 font-semibold text-road underline">
                   Toon op kaart
                 </a>
               </span>
             </p>
+            <div className="mt-2">
+              <OpenChip place={place} />
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-4">
-            <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} size="lg" />
-          </div>
+          {place.ratingCount > 0 && (
+            <div className="flex shrink-0 items-center gap-4">
+              <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} size="lg" />
+            </div>
+          )}
         </header>
 
         <div className="mt-4 hidden gap-2 md:flex">
@@ -151,23 +157,46 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             </div>
           ))}
         </dl>
-        {place.priceNote && <p className="mt-2 text-sm text-muted">{place.priceNote}</p>}
+        {place.priceNote && <p className="mt-2 text-sm text-muted">Volgens de website: {place.priceNote}.</p>}
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
-          <div className="min-w-0 space-y-10">
+        {/* Contact op mobiel (op grotere schermen in de zijkolom) */}
+        {(place.website || tel || place.email) && (
+          <div className="mt-4 grid grid-cols-2 gap-2 md:hidden">
+            {place.website && (
+              <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="col-span-2 flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface font-semibold">
+                <Icon name="globe" size={19} /> {place.reservation ? "Reserveren op de website" : "Naar de website"}
+              </a>
+            )}
+            {tel && (
+              <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface font-semibold">
+                <Icon name="phone" size={19} /> Bellen
+              </a>
+            )}
+            {place.email && (
+              <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface font-semibold">
+                <Icon name="mail" size={19} /> E-mail
+              </a>
+            )}
+            <ShareButton title={place.name} className={(tel ? 1 : 0) + (place.email ? 1 : 0) === 1 ? "" : "col-span-2"} />
+          </div>
+        )}
+
+        {/* Mobiel: voorzieningen, dan route en kaart, dan de rest. Groot scherm: twee kolommen met zijkolom. */}
+        <div className="mt-8 flex flex-col gap-10 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
+          <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-1">
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">
               <h2 id="voorzieningen" className="font-sign text-2xl font-bold">Voorzieningen</h2>
-              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+              <ul className="mt-4 grid grid-cols-2 gap-2">
                 {FACILITY_ROWS.map((f) => {
                   const v = place[f.key] as boolean | undefined;
                   return (
-                    <li key={f.label} className="flex items-center gap-3 rounded-xl bg-surface p-3 outline-1 outline-line outline">
-                      <Sign name={f.sign} size={36} state={v === true ? "on" : v === false ? "off" : "unknown"} />
+                    <li key={f.label} className="flex items-center gap-2.5 rounded-xl bg-surface p-2.5 outline-1 outline-line outline sm:gap-3 sm:p-3">
+                      <Sign name={f.sign} size={32} state={v === true ? "on" : v === false ? "off" : "unknown"} />
                       <span className="min-w-0">
-                        <span className="block font-semibold">{f.label}</span>
-                        <span className={`block text-sm ${v === undefined ? "text-muted" : "text-ink-2"}`}>
-                          {v === true ? f.yes : v === false ? f.no : "Nog niet bekend"}
+                        <span className="block leading-tight font-semibold">{f.label}</span>
+                        <span className={`block text-sm leading-tight ${v === undefined ? "text-muted" : "text-ink-2"}`}>
+                          {v === true ? f.yes : v === false ? f.no : "Onbekend"}
                         </span>
                       </span>
                     </li>
@@ -187,20 +216,28 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               </section>
             )}
 
+          </div>
+
+          {/* Zijkolom: op mobiel tussen de voorzieningen en de praktische info */}
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+            <SideColumn place={place} tel={tel} nearby={nearby.map((n) => n.place)} />
+          </aside>
+
+          <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-2">
             {/* Praktisch */}
             <section aria-labelledby="praktisch">
               <h2 id="praktisch" className="font-sign text-2xl font-bold">Praktisch</h2>
               <dl className="mt-3 divide-y divide-line rounded-2xl bg-surface outline-1 outline-line outline">
                 {[
-                  ["Reserveren", place.reservation === undefined ? "Onbekend" : place.reservation ? "Mogelijk of nodig" : "Niet nodig, vol is vol"],
+                  ["Reserveren", place.reservation === undefined ? "Onbekend" : place.reservation ? "Ja" : "Nee"],
                   ["Toeristenbelasting", place.touristTaxIncluded === undefined ? "Onbekend" : place.touristTaxIncluded ? "Inbegrepen in de prijs" : "Komt bij de prijs"],
                   ["Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : "Onbekend"],
-                  ["Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : "Niet vermeld"],
+                  ["Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : "Onbekend"],
                   ["Adres", address ? `${address}, ${place.province}` : `${place.town}, ${place.province}`],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-3">
                     <dt className="text-ink-2">{k}</dt>
-                    <dd className={`text-right font-semibold ${v === "Onbekend" || v === "Niet vermeld" ? "font-normal text-muted" : ""}`}>{v}</dd>
+                    <dd className={`text-right ${v === "Onbekend" ? "text-muted" : "font-semibold"}`}>{v}</dd>
                   </div>
                 ))}
               </dl>
@@ -211,9 +248,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h2 id="reviews" className="font-sign text-2xl font-bold">Ervaringen van camperaars</h2>
-                  <div className="mt-2">
-                    <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} size="lg" />
-                  </div>
+                  {place.ratingCount > 0 && (
+                    <div className="mt-2">
+                      <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} size="lg" />
+                    </div>
+                  )}
                 </div>
                 <WriteReview placeId={place.id} placeName={place.name} />
               </div>
@@ -230,58 +269,6 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             </section>
           </div>
 
-          {/* Zijkolom */}
-          <aside className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <div className="hidden rounded-2xl bg-surface p-5 outline-1 outline-line outline md:block">
-              <p className="font-sign text-3xl font-extrabold">
-                {place.priceEur === undefined ? "Prijs onbekend" : place.priceEur === 0 ? "Gratis" : eur(place.priceEur)}
-                {place.priceEur ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
-              </p>
-              <div className="mt-4 grid gap-2">
-                {place.website && (
-                  <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-road font-semibold text-on-road hover:bg-road-deep">
-                    <Icon name="globe" size={19} /> {place.reservation ? "Reserveren op de website" : "Naar de website"}
-                  </a>
-                )}
-                {tel && (
-                  <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-road">
-                    <Icon name="phone" size={19} /> {tel}
-                  </a>
-                )}
-                {place.email && (
-                  <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-road">
-                    <Icon name="mail" size={19} /> E-mail sturen
-                  </a>
-                )}
-              </div>
-              {place.website && <p className="mt-3 text-center text-sm text-muted">{websiteLabel(place.website)}</p>}
-            </div>
-
-            <RouteCard to={{ lat: place.lat, lng: place.lng }} name={place.name} />
-
-            <section id="ligging" aria-label="Ligging" className="scroll-mt-24">
-              <PlaceMap
-                places={[place, ...nearby.map((n) => n.place)]}
-                highlight={place.slug}
-                fitKey={place.slug}
-                cluster={false}
-                className="h-72 rounded-2xl outline-1 outline-line outline"
-              />
-            </section>
-
-            <div className="rounded-2xl bg-surface p-5 text-sm text-ink-2 outline-1 outline-line outline">
-              <p className="flex items-center gap-2 font-semibold text-ink">
-                <Icon name="shield" size={18} className="text-polder" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
-              </p>
-              <p className="mt-1">
-                {place.verifiedAt ? `Laatst gecontroleerd op ${formatDate(place.verifiedAt)}. ` : ""}Bronnen: OpenStreetMap
-                {place.verifiedAt ? " en de website van de plek" : ""}.
-              </p>
-              <div className="mt-2">
-                <ReportProblem placeId={place.id} placeName={place.name} />
-              </div>
-            </div>
-          </aside>
         </div>
 
         {nearby.length > 0 && (
@@ -299,11 +286,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
       </div>
 
       {/* Vaste actiebalk op mobiel */}
-      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 border-t border-line bg-surface px-4 py-3 md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="font-sign text-xl leading-none font-extrabold">
-              {place.priceEur === undefined ? "Prijs onbekend" : place.priceEur === 0 ? "Gratis" : eur(place.priceEur)}
+            <p className={`font-sign leading-none font-extrabold ${place.priceEur === undefined ? "text-base text-muted" : "text-xl"}`}>
+              {priceLabel(place.priceEur, place.priceFrom)}
             </p>
             {!!place.priceEur && <p className="text-xs text-muted">per nacht</p>}
           </div>
@@ -318,12 +305,68 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               Website
             </a>
           ) : (
-            <a href="#ligging" className="flex h-12 items-center rounded-xl bg-road px-5 font-semibold text-on-road">
-              Route
+            <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-12 items-center gap-2 rounded-xl bg-road px-5 font-semibold text-on-road">
+              <Icon name="route" size={19} /> Route
             </a>
           )}
         </div>
       </div>
     </article>
+  );
+}
+
+function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby: PlaceSummary[] }) {
+  return (
+    <>
+      <div className="hidden rounded-2xl bg-surface p-5 outline-1 outline-line outline md:block">
+        <p className="font-sign text-3xl font-extrabold">
+          {priceLabel(place.priceEur, place.priceFrom)}
+          {place.priceEur ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
+        </p>
+        <div className="mt-4 grid gap-2">
+          {place.website && (
+            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-road font-semibold text-on-road hover:bg-road-deep">
+              <Icon name="globe" size={19} /> {place.reservation ? "Reserveren op de website" : "Naar de website"}
+            </a>
+          )}
+          {tel && (
+            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-road">
+              <Icon name="phone" size={19} /> {tel}
+            </a>
+          )}
+          {place.email && (
+            <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-road">
+              <Icon name="mail" size={19} /> E-mail sturen
+            </a>
+          )}
+        </div>
+        {place.website && <p className="mt-3 text-center text-sm text-muted">{websiteLabel(place.website)}</p>}
+      </div>
+
+      <RouteCard to={{ lat: place.lat, lng: place.lng }} name={place.name} />
+
+      <section id="ligging" aria-label="Ligging" className="scroll-mt-24">
+        <PlaceMap
+          places={[place, ...nearby]}
+          highlight={place.slug}
+          fitKey={place.slug}
+          cluster={false}
+          className="h-72 rounded-2xl outline-1 outline-line outline"
+        />
+      </section>
+
+      <div className="rounded-2xl bg-surface p-5 text-sm text-ink-2 outline-1 outline-line outline">
+        <p className="flex items-center gap-2 font-semibold text-ink">
+          <Icon name="shield" size={18} className="text-polder" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
+        </p>
+        <p className="mt-1">
+          Bronnen: OpenStreetMap{place.verifiedAt ? " en de website van de plek" : ""}.
+          {place.verifiedAt ? ` Gegevens bijgewerkt op ${formatDate(place.verifiedAt)}.` : ""} Onbekende gegevens laten we leeg in plaats van te gokken.
+        </p>
+        <div className="mt-2">
+          <ReportProblem placeId={place.id} placeName={place.name} />
+        </div>
+      </div>
+    </>
   );
 }

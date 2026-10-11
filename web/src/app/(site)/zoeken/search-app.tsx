@@ -46,7 +46,8 @@ export function SearchApp() {
   const results = useMemo(() => (places ? applyFilters(places, filters) : null), [places, filters]);
   const [hovered, setHovered] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(params.get("kaart") === "1");
+  const hasReviews = useMemo(() => Boolean(places?.some((p) => p.ratingCount > 0)), [places]);
   const wide = useMediaQuery("(min-width: 1024px)");
 
   const update = (f: Filters) => {
@@ -80,11 +81,11 @@ export function SearchApp() {
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
         <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-6">
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} />
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setFiltersOpen(true)}
-              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-road"
             >
               <Icon name="sliders" size={19} />
               Filters
@@ -92,15 +93,15 @@ export function SearchApp() {
                 <span className="grid h-6 min-w-6 place-items-center rounded-full bg-road px-1.5 text-sm text-on-road">{count}</span>
               )}
             </button>
-            <label className="relative flex h-11 items-center rounded-xl border-2 border-line bg-surface pr-9 pl-3 font-semibold hover:border-road">
-              <span className="sr-only">Sorteren</span>
-              <Icon name="sort" size={18} className="mr-2 text-muted" />
+            <label className="relative flex h-11 min-w-0 flex-1 items-center rounded-xl border-2 border-line bg-surface pr-9 pl-3 font-semibold hover:border-road sm:flex-none">
+              <Icon name="sort" size={18} className="mr-2 shrink-0 text-muted" />
               <select
+                aria-label="Sorteren"
                 value={filters.sort}
                 onChange={(e) => update({ ...filters, sort: e.target.value as SortKey })}
-                className="appearance-none bg-transparent focus:outline-none"
+                className="w-full min-w-0 appearance-none truncate bg-transparent focus:outline-none"
               >
-                {SORTS.filter((s) => !s.needsCenter || filters.center).map((s) => (
+                {SORTS.filter((s) => (!s.needsCenter || filters.center) && (s.key !== "score" || hasReviews)).map((s) => (
                   <option key={s.key} value={s.key}>
                     {s.label}
                   </option>
@@ -108,17 +109,6 @@ export function SearchApp() {
               </select>
               <Icon name="chevronDown" size={16} className="pointer-events-none absolute right-3" />
             </label>
-            {!wide && (
-              <button
-                type="button"
-                onClick={() => setMapOpen((o) => !o)}
-                aria-pressed={mapOpen}
-                className="ml-auto flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold aria-pressed:border-road aria-pressed:bg-road aria-pressed:text-on-road"
-              >
-                <Icon name={mapOpen ? "list" : "map"} size={19} />
-                {mapOpen ? "Lijst" : "Kaart"}
-              </button>
-            )}
           </div>
           {chips.length > 0 && (
             <ul className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:flex-wrap sm:px-0">
@@ -140,11 +130,13 @@ export function SearchApp() {
         </div>
 
         {/* Mobiele kaart */}
-        {!wide && mapOpen && <div className="h-[calc(100dvh-12rem)]">{map}</div>}
+        {!wide && mapOpen && <div className="animate-fade-in h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] min-h-80">{map}</div>}
 
-        <section className={`px-3 pt-4 pb-8 sm:px-6 ${!wide && mapOpen ? "hidden" : ""}`} aria-live="polite">
+        <section className={`px-3 pt-4 pb-24 sm:px-6 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
           <h1 className="font-sign text-2xl font-bold">
-            {results ? pluralize(results.length, "plek", "plekken") : "Plekken laden"}{" "}
+            <span key={results?.length} className="animate-fade-in inline-block">
+              {results ? pluralize(results.length, "plek", "plekken") : "Plekken laden"}
+            </span>{" "}
             <span className="font-semibold text-muted">
               {filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}
             </span>
@@ -169,7 +161,22 @@ export function SearchApp() {
 
       {wide && <aside className="sticky top-16 h-[calc(100dvh-4rem)] border-l border-line">{map}</aside>}
 
-      <FilterSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} filters={filters} places={places} onApply={update} />
+      {/* Wisselen tussen lijst en kaart: zwevende knop boven de tabbalk (duim-bereik) */}
+      {!wide && (
+        <button
+          type="button"
+          onClick={() => {
+            setMapOpen((o) => !o);
+            window.scrollTo({ top: 0 });
+          }}
+          className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] left-1/2 z-30 flex h-12 -translate-x-1/2 items-center gap-2 rounded-full bg-ink px-5 font-semibold text-surface shadow-lift transition-transform active:scale-95"
+        >
+          <Icon name={mapOpen ? "list" : "map"} size={20} />
+          {mapOpen ? "Toon lijst" : "Toon kaart"}
+        </button>
+      )}
+
+      <FilterSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} filters={filters} places={places} onApply={update} showScore={hasReviews} />
     </div>
   );
 }

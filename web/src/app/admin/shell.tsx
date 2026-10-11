@@ -179,7 +179,7 @@ function Login() {
           {busy ? "Bezig…" : mode === "inloggen" ? "Inloggen" : mode === "registreren" ? "Account aanmaken" : "Stuur herstellink"}
         </button>
       </form>
-      <div className="mt-6 flex flex-col items-start gap-2 text-sm font-semibold text-road">
+      <div className="mt-6 flex flex-col items-start font-semibold text-road [&>button]:min-h-11 [&>button]:text-left">
         {mode !== "inloggen" && <button onClick={() => setMode("inloggen")}>Terug naar inloggen</button>}
         {mode === "inloggen" && <button onClick={() => setMode("vergeten")}>Wachtwoord vergeten?</button>}
         {mode === "inloggen" && <button onClick={() => setMode("registreren")}>Nog geen account? Aanmaken met je uitgenodigde e-mailadres</button>}

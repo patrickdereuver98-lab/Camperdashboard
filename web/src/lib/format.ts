@@ -6,10 +6,10 @@ export function eur(n: number, round = false): string {
   return eurFmt.format(n);
 }
 
-export function priceLabel(priceEur?: number): string {
+export function priceLabel(priceEur?: number, from?: boolean): string {
   if (priceEur === undefined) return "Prijs onbekend";
   if (priceEur === 0) return "Gratis";
-  return eur(priceEur);
+  return from ? `vanaf ${eur(priceEur)}` : eur(priceEur);
 }
 
 /** Booking-achtige woordlabels bij een score op 10 */

@@ -38,25 +38,25 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 
 export function Footer() {
   return (
-    <footer className="mt-16 border-t border-line bg-surface pb-24 md:pb-0">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.3fr_repeat(3,1fr)]">
-        <div>
+    <footer className="mt-16 border-t border-line bg-surface">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 md:grid-cols-[1.3fr_repeat(3,1fr)] md:gap-10 md:py-12">
+        <div className="col-span-2 md:col-span-1">
           <Link href="/" className="flex items-center gap-2.5">
             <Logo />
             <span className="font-sign text-xl font-extrabold text-road">VrijStaan</span>
           </Link>
           <p className="mt-4 max-w-xs text-ink-2">
-            Onafhankelijke gids voor camperplaatsen in Nederland. We tonen alleen plekken waarvan we de belangrijkste
-            informatie hebben gecontroleerd.
+            Onafhankelijke gids voor camperplaatsen in Nederland. We tonen alleen plekken waarvan de belangrijkste
+            gegevens bekend zijn, uit OpenStreetMap en de eigen website van de plek.
           </p>
         </div>
         {COLUMNS.map((c) => (
-          <nav key={c.title} aria-label={c.title}>
+          <nav key={c.title} aria-label={c.title} className={c.title === "Over VrijStaan" ? "col-span-2 md:col-span-1" : ""}>
             <h2 className="font-sign text-base font-bold text-ink">{c.title}</h2>
-            <ul className="mt-3 space-y-1">
+            <ul className={`mt-2 ${c.title === "Over VrijStaan" ? "grid grid-cols-2 gap-x-6 md:block" : ""}`}>
               {c.links.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="inline-block py-1.5 text-ink-2 hover:text-road hover:underline">
+                  <Link href={l.href} className="inline-block py-2.5 text-ink-2 hover:text-road hover:underline md:py-1.5">
                     {l.label}
                   </Link>
                 </li>
@@ -72,17 +72,19 @@ export function Footer() {
       </div>
       <div className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-          <p className="text-sm text-muted">
-            Camperplaatsen per provincie:{" "}
-            {PROVINCES.map((p, i) => (
-              <span key={p}>
-                <Link href={`/camperplaatsen/${p.toLowerCase()}`} className="hover:text-road hover:underline">
+          <h2 className="text-sm font-semibold text-ink-2">Camperplaatsen per provincie</h2>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {PROVINCES.map((p) => (
+              <li key={p}>
+                <Link
+                  href={`/camperplaatsen/${p.toLowerCase()}`}
+                  className="inline-flex h-11 items-center rounded-full bg-sunken px-4 text-sm font-semibold text-ink-2 hover:text-road md:h-9"
+                >
                   {p}
                 </Link>
-                {i < PROVINCES.length - 1 ? ", " : ""}
-              </span>
+              </li>
             ))}
-          </p>
+          </ul>
           <p className="mt-3 text-sm text-muted">
             Kaartgegevens © <a className="underline" href="https://www.openstreetmap.org/copyright">OpenStreetMap-bijdragers</a>.
             Routes via OpenRouteService en OSRM. Kaarten van OpenFreeMap.

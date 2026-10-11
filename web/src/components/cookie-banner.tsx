@@ -88,21 +88,22 @@ export function CookieBanner() {
           </label>
         </div>
       )}
-      <div className="mt-4 flex flex-wrap gap-2">
+      {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {details ? (
-          <button type="button" onClick={() => close(analytics)} className="h-12 flex-1 rounded-xl bg-road px-5 font-semibold text-on-road">
+          <button type="button" onClick={() => close(analytics)} className="min-h-12 rounded-xl bg-road px-5 font-semibold text-on-road sm:col-span-2">
             Keuze opslaan
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => close(true)} className="h-12 flex-1 rounded-xl bg-road px-5 font-semibold text-on-road">
-              Accepteren
+            <button type="button" onClick={() => close(true)} className="min-h-12 rounded-xl border-2 border-road bg-road-tint px-5 font-semibold text-road">
+              Statistieken toestaan
             </button>
-            <button type="button" onClick={() => close(false)} className="h-12 flex-1 rounded-xl border border-line px-5 font-semibold">
+            <button type="button" onClick={() => close(false)} className="min-h-12 rounded-xl border-2 border-road bg-road-tint px-5 font-semibold text-road">
               Alleen noodzakelijk
             </button>
-            <button type="button" onClick={() => setDetails(true)} className="h-12 w-full rounded-xl px-5 font-semibold text-road underline sm:w-auto">
-              Instellen
+            <button type="button" onClick={() => setDetails(true)} className="min-h-11 rounded-xl px-5 font-semibold text-road underline sm:col-span-2">
+              Zelf instellen
             </button>
           </>
         )}
@@ -116,7 +117,7 @@ export function CookieSettingsLink({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}
-      className={`inline-block py-1.5 text-left text-ink-2 hover:text-road hover:underline ${className}`}
+      className={`inline-block py-2.5 text-left text-ink-2 hover:text-road hover:underline md:py-1.5 ${className}`}
     >
       Cookie-instellingen
     </button>

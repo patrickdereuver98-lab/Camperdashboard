@@ -21,6 +21,8 @@ export interface Place {
   descriptionSource?: string;
   priceEur?: number;
   priceNote?: string;
+  /** De prijs is het laagste genoemde tarief ("vanaf") */
+  priceFrom?: boolean;
   touristTaxIncluded?: boolean;
   power?: boolean;
   water?: boolean;
@@ -61,6 +63,8 @@ export type PlaceSummary = Pick<
   | "town"
   | "province"
   | "priceEur"
+  | "priceFrom"
+  | "touristTaxIncluded"
   | "power"
   | "water"
   | "dumpStation"

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { MotionConfig, motion } from "motion/react";
 import { distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { eur, formatDuration, pluralize } from "@/lib/format";
 import { usePlaces, useTrip, useTripSettings, type TripStop } from "@/lib/store";
@@ -11,9 +12,6 @@ import { Icon } from "@/components/icons";
 import { PlaceMap } from "@/components/place-map";
 import { PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
-
-/** Aanname als de prijs van een betaalde plek niet bekend is (gemiddelde NL camperplaats 2026) */
-const UNKNOWN_PRICE = 18;
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
 type Stop = TripStop & { place: PlaceSummary };
@@ -43,6 +41,8 @@ export function TripApp() {
   const [start, setStart] = useState<LatLng | null>(null);
   const [routeResult, setRouteResult] = useState<{ key: string; data: RouteData | null; failed: boolean }>({ key: "", data: null, failed: false });
   const [shared, setShared] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // Gedeelde reis: /mijn-reis?r=slug.2,slug.1
   const incoming = params.get("r");
@@ -126,10 +126,13 @@ export function TripApp() {
   const legFor = (i: number) => legs[start ? i : i - 1];
   const totalKm = route ? route.distanceM / 1000 : null;
   const nights = stops.reduce((a, s) => a + s.nights, 0);
-  const unknownPrice = stops.some((s) => s.place.priceEur === undefined);
-  const stay = stops.reduce((a, s) => a + (s.place.priceEur ?? UNKNOWN_PRICE) * s.nights, 0);
+  // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag)
+  const unknownPriceStops = stops.filter((s) => s.place.priceEur === undefined).length;
+  const fromPrice = stops.some((s) => s.place.priceFrom);
+  const stay = stops.reduce((a, s) => a + (s.place.priceEur ?? 0) * s.nights, 0);
   const fuel = totalKm !== null ? (totalKm * settings.litersPer100 * settings.fuelPrice) / 100 : null;
-  const tax = settings.persons * settings.touristTax * stops.filter((s) => s.place.priceEur !== 0).reduce((a, s) => a + s.nights, 0);
+  const taxNights = stops.filter((s) => s.place.priceEur !== 0 && s.place.touristTaxIncluded !== true).reduce((a, s) => a + s.nights, 0);
+  const tax = settings.persons * settings.touristTax * taxNights;
   const total = stay + (fuel ?? 0) + tax;
 
   const shareUrl = typeof window !== "undefined" ? `${location.origin}/mijn-reis?r=${trip.stops.map((s) => `${s.slug}.${s.nights}`).join(",")}` : "";
@@ -193,13 +196,20 @@ export function TripApp() {
             ) : (
               <button
                 type="button"
-                onClick={() =>
-                  navigator.geolocation?.getCurrentPosition(
+                onClick={() => {
+                  setGeoError(null);
+                  if (!navigator.geolocation) return setGeoError("Je browser kan je locatie niet bepalen.");
+                  navigator.geolocation.getCurrentPosition(
                     (p) => setStart({ lat: p.coords.latitude, lng: p.coords.longitude }),
-                    () => undefined,
+                    (err) =>
+                      setGeoError(
+                        err.code === err.PERMISSION_DENIED
+                          ? "Geen toegang tot je locatie. Sta het toe in je browser."
+                          : "Je locatie kon niet worden bepaald. Probeer het opnieuw.",
+                      ),
                     { timeout: 12000 },
-                  )
-                }
+                  );
+                }}
                 className="h-11 rounded-xl border-2 border-line px-3 font-semibold hover:border-road"
               >
                 Mijn locatie
@@ -207,11 +217,18 @@ export function TripApp() {
             )}
           </div>
 
+          {geoError && (
+            <p role="alert" className="-mt-1 mb-3 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert">
+              {geoError}
+            </p>
+          )}
+
+          <MotionConfig reducedMotion="user">
           <ol>
             {stops.map((s, i) => {
               const leg = legFor(i);
               return (
-                <li key={s.slug}>
+                <motion.li key={s.slug} layout="position" transition={{ type: "spring", stiffness: 520, damping: 42 }}>
                   {(i > 0 || start) && (
                     <div className="flex items-center gap-3 py-2 pl-5 text-sm text-ink-2">
                       <span className="h-8 border-l-[3px] border-dotted border-road" aria-hidden="true" />
@@ -222,48 +239,56 @@ export function TripApp() {
                           : `${formatKm(distanceKm(i === 0 ? start! : stops[i - 1].place, s.place))} hemelsbreed`}
                     </div>
                   )}
-                  <div className="flex gap-3 rounded-2xl bg-surface p-3 outline-1 outline-line outline">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl">
-                      <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
-                      <span className="absolute top-1 left-1 grid h-7 w-7 place-items-center rounded-full bg-road font-sign text-sm font-bold text-on-road">
-                        {i + 1}
-                      </span>
+                  <div className="rounded-2xl bg-surface p-3 outline-1 outline-line outline">
+                    <div className="flex gap-3">
+                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+                        <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
+                        <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-road font-sign text-xs font-bold text-on-road">
+                          {i + 1}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-sign text-lg font-bold hover:text-road">
+                          {s.place.name}
+                        </Link>
+                        <p className="truncate text-sm text-muted">
+                          {s.place.town},{" "}
+                          {s.place.priceEur === undefined
+                            ? "prijs onbekend"
+                            : s.place.priceEur === 0
+                              ? "gratis"
+                              : `${s.place.priceFrom ? "vanaf " : ""}${eur(s.place.priceEur)} per nacht`}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/plek/${s.slug}`} className="block truncate font-sign text-lg font-bold hover:text-road">
-                        {s.place.name}
-                      </Link>
-                      <p className="truncate text-sm text-muted">
-                        {s.place.town}, {s.place.priceEur === undefined ? "prijs onbekend" : s.place.priceEur === 0 ? "gratis" : `${eur(s.place.priceEur)} per nacht`}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <div className="flex items-center rounded-xl border-2 border-line" role="group" aria-label={`Nachten bij ${s.place.name}`}>
-                          <button type="button" aria-label="Een nacht minder" disabled={s.nights <= 1} onClick={() => trip.setNights(s.slug, s.nights - 1)} className="grid h-10 w-10 place-items-center disabled:opacity-30">
-                            <Icon name="minus" size={18} />
-                          </button>
-                          <span className="min-w-20 text-center font-semibold">{pluralize(s.nights, "nacht", "nachten")}</span>
-                          <button type="button" aria-label="Een nacht meer" onClick={() => trip.setNights(s.slug, s.nights + 1)} className="grid h-10 w-10 place-items-center">
-                            <Icon name="plus" size={18} />
-                          </button>
-                        </div>
-                        <div className="ml-auto flex items-center">
-                          <button type="button" aria-label="Eerder in de reis" disabled={i === 0} onClick={() => trip.move(i, i - 1)} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-sunken disabled:opacity-25">
-                            <Icon name="chevronUp" />
-                          </button>
-                          <button type="button" aria-label="Later in de reis" disabled={i === stops.length - 1} onClick={() => trip.move(i, i + 1)} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-sunken disabled:opacity-25">
-                            <Icon name="chevronDown" />
-                          </button>
-                          <button type="button" aria-label={`${s.place.name} verwijderen`} onClick={() => trip.remove(s.slug)} className="grid h-10 w-10 place-items-center rounded-lg text-alert hover:bg-alert-tint">
-                            <Icon name="trash" size={19} />
-                          </button>
-                        </div>
+                    <div className="mt-2 flex items-center gap-1">
+                      <div className="flex items-center rounded-xl border-2 border-line" role="group" aria-label={`Nachten bij ${s.place.name}`}>
+                        <button type="button" aria-label="Een nacht minder" disabled={s.nights <= 1} onClick={() => trip.setNights(s.slug, s.nights - 1)} className="grid h-11 w-11 place-items-center disabled:opacity-30">
+                          <Icon name="minus" size={18} />
+                        </button>
+                        <span className="min-w-[4.5rem] text-center font-semibold">{pluralize(s.nights, "nacht", "nachten")}</span>
+                        <button type="button" aria-label="Een nacht meer" onClick={() => trip.setNights(s.slug, s.nights + 1)} className="grid h-11 w-11 place-items-center">
+                          <Icon name="plus" size={18} />
+                        </button>
+                      </div>
+                      <div className="ml-auto flex items-center">
+                        <button type="button" aria-label="Eerder in de reis" disabled={i === 0} onClick={() => trip.move(i, i - 1)} className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-25">
+                          <Icon name="chevronUp" />
+                        </button>
+                        <button type="button" aria-label="Later in de reis" disabled={i === stops.length - 1} onClick={() => trip.move(i, i + 1)} className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-25">
+                          <Icon name="chevronDown" />
+                        </button>
+                        <button type="button" aria-label={`${s.place.name} verwijderen`} onClick={() => trip.remove(s.slug)} className="grid h-11 w-11 place-items-center rounded-lg text-alert hover:bg-alert-tint">
+                          <Icon name="trash" size={19} />
+                        </button>
                       </div>
                     </div>
                   </div>
-                </li>
+                </motion.li>
               );
             })}
           </ol>
+          </MotionConfig>
           <Link href="/zoeken" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line font-semibold text-road hover:border-road">
             <Icon name="plus" size={19} /> Plek toevoegen
           </Link>
@@ -280,23 +305,32 @@ export function TripApp() {
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-ink-2">Overnachtingen{unknownPrice ? "*" : ""}</dt>
-                <dd className="font-semibold">{eur(stay, true)}</dd>
+                <dt className="text-ink-2">Overnachtingen{fromPrice ? " (vanaf)" : ""}</dt>
+                <dd className="text-right font-semibold">
+                  {eur(stay, true)}
+                  {unknownPriceStops > 0 && (
+                    <span className="block text-sm font-normal text-muted">
+                      + {unknownPriceStops} {unknownPriceStops === 1 ? "plek" : "plekken"} zonder bekende prijs
+                    </span>
+                  )}
+                </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-ink-2">Brandstof</dt>
+                <dt className="text-ink-2">Brandstof*</dt>
                 <dd className="font-semibold">{fuel === null ? "–" : eur(fuel, true)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-ink-2">Toeristenbelasting</dt>
+                <dt className="text-ink-2">Toeristenbelasting*</dt>
                 <dd className="font-semibold">{eur(tax, true)}</dd>
               </div>
               <div className="flex justify-between border-t border-line pt-2">
-                <dt className="font-sign text-lg font-bold">Totaal ongeveer</dt>
+                <dt className="font-sign text-lg font-bold">Bekende kosten</dt>
                 <dd className="font-sign text-2xl font-extrabold">{eur(total, true)}</dd>
               </div>
             </dl>
-            {unknownPrice && <p className="mt-2 text-sm text-muted">* Voor plekken zonder bekende prijs rekenen we {eur(UNKNOWN_PRICE)} per nacht.</p>}
+            <p className="mt-2 text-sm text-muted">
+              * Berekend met jouw uitgangspunten hieronder. Toeristenbelasting telt niet mee bij gratis plekken en plekken waar die al in de prijs zit.
+            </p>
             {routeState === "error" && <p className="mt-2 text-sm text-alert">De routeplanner is even niet bereikbaar; afstanden zijn hemelsbreed.</p>}
 
             <details className="mt-4 rounded-xl bg-sunken p-4">
@@ -342,9 +376,30 @@ export function TripApp() {
           <p className="flex items-center gap-2 text-sm text-muted">
             <Sign name="camper" size={22} /> Route over de weg via OpenRouteService of OSRM.
           </p>
-          <button type="button" onClick={() => confirm("Weet je zeker dat je je hele reis wilt wissen?") && trip.clear()} className="h-11 font-semibold text-alert underline">
-            Reis wissen
-          </button>
+          {confirmClear ? (
+            <div role="alert" className="animate-fade-in rounded-2xl bg-alert-tint p-4">
+              <p className="font-semibold text-alert">Je hele reis wissen? Dit kun je niet ongedaan maken.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setConfirmClear(false)} className="h-12 rounded-xl border-2 border-line bg-surface font-semibold">
+                  Annuleren
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    trip.clear();
+                    setConfirmClear(false);
+                  }}
+                  className="h-12 rounded-xl bg-alert font-semibold text-surface"
+                >
+                  Ja, wissen
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setConfirmClear(true)} className="h-11 font-semibold text-alert underline">
+              Reis wissen
+            </button>
+          )}
         </aside>
       </div>
     </div>

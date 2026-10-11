@@ -19,6 +19,9 @@
   --polder-tint: #e2f1e7;
   --signal: #ffc629;
   --on-signal: #122033;
+  /* Borden: altijd wit op verkeersblauw, ook in donkere modus */
+  --sign: #0f4c8a;
+  --on-sign: #ffffff;
   --alert: #b3261e;
   --alert-tint: #fbe9e7;
   --scrim: rgb(10 22 38 / 0.45);
@@ -41,6 +44,7 @@
     --on-road: #0b1626;
     --polder: #79c99a;
     --polder-tint: #183a2a;
+    --sign: #1d5fa8;
     --alert: #ff8a80;
     --alert-tint: #3a1d1c;
     --scrim: rgb(0 0 0 / 0.6);
@@ -65,6 +69,8 @@
   --color-polder-tint: var(--polder-tint);
   --color-signal: var(--signal);
   --color-on-signal: var(--on-signal);
+  --color-sign: var(--sign);
+  --color-on-sign: var(--on-sign);
   --color-alert: var(--alert);
   --color-alert-tint: var(--alert-tint);
   --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
@@ -93,10 +99,19 @@ body {
   color: var(--on-signal);
 }
 
-:focus-visible {
-  outline: 3px solid var(--signal);
-  outline-offset: 2px;
-  border-radius: 6px;
+/* Focus: tweekleurige ring (inkt + signaalgeel), zichtbaar op elke ondergrond.
+   In een laag, zodat utilities als focus:outline-none voorgaan. */
+@layer base {
+  :focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 5px var(--signal);
+  }
+}
+
+/* Vangnet tegen horizontaal scrollen op smalle schermen */
+body {
+  overflow-x: clip;
 }
 
 /* Koppen in het borden-lettertype */
@@ -108,7 +123,7 @@ body {
 /* Bord: verkeersblauw paneel met witte binnenrand */
 .sign-panel {
   background: var(--road);
-  color: var(--on-road);
+  color: var(--on-sign);
   border-radius: 1.25rem;
   box-shadow: inset 0 0 0 4px var(--road), inset 0 0 0 6px rgb(255 255 255 / 0.9);
 }
@@ -140,6 +155,61 @@ body {
 ::view-transition-group(.photo-morph) {
   animation-duration: 380ms;
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+/* Kaartfoto (16:10) naar galerij (21:9): beeld vullen in plaats van uitrekken */
+::view-transition-old(.photo-morph),
+::view-transition-new(.photo-morph) {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+/* ── Kleine overgangen ───────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 200ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+/* Fotobijschrift en teller pas na de foto-overgang */
+.animate-fade-in-late {
+  animation: fade-in 200ms 260ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+/* Uitklapblokken (FAQ, details) openen vloeiend in plaats van te springen */
+:root {
+  interpolate-size: allow-keywords;
+}
+details::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 220ms cubic-bezier(0.2, 0, 0, 1),
+    content-visibility 220ms allow-discrete;
+}
+details[open]::details-content {
+  block-size: auto;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.animate-toast {
+  animation: toast-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 /* ── Eén georkestreerd moment: het bord op de homepage ───────────────────── */

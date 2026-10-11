@@ -16,6 +16,7 @@ export function SubmitForm() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [checked, setChecked] = useState<string[]>([]);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -81,17 +82,18 @@ export function SubmitForm() {
 
       <fieldset className="space-y-4">
         <legend className="mb-2 font-sign text-xl font-bold">De plek</legend>
+        <p className="text-sm text-muted">Velden met <span className="text-alert">*</span> zijn verplicht.</p>
         <label className="block">
-          <span className="mb-1.5 block font-semibold">Naam van de plek</span>
+          <span className="mb-1.5 block font-semibold">Naam van de plek <span className="text-alert" aria-hidden="true">*</span></span>
           <input name="name" required minLength={2} className={field} />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1.5 block font-semibold">Plaats</span>
+            <span className="mb-1.5 block font-semibold">Plaats <span className="text-alert" aria-hidden="true">*</span></span>
             <input name="town" required className={field} />
           </label>
           <label className="block">
-            <span className="mb-1.5 block font-semibold">Provincie</span>
+            <span className="mb-1.5 block font-semibold">Provincie <span className="text-alert" aria-hidden="true">*</span></span>
             <select name="province" required className={field} defaultValue="">
               <option value="" disabled>Kies…</option>
               {PROVINCES.map((p) => (
@@ -132,14 +134,28 @@ export function SubmitForm() {
             <input name="season" placeholder="bijv. april – oktober" className={field} />
           </label>
         </div>
+        <p className="text-sm text-muted">Tik aan wat er zeker is. Wat je niet aantikt, laten we op onbekend staan.</p>
         <div className="grid grid-cols-2 gap-2">
-          {FACILITIES.map((fac) => (
-            <label key={fac.key} className="flex min-h-12 items-center gap-2.5 rounded-xl border-2 border-line px-3 font-semibold has-[:checked]:border-road has-[:checked]:bg-road-tint">
-              <input type="checkbox" name={`v_${fac.key}`} className="sr-only" />
-              <Sign name={fac.icon as SignName} size={28} />
-              {fac.label}
-            </label>
-          ))}
+          {FACILITIES.map((fac) => {
+            const on = checked.includes(fac.key);
+            return (
+              <label
+                key={fac.key}
+                className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border-2 border-line px-3 font-semibold has-[:checked]:border-road has-[:checked]:bg-road-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+              >
+                <input
+                  type="checkbox"
+                  name={`v_${fac.key}`}
+                  checked={on}
+                  onChange={() => setChecked((c) => (on ? c.filter((k) => k !== fac.key) : [...c, fac.key]))}
+                  className="sr-only"
+                />
+                <Sign name={fac.icon as SignName} size={28} state={on ? "on" : "unknown"} />
+                <span className="flex-1">{fac.label}</span>
+                {on && <Icon name="check" size={18} className="shrink-0 text-road" />}
+              </label>
+            );
+          })}
         </div>
         <label className="block">
           <span className="mb-1.5 block font-semibold">Toelichting (optioneel)</span>

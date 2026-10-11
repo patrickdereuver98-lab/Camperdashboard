@@ -32,23 +32,23 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
   const avg = priced.length ? priced.reduce((a, b) => a + b, 0) / priced.length : null;
   const free = places.filter((p) => p.priceEur === 0).length;
   const towns = [...new Set(places.map((p) => p.town))].sort((a, b) => a.localeCompare(b, "nl"));
-  const top = [...places].sort((a, b) => (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) || b.completeness - a.completeness).slice(0, 12).map(toSummary);
+  const top = [...places].sort((a, b) => b.completeness - a.completeness || Number(!!b.imageUrl) - Number(!!a.imageUrl) || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0)).slice(0, 12).map(toSummary);
 
   return (
     <div className="mx-auto max-w-6xl px-3 pt-6 sm:px-6">
       <nav aria-label="Kruimelpad" className="flex items-center gap-1 text-sm text-muted">
-        <Link href="/" className="hover:text-road hover:underline">Start</Link>
+        <Link href="/" className="-my-3 inline-block py-3 hover:text-road hover:underline">Start</Link>
         <Icon name="chevronRight" size={14} />
         <span>{prov}</span>
       </nav>
       <h1 className="mt-3 font-sign text-3xl font-extrabold sm:text-4xl">Camperplaatsen in {prov}</h1>
       <p className="mt-3 max-w-2xl text-lg text-ink-2">
         {places.length
-          ? `${pluralize(places.length, "gecontroleerde plek", "gecontroleerde plekken")} in ${prov}${free ? `, waarvan ${free} gratis` : ""}.${avg ? ` Een nacht kost gemiddeld ${eur(avg)}.` : ""}`
+          ? `${pluralize(places.length, "plek", "plekken")} met complete gegevens in ${prov}${free ? `, waarvan ${free} gratis` : ""}.${avg ? ` Een nacht kost gemiddeld ${eur(avg)}.` : ""}`
           : `We hebben nog geen plekken in ${prov} die aan onze kwaliteitseisen voldoen.`}
       </p>
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link href={searchHref({ province: prov, where: prov })} className="flex h-12 items-center gap-2 rounded-xl bg-road px-5 font-semibold text-on-road">
+        <Link href={`${searchHref({ province: prov, where: prov })}&kaart=1`} className="flex h-12 items-center gap-2 rounded-xl bg-road px-5 font-semibold text-on-road">
           <Icon name="map" size={19} /> Bekijk op de kaart
         </Link>
         <Link href={searchHref({ province: prov, where: prov, free: true })} className="flex h-12 items-center rounded-xl border-2 border-line bg-surface px-5 font-semibold hover:border-road">
@@ -58,11 +58,11 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
 
       {top.length > 0 && (
         <section className="mt-10">
-          <h2 className="font-sign text-2xl font-bold">Best beoordeeld en meest compleet</h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="font-sign text-2xl font-bold">Meest complete informatie</h2>
+          <ul className="mt-4 grid gap-3 lg:grid-cols-2">
             {top.map((p) => (
               <li key={p.id}>
-                <PlaceCard place={p} layout="stack" />
+                <PlaceCard place={p} />
               </li>
             ))}
           </ul>
@@ -79,7 +79,7 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
                 <li key={t}>
                   <Link
                     href={searchHref({ where: t, center: { lat: p.lat, lng: p.lng }, radiusKm: 10 })}
-                    className="inline-flex h-10 items-center rounded-full bg-surface px-4 outline-1 outline-line outline hover:outline-road"
+                    className="inline-flex h-11 items-center rounded-full bg-surface px-4 outline-1 outline-line outline hover:outline-road"
                   >
                     {t}
                   </Link>

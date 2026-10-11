@@ -34,9 +34,10 @@ function Toggle({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
+    // Een zwevende legend gedraagt zich als gewone kop binnen de padding van de fieldset
     <fieldset className="border-b border-line py-5 first:pt-1 last:border-0">
-      <legend className="mb-3 font-sign text-lg font-bold">{title}</legend>
-      {children}
+      <legend className="float-left mb-3 w-full font-sign text-lg font-bold">{title}</legend>
+      <div className="clear-both">{children}</div>
     </fieldset>
   );
 }
@@ -47,12 +48,14 @@ export function FilterSheet({
   filters,
   places,
   onApply,
+  showScore,
 }: {
   open: boolean;
   onClose: () => void;
   filters: Filters;
   places: PlaceSummary[] | null;
   onApply: (f: Filters) => void;
+  showScore?: boolean;
 }) {
   const [draft, setDraft] = useState(filters);
   const [lastOpen, setLastOpen] = useState(open);
@@ -62,6 +65,22 @@ export function FilterSheet({
   }
   const count = useMemo(() => (places ? applyFilters(places, draft).length : null), [places, draft]);
   const set = (patch: Partial<Filters>) => setDraft((d) => ({ ...d, ...patch }));
+  const knownLength = useMemo(() => places?.filter((p) => p.maxLengthM !== undefined).length ?? 0, [places]);
+  // Bij nul resultaten: welk ene filter levert het meeste op als je het weghaalt?
+  const suggestion = useMemo(() => {
+    if (!places || count !== 0) return null;
+    const options: { label: string; next: Filters }[] = [
+      ...draft.facilities.map((f) => ({ label: FACILITIES.find((x) => x.key === f)!.label, next: { ...draft, facilities: draft.facilities.filter((x) => x !== f) } })),
+      ...draft.kinds.map((k) => ({ label: KIND_LABEL[k], next: { ...draft, kinds: draft.kinds.filter((x) => x !== k) } })),
+      ...(draft.free ? [{ label: "Gratis", next: { ...draft, free: false } }] : []),
+      ...(draft.maxPrice ? [{ label: `Tot € ${draft.maxPrice}`, next: { ...draft, maxPrice: undefined } }] : []),
+      ...(draft.minLength ? [{ label: `${draft.minLength} m`, next: { ...draft, minLength: undefined } }] : []),
+      ...(draft.openNow ? [{ label: "Nu open", next: { ...draft, openNow: false } }] : []),
+      ...(draft.minScore ? [{ label: `Score ${draft.minScore}+`, next: { ...draft, minScore: undefined } }] : []),
+    ];
+    const best = options.map((o) => ({ ...o, n: applyFilters(places, o.next).length })).sort((a, b) => b.n - a.n)[0];
+    return best && best.n > 0 ? best : null;
+  }, [places, draft, count]);
   const toggleIn = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
   return (
@@ -70,6 +89,20 @@ export function FilterSheet({
       onClose={onClose}
       title="Filters"
       footer={
+        <>
+        {count === 0 && (
+          <p role="status" className="mb-3 text-sm text-ink-2">
+            Geen plekken met deze combinatie.
+            {suggestion && (
+              <>
+                {" "}
+                <button type="button" onClick={() => setDraft(suggestion.next)} className="font-semibold text-road underline">
+                  Zonder &quot;{suggestion.label}&quot;: {suggestion.n} {suggestion.n === 1 ? "plek" : "plekken"}
+                </button>
+              </>
+            )}
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -89,9 +122,10 @@ export function FilterSheet({
             disabled={count === 0}
             className="h-12 flex-1 rounded-xl bg-road font-sign text-lg font-bold text-on-road disabled:opacity-50"
           >
-            {count === null ? "Toon plekken" : count === 0 ? "Geen plekken gevonden" : `Toon ${count} ${count === 1 ? "plek" : "plekken"}`}
+            {count === null ? "Toon plekken" : count === 0 ? "Geen plekken" : `Toon ${count} ${count === 1 ? "plek" : "plekken"}`}
           </button>
         </div>
+        </>
       }
     >
       {draft.center && (
@@ -142,7 +176,9 @@ export function FilterSheet({
       </Section>
 
       <Section title="Lengte van je camper">
-        <p className="-mt-1 mb-3 text-sm text-muted">Plekken met een lagere maximale lengte vallen weg. Plekken zonder bekende maximale lengte blijven staan.</p>
+        <p className="-mt-1 mb-3 text-sm text-muted">
+          Van {knownLength} plekken is de maximale lengte bekend. Plekken met een lagere maximale lengte vallen weg; plekken waarvan we het niet weten blijven staan.
+        </p>
         <div className="grid grid-cols-4 gap-2">
           {LENGTHS.map((l) => (
             <Toggle key={l} pressed={draft.minLength === l} onClick={() => set({ minLength: draft.minLength === l ? undefined : l })}>
@@ -158,13 +194,15 @@ export function FilterSheet({
             <Sign name="calendar" size={30} state={draft.openNow ? "on" : "unknown"} />
             Nu open (volgens seizoen)
           </Toggle>
-          <div className="grid grid-cols-3 gap-2">
-            {SCORES.map((s) => (
-              <Toggle key={s} pressed={draft.minScore === s} onClick={() => set({ minScore: draft.minScore === s ? undefined : s })}>
-                <span className="w-full text-center">Score {s}+</span>
-              </Toggle>
-            ))}
-          </div>
+          {showScore && (
+            <div className="grid grid-cols-3 gap-2">
+              {SCORES.map((s) => (
+                <Toggle key={s} pressed={draft.minScore === s} onClick={() => set({ minScore: draft.minScore === s ? undefined : s })}>
+                  <span className="w-full text-center">Score {s}+</span>
+                </Toggle>
+              ))}
+            </div>
+          )}
         </div>
       </Section>
     </Sheet>

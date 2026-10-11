@@ -20,8 +20,24 @@ export default function CookiePage() {
       updated="11 oktober 2026"
     >
       <Section title="Wat we opslaan">
-        <div className="overflow-x-auto rounded-xl outline-1 outline-line outline">
-          <table className="w-full min-w-[560px] text-left text-sm">
+        {/* Mobiel: kaartjes; vanaf sm een tabel */}
+        <ul className="space-y-2 sm:hidden">
+          {ROWS.map((r) => (
+            <li key={r[0]} className="rounded-xl bg-surface p-3 outline-1 outline-line outline">
+              <p className="font-mono text-xs break-all text-ink">{r[0]}</p>
+              <dl className="mt-1 grid grid-cols-[7rem_1fr] gap-x-2 gap-y-0.5 text-sm">
+                <dt className="text-muted">Soort</dt>
+                <dd>{r[1]}</dd>
+                <dt className="text-muted">Doel</dt>
+                <dd>{r[2]}</dd>
+                <dt className="text-muted">Bewaartermijn</dt>
+                <dd>{r[3]}</dd>
+              </dl>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden overflow-hidden rounded-xl outline-1 outline-line outline sm:block">
+          <table className="w-full text-left text-sm">
             <thead className="bg-sunken">
               <tr>
                 {["Naam", "Soort", "Doel", "Bewaartermijn"].map((h) => (
@@ -33,7 +49,7 @@ export default function CookiePage() {
               {ROWS.map((r) => (
                 <tr key={r[0]}>
                   {r.map((c, i) => (
-                    <td key={i} className={`px-3 py-2 ${i === 0 ? "font-mono text-xs" : ""}`}>{c}</td>
+                    <td key={i} className={`px-3 py-2 align-top ${i === 0 ? "font-mono text-xs" : ""}`}>{c}</td>
                   ))}
                 </tr>
               ))}

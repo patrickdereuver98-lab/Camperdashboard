@@ -5,7 +5,8 @@ import { useId, useMemo, useRef, useState } from "react";
 import { DEFAULT_FILTERS, filtersToQuery, normalize, type Filters } from "@/lib/search";
 import { usePlaces, useTowns } from "@/lib/store";
 import { track } from "@/lib/track";
-import { PROVINCES } from "@/lib/types";
+import { PROVINCES, type Town } from "@/lib/types";
+import { distanceKm } from "@/lib/geo";
 import { Icon } from "./icons";
 
 type Option =
@@ -45,15 +46,27 @@ export function DestinationSearch({
       return out;
     }
     for (const p of PROVINCES) if (normalize(p).includes(q)) out.push({ type: "province", label: p });
+    // Plaatsen: exacte match, dan begint-met, dan bevat; daarbinnen de plaats met de meeste plekken in de buurt
     const seen = new Set<string>();
+    const matches: { t: Town; rank: number; nearby: number }[] = [];
     for (const t of towns ?? []) {
       const n = normalize(t.name);
-      if ((n.startsWith(q) || (q.length > 2 && n.includes(q))) && !seen.has(t.name)) {
-        seen.add(t.name);
-        out.push({ type: "town", label: t.name, sub: t.province, lat: t.lat, lng: t.lng });
-      }
-      if (out.length > 8) break;
+      const rank = n === q ? 0 : n.startsWith(q) ? 1 : q.length > 2 && n.includes(q) ? 2 : -1;
+      if (rank < 0 || seen.has(t.name)) continue;
+      seen.add(t.name);
+      const nearby = (places ?? []).filter((p) => distanceKm(t, p) <= 25).length;
+      if (places && nearby === 0) continue;
+      matches.push({ t, rank, nearby });
     }
+    matches.sort((a, b) => a.rank - b.rank || b.nearby - a.nearby);
+    for (const { t, nearby } of matches.slice(0, 7))
+      out.push({
+        type: "town",
+        label: t.name,
+        sub: places ? `${t.province}, ${nearby} ${nearby === 1 ? "plek" : "plekken"} binnen 25 km` : t.province,
+        lat: t.lat,
+        lng: t.lng,
+      });
     if (q.length > 2)
       for (const p of places ?? []) {
         if (normalize(p.name).includes(q)) out.push({ type: "place", label: p.name, sub: `${p.town}, ${p.province}`, slug: p.slug });
@@ -130,11 +143,11 @@ export function DestinationSearch({
         }}
         className={hero ? "space-y-3" : "flex items-center gap-2"}
       >
-        <label htmlFor={`${id}-q`} className={hero ? "block font-semibold text-on-road" : "sr-only"}>
+        <label htmlFor={`${id}-q`} className={hero ? "block font-semibold text-on-sign" : "sr-only"}>
           Waar wil je staan?
         </label>
         <div
-          className={`flex flex-1 items-center gap-2 rounded-xl bg-surface text-ink ring-2 transition-shadow focus-within:ring-signal ${
+          className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-surface text-ink ring-2 transition-shadow focus-within:ring-signal ${
             hero ? "h-14 px-4 ring-transparent" : "h-12 px-3 ring-line"
           }`}
         >
@@ -178,7 +191,7 @@ export function DestinationSearch({
                 setText("");
                 inputRef.current?.focus();
               }}
-              className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-sunken"
+              className="-mr-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken"
             >
               <Icon name="x" size={18} />
             </button>
@@ -189,14 +202,14 @@ export function DestinationSearch({
           className={`font-sign font-bold transition-colors ${
             hero
               ? "flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-signal text-lg text-on-signal hover:brightness-95"
-              : "h-12 rounded-xl bg-road px-5 text-on-road hover:bg-road-deep"
+              : "h-12 shrink-0 rounded-xl bg-road px-5 text-on-road hover:bg-road-deep"
           }`}
         >
           {hero ? "Zoek een camperplaats" : "Zoek"}
         </button>
       </form>
 
-      {locating && <p className={`mt-2 text-sm ${hero ? "text-on-road" : "text-muted"}`}>Locatie bepalen…</p>}
+      {locating && <p className={`mt-2 text-sm ${hero ? "text-on-sign" : "text-muted"}`}>Locatie bepalen…</p>}
       {geoError && (
         <p role="alert" className={`mt-2 rounded-lg px-3 py-2 text-sm ${hero ? "bg-surface text-alert" : "bg-alert-tint text-alert"}`}>
           {geoError}
