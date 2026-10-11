@@ -1,0 +1,23 @@
+# Houdt het gratis Supabase-project actief: gratis projecten worden na een week zonder databaseverkeer gepauzeerd.
+# Eén lichte leesopdracht per dag op een openbare tabel (met de publieke sleutel, die ook in de website zit).
+name: Supabase actief houden
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Database even aanspreken
+        env:
+          SUPABASE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co
+          SUPABASE_KEY: sb_publishable_EGEUx5L3Df4w18_DgmtbHw_6RUoglht
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" \
+            "$SUPABASE_URL/rest/v1/site_settings?select=key&limit=1")
+          echo "Supabase antwoordde met HTTP $code"
+          test "$code" = "200"
