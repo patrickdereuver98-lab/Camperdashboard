@@ -173,7 +173,7 @@ export function extract(pages: string[], base: URL) {
 
   // ── Prijs per nacht ─────────────────────────────────────────────────────
   const AMOUNT = "(\\d{1,2}(?:[.,]\\d{2})?)(?:\\s*,-|\\s*[-–](?=\\s))?";
-  const PER = "(?:per|p\\.?|\\/|pro)\\s*(?:nacht|night|nacht|camper|plaats|plek|overnachting|24\\s*uur|etmaal|stellplatz|standplaats|kampeerplaats|kampeermiddel|staanplaats|pitch|motorhome|kampeerauto)";
+  const PER = "(?:per|p\\.?|\\/|pro)\\s*(?:nacht|night|dag|camper|plaats|plek|overnachting|24\\s*uur|etmaal|stellplatz|standplaats|kampeerplaats|kampeermiddel|staanplaats|pitch|motorhome|kampeerauto)";
   const prices: number[] = [];
   for (const re of [
     new RegExp(`€\\s?${AMOUNT}\\s*(?:euro\\s*)?${PER}`, "g"),
@@ -181,6 +181,8 @@ export function extract(pages: string[], base: URL) {
     // Tarieventabel: "camperplaats … € 15,00" (max. 40 tekens ertussen)
     new RegExp(`(?:camperplaats|camperplek|campertarief|camper|kampeerplaats|standplaats|staanplaats|stellplatz)[^€.]{0,40}€\\s?${AMOUNT}`, "g"),
     new RegExp(`(?:overnachting|overnachten|nachttarief|tarief per nacht|prijs per nacht|kosten per nacht|camperstandplaats)[^€.]{0,30}€\\s?${AMOUNT}`, "g"),
+    // Eenheid vóór het bedrag: "tent, caravan of camper, 2 personen, per nacht* € 22,00"
+    new RegExp(`(?:camper|caravan|kampeerplaats|standplaats|staanplaats)[^€.]{0,70}per (?:nacht|dag)\\*?\\s*€\\s?${AMOUNT}`, "g"),
   ])
     for (const m of text.matchAll(re)) {
       // Geen weekprijzen, prijzen per persoon/uur/kWh of losse toeslagen
@@ -190,6 +192,12 @@ export function extract(pages: string[], base: URL) {
       if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test(m[0])) continue;
       prices.push(money(m[1]));
     }
+  // schema.org priceRange alleen als er expliciet een nachtprijs staat ("€ 22 per nacht")
+  for (const item of jsonLd(pages[0])) {
+    const range = typeof item.priceRange === "string" ? item.priceRange.toLowerCase() : "";
+    const m = /€\s?(\d{1,2}(?:[.,]\d{2})?)\s*(?:,-\s*)?(?:per|p\.?|\/)\s*(?:nacht|night)/.exec(range);
+    if (m) prices.push(money(m[1]));
+  }
   const valid = prices.filter((p) => p >= 5 && p <= 75);
   if (valid.length) {
     const sorted = [...valid].sort((a, b) => a - b);
@@ -269,37 +277,52 @@ export function extract(pages: string[], base: URL) {
   }
 
   // ── Seizoen ──────────────────────────────────────────────────────────────
-  if (
-    /(het )?(hele|gehele) jaar (door )?(geopend|open)|(geopend|open) (het )?(hele|gehele) jaar|jaarrond (geopend|open)|365 dagen (per|per het) jaar|ganzjährig (geöffnet)?|open all year|year-round/.test(text)
-  ) {
-    out.open_all_year = true;
-  } else {
-    const season =
-      new RegExp(
-        `(?:geopend|open|seizoen|kampeerseizoen|openingsperiode|openingstijden|saison|season)[^.]{0,25}?(?:van(?:af)?\\s+)?(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\.?\\s*(?:t/m|tot en met|tot|-|–|bis|to|until)\\s*(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\b`,
-      ).exec(text) ??
-      // Numeriek: "01-04 t/m 31-10"
-      /(?:geopend|open|seizoen|periode)[^.]{0,25}?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\d{2,4})?\s*(?:t\/m|tot en met|tot|-|–)\s*(\d{1,2})[-/.](\d{1,2})/.exec(text);
-    if (season) {
-      let from: string;
-      let to: string;
-      if (MONTH_ALIASES[season[2]] !== undefined) {
-        from = `${season[1] ? `${Number(season[1])} ` : ""}${MONTHS_NL[MONTH_ALIASES[season[2]]]}`;
-        to = `${season[3] ? `${Number(season[3])} ` : ""}${MONTHS_NL[MONTH_ALIASES[season[4]]]}`;
-      } else {
-        const fm = Number(season[2]) - 1;
-        const tm = Number(season[4]) - 1;
-        if (fm < 0 || fm > 11 || tm < 0 || tm > 11) {
-          from = to = "";
-        } else {
-          from = `${Number(season[1])} ${MONTHS_NL[fm]}`;
-          to = `${Number(season[3])} ${MONTHS_NL[tm]}`;
-        }
+  // Alleen als het over het kamperen gaat: "de chalets zijn het hele jaar geopend" of "zwembad van april tot
+  // oktober geopend" zegt niets over de camperplaats. Bij twijfel laten we het veld leeg.
+  const OTHER =
+    /\b(chalets?|horeca|restaurant|zwembad|receptie|winkel|snackbar|kantine|vakantiehui(?:s|zen)|accommodaties?|appartement(?:en)?|huisjes?|lodges?|b&b|bungalows?|stacaravans?|safaritent(?:en)?|glamping|hotel|kamers?|speeltuin|sauna|cafe|bar)\b/;
+  const aboutCamping = (index: number, match: string) => {
+    // Alleen binnen dezelfde zin kijken
+    const before = text.slice(Math.max(0, index - 60), index);
+    return !OTHER.test(before.slice(before.lastIndexOf(".") + 1) + match);
+  };
+  const allYear =
+    /(het )?(hele|gehele) jaar (door )?(geopend|open)|(geopend|open) (het )?(hele|gehele) jaar|jaarrond (geopend|open)|365 dagen (per|per het) jaar|ganzjährig (geöffnet)?|open all year|year-round/g;
+  const ranged = new RegExp(
+    `(?:geopend|open|seizoen|kampeerseizoen|openingsperiode|openingstijden|saison|season)[^.]{0,25}?(?:van(?:af)?\\s+)?(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\.?\\s*(?:t/m|tot en met|tot|-|–|bis|to|until)\\s*(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\b`,
+    "g",
+  );
+  // Numeriek: "01-04 t/m 31-10"
+  const numeric = /(?:geopend|open|seizoen|periode)[^.]{0,25}?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\d{2,4})?\s*(?:t\/m|tot en met|tot|-|–)\s*(\d{1,2})[-/.](\d{1,2})/g;
+  type Hit = { index: number; allYear?: true; season?: RegExpExecArray };
+  const hits: Hit[] = [];
+  for (const m of text.matchAll(allYear)) if (aboutCamping(m.index!, m[0])) hits.push({ index: m.index!, allYear: true });
+  for (const m of text.matchAll(ranged)) if (aboutCamping(m.index!, m[0])) hits.push({ index: m.index!, season: m as RegExpExecArray });
+  for (const m of text.matchAll(numeric)) if (aboutCamping(m.index!, m[0])) hits.push({ index: m.index!, season: m as RegExpExecArray });
+  hits.sort((a, b) => a.index - b.index);
+  for (const hit of hits) {
+    if (hit.allYear) {
+      out.open_all_year = true;
+      break;
+    }
+    const season = hit.season!;
+    let from = "";
+    let to = "";
+    if (MONTH_ALIASES[season[2]] !== undefined) {
+      from = `${season[1] ? `${Number(season[1])} ` : ""}${MONTHS_NL[MONTH_ALIASES[season[2]]]}`;
+      to = `${season[3] ? `${Number(season[3])} ` : ""}${MONTHS_NL[MONTH_ALIASES[season[4]]]}`;
+    } else {
+      const fm = Number(season[2]) - 1;
+      const tm = Number(season[4]) - 1;
+      if (fm >= 0 && fm <= 11 && tm >= 0 && tm <= 11) {
+        from = `${Number(season[1])} ${MONTHS_NL[fm]}`;
+        to = `${Number(season[3])} ${MONTHS_NL[tm]}`;
       }
-      if (from && to && from !== to) {
-        out.open_all_year = false;
-        out.season = `${from} – ${to}`;
-      }
+    }
+    if (from && to && from !== to) {
+      out.open_all_year = false;
+      out.season = `${from} – ${to}`;
+      break;
     }
   }
 
