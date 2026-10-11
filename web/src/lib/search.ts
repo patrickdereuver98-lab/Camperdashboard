@@ -114,7 +114,7 @@ export function refinementCount(f: Filters): number {
 const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 /** Is de plek op `date` open volgens het seizoen? `undefined` = onbekend. */
-export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): boolean | undefined {
+function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): boolean | undefined {
   if (p.openAllYear) return true;
   if (!p.season) return undefined;
   const m = /(?:(\d{1,2}) )?([a-z]+) – (?:(\d{1,2}) )?([a-z]+)/.exec(p.season.toLowerCase());

@@ -114,7 +114,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
 
 // ── Voorzieningen als bordjes ───────────────────────────────────────────────
 
-export function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max?: number; size?: number }) {
+function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max?: number; size?: number }) {
   const present = FACILITIES.filter((f) => place[f.key] === true);
   const shown = present.slice(0, max);
   if (!shown.length) return null;
