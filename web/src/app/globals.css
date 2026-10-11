@@ -1,119 +1,185 @@
 @import "tailwindcss";
 
-/* ── Design tokens: "natuur & vrijheid" ─────────────────────────────────────
-   Papier-zand als ondergrond, bosgroen als merk, avondzon (ember) voor
-   accenten en meerblauw (lake) voor water. Donker = avond in het bos. */
+/* ── Wegwijzer: tokens ──────────────────────────────────────────────────────
+   Gebaseerd op Nederlandse bewegwijzering: verkeersblauw, wit, signaalgeel.
+   Zie docs/design.md. */
 :root {
-  --paper: #f5f0e6;
-  --surface: #fffcf6;
-  --surface-2: #ede6d8;
-  --ink: #1f2b24;
-  --ink-soft: #46524a;
-  --muted: #6b756d;
-  --line: #e0d7c5;
-  --forest: #2d5a43;
-  --forest-deep: #1c3a2b;
-  --forest-tint: #e1ebe2;
-  --on-forest: #fffcf6;
-  --ember: #b9592a;
-  --ember-tint: #f6e2d3;
-  --lake: #2f6f7e;
-  --lake-tint: #d9e9ea;
-  --shadow: 0 1px 2px rgb(40 35 20 / 0.05), 0 4px 16px rgb(40 35 20 / 0.06);
-  --shadow-lg: 0 2px 4px rgb(40 35 20 / 0.06), 0 16px 40px rgb(40 35 20 / 0.12);
+  --mist: #f3f5f4;
+  --surface: #ffffff;
+  --sunken: #e9edeb;
+  --ink: #122033;
+  --ink-2: #3b4a5c;
+  --muted: #5d6b7a;
+  --line: #d9e0dd;
+  --road: #0f4c8a;
+  --road-deep: #0a3767;
+  --road-tint: #e3edf8;
+  --on-road: #ffffff;
+  --polder: #2e7a4b;
+  --polder-tint: #e2f1e7;
+  --signal: #ffc629;
+  --on-signal: #122033;
+  --alert: #b3261e;
+  --alert-tint: #fbe9e7;
+  --scrim: rgb(10 22 38 / 0.45);
+  --lift: 0 1px 2px rgb(18 32 51 / 0.06), 0 8px 24px rgb(18 32 51 / 0.12);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #111713;
-    --surface: #18201b;
-    --surface-2: #222c26;
-    --ink: #ece7db;
-    --ink-soft: #c7c2b6;
-    --muted: #949e95;
-    --line: #2c3730;
-    --forest: #8dbf9f;
-    --forest-deep: #b9dcc4;
-    --forest-tint: #1e3227;
-    --on-forest: #0f1612;
-    --ember: #e8915c;
-    --ember-tint: #3a2519;
-    --lake: #82bcc8;
-    --lake-tint: #17303a;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
-    --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.3), 0 16px 40px rgb(0 0 0 / 0.45);
+    --mist: #0d1726;
+    --surface: #152238;
+    --sunken: #1c2c45;
+    --ink: #e8eef6;
+    --ink-2: #c3cedb;
+    --muted: #93a3b7;
+    --line: #26385a;
+    --road: #7db3f2;
+    --road-deep: #a9cdf7;
+    --road-tint: #1a3354;
+    --on-road: #0b1626;
+    --polder: #79c99a;
+    --polder-tint: #183a2a;
+    --alert: #ff8a80;
+    --alert-tint: #3a1d1c;
+    --scrim: rgb(0 0 0 / 0.6);
+    --lift: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.5);
     color-scheme: dark;
   }
 }
 
 @theme inline {
-  --color-paper: var(--paper);
+  --color-mist: var(--mist);
   --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
+  --color-sunken: var(--sunken);
   --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
+  --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);
   --color-line: var(--line);
-  --color-forest: var(--forest);
-  --color-forest-deep: var(--forest-deep);
-  --color-forest-tint: var(--forest-tint);
-  --color-on-forest: var(--on-forest);
-  --color-ember: var(--ember);
-  --color-ember-tint: var(--ember-tint);
-  --color-lake: var(--lake);
-  --color-lake-tint: var(--lake-tint);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
-  --shadow-card: var(--shadow);
-  --shadow-lift: var(--shadow-lg);
+  --color-road: var(--road);
+  --color-road-deep: var(--road-deep);
+  --color-road-tint: var(--road-tint);
+  --color-on-road: var(--on-road);
+  --color-polder: var(--polder);
+  --color-polder-tint: var(--polder-tint);
+  --color-signal: var(--signal);
+  --color-on-signal: var(--on-signal);
+  --color-alert: var(--alert);
+  --color-alert-tint: var(--alert-tint);
+  --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
+  --font-sign: var(--font-overpass), ui-sans-serif, system-ui, sans-serif;
+  --shadow-lift: var(--lift);
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.55;
 }
 
 html {
   -webkit-tap-highlight-color: transparent;
+  scroll-padding-top: 5rem;
 }
 
 body {
-  background: var(--paper);
+  background: var(--mist);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
+  font-size: var(--text-base);
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: var(--ember-tint);
+  background: var(--signal);
+  color: var(--on-signal);
 }
 
 :focus-visible {
-  outline: 2px solid var(--forest);
+  outline: 3px solid var(--signal);
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
-.font-display {
-  font-variation-settings: "SOFT" 60, "opsz" 72;
-  letter-spacing: -0.015em;
+/* Koppen in het borden-lettertype */
+.font-sign {
+  font-family: var(--font-sign);
+  letter-spacing: -0.01em;
 }
 
-/* Iets van papier-structuur op grote vlakken */
-.grain {
-  background-image: radial-gradient(rgb(120 100 60 / 0.06) 1px, transparent 1px);
-  background-size: 3px 3px;
+/* Bord: verkeersblauw paneel met witte binnenrand */
+.sign-panel {
+  background: var(--road);
+  color: var(--on-road);
+  border-radius: 1.25rem;
+  box-shadow: inset 0 0 0 4px var(--road), inset 0 0 0 6px rgb(255 255 255 / 0.9);
 }
-
-/* Gegenereerde landschappen iets gedempt in het donker */
 @media (prefers-color-scheme: dark) {
-  [data-landscape] {
-    filter: brightness(0.82) saturate(0.9);
+  .sign-panel {
+    background: #12406f;
+    color: #ffffff;
+    box-shadow: inset 0 0 0 4px #12406f, inset 0 0 0 6px rgb(255 255 255 / 0.85);
   }
 }
 
-/* ── MapLibre aanpassingen ───────────────────────────────────────────────── */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Schermlezers */
+.sr-only-focusable:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* ── View transitions ────────────────────────────────────────────────────── */
+::view-transition-group(.photo-morph) {
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ── Eén georkestreerd moment: het bord op de homepage ───────────────────── */
+@keyframes sign-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-sign-in {
+  animation: sign-in 420ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pop {
+  animation: pop 320ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ── MapLibre ────────────────────────────────────────────────────────────── */
 .maplibregl-popup-content {
   background: var(--surface) !important;
   color: var(--ink);
   border-radius: 14px !important;
-  padding: 12px 14px !important;
-  box-shadow: var(--shadow-lg) !important;
+  padding: 0 !important;
+  box-shadow: var(--lift) !important;
+  overflow: hidden;
   font-family: var(--font-sans);
 }
 .maplibregl-popup-tip {
@@ -121,21 +187,37 @@ body {
   border-bottom-color: var(--surface) !important;
 }
 .maplibregl-popup-close-button {
-  color: var(--muted);
-  font-size: 18px;
-  padding: 2px 8px;
+  color: var(--ink);
+  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  right: 2px;
+  top: 2px;
+  background: var(--surface);
+  border-radius: 999px;
 }
 .maplibregl-ctrl-group {
   background: var(--surface) !important;
   border-radius: 12px !important;
-  box-shadow: var(--shadow) !important;
+  box-shadow: var(--lift) !important;
+}
+.maplibregl-ctrl-group button {
+  width: 40px !important;
+  height: 40px !important;
 }
 .maplibregl-ctrl-attrib {
-  font-size: 10px;
+  font-size: 11px;
 }
 @media (prefers-color-scheme: dark) {
   .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
     filter: invert(1);
+  }
+  .maplibregl-ctrl-attrib {
+    background: rgb(21 34 56 / 0.8) !important;
+    color: var(--muted);
+  }
+  .maplibregl-ctrl-attrib a {
+    color: var(--ink-2);
   }
 }
 
@@ -145,5 +227,11 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

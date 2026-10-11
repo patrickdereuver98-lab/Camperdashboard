@@ -13,3 +13,10 @@ export function useMediaQuery(query: string): boolean {
     () => false,
   );
 }
+
+const noop = () => () => {};
+
+/** true zodra de component in de browser draait (na hydratatie) */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(noop, () => true, () => false);
+}

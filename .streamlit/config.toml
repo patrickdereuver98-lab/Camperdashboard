@@ -1,7 +1,0 @@
-# .streamlit/config.toml
-[theme]
-base = "light"
-primaryColor = "#0077B6"
-
-[server]
-headless = true

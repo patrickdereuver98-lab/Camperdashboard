@@ -1,53 +1,44 @@
 # VrijStaan web
 
-De nieuwe publieksapp van VrijStaan: camperplaatsen in Nederland zoeken, op de kaart bekijken en een reis plannen.
-Gebouwd met Next.js 16 (App Router, Cache Components), Tailwind CSS 4 en MapLibre GL.
+Next.js 16 (App Router, Cache Components, Partial Prerendering), React 19, Tailwind CSS 4, MapLibre GL 5,
+motion en Supabase. Mobile-first en installeerbaar als PWA.
 
-De Streamlit-app in de root van de repo blijft voorlopig het beheerpaneel en de batch engine
-(OSM-import en AI-verrijking).
-
-## Starten
+## Commando's
 
 ```bash
-cd web
 npm install
-npm run dev        # http://localhost:3000
-npm run build      # bouwt ook alle ~3.600 plekpagina's statisch voor
+npm run dev        # ontwikkelserver op http://localhost:3000
+npm run check      # ESLint + TypeScript
+npm run build      # productiebuild (prerendert alle gepubliceerde plekken)
+npm start          # productieserver
 ```
 
-## Pagina's
+Zonder internet (bijvoorbeeld in CI) bouwen met de meegeleverde snapshot: `VRIJSTAAN_OFFLINE=1 npm run build`.
 
-| Route | Wat |
+## Structuur
+
+| Pad | Wat |
 |---|---|
-| `/` | Landing met zoekbalk, snelle ingangen, provincies en een eerlijk overzicht van de datakwaliteit |
-| `/zoeken` | Lijst + kaart. Vrije tekst ("gratis aan het water in Zeeland") wordt omgezet naar filters; alle filters staan in de URL |
-| `/plek/[slug]` | Detailpagina: voorzieningen (met "onbekend" waar we het niet weten), contact, ligging, plekken in de buurt |
-| `/dichtbij` | GPS-locatie, straal 10–100 km, gesorteerd op afstand |
-| `/mijn-reis` | Bewaarde plekken (localStorage) op volgorde, nachten per stop, afstand, kostenschatting, route naar Google Maps |
+| `src/app/(site)/` | Publieke pagina's: start, zoeken, plek, dichtbij, mijn reis, provincies, FAQ, contact, support, juridisch |
+| `src/app/admin/` | Beheeromgeving (client-side, Supabase Auth + RLS) |
+| `src/app/api/` | `places`, `towns`, `route` (echte route), `distances` (rijtijdenmatrix) |
+| `src/components/` | UI: `sign.tsx` (pictogrammen), `place-ui.tsx`, `place-map.tsx`, `sheet.tsx`, `filter-sheet.tsx`, chrome |
+| `src/lib/` | Data (`places.ts`), zoeken en filters (`search.ts`), routes (`routing.ts`), opslag op het toestel (`store.ts`) |
+| `src/data/snapshot.json` | Kopie van de data voor offline bouwen en als vangnet als Supabase onbereikbaar is |
+| `public/sw.js` | Service worker: app-shell, eerder bekeken pagina's en kaarttegels offline |
+| `supabase/schema.sql` | Volledige databasestructuur, functies, RLS en cron-jobs |
+| `supabase/seed.sql` | Startgegevens (instellingen, FAQ, provincies, woonplaatsen, Overpass-sjablonen) |
+| `supabase/functions/pipeline/` | Edge function: OpenStreetMap-import en website-scraper |
 
 ## Data
 
-`src/data/places.json` wordt gegenereerd uit `../data/api_export_campers.csv`:
+Alle plekken komen uit OpenStreetMap en worden aangevuld met feiten van de eigen website van de plek.
+Er wordt niets geschat of verzonnen: een veld zonder bron blijft leeg en de site toont "onbekend".
+Een plek gaat pas online als minstens 80% van de 15 kernvelden bekend is (instelbaar in `/admin/instellingen`).
+Meer uitleg: [`../docs/HANDLEIDING.md`](../docs/HANDLEIDING.md).
+
+Snapshot verversen (na een `select public.export_snapshot();` in de Supabase SQL-editor, uitvoer opgeslagen als bestand):
 
 ```bash
-python3 web/scripts/build_data.py
+python3 scripts/write_snapshot.py export.json
 ```
-
-Het script vertaalt provincies naar het Nederlands, koppelt elke plek aan de dichtstbijzijnde woonplaats
-(GeoNames, `scripts/cities_nl.csv`), geeft naamloze plekken een leesbare naam, voegt dubbelingen samen en
-maakt openingstijden leesbaar.
-
-### Supabase (optioneel)
-
-Zet `SUPABASE_URL` en `SUPABASE_ANON_KEY` en de app leest uit de tabel `places`
-(schema: `supabase/migrations/0001_places.sql`). Zonder die variabelen, of als Supabase niet bereikbaar is,
-gebruikt de app de meegebouwde JSON.
-
-## Ontwerp
-
-"Natuur & vrijheid": zandpapier als ondergrond, bosgroen als merkkleur, avondzon (ember) voor accenten
-en meerblauw voor water. Fraunces voor koppen, Inter voor tekst. Alle kleuren zijn tokens in
-`src/app/globals.css`, met een donkere variant ("avond in het bos").
-
-Omdat er nog geen echte foto's zijn, krijgt elke plek een gegenereerd landschap (`components/landscape.tsx`),
-altijd hetzelfde per plek, met water erin als de plek aan het water ligt.

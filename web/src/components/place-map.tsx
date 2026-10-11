@@ -2,24 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
-import type { Place } from "@/lib/types";
 import type { LatLng } from "@/lib/geo";
+import { priceLabel } from "@/lib/format";
+import type { PlaceSummary } from "@/lib/types";
 
 const NL_BOUNDS: [[number, number], [number, number]] = [
   [3.3, 50.75],
   [7.25, 53.55],
 ];
-
 const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
 const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 
-function cssVar(name: string) {
-  return getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-}
+type MapPlace = Pick<PlaceSummary, "slug" | "name" | "lat" | "lng" | "town" | "priceEur" | "imageUrl">;
 
-function toGeoJSON(places: Place[]) {
+function toGeoJSON(places: MapPlace[]) {
   return {
     type: "FeatureCollection" as const,
     features: places.map((p) => ({
@@ -29,32 +25,58 @@ function toGeoJSON(places: Place[]) {
         slug: p.slug,
         name: p.name,
         town: p.town,
-        free: p.price === "gratis",
+        free: p.priceEur === 0,
+        price: p.priceEur === undefined ? "" : priceLabel(p.priceEur),
+        image: p.imageUrl ?? "",
       },
     })),
   };
 }
 
-/** Kleur de basiskaart bij in de VrijStaan-tinten (zand, mos, meer). */
-function tintBaseMap(map: MlMap, dark: boolean) {
-  const paper = dark ? "#141b16" : "#efe9dc";
-  const water = dark ? "#1c3640" : "#c5dcdc";
-  const green = dark ? "#1a2a20" : "#dde6d2";
+/** Basiskaart in de tinten van de site: koel wit, zacht groen, meerblauw */
+function tint(map: MlMap, dark: boolean) {
+  const colors = dark
+    ? { bg: "#0d1726", water: "#14324d", green: "#13261f" }
+    : { bg: "#f3f5f4", water: "#cfe1ee", green: "#e1ece2" };
   for (const layer of map.getStyle().layers ?? []) {
     try {
-      if (layer.type === "background")
-        map.setPaintProperty(layer.id, "background-color", paper);
-      else if (layer.type === "fill" && /water/.test(layer.id))
-        map.setPaintProperty(layer.id, "fill-color", water);
-      else if (
-        layer.type === "fill" &&
-        /wood|forest|park|grass|landcover/.test(layer.id)
-      )
-        map.setPaintProperty(layer.id, "fill-color", green);
+      if (layer.type === "background") map.setPaintProperty(layer.id, "background-color", colors.bg);
+      else if (layer.type === "fill" && /water/.test(layer.id)) map.setPaintProperty(layer.id, "fill-color", colors.water);
+      else if (layer.type === "fill" && /wood|forest|park|grass|landcover/.test(layer.id))
+        map.setPaintProperty(layer.id, "fill-color", colors.green);
     } catch {
-      /* laag ondersteunt deze eigenschap niet */
+      /* niet elke laag ondersteunt deze eigenschap */
     }
   }
+}
+
+function popupNode(p: { slug: string; name: string; town: string; price: string; image: string }) {
+  const a = document.createElement("a");
+  a.href = `/plek/${p.slug}`;
+  a.style.cssText = "display:block;width:240px;color:var(--ink);text-decoration:none";
+  if (p.image) {
+    const img = document.createElement("img");
+    img.src = p.image;
+    img.alt = "";
+    img.referrerPolicy = "no-referrer";
+    img.style.cssText = "width:100%;height:120px;object-fit:cover;display:block;background:var(--sunken)";
+    img.onerror = () => img.remove();
+    a.append(img);
+  }
+  const body = document.createElement("div");
+  body.style.cssText = "padding:10px 12px 12px";
+  const name = document.createElement("div");
+  name.textContent = p.name;
+  name.style.cssText = "font-family:var(--font-sign);font-weight:700;font-size:16px;line-height:1.25;padding-right:24px";
+  const meta = document.createElement("div");
+  meta.textContent = p.price ? `${p.town}, ${p.price}` : p.town;
+  meta.style.cssText = "margin-top:4px;font-size:14px;color:var(--muted)";
+  const cta = document.createElement("div");
+  cta.textContent = "Bekijk plek";
+  cta.style.cssText = "margin-top:8px;font-weight:700;color:var(--road);font-size:14px;text-decoration:underline";
+  body.append(name, meta, cta);
+  a.append(body);
+  return a;
 }
 
 export function PlaceMap({
@@ -64,19 +86,19 @@ export function PlaceMap({
   fitKey,
   route,
   user,
+  cluster = true,
   className = "",
-  interactive = true,
 }: {
-  places: Place[];
+  places: MapPlace[];
   highlight?: string | null;
   onSelect?: (slug: string) => void;
   /** Verandert deze waarde, dan zoomt de kaart naar de huidige plekken. */
   fitKey?: string;
-  /** Teken een lijn langs de plekken in volgorde. */
-  route?: boolean;
+  /** Lijn over de weg (lng/lat), bijvoorbeeld van de routeplanner */
+  route?: [number, number][] | null;
   user?: LatLng | null;
+  cluster?: boolean;
   className?: string;
-  interactive?: boolean;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
@@ -84,24 +106,24 @@ export function PlaceMap({
   const userMarker = useRef<{ remove(): void } | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const latest = useRef({ places, onSelect });
+  const latest = useRef({ places, onSelect, cluster });
   useEffect(() => {
-    latest.current = { places, onSelect };
+    latest.current = { places, onSelect, cluster };
   });
 
-  // Kaart opbouwen (en weer opruimen: routes blijven onder <Activity> gemount)
+  // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
   useEffect(() => {
     let cancelled = false;
     let map: MlMap | null = null;
-
     (async () => {
       const maplibregl = (await import("maplibre-gl")).default;
       if (cancelled || !el.current) return;
       const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const forest = cssVar("--forest") || "#2d5a43";
-      const ember = cssVar("--ember") || "#b9592a";
-      const surface = cssVar("--surface") || "#fffcf6";
-      const onForest = cssVar("--on-forest") || "#fffcf6";
+      const css = getComputedStyle(document.documentElement);
+      const signal = css.getPropertyValue("--signal").trim() || "#ffc629";
+      const surface = css.getPropertyValue("--surface").trim() || "#ffffff";
+      const ink = css.getPropertyValue("--ink").trim() || "#122033";
+      const road = dark ? "#2f6db3" : css.getPropertyValue("--road").trim() || "#0f4c8a";
 
       map = new maplibregl.Map({
         container: el.current,
@@ -109,46 +131,36 @@ export function PlaceMap({
         bounds: NL_BOUNDS,
         fitBoundsOptions: { padding: 24 },
         attributionControl: { compact: true },
-        interactive,
-        cooperativeGestures: false,
       });
       mapRef.current = map;
-      if (interactive)
-        map.addControl(
-          new maplibregl.NavigationControl({ showCompass: false }),
-          "top-right",
-        );
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
       map.on("error", (e) => {
-        if (
-          !map?.isStyleLoaded() &&
-          String(e.error?.message ?? "").match(/style|fetch/i)
-        )
-          setFailed(true);
+        if (!map?.isStyleLoaded() && /style|fetch|Failed/i.test(String(e.error?.message ?? ""))) setFailed(true);
       });
 
       map.on("load", () => {
         if (!map) return;
-        tintBaseMap(map, dark);
+        tint(map, dark);
         map.addSource("places", {
           type: "geojson",
           data: toGeoJSON(latest.current.places),
-          cluster: !route,
-          clusterRadius: 44,
-          clusterMaxZoom: 11,
+          cluster: latest.current.cluster,
+          clusterRadius: 46,
+          clusterMaxZoom: 10,
         });
-        map.addSource("route", {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
+        map.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({
+          id: "route-casing",
+          type: "line",
+          source: "route",
+          paint: { "line-color": surface, "line-width": 8 },
+          layout: { "line-cap": "round", "line-join": "round" },
         });
         map.addLayer({
           id: "route",
           type: "line",
           source: "route",
-          paint: {
-            "line-color": ember,
-            "line-width": 3,
-            "line-dasharray": [2, 1.5],
-          },
+          paint: { "line-color": road, "line-width": 4.5 },
           layout: { "line-cap": "round", "line-join": "round" },
         });
         map.addLayer({
@@ -157,21 +169,10 @@ export function PlaceMap({
           source: "places",
           filter: ["has", "point_count"],
           paint: {
-            "circle-color": forest,
-            "circle-opacity": 0.92,
-            "circle-radius": [
-              "step",
-              ["get", "point_count"],
-              15,
-              20,
-              19,
-              100,
-              25,
-              300,
-              31,
-            ],
+            "circle-color": road,
+            "circle-radius": ["step", ["get", "point_count"], 16, 20, 20, 100, 26],
             "circle-stroke-width": 3,
-            "circle-stroke-color": surface,
+            "circle-stroke-color": "#ffffff",
           },
         });
         map.addLayer({
@@ -179,12 +180,8 @@ export function PlaceMap({
           type: "symbol",
           source: "places",
           filter: ["has", "point_count"],
-          layout: {
-            "text-field": ["get", "point_count_abbreviated"],
-            "text-size": 12,
-            "text-font": ["Noto Sans Bold"],
-          },
-          paint: { "text-color": onForest },
+          layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 13, "text-font": ["Noto Sans Bold"] },
+          paint: { "text-color": "#ffffff" },
         });
         map.addLayer({
           id: "points",
@@ -192,87 +189,55 @@ export function PlaceMap({
           source: "places",
           filter: ["!", ["has", "point_count"]],
           paint: {
-            "circle-color": ["case", ["get", "free"], ember, forest],
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 5, 13, 8],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": surface,
+            "circle-color": ["case", ["get", "free"], signal, road],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 6, 13, 9],
+            "circle-stroke-width": 2.5,
+            "circle-stroke-color": "#ffffff",
           },
+        });
+        map.addLayer({
+          id: "point-price",
+          type: "symbol",
+          source: "places",
+          minzoom: 10,
+          filter: ["all", ["!", ["has", "point_count"]], ["!=", ["get", "price"], ""]],
+          layout: {
+            "text-field": ["get", "price"],
+            "text-size": 12,
+            "text-font": ["Noto Sans Bold"],
+            "text-offset": [0, 1.5],
+            "text-anchor": "top",
+          },
+          paint: { "text-color": ink, "text-halo-color": surface, "text-halo-width": 2 },
         });
         map.addLayer({
           id: "points-active",
           type: "circle",
           source: "places",
           filter: ["==", ["get", "slug"], ""],
-          paint: {
-            "circle-color": ember,
-            "circle-radius": 11,
-            "circle-stroke-width": 3,
-            "circle-stroke-color": surface,
-          },
+          paint: { "circle-color": signal, "circle-radius": 13, "circle-stroke-width": 4, "circle-stroke-color": road },
         });
 
         map.on("click", "clusters", async (e) => {
           const f = e.features?.[0];
           if (!f || !map) return;
-          const src = map.getSource("places") as GeoJSONSource;
-          const zoom = await src.getClusterExpansionZoom(
-            f.properties.cluster_id,
-          );
-          map.easeTo({
-            center: (f.geometry as GeoJSON.Point).coordinates as [
-              number,
-              number,
-            ],
-            zoom,
-          });
+          const zoom = await (map.getSource("places") as GeoJSONSource).getClusterExpansionZoom(f.properties.cluster_id);
+          map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
         });
         map.on("click", "points", (e) => {
           const f = e.features?.[0];
           if (!f || !map) return;
-          const { slug, name, town } = f.properties as {
-            slug: string;
-            name: string;
-            town: string;
-          };
-          latest.current.onSelect?.(slug);
-          const box = document.createElement("div");
-          const a = document.createElement("a");
-          a.href = `/plek/${slug}`;
-          a.textContent = name;
-          a.style.cssText =
-            "font-weight:600;font-size:15px;color:var(--ink);text-decoration:none;display:block;padding-right:14px";
-          const sub = document.createElement("div");
-          sub.textContent = town;
-          sub.style.cssText =
-            "font-size:13px;color:var(--muted);margin-top:2px";
-          const more = document.createElement("a");
-          more.href = `/plek/${slug}`;
-          more.textContent = "Bekijk plek →";
-          more.style.cssText =
-            "display:inline-block;margin-top:8px;font-size:13px;font-weight:600;color:var(--forest)";
-          box.append(a, sub, more);
+          const props = f.properties as { slug: string; name: string; town: string; price: string; image: string };
+          latest.current.onSelect?.(props.slug);
           popupRef.current?.remove();
-          popupRef.current = new maplibregl.Popup({
-            offset: 12,
-            maxWidth: "240px",
-          })
-            .setLngLat(
-              (f.geometry as GeoJSON.Point).coordinates as [number, number],
-            )
-            .setDOMContent(box)
+          popupRef.current = new maplibregl.Popup({ offset: 14, maxWidth: "260px" })
+            .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
+            .setDOMContent(popupNode(props))
             .addTo(map);
         });
         for (const id of ["clusters", "points"]) {
-          map.on(
-            "mouseenter",
-            id,
-            () => map && (map.getCanvas().style.cursor = "pointer"),
-          );
-          map.on(
-            "mouseleave",
-            id,
-            () => map && (map.getCanvas().style.cursor = ""),
-          );
+          map.on("mouseenter", id, () => map && (map.getCanvas().style.cursor = "pointer"));
+          map.on("mouseleave", id, () => map && (map.getCanvas().style.cursor = ""));
         }
         setReady(true);
       });
@@ -288,39 +253,34 @@ export function PlaceMap({
       setReady(false);
     };
     // De kaart wordt één keer opgebouwd; updates lopen via de effecten hieronder.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Data bijwerken
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
-    (map.getSource("places") as GeoJSONSource | undefined)?.setData(
-      toGeoJSON(places),
-    );
-    if (route) {
-      (map.getSource("route") as GeoJSONSource | undefined)?.setData({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates: places.map((p) => [p.lng, p.lat]),
-        },
-      });
-    }
-  }, [places, ready, route]);
+    (map.getSource("places") as GeoJSONSource | undefined)?.setData(toGeoJSON(places));
+  }, [places, ready]);
 
-  // Inzoomen op de resultaten
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
-    const pts = [
+    (map.getSource("route") as GeoJSONSource | undefined)?.setData(
+      route && route.length > 1
+        ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route } }
+        : { type: "FeatureCollection", features: [] },
+    );
+  }, [route, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    const pts: [number, number][] = [
       ...places.map((p) => [p.lng, p.lat] as [number, number]),
       ...(user ? [[user.lng, user.lat] as [number, number]] : []),
     ];
     if (!pts.length) return;
     if (pts.length === 1) {
-      map.easeTo({ center: pts[0], zoom: 11, duration: 600 });
+      map.easeTo({ center: pts[0], zoom: 12, duration: 500 });
       return;
     }
     const lngs = pts.map((p) => p[0]);
@@ -330,19 +290,17 @@ export function PlaceMap({
         [Math.min(...lngs), Math.min(...lats)],
         [Math.max(...lngs), Math.max(...lats)],
       ],
-      { padding: 48, maxZoom: 12, duration: 600 },
+      { padding: 56, maxZoom: 12.5, duration: 500 },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey, ready]);
 
-  // Markering bij hover in de lijst
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
     map.setFilter("points-active", ["==", ["get", "slug"], highlight ?? ""]);
   }, [highlight, ready]);
 
-  // Eigen locatie
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -354,11 +312,9 @@ export function PlaceMap({
       if (!alive || !mapRef.current) return;
       const dot = document.createElement("div");
       dot.style.cssText =
-        "width:18px;height:18px;border-radius:50%;background:#3b82c4;border:3px solid white;box-shadow:0 0 0 6px rgb(59 130 196 / .25)";
+        "width:20px;height:20px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 8px rgb(26 115 232 / .22)";
       dot.setAttribute("aria-label", "Jouw locatie");
-      userMarker.current = new maplibregl.Marker({ element: dot })
-        .setLngLat([user.lng, user.lat])
-        .addTo(mapRef.current);
+      userMarker.current = new maplibregl.Marker({ element: dot }).setLngLat([user.lng, user.lat]).addTo(mapRef.current);
     });
     return () => {
       alive = false;
@@ -366,16 +322,12 @@ export function PlaceMap({
   }, [user, ready]);
 
   return (
-    <div className={`relative overflow-hidden bg-surface-2 ${className}`}>
-      {/* Inline: maplibre-gl.css (zonder layer) zet position: relative en wint van utilities */}
+    <div className={`relative overflow-hidden bg-sunken ${className}`}>
+      {/* Inline: maplibre-gl.css (zonder cascade layer) zet position: relative en wint van utilities */}
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
-      {!ready && !failed && (
-        <div className="absolute inset-0 grid place-items-center text-sm text-muted">
-          Kaart laden…
-        </div>
-      )}
+      {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-muted">Kaart laden…</div>}
       {failed && (
-        <div className="absolute inset-0 grid place-items-center p-6 text-center text-sm text-muted">
+        <div className="absolute inset-0 grid place-items-center p-6 text-center text-muted">
           De kaart kon niet worden geladen. Controleer je verbinding.
         </div>
       )}
