@@ -31,6 +31,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/cookies", label: "Cookiebeleid" },
       { href: "/voorwaarden", label: "Gebruiksvoorwaarden" },
       { href: "/disclaimer", label: "Disclaimer" },
+      { href: "/reviews-en-ranking", label: "Reviews en ranking" },
+      { href: "/melden", label: "Meld inhoud" },
       { href: "/toegankelijkheid", label: "Toegankelijkheid" },
     ],
   },

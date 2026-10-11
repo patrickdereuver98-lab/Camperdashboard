@@ -235,6 +235,22 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
           </div>
           <Field label="Toelichting prijs"><input className={input} value={text("price_note")} onChange={(e) => set("price_note", e.target.value || null)} /></Field>
           <Field label="Seizoen"><input className={input} placeholder="bijv. 1 april t/m 31 oktober" value={text("season")} onChange={(e) => set("season", e.target.value || null)} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Vertrekken">
+              <select className={input} value={String(v("departure") ?? "")} onChange={(e) => set("departure", e.target.value || null)}>
+                <option value="">Onbekend</option>
+                <option value="vrij">Geen vaste vertrektijd</option>
+                <option value="per24">Per 24 uur</option>
+                <option value="vast">Vaste vertrektijd</option>
+              </select>
+            </Field>
+            <Field label="Vertrek uiterlijk (uu:mm)"><input className={input} placeholder="11:00" value={text("checkout_until")} onChange={(e) => set("checkout_until", e.target.value || null)} /></Field>
+            <Field label="Aankomst vanaf (uu:mm)"><input className={input} placeholder="13:00" value={text("checkin_from")} onChange={(e) => set("checkin_from", e.target.value || null)} /></Field>
+            <Field label="Slagboom/poort open"><input className={input} placeholder="07:30–23:00" value={text("access_hours")} onChange={(e) => set("access_hours", e.target.value || null)} /></Field>
+          </div>
+          <Field label="Bron vertrektijden (letterlijke zin)">
+            <textarea className={textarea} rows={2} value={text("times_note")} onChange={(e) => set("times_note", e.target.value || null)} />
+          </Field>
           <Field label="Ondergrond">
             <select className={input} value={String(v("surface") ?? "")} onChange={(e) => set("surface", e.target.value || null)}>
               <option value="">Onbekend</option>

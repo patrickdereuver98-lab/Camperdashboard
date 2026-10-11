@@ -164,9 +164,10 @@ function concat(chunks: Uint8Array[]) {
 // Subpagina's met de meeste kans op prijzen, voorzieningen en seizoen (hoogste prioriteit eerst)
 const SUBPAGES: RegExp[] = [
   /tarie|prijs|prijzen|kosten|preise|tarife|prices|rates/i,
-  /camper|stellplatz|motorhome/i,
+  /camper|stellplatz|motorhome|wohnmobil/i,
+  /aankomst|vertrek|check-?in|check-?out|inchecken|huisregel|reglement|regels|praktisch|faq|veelgestelde|vragen|anreise|platzordnung/i,
   /faciliteit|voorzien|ausstattung|facilities|sanitair/i,
-  /info|praktisch|reglement|huisregels|openingstijden|seizoen/i,
+  /info|openingstijden|seizoen/i,
   /over-ons|contact|ueber-uns|about/i,
 ];
 
@@ -189,11 +190,18 @@ async function scrapeOne(place: { id: string; website: string }) {
         .map((u) => u.origin + u.pathname),
     ),
   ];
+  // Hoogstens twee pagina's per soort, zodat ook de huisregels (aankomst- en vertrektijden) aan bod komen
+  const perRank = new Map<number, number>();
   const ranked = links
     .map((href) => ({ href, rank: SUBPAGES.findIndex((re) => re.test(new URL(href).pathname)) }))
     .filter((l) => l.rank >= 0)
-    .sort((a, b) => a.rank - b.rank)
-    .slice(0, 5);
+    .sort((a, b) => a.rank - b.rank || a.href.length - b.href.length)
+    .filter((l) => {
+      const n = perRank.get(l.rank) ?? 0;
+      perRank.set(l.rank, n + 1);
+      return n < 2;
+    })
+    .slice(0, 6);
   const subs = await Promise.all(ranked.map((l) => fetchPage(new URL(l.href)).catch(() => null)));
   for (const sub of subs) if (sub) pages.push(sub);
   return extract(pages, home);

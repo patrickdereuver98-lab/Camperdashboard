@@ -11,7 +11,7 @@ const PLACE_COLUMNS =
   "id,slug,name,kind,lat,lng,street,postcode,town,province,description,description_source,price_eur,price_note," +
   "tourist_tax_included,power,water,dump_station,toilet,shower,wifi,dogs,capacity,max_length_m,surface,open_all_year," +
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
-  "completeness,verified_at,updated_at";
+  "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras";
 
 async function rest<T>(path: string): Promise<T[]> {
   const out: T[] = [];
@@ -28,7 +28,7 @@ async function rest<T>(path: string): Promise<T[]> {
   }
 }
 
-const camel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+const camel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 
 function toCamel<T>(row: Record<string, unknown>): T {
   const out: Record<string, unknown> = {};
@@ -63,26 +63,41 @@ export async function getPlaces(): Promise<Place[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag("places");
+  const { website_photos } = await getSettings();
   return withFallback(
     async () =>
       (await rest<Record<string, unknown>>(`places?select=${PLACE_COLUMNS}&status=eq.published&order=slug`)).map(
-        (r) => normalize(toCamel<Place>(r)),
+        (r) => normalize(toCamel<Place>(r), website_photos),
       ),
-    () => SNAP.places.map(normalize),
+    () => SNAP.places.map((p) => normalize(p, website_photos)),
   );
+}
+
+/**
+ * Foto's die we mogen tonen: Wikimedia Commons (met naamsvermelding), uploads in onze eigen opslag (bezoekers en
+ * eigenaren, met licentie via de voorwaarden) en foto's waarvoor de eigenaar toestemming gaf. Foto's van de website
+ * van de plek alleen als dat in beheer is aangezet: die zijn auteursrechtelijk beschermd.
+ */
+function photoAllowed(url: string, permission: boolean | undefined, websitePhotos: boolean) {
+  if (websitePhotos || permission) return true;
+  return /^https:\/\/(commons|upload)\.wikimedia\.org\//.test(url) || url.startsWith(`${SUPABASE_URL}/storage/`);
 }
 
 /** Sommige sites geven foto-URL's met HTML-entiteiten (https&#x3A;&#x2F;…) */
 const decodeEntities = (s: string) =>
   s.replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCharCode(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d: string) => String.fromCharCode(Number(d))).replace(/&amp;/g, "&");
 
-function normalize(p: Place): Place {
-  const photos = (p.photos ?? []).map((ph) => ({ ...ph, url: decodeEntities(ph.url) })).filter((ph) => /^https:\/\//.test(ph.url));
-  const imageUrl = p.imageUrl ? decodeEntities(p.imageUrl) : undefined;
+function normalize(p: Place, websitePhotos = false): Place {
+  const photos = (p.photos ?? [])
+    .map((ph) => ({ ...ph, url: decodeEntities(ph.url) }))
+    .filter((ph) => /^https:\/\//.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos));
+  const image = p.imageUrl ? decodeEntities(p.imageUrl) : undefined;
+  const imageUrl = image && /^https:\/\//.test(image) && photoAllowed(image, p.photos?.find((ph) => ph.url === p.imageUrl)?.permission, websitePhotos) ? image : photos[0]?.url;
   return {
     ...p,
     photos,
-    imageUrl: imageUrl && /^https:\/\//.test(imageUrl) ? imageUrl : undefined,
+    imageUrl,
+    imageCredit: imageUrl ? (imageUrl === image ? p.imageCredit : photos[0]?.credit) : undefined,
     // "vanaf € x": de laagste genoemde prijs, er zijn duurdere tarieven
     priceFrom: p.priceEur !== undefined && p.priceEur > 0 && /^vanaf/i.test(p.priceNote ?? "") ? true : undefined,
   };
@@ -91,7 +106,7 @@ function normalize(p: Place): Place {
 const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
   "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
-  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded",
+  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "priceExtras",
 ];
 
 export function toSummary(p: Place): PlaceSummary {
@@ -165,6 +180,7 @@ export async function getStats() {
     power: places.filter((p) => p.power).length,
     dump: places.filter((p) => p.dumpStation).length,
     dogs: places.filter((p) => p.dogs).length,
+    freeDeparture: places.filter((p) => p.departure === "vrij" || p.departure === "per24").length,
     withPhoto: places.filter((p) => p.imageUrl).length,
     byProvince,
   };
@@ -172,8 +188,17 @@ export async function getStats() {
 
 // ── Instellingen uit de beheeromgeving ─────────────────────────────────────
 
-export type SiteSettings = { contact: { email: string; response_days: number }; announcement: { text: string; enabled: boolean } };
-const DEFAULT_SETTINGS: SiteSettings = { contact: { email: "hallo@vrijstaan.nl", response_days: 2 }, announcement: { text: "", enabled: false } };
+export type SiteSettings = {
+  contact: { email: string; response_days: number };
+  announcement: { text: string; enabled: boolean };
+  /** Foto's van de websites van plekken tonen (alleen met toestemming van de rechthebbenden) */
+  website_photos: boolean;
+};
+const DEFAULT_SETTINGS: SiteSettings = {
+  contact: { email: "hallo@vrijstaan.nl", response_days: 2 },
+  announcement: { text: "", enabled: false },
+  website_photos: false,
+};
 
 export async function getSettings(): Promise<SiteSettings> {
   "use cache";

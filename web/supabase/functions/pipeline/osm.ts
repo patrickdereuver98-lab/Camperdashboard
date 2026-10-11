@@ -66,6 +66,29 @@ function season(oh?: string): { open_all_year?: boolean; season?: string } {
   return {};
 }
 
+/** check_in / check_out / maxstay / opening_hours=24/7 (OSM-wiki): alleen als het er letterlijk staat */
+function times(t: Tags): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const clock = (v?: string, last = false) => {
+    const all = [...(v ?? "").matchAll(/(\d{1,2}):(\d{2})/g)];
+    const m = last ? all[all.length - 1] : all[0];
+    return m && Number(m[1]) < 24 ? `${m[1].padStart(2, "0")}:${m[2]}` : undefined;
+  };
+  // "-18:00" of "06:00-10:00": vertrekken kan uiterlijk tot de laatste tijd
+  const out_ = clock(t.check_out, true);
+  if (out_) Object.assign(out, { departure: "vast", checkout_until: out_ });
+  const in_ = t.check_in && !t.check_in.trim().startsWith("-") ? clock(t.check_in) : undefined;
+  if (in_) out.checkin_from = in_;
+  const stay = /^(\d{1,3})\s*(nights?|days?|nachten|dagen)$/i.exec(t.maxstay ?? "") ?? /^(\d{1,3})\s*(hours?|h|uur)$/i.exec(t.maxstay ?? "");
+  if (stay) {
+    const n = Number(stay[1]);
+    const nights = /hour|^h$|uur/i.test(stay[2]) ? Math.floor(n / 24) : n;
+    if (nights >= 1 && nights <= 60) out.max_stay_nights = nights;
+  }
+  if (/^24\/7$/.test((t.opening_hours ?? "").trim())) out.access_24h = true;
+  return out;
+}
+
 function kind(t: Tags): string {
   const name = t.name ?? "";
   if (/boerderij|boerencamping|\bboer\b|hoeve|farm/i.test(name)) return "boerderij";
@@ -144,6 +167,7 @@ export function mapOsm(e: Record<string, unknown>) {
     phone: t.phone ?? t["contact:phone"],
     email: t.email ?? t["contact:email"],
     ...season(t.opening_hours),
+    ...times(t),
     ...image(t),
   };
   for (const k of Object.keys(row)) if (row[k] === undefined || row[k] === "") delete row[k];

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { MotionConfig, motion } from "motion/react";
-import { distanceKm, formatKm, type LatLng } from "@/lib/geo";
+import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { eur, formatDuration, pluralize } from "@/lib/format";
 import { readTripPlaces, rememberTripPlaces, usePlaces, useTrip, useTripSettings, type TripStop } from "@/lib/store";
 import type { PlaceSummary } from "@/lib/types";
@@ -72,8 +72,8 @@ export function TripApp() {
 
   const routeKey = useMemo(() => {
     if (!stops || stops.length + (start ? 1 : 0) < 2) return null;
-    const pts = [...(start ? [start] : []), ...stops.map((s) => s.place)];
-    return pts.map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join(";");
+    // Het vertrekpunt kan je eigen locatie zijn: alleen afgerond versturen
+    return [...(start ? [coarse(start)] : []), ...stops.map((s) => `${s.place.lat.toFixed(5)},${s.place.lng.toFixed(5)}`)].join(";");
   }, [stops, start]);
 
   useEffect(() => {

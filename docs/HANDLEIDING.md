@@ -93,7 +93,8 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 | **Reviews** | Reviews goedkeuren, afwijzen of verwijderen. Alleen goedgekeurde reviews zijn zichtbaar |
 | **FAQ** | Vragen toevoegen, bewerken, verbergen en ordenen. Verschijnt op `/veelgestelde-vragen` |
 | **Logs** | Systeemfouten, alle wijzigingen door beheerders (auditlog), data-imports en cookietoestemmingen |
-| **Instellingen** | Contactadres, mededeling bovenaan de site, publicatiedrempel en knoppen voor de pipeline |
+| **Statistieken** | Bezoeken per dag, populaire pagina's, zoekopdrachten en plekken (alleen bezoekers die toestemming gaven) |
+| **Instellingen** | Contactadres, mededeling bovenaan de site, publicatiedrempel, websitefoto's aan/uit en knoppen voor de pipeline |
 
 ---
 
@@ -110,12 +111,20 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
    Ontkenningen ("geen honden") gaan altijd voor. `robots.txt` wordt gerespecteerd.
 3. **Volgorde van gezag**: wat jij in beheer invult > de eigen website (voor prijs en seizoen) > OpenStreetMap.
    Komt een waarde van een website en staat die er bij een volgende controle niet meer, dan wordt hij gewist.
-4. **Publiceren**: een plek gaat automatisch online als:
+4. **Vertrektijden (de kern)**: de scraper leest ook aankomst- en vertrektijden, slagboomtijden en "per 24 uur".
+   Een plek krijgt *Geen vaste vertrektijd* alleen als de website dat letterlijk zegt; de zin zelf wordt bewaard en op de
+   site getoond met de datum. Tijden voor chalets, verhuur, arrangementen of de receptie tellen niet mee.
+5. **Prijzen**: de laagste nachtprijs voor een kampeerplek ("vanaf"), de hoogste genoemde prijs, en losse toeslagen
+   (toeristenbelasting, stroom, per persoon, kind, hond, douche, water, lozen, extra auto) precies zoals de website ze noemt.
+6. **Publiceren**: een plek gaat automatisch online als:
    - er een website of telefoonnummer is, én
-   - minstens twee van de drie beslisfeiten bekend zijn: prijs, openingsperiode en stroom, én
-   - de gewogen score minstens 70% is. Gewichten (20 punten): prijs 3, openingsperiode 3, stroom 2, contact 2,
-     foto 2, water 1,5, lozen 1,5, toilet 1, honden 1, beschrijving 1, echte naam 1, douche 0,5, aantal plekken 0,5.
-   Wifi, maximale lengte, ondergrond en reserveren worden getoond maar tellen niet mee. Drempel aanpassen kan in **Instellingen**.
+   - minstens twee van de vier beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom en prijs, én
+   - de gewogen score de drempel haalt (nu 55%). Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs 2,
+     stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1, honden 1, beschrijving 0,5, echte naam 0,5,
+     douche 0,25, aantal plekken 0,25.
+   Drempel aanpassen kan in **Instellingen**.
+7. **Foto's**: foto's van websites van plekken worden standaard niet getoond (auteursrecht). Alleen Wikimedia Commons,
+   uploads in onze eigen opslag en foto's met toestemming. Aanzetten kan in **Instellingen**, alleen met toestemming.
 
 Automatische taken (pg_cron in Supabase):
 
@@ -136,8 +145,8 @@ openbare OSRM-server van de OpenStreetMap-gemeenschap.
 - [ ] Site URL en redirect-URL's in Supabase Auth (stap 4) en eigen SMTP
 - [ ] Beheeraccount aanmaken (stap 4)
 - [ ] In **Instellingen** het echte contactadres invullen (nu staat er `hallo@vrijstaan.nl`)
-- [ ] Bedrijfsgegevens (naam, KvK-nummer, adres) toevoegen aan `web/src/app/(site)/privacy/page.tsx`
-      en `voorwaarden/page.tsx`, en de teksten laten nalezen door een jurist
+- [ ] Bedrijfsgegevens (naam, adres, KvK, btw) invullen in `web/src/lib/company.ts` (privacy, voorwaarden en
+      disclaimer gebruiken die automatisch) en de teksten laten nalezen door een jurist
 - [ ] Optioneel: OpenRouteService-sleutel voor eigen rijtijden-quotum
 
 ---

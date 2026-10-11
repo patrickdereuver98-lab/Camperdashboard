@@ -20,6 +20,11 @@ const MONTH_ALIASES: Record<string, number> = {
 const MONTH_RE = Object.keys(MONTH_ALIASES).sort((a, b) => b.length - a.length).join("|");
 
 function toText(html: string): string {
+  return toRawText(html).toLowerCase();
+}
+
+/** Zelfde tekst als toText, maar met hoofdletters, voor letterlijke citaten */
+function toRawText(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -37,8 +42,7 @@ function toText(html: string): string {
     .replace(/&auml;/g, "ä")
     .replace(/&ndash;|&mdash;|&#8211;/g, "–")
     .replace(/&[a-z]+;/g, " ")
-    .replace(/\s+/g, " ")
-    .toLowerCase();
+    .replace(/\s+/g, " ");
 }
 
 function meta(html: string, name: string): string | undefined {
@@ -107,7 +111,8 @@ function contentImages(html: string, base: URL): string[] {
     if (url && !out.includes(url)) out.push(url);
     if (out.length >= 8) break;
   }
-  return out;
+  const order = EXTRA_KINDS.map((k) => k.label);
+  return out.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
 }
 
 function money(s: string): number {
@@ -206,8 +211,11 @@ export function extract(pages: string[], base: URL) {
     const m = /€\s?(\d{1,2}(?:[.,]\d{2})?)\s*(?:,-\s*)?(?:per|p\.?|\/)\s*(?:nacht|night)/.exec(range);
     if (m) prices.push({ amount: money(m[1]), pitch: true });
   }
+  // Bedragen die we als losse toeslag herkennen (extra persoon, hond, stroom …) zijn geen nachtprijs
+  const extras = priceExtras(text);
+  const extraAmounts = new Set(extras.map((x) => x.amount));
   // Bedragen bij een kampeerplek gaan voor; alleen als die er niet zijn, de losse nachtprijzen
-  const inRange = prices.filter((p) => p.amount >= 5 && p.amount <= 75);
+  const inRange = prices.filter((p) => p.amount >= 5 && p.amount <= 75 && !(extraAmounts.has(p.amount) && !p.pitch));
   const valid = (inRange.some((p) => p.pitch) ? inRange.filter((p) => p.pitch) : inRange).map((p) => p.amount);
   if (valid.length) {
     const sorted = [...valid].sort((a, b) => a - b);
@@ -217,6 +225,7 @@ export function extract(pages: string[], base: URL) {
   } else if (/(gratis|kosteloos|kostenloos) (overnachten|staan|parkeren voor campers|camperplaats)|overnachten is gratis|kostenlos übernachten|free overnight/.test(text)) {
     out.price_eur = 0;
   }
+  if (extras.length) out.price_extras = extras;
   const tax = flag(
     text,
     /(inclusief|incl\.?|inkl\.?) (de )?(toeristen ?belasting|kurtaxe|tourist tax)/,
@@ -336,6 +345,10 @@ export function extract(pages: string[], base: URL) {
     }
   }
 
+  // ── Aankomst- en vertrektijden ───────────────────────────────────────────
+  const raw = pages.map(toRawText).join(" . ");
+  Object.assign(out, arrivalDeparture(text, raw.length === text.length ? raw : text));
+
   // ── Reserveren ───────────────────────────────────────────────────────────
   const res = flag(
     text,
@@ -345,6 +358,261 @@ export function extract(pages: string[], base: URL) {
   if (res !== undefined) out.reservation = res;
 
   for (const k of Object.keys(out)) if (out[k] === undefined || out[k] === null || out[k] === "") delete out[k];
-  out.fields = Object.keys(out).filter((k) => !["photos", "image_credit", "price_note"].includes(k));
+  out.fields = Object.keys(out).filter((k) => !["photos", "image_credit", "price_note", "times_note"].includes(k));
   return out as Record<string, unknown> & { fields: string[] };
+}
+
+// ── Aankomst- en vertrektijden ─────────────────────────────────────────────
+// De kern van VrijStaan: kun je vertrekken wanneer je wilt? Alleen wat letterlijk op de site staat telt,
+// en we bewaren de zin zelf als bewijs. Tijden voor chalets, verhuur of de receptie tellen niet mee,
+// en "eerder aankomen of later vertrekken tegen toeslag" is geen vertrektijd.
+
+const CLOCK = String.raw`(\d{1,2})(?:[:.](\d{2}))?\s*(uur|uhr|u\b|h\b|hrs?\b)?`;
+const TIME_AFTER = new RegExp(
+  String.raw`^[^0-9]{0,45}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|from|after|before|until|by|ab|bis|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
+);
+const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis)\s*${CLOCK}\s*$`);
+const KEY =
+  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|check-?out|abreise|departure|verlaten|vrij te zijn|vrij zijn)/g;
+const ARRIVAL_KEY = /aankom|incheck|check-?in|anreise|arrival/;
+const RENTAL =
+  /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
+const EXCEPTION =
+  /vroege? aankomst|eerder aankomen|vroeg aankomen|laat vertrek|later vertrek|later vertrekken|laat vertrekken|late check-?out|early check-?in|late check-?in|annuler|toeslag|bijbetaling|tegen betaling|datum/;
+const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien|in overleg/;
+const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
+const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
+// Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
+const FREE =
+  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr/g;
+// Zwak: "komen en gaan wanneer je wilt" gaat vaak over een seizoensplaats of dagtochtjes. Alleen geldig bij campers
+// en zonder seizoensplaats-context.
+const FREE_WEAK =
+  /(aankomen|komen) en (vertrekken|gaan) (wanneer|op elk|zoals)|vertrekken (wanneer (je|u) (wilt|wil)|op elk (gewenst )?(moment|tijdstip)|wanneer het (je|u) uitkomt)|(arrive|come) and (leave|go) (at )?any ?time|leave (at )?any ?time/g;
+const SEASONAL = /seizoen|uitvalsbasis|jaarplaats|toercaravan|vouwwagen|laten staan|periode|vaste plaats|seizoensplaats|tussen \d+ \w+ en/;
+const ACCESS24 =
+  /24 ?uur per dag (bereikbaar|toegankelijk|open|geopend|aankomen|inrijden)|24\/7 (bereikbaar|toegankelijk|open|geopend)|dag en nacht (bereikbaar|toegankelijk|aankomen|open|inrijden)|rund um die uhr (geöffnet|zugänglich|anreisen)|jederzeit anreisen|aankomst (is )?(op elk tijdstip|altijd mogelijk|24 uur per dag)|arrive (at )?any ?time/g;
+// "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
+const PER24 =
+  /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival/g;
+// Toegangstijden van slagboom of poort: "de slagboom is geopend van 07:30 tot 23:00 uur"
+const GATE = new RegExp(
+  String.raw`\b(?:slagboom|schuifpoort|toegangspoort|poort|hek|barri[eè]re|schranke|tor|gate)\b[^.?!]{0,40}?(?:open|geopend|ge[öo]ffnet)[^.0-9]{0,20}?${CLOCK}\s*(?:tot|en|-|–|bis|to)\s*${CLOCK}|(?:tussen|zwischen|between)\s*${CLOCK}\s*(?:en|und|and)\s*${CLOCK}[^.]{0,30}?(?:aankomen en vertrekken|aankomen|an- und abreise|arrive)`,
+  "g",
+);
+const ACCESS_NOT = /telefo|bellen|receptie|noodnummer|wifi|winkel|bereikbaar per|mail|sanitair|toilet|douche|wasruimte|wasserette|sauna|zwembad|restaurant|bar\b/;
+
+type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; camper: boolean; cond: boolean };
+
+function sentenceBounds(text: string, index: number): [number, number] {
+  const boundary = /(?<!\d)[.!?](?!\d)/g;
+  let start = 0;
+  let end = text.length;
+  for (const m of text.matchAll(boundary)) {
+    if (m.index! < index) start = m.index! + 1;
+    else {
+      end = m.index!;
+      break;
+    }
+  }
+  return [start, end];
+}
+
+function quote(raw: string, text: string, index: number): string {
+  const [s, e] = sentenceBounds(text, index);
+  let from = s;
+  let to = e;
+  if (to - from > 200) {
+    from = Math.max(s, index - 70);
+    to = Math.min(e, index + 130);
+  }
+  const q = raw.slice(from, to).replace(/\s*\|\s*/g, " ").replace(/\s+/g, " ").trim();
+  return (from > s ? "… " : "") + q.charAt(0).toUpperCase() + q.slice(1) + (to < e ? " …" : "");
+}
+
+const asClock = (h: string, m?: string) => `${h.padStart(2, "0")}:${m ?? "00"}`;
+
+export function arrivalDeparture(text: string, raw: string): Record<string, unknown> {
+  const hits: TimeHit[] = [];
+  for (const k of text.matchAll(KEY)) {
+    const i = k.index!;
+    const [s, e] = sentenceBounds(text, i);
+    const local = text.slice(Math.max(s, i - 60), Math.min(e, i + 90));
+    if (RENTAL.test(local) || EXCEPTION.test(local)) continue;
+    const type = ARRIVAL_KEY.test(k[0]) ? "in" : "out";
+    // Vooruit kijken tot de eerstvolgende tijd, maar niet voorbij een sleutelwoord van het andere soort
+    let ahead = text.slice(i + k[0].length, Math.min(e, i + k[0].length + 70));
+    const other = [...ahead.matchAll(KEY)].find((o) => ARRIVAL_KEY.test(o[0]) !== (type === "in"));
+    if (other) ahead = ahead.slice(0, other.index);
+    let h: string | undefined;
+    let m: string | undefined;
+    const a = TIME_AFTER.exec(ahead);
+    if (a && (a[2] || a[3])) {
+      // "tussen 9.00 en 11.00": aankomen vanaf het begin, vertrekken uiterlijk aan het eind
+      if (type === "out" && a[4] && (a[5] || a[6])) [h, m] = [a[4], a[5]];
+      else [h, m] = [a[1], a[2]];
+    } else if (type === "out") {
+      const b = TIME_BEFORE.exec(text.slice(Math.max(s, i - 30), i));
+      if (b && (b[2] || b[3])) [h, m] = [b[1], b[2]];
+    }
+    if (!h) continue;
+    const hour = Number(h);
+    if (Number(m ?? 0) > 59 || (type === "out" ? hour < 7 || hour > 14 : hour < 7 || hour > 22)) continue;
+    hits.push({
+      type,
+      time: asClock(h, m),
+      index: i,
+      strong: PITCH_CONTEXT.test(local),
+      camper: CAMPER.test(local),
+      cond: CONDITIONAL.test(local),
+    });
+  }
+
+  const pick = (type: "in" | "out") => {
+    const firm = hits.filter((x) => x.type === type && !x.cond);
+    return firm.find((x) => x.camper) ?? firm.find((x) => x.strong) ?? firm[0];
+  };
+  const out = pick("out");
+  const arrive = pick("in");
+
+  let free: { index: number; camper: boolean } | undefined;
+  for (const f of text.matchAll(FREE)) {
+    const [s, e] = sentenceBounds(text, f.index!);
+    const local = text.slice(Math.max(s, f.index! - 60), Math.min(e, f.index! + 90));
+    if (RENTAL.test(local) && !CAMPER.test(local)) continue;
+    free = { index: f.index!, camper: CAMPER.test(local) };
+    if (free.camper) break;
+  }
+  if (!free)
+    for (const f of text.matchAll(FREE_WEAK)) {
+      const near = text.slice(Math.max(0, f.index! - 150), f.index! + 120);
+      if (!CAMPER.test(near) || SEASONAL.test(near) || RENTAL.test(near)) continue;
+      free = { index: f.index!, camper: true };
+      break;
+    }
+
+  const res: Record<string, unknown> = {};
+  const notes: string[] = [];
+  let per24: number | undefined;
+  for (const p of text.matchAll(PER24)) {
+    const [s, e] = sentenceBounds(text, p.index!);
+    if (RENTAL.test(text.slice(Math.max(s, p.index! - 60), Math.min(e, p.index! + 60)))) continue;
+    per24 = p.index!;
+    break;
+  }
+  if (per24 !== undefined && !free && !out) {
+    res.departure = "per24";
+    notes.push(quote(raw, text, per24));
+  } else if (free && (!out || (free.camper && !out.camper))) {
+    res.departure = "vrij";
+    notes.push(quote(raw, text, free.index));
+    // Een voorwaardelijke tijd ("bij drukte graag voor 13:00 vertrekken") hoort bij het eerlijke verhaal
+    const cond = hits.find((x) => x.type === "out" && x.cond);
+    if (cond) notes.push(quote(raw, text, cond.index));
+  } else if (out && !free) {
+    res.departure = "vast";
+    res.checkout_until = out.time;
+    notes.push(quote(raw, text, out.index));
+  }
+  // Tegenstrijdig (wel "geen vertrektijden", maar ook een vaste tijd): niets invullen
+  if (arrive && res.departure !== undefined) {
+    res.checkin_from = arrive.time;
+    const q = quote(raw, text, arrive.index);
+    if (!notes.includes(q)) notes.push(q);
+  } else if (arrive && !free && !out) {
+    res.checkin_from = arrive.time;
+    notes.push(quote(raw, text, arrive.index));
+  }
+
+  for (const a of text.matchAll(ACCESS24)) {
+    const [s, e] = sentenceBounds(text, a.index!);
+    const local = text.slice(Math.max(s, a.index! - 60), Math.min(e, a.index! + 60));
+    if (ACCESS_NOT.test(local) || (RENTAL.test(local) && !CAMPER.test(local))) continue;
+    res.access_24h = true;
+    if (!notes.length) notes.push(quote(raw, text, a.index!));
+    break;
+  }
+  for (const g of text.matchAll(GATE)) {
+    const [h1, m1, u1, h2, m2, u2] = g[1] !== undefined ? g.slice(1, 7) : g.slice(7, 13);
+    if (!(m1 || u1) || !(m2 || u2)) continue;
+    const a = Number(h1);
+    const b = Number(h2);
+    if (a > 12 || b < 17 || b > 24) continue;
+    res.access_hours = `${asClock(h1, m1)}–${asClock(h2, m2)}`;
+    const q = quote(raw, text, g.index!);
+    if (!notes.includes(q)) notes.push(q);
+    break;
+  }
+  if (notes.length) res.times_note = notes.join(" · ").slice(0, 420);
+  return res;
+}
+
+// ── Extra kosten ───────────────────────────────────────────────────────────
+// Prijzen zo transparant mogelijk: naast de nachtprijs ook de losse toeslagen die de site letterlijk noemt
+// (toeristenbelasting, stroom, per persoon, hond …). Elk bedrag hoort bij een herkenbare omschrijving en eenheid.
+
+type Extra = { label: string; amount: number; unit?: string };
+
+const EXTRA_KINDS: { label: string; re: RegExp; min: number; max: number }[] = [
+  { label: "Toeristenbelasting", re: /toeristen ?belasting|tourist tax|kurtaxe|gemeentelijke heffing/, min: 0.3, max: 6 },
+  { label: "Stroom", re: /stroom|elektra|elektriciteit|kwh|strom\b/, min: 0.2, max: 12 },
+  { label: "Kind", re: /\bkind(eren)?\b|\bkids?\b|\bjeugd\b|t\/m \d+ jaar|tot \d+ jaar/, min: 0.5, max: 15 },
+  { label: "Per persoon", re: /extra (campinggast|gast|persoon|volwassene)|per persoon|p\.?p\.?(p\.?n\.?)?\b|volwassenen?|\bpersonen?\b/, min: 1, max: 25 },
+  { label: "Hond", re: /\bhond(en)?\b|huisdier/, min: 0.5, max: 10 },
+  { label: "Douche", re: /douche/, min: 0.2, max: 5 },
+  { label: "Water", re: /drinkwater|water (tanken|tappen|vullen)|\bwater\b/, min: 0.2, max: 6 },
+  { label: "Lozen", re: /lozen|loosplaats|dumpstation|servicestation|afvalwater|chemisch toilet/, min: 0.5, max: 15 },
+  { label: "Extra auto", re: /extra auto|\bauto\b|tweede voertuig/, min: 0.5, max: 10 },
+];
+
+function extraUnit(after: string): string | undefined {
+  const a = after.slice(0, 40);
+  if (/^\s*(?:euro\s*)?(?:p\.?p\.?p\.?n\.?|per persoon per nacht|pppn)/.test(a)) return "per persoon per nacht";
+  if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*kwh/.test(a)) return "per kWh";
+  if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*(?:persoon|pers\.?|p\.?p\.?)/.test(a)) return "per persoon";
+  if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*(?:nacht|night|dag|etmaal|24 uur)/.test(a)) return "per nacht";
+  if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*(?:keer|beurt|munt|token|lozing)|eenmalig/.test(a)) return "per keer";
+  if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*(?:\d+\s*)?(?:liter|l\b)/.test(a)) return /\d+\s*liter/.exec(a) ? `per ${/(\d+)\s*liter/.exec(a)![1]} liter` : "per liter";
+  if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*(?:week|maand|jaar|seizoen)/.test(a)) return "skip";
+  return undefined;
+}
+
+export function priceExtras(text: string): Extra[] {
+  const out: Extra[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(/€\s?(\d{1,3}(?:[.,]\d{1,2})?)(?:\s*,-)?|(\d{1,3}[.,]\d{2})\s*(?:euro|eur)\b/g)) {
+    const amount = money(m[1] ?? m[2]);
+    if (!Number.isFinite(amount)) continue;
+    const i = m.index!;
+    // Omschrijving: het stuk zin vlak vóór het bedrag (tarieventabel: "Hond | € 2,00")
+    const before = text.slice(Math.max(0, i - 45), i);
+    // Grens: einde van een tabelrij of alinea (" . "), een vorig bedrag of een echte zin; niet "incl." of "ca."
+    const sentenceEnd = [...before.matchAll(/([a-z\u00e0-\u00ff]{4,})\.\s/g)]
+      .filter((x) => !/^(incl|excl|inkl|exkl|bijv|resp|ongeveer|max|min)$/.test(x[1]))
+      .pop();
+    const cut = Math.max(before.lastIndexOf(" . ") + 2, before.lastIndexOf("€"), sentenceEnd ? sentenceEnd.index! + sentenceEnd[0].length - 1 : -1);
+    const label = before.slice(cut + 1);
+    if (/\b(chalets?|accommodaties?|stacaravans?|bungalows?|lodges?|huur|verhuur|arrangement|borg|annulering|reservering|week|maand|seizoen|jaarplaats|ontbijt|fiets|kano|sup|wasmachine|droger)\b/.test(label)) continue;
+    // Het basistarief voor de plek zelf ("kampeerplaats incl. 2 personen € 24,50") is geen toeslag
+    if (/kampeerplaats|camperplaats|camperplek|standplaats|staanplaats|plaats incl|plek incl|\bcamper\b|caravan|\btent\b|stellplatz|overnachting/.test(label) && !/extra|toeslag/.test(label)) continue;
+    // Eenheid na het bedrag ("€ 5 per nacht") of ervoor ("per nacht € 5")
+    let unit = extraUnit(text.slice(i + m[0].length));
+    if (!unit) {
+      if (/p\.?p\.?p\.?n\.?|per persoon per nacht/.test(label)) unit = "per persoon per nacht";
+      else if (/per kwh/.test(label)) unit = "per kWh";
+      else if (/per (nacht|dag|etmaal)/.test(label)) unit = "per nacht";
+      else if (/per (keer|beurt)/.test(label)) unit = "per keer";
+    }
+    if (unit === "skip") continue;
+    const kind = EXTRA_KINDS.find((k) => k.re.test(label)) ?? (unit?.startsWith("per persoon") ? EXTRA_KINDS.find((k) => k.label === "Per persoon") : undefined);
+    if (!kind || seen.has(kind.label)) continue;
+    if (amount < kind.min || amount > kind.max) continue;
+    // Toeristenbelasting en "per persoon" zonder eenheid zijn vrijwel altijd per persoon per nacht, maar dat zeggen
+    // we alleen als het er staat; anders tonen we het bedrag zonder eenheid.
+    out.push({ label: kind.label, amount, ...(unit ? { unit } : {}) });
+    seen.add(kind.label);
+    if (out.length >= 8) break;
+  }
+  const order = EXTRA_KINDS.map((k) => k.label);
+  return out.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
 }

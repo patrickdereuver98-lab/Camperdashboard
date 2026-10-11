@@ -131,6 +131,14 @@ export function FilterSheet({
         </Section>
       )}
 
+      <Section title="Aankomen en vertrekken">
+        <Toggle pressed={draft.noFixedDeparture} onClick={() => set({ noFixedDeparture: !draft.noFixedDeparture })}>
+          <Sign name="clock" size={30} state={draft.noFixedDeparture ? "on" : "unknown"} />
+          Geen vaste vertrektijd
+        </Toggle>
+        <p className="mt-2 text-sm text-muted">Alleen plekken waarvan de website letterlijk zegt dat je kunt vertrekken wanneer je wilt.</p>
+      </Section>
+
       <Section title="Voorzieningen">
         <div className="grid grid-cols-2 gap-2">
           {FACILITIES.map((f) => (

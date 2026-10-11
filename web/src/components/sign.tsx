@@ -47,6 +47,7 @@ const GLYPHS = {
   euro: <path {...stroke} d="M17.5 6.5A6.5 6.5 0 0 0 7 12a6.5 6.5 0 0 0 10.5 5.5M4.5 10.5h8M4.5 13.5h7" />,
   length: <path {...stroke} d="M3 12h18M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3M3 6v12M21 6v12" />,
   calendar: <path {...stroke} d="M4 6h16v14H4ZM4 10.5h16M8.5 3.5v4M15.5 3.5v4" />,
+  clock: <path {...stroke} d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17ZM12 7.5V12l3 2" />,
   reserve: <path {...stroke} d="M4 6h16v14H4ZM4 10.5h16M8.5 3.5v4M15.5 3.5v4M9 15.5l2 2 4-4" />,
   spots: <path {...stroke} d="M4 4h16v16H4ZM12 4v16M4 12h16" />,
   surface: <path {...stroke} d="M3 18h18M5 18l2.5-5h9L19 18M8 13l1.5-3h5l1.5 3" />,

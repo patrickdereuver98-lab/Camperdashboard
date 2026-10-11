@@ -31,6 +31,8 @@ export interface Filters {
   /** Bij een prijsfilter ook plekken tonen waarvan de prijs onbekend is */
   priceUnknown: boolean;
   minLength?: number;
+  /** Alleen plekken waarvan de bron zegt dat er geen vaste vertrektijd is (vrij of per 24 uur) */
+  noFixedDeparture: boolean;
   openNow: boolean;
   minScore?: number;
   sort: SortKey;
@@ -42,6 +44,7 @@ export const DEFAULT_FILTERS: Filters = {
   kinds: [],
   free: false,
   priceUnknown: false,
+  noFixedDeparture: false,
   openNow: false,
   sort: "aanbevolen",
 };
@@ -68,6 +71,7 @@ export function parseFilters(p: Params): Filters {
     maxPrice: num("maxprijs"),
     priceUnknown: p.get("onbekend") === "1",
     minLength: num("lengte"),
+    noFixedDeparture: p.get("vrij") === "1",
     openNow: p.get("open") === "1",
     minScore: num("score"),
     sort: sort && ["aanbevolen", "afstand", "prijs", "score"].includes(sort) ? sort : "aanbevolen",
@@ -90,6 +94,7 @@ export function filtersToQuery(f: Filters): string {
   if (f.maxPrice) p.set("maxprijs", String(f.maxPrice));
   if (f.priceUnknown && (f.free || f.maxPrice)) p.set("onbekend", "1");
   if (f.minLength) p.set("lengte", String(f.minLength));
+  if (f.noFixedDeparture) p.set("vrij", "1");
   if (f.openNow) p.set("open", "1");
   if (f.minScore) p.set("score", String(f.minScore));
   if (f.sort !== "aanbevolen") p.set("sort", f.sort);
@@ -109,6 +114,7 @@ export function refinementCount(f: Filters): number {
     (f.free ? 1 : 0) +
     (f.maxPrice ? 1 : 0) +
     (f.minLength ? 1 : 0) +
+    (f.noFixedDeparture ? 1 : 0) +
     (f.openNow ? 1 : 0) +
     (f.minScore ? 1 : 0)
   );
@@ -152,9 +158,14 @@ export interface Result {
   km?: number;
 }
 
+/** Geen vaste vertrektijd volgens de bron: vrij vertrekken of betalen per 24 uur */
+export const freeDeparture = (p: Pick<PlaceSummary, "departure">) => p.departure === "vrij" || p.departure === "per24";
+
+// "Aanbevolen": volledigheid van de gegevens, reviews (pas zwaar vanaf 5), een foto en geen vaste vertrektijd.
+// Bij een bestemming telt de afstand mee. Betaalde plaatsing bestaat niet.
 function recommendScore(p: PlaceSummary): number {
   const rating = p.ratingAvg ? (p.ratingAvg / 10) * Math.min(1, p.ratingCount / 5) : 0;
-  return p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0);
+  return p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0) + (freeDeparture(p) ? 0.3 : 0);
 }
 
 export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
@@ -173,6 +184,7 @@ export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
     if (f.free && p.priceEur !== 0 && !unknownPriceOk) continue;
     if (f.maxPrice && !unknownPriceOk && (p.priceEur === undefined || p.priceEur > f.maxPrice)) continue;
     if (f.minLength && p.maxLengthM !== undefined && p.maxLengthM < f.minLength) continue;
+    if (f.noFixedDeparture && !freeDeparture(p)) continue;
     // "Nu open" verbergt alleen plekken die volgens hun seizoen zeker dicht zijn; onbekend blijft staan
     if (f.openNow && isOpenOn(p, now) === false) continue;
     if (f.minScore && (p.ratingAvg ?? 0) < f.minScore) continue;
@@ -210,6 +222,7 @@ export function relaxations(places: PlaceSummary[], f: Filters): { label: string
     ...(f.free || f.maxPrice ? [{ label: "Ook met onbekende prijs", next: { ...f, priceUnknown: true } }] : []),
     ...(f.maxPrice ? [{ label: "Zonder prijsgrens", next: { ...f, maxPrice: undefined } }] : []),
     ...(f.minLength ? [{ label: "Zonder lengtefilter", next: { ...f, minLength: undefined } }] : []),
+    ...(f.noFixedDeparture ? [{ label: "Ook plekken met vertrektijd of onbekend", next: { ...f, noFixedDeparture: false } }] : []),
     ...(f.openNow ? [{ label: "Ook gesloten plekken", next: { ...f, openNow: false } }] : []),
     ...(f.minScore ? [{ label: "Zonder minimale score", next: { ...f, minScore: undefined } }] : []),
     ...(f.center && f.radiusKm < 100 ? [{ label: `Binnen ${f.radiusKm * 2} km`, next: { ...f, radiusKm: f.radiusKm * 2 } }] : []),

@@ -34,3 +34,11 @@ export function directionsUrl(to: LatLng, from?: LatLng[]): string {
     params.set("waypoints", from.map((p) => `${p.lat},${p.lng}`).join("|"));
   return `https://www.google.com/maps/dir/?${params}`;
 }
+
+/**
+ * Je eigen locatie afgerond op ±1 km voordat hij het apparaat verlaat. Genoeg voor een rijtijd,
+ * maar niet je precieze adres; zo komt je exacte locatie nooit in een cache of log terecht.
+ */
+export function coarse(p: LatLng): string {
+  return `${p.lat.toFixed(2)},${p.lng.toFixed(2)}`;
+}

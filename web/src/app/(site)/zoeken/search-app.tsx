@@ -33,6 +33,7 @@ function activeChips(f: Filters): { label: string; without: Filters }[] {
   if (f.free) chips.push({ label: "Gratis", without: { ...f, free: false } });
   if (f.maxPrice) chips.push({ label: `Tot € ${f.maxPrice}`, without: { ...f, maxPrice: undefined } });
   if (f.minLength) chips.push({ label: `Camper ${f.minLength} m`, without: { ...f, minLength: undefined } });
+  if (f.noFixedDeparture) chips.push({ label: "Geen vaste vertrektijd", without: { ...f, noFixedDeparture: false } });
   if (f.openNow) chips.push({ label: "Zonder gesloten plekken", without: { ...f, openNow: false } });
   if (f.priceUnknown && (f.free || f.maxPrice)) chips.push({ label: "Ook onbekende prijs", without: { ...f, priceUnknown: false } });
   if (f.minScore) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });

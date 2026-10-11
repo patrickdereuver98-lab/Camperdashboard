@@ -8,6 +8,7 @@ type Settings = {
   contact: { email: string; response_days: number };
   announcement: { text: string; enabled: boolean };
   publish_threshold: number;
+  website_photos: boolean;
 };
 
 export default function SettingsPage() {
@@ -19,6 +20,7 @@ export default function SettingsPage() {
       contact: (map.contact as Settings["contact"]) ?? { email: "", response_days: 2 },
       announcement: (map.announcement as Settings["announcement"]) ?? { text: "", enabled: false },
       publish_threshold: Number(map.publish_threshold ?? 0.7),
+      website_photos: map.website_photos === true,
     };
   }, [data]);
   const [edited, setS] = useState<Settings | null>(null);
@@ -76,13 +78,25 @@ export default function SettingsPage() {
           <Card className="space-y-3">
             <h2 className="font-display text-lg font-semibold">Publicatiedrempel</h2>
             <p className="text-sm text-muted">
-              Een plek gaat automatisch online als de harde eisen kloppen (website of telefoon, en minstens twee van prijs, openingsperiode en stroom) en de gewogen score minstens deze drempel haalt. Gewichten: prijs en openingsperiode 3, stroom, contact en foto 2, water en lozen 1,5, toilet, honden, beschrijving en echte naam 1, douche en aantal plekken 0,5. Plekken die je handmatig hebt vastgezet blijven zoals ze zijn.
+              Een plek gaat automatisch online als de harde eisen kloppen (website of telefoon, en minstens twee van vertrekregel, openingsperiode, stroom en prijs) en de gewogen score minstens deze drempel haalt. Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs, stroom en contact 2, foto 1,5, water, lozen, toilet en honden 1, beschrijving en echte naam 0,5, douche en aantal plekken 0,25. Plekken die je handmatig hebt vastgezet blijven zoals ze zijn.
             </p>
             <label className="flex items-center gap-3">
               <input type="range" min={0.5} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--forest)]" />
               <span className="w-14 text-right font-display text-xl font-semibold tabular-nums">{Math.round(s.publish_threshold * 100)}%</span>
             </label>
             <p className="text-sm text-muted">Na opslaan: klik op &quot;Drempel toepassen&quot; hieronder om bestaande plekken bij te werken.</p>
+          </Card>
+          <Card className="space-y-3">
+            <h2 className="font-display text-lg font-semibold">Foto&apos;s van websites</h2>
+            <p className="text-sm text-muted">
+              Foto&apos;s op de websites van plekken zijn auteursrechtelijk beschermd. Zet dit alleen aan als je toestemming hebt van de
+              rechthebbenden. Uit: alleen Wikimedia Commons, uploads van bezoekers en eigenaren, en foto&apos;s die je per plek als
+              &quot;toestemming&quot; hebt gemarkeerd.
+            </p>
+            <label className="flex min-h-11 items-center gap-3">
+              <input type="checkbox" className="h-5 w-5 accent-[var(--forest)]" checked={s.website_photos} onChange={(e) => setS({ ...s, website_photos: e.target.checked })} />
+              Websitefoto&apos;s tonen
+            </label>
           </Card>
           <button className={`${primary} h-12 w-full`}>Instellingen opslaan</button>
         </form>

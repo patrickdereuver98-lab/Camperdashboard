@@ -52,3 +52,26 @@ export function pluralize(n: number, one: string, many: string) {
 export function websiteLabel(url: string) {
   return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 }
+
+type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string };
+
+/** Korte vertrekregel voor kaarten en kerngegevens; undefined = onbekend */
+export function departureShort(p: Departure): string | undefined {
+  if (p.departure === "vrij") return "Geen vaste vertrektijd";
+  if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";
+  if (p.departure === "vast") return p.checkoutUntil ? `Vertrek vóór ${p.checkoutUntil}` : "Vaste vertrektijd";
+  return undefined;
+}
+
+/** "Toeristenbelasting € 1,35 per persoon per nacht" */
+export function extraLabel(x: { label: string; amount: number; unit?: string }): string {
+  return `${eur(x.amount)}${x.unit ? ` ${x.unit}` : ""}`;
+}
+
+/** Prijs voor kaarten: nachtprijs, of als die ontbreekt de prijs per persoon */
+export function cardPrice(p: { priceEur?: number; priceFrom?: boolean; priceExtras?: { label: string; amount: number; unit?: string }[] }) {
+  if (p.priceEur !== undefined) return { value: priceLabel(p.priceEur, p.priceFrom), extras: (p.priceExtras?.length ?? 0) > 0 };
+  const pp = p.priceExtras?.find((x) => x.label === "Per persoon" && x.unit?.startsWith("per persoon"));
+  if (pp) return { value: `${eur(pp.amount)} p.p.`, extras: (p.priceExtras?.length ?? 0) > 1 };
+  return undefined;
+}

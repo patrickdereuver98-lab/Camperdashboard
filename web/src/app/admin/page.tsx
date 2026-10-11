@@ -97,7 +97,10 @@ export default function Dashboard() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="font-display text-lg font-semibold">Bezoek, laatste 14 dagen</h2>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <h2 className="font-display text-lg font-semibold">Bezoek, laatste 14 dagen</h2>
+                <Link href="/admin/statistieken" className="text-sm font-semibold text-forest hover:underline">Alle statistieken</Link>
+              </div>
               <p className="text-sm text-muted">Alleen bezoekers die analytische cookies accepteerden.</p>
               {o.traffic.length === 0 ? (
                 <p className="mt-4 text-muted">Nog geen metingen.</p>

@@ -19,8 +19,8 @@ export default async function AboutPage() {
       <Section title="Alleen complete plekken">
         <p>
           We tonen op dit moment {stats.total.toLocaleString("nl-NL")} plekken. Een plek komt pas online als we een website of
-          telefoonnummer hebben, minstens twee van de drie beslisfeiten kennen (prijs, openingsperiode en stroom) en in totaal
-          minstens 70% weten van wat camperaars willen weten. Prijs en openingsperiode tellen daarbij het zwaarst. Wat we niet
+          telefoonnummer hebben, minstens twee van de vier beslisfeiten kennen (vertrektijd, openingsperiode, stroom en prijs)
+          en genoeg weten van wat camperaars willen weten. Of je kunt vertrekken wanneer je wilt, telt het zwaarst. Wat we niet
           zeker weten, laten we leeg. We vullen nooit iets in op basis van een aanname.
         </p>
       </Section>

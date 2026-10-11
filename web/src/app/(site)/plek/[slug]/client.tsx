@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, ViewTransition } from "react";
 import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format";
-import { directionsUrl, formatKm, type LatLng } from "@/lib/geo";
+import { coarse, directionsUrl, formatKm, type LatLng } from "@/lib/geo";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
 import type { Photo, Review } from "@/lib/types";
@@ -116,7 +116,7 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
       async (pos) => {
         const from = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         try {
-          const res = await fetch(`/api/route?p=${from.lat},${from.lng};${to.lat},${to.lng}`);
+          const res = await fetch(`/api/route?p=${coarse(from)};${to.lat},${to.lng}`);
           if (!res.ok) throw new Error();
           const r = await res.json();
           setState({ s: "ok", km: r.distanceM / 1000, seconds: r.durationS, from });
@@ -379,7 +379,17 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
 
 // ── Fout melden ─────────────────────────────────────────────────────────────
 
-export function ReportProblem({ placeId, placeName }: { placeId: string; placeName: string }) {
+export function ReportProblem({
+  placeId,
+  placeName,
+  topic = "prijs",
+  label = "Klopt er iets niet? Meld het",
+}: {
+  placeId: string;
+  placeName: string;
+  topic?: string;
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -406,7 +416,7 @@ export function ReportProblem({ placeId, placeName }: { placeId: string; placeNa
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
-        <Icon name="alert" size={18} /> Klopt er iets niet? Meld het
+        <Icon name="alert" size={18} /> {label}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je melding" : "Gegevens aanpassen"}>
         {done ? (
@@ -420,8 +430,9 @@ export function ReportProblem({ placeId, placeName }: { placeId: string; placeNa
           <form onSubmit={submit} className="space-y-4 pb-4">
             <label className="block">
               <span className="mb-1.5 block font-semibold">Wat klopt er niet?</span>
-              <select name="topic" className={input} defaultValue="prijs">
-                <option value="prijs">Prijs</option>
+              <select name="topic" className={input} defaultValue={topic}>
+                <option value="vertrektijd">Aankomst- en vertrektijden</option>
+                <option value="prijs">Prijs of extra kosten</option>
                 <option value="voorzieningen">Voorzieningen</option>
                 <option value="seizoen">Openingsperiode</option>
                 <option value="contact">Contactgegevens</option>

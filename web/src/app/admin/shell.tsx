@@ -10,6 +10,7 @@ import { ErrorNote, input, primary } from "./ui";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin", label: "Overzicht", icon: "chart" },
+  { href: "/admin/statistieken", label: "Statistieken", icon: "eye" },
   { href: "/admin/plekken", label: "Plekken", icon: "pin" },
   { href: "/admin/support", label: "Support", icon: "inbox" },
   { href: "/admin/inzendingen", label: "Inzendingen", icon: "plus" },

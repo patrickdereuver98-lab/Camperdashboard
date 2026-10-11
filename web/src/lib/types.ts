@@ -1,8 +1,19 @@
 export type PlaceKind = "camperplaats" | "camping" | "parkeerplaats" | "boerderij" | "jachthaven";
 
+export interface PriceExtra {
+  label: string;
+  amount: number;
+  unit?: string;
+}
+
 export interface Photo {
   url: string;
   credit?: string;
+  /** De rechthebbende gaf toestemming (vastgelegd in beheer) */
+  permission?: boolean;
+  /** Licentie en bronpagina, bv. bij Wikimedia Commons */
+  license?: string;
+  source?: string;
 }
 
 /** Een gepubliceerde plek. Ontbrekende velden betekenen: onbekend. */
@@ -38,6 +49,17 @@ export interface Place {
   season?: string;
   reservation?: boolean;
   maxStayNights?: number;
+  /** vrij = geen vaste vertrektijd, per24 = je betaalt per 24 uur, vast = vertrek uiterlijk checkoutUntil */
+  departure?: "vrij" | "per24" | "vast";
+  checkoutUntil?: string;
+  checkinFrom?: string;
+  /** Toegangstijden van slagboom of poort, bv. "07:30–23:00" */
+  accessHours?: string;
+  access24h?: boolean;
+  /** Letterlijke zin(nen) uit de bron waarop de tijden zijn gebaseerd */
+  timesNote?: string;
+  /** Losse toeslagen zoals de website ze noemt */
+  priceExtras?: PriceExtra[];
   website?: string;
   phone?: string;
   email?: string;
@@ -76,6 +98,9 @@ export type PlaceSummary = Pick<
   | "maxLengthM"
   | "openAllYear"
   | "season"
+  | "departure"
+  | "checkoutUntil"
+  | "priceExtras"
   | "imageUrl"
   | "ratingAvg"
   | "ratingCount"

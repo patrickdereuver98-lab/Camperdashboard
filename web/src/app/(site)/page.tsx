@@ -14,19 +14,25 @@ const nf = new Intl.NumberFormat("nl-NL");
 export default async function Home() {
   const [stats, places] = await Promise.all([getStats(), getPlaces()]);
 
-  // Uitgelicht: plekken met foto, de meeste informatie en (indien aanwezig) de beste score
-  const featured = places
-    .filter((p) => p.imageUrl)
-    .sort((a, b) => (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) || b.completeness - a.completeness)
+  // Uitgelicht: eerst plekken zonder vaste vertrektijd, dan foto, score en de meeste informatie
+  const free = (p: (typeof places)[number]) => (p.departure === "vrij" || p.departure === "per24" ? 1 : 0);
+  const featured = [...places]
+    .sort(
+      (a, b) =>
+        free(b) - free(a) ||
+        Number(!!b.imageUrl) - Number(!!a.imageUrl) ||
+        (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) ||
+        b.completeness - a.completeness,
+    )
     .slice(0, 6)
     .map(toSummary);
 
   const quick: { href: string; sign: SignName; label: string; count: number }[] = [
+    { href: searchHref({ noFixedDeparture: true }), sign: "clock", label: "Geen vaste vertrektijd", count: stats.freeDeparture },
     { href: searchHref({ openNow: true }), sign: "calendar", label: "Nu open", count: stats.openNow },
     { href: searchHref({ facilities: ["power"] }), sign: "power", label: "Met stroom", count: stats.power },
     { href: searchHref({ facilities: ["dumpStation"] }), sign: "dump", label: "Lozen mogelijk", count: stats.dump },
     { href: searchHref({ facilities: ["dogs"] }), sign: "dog", label: "Honden welkom", count: stats.dogs },
-    { href: searchHref({ free: true }), sign: "euro", label: "Gratis staan", count: stats.free },
   ];
   const quickShown = quick.filter((q) => q.count > 0);
 
@@ -82,8 +88,10 @@ export default async function Home() {
       {featured.length > 0 && (
         <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
           <div className="mb-4 flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl font-semibold sm:text-3xl">Meest complete informatie</h2>
-            <Link href="/zoeken" className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-forest hover:underline">
+            <h2 className="font-display text-2xl font-semibold sm:text-3xl">
+              {stats.freeDeparture > 0 ? "Vertrekken wanneer je wilt" : "Meest complete informatie"}
+            </h2>
+            <Link href={stats.freeDeparture > 0 ? searchHref({ noFixedDeparture: true }) : "/zoeken"} className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-forest hover:underline">
               Alle plekken <Icon name="chevronRight" size={18} />
             </Link>
           </div>
@@ -122,9 +130,9 @@ export default async function Home() {
         <div className="grid gap-px overflow-hidden rounded-2xl bg-line outline-1 outline-line outline md:grid-cols-3">
           {[
             {
-              sign: "reserve" as SignName,
-              title: "Alleen complete plekken",
-              text: "We tonen een plek pas als contact en minstens twee van prijs, openingsperiode en stroom bekend zijn, uit OpenStreetMap en de eigen website van de plek. Wat we niet weten, zetten we er eerlijk bij.",
+              sign: "clock" as SignName,
+              title: "Weten wanneer je weg moet",
+              text: "Bij elke plek staat of je kunt vertrekken wanneer je wilt, met de zin van de website als bewijs. Prijzen tonen we met alle extra kosten. Wat we niet weten, zetten we er eerlijk bij.",
             },
             {
               sign: "length" as SignName,

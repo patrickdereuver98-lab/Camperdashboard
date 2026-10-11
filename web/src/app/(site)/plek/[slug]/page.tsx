@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getNearby, getPlace, getPlaces, getReviews } from "@/lib/places";
 import { searchHref } from "@/lib/search";
-import { eur, formatDate, pluralize, priceLabel, websiteLabel } from "@/lib/format";
+import { cardPrice, departureShort, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { SITE_URL } from "@/lib/env";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
@@ -34,14 +34,15 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
 type Fact = { sign: SignName; label: string; value: string; known: boolean };
 
 function keyFacts(p: Place): Fact[] {
+  const price = cardPrice(p);
   return [
     {
       sign: "euro",
-      label: "Per nacht",
-      value: p.priceEur === undefined ? "Onbekend" : priceLabel(p.priceEur, p.priceFrom),
-      known: p.priceEur !== undefined,
+      label: p.priceEur === undefined && price ? "Per persoon" : "Per nacht",
+      value: price?.value ?? "Onbekend",
+      known: !!price,
     },
-    { sign: "spots", label: "Plekken", value: p.capacity ? String(p.capacity) : "Onbekend", known: !!p.capacity },
+    { sign: "clock", label: "Vertrekken", value: departureShort(p) ?? "Onbekend", known: !!p.departure },
     {
       sign: "calendar",
       label: "Open",
@@ -157,7 +158,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             </div>
           ))}
         </dl>
-        {place.priceNote && <p className="mt-2 text-sm text-muted">Volgens de website: {place.priceNote}.</p>}
+        <Departure place={place} />
+        <PriceDetails place={place} />
 
         {/* Contact op mobiel (op grotere schermen in de zijkolom) */}
         {(place.website || tel || place.email) && (
@@ -230,6 +232,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <dl className="mt-3 divide-y divide-line rounded-2xl bg-surface outline-1 outline-line outline">
                 {[
                   ["Reserveren", place.reservation === undefined ? "Onbekend" : place.reservation ? "Ja" : "Nee"],
+                  ["Aantal plekken", place.capacity ? String(place.capacity) : "Onbekend"],
                   ["Toeristenbelasting", place.touristTaxIncluded === undefined ? "Onbekend" : place.touristTaxIncluded ? "Inbegrepen in de prijs" : "Komt bij de prijs"],
                   ["Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : "Onbekend"],
                   ["Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : "Onbekend"],
@@ -289,10 +292,10 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className={`font-display leading-none font-semibold ${place.priceEur === undefined ? "text-base text-muted" : "text-xl"}`}>
-              {priceLabel(place.priceEur, place.priceFrom)}
+            <p className={`font-display leading-none font-semibold ${cardPrice(place) ? "text-xl" : "text-base text-muted"}`}>
+              {cardPrice(place)?.value ?? "Prijs onbekend"}
             </p>
-            {!!place.priceEur && <p className="text-xs text-muted">per nacht</p>}
+            {!!place.priceEur && <p className="text-sm text-muted">per nacht{place.priceExtras?.length ? " + extra's" : ""}</p>}
           </div>
           <SaveButton slug={place.slug} />
           {tel && (
@@ -319,7 +322,7 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
     <>
       <div className="hidden rounded-2xl bg-surface p-5 outline-1 outline-line outline md:block">
         <p className="font-display text-3xl font-semibold">
-          {priceLabel(place.priceEur, place.priceFrom)}
+          {cardPrice(place)?.value ?? "Prijs onbekend"}
           {place.priceEur ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
         </p>
         <div className="mt-4 grid gap-2">
@@ -367,5 +370,91 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
         </div>
       </div>
     </>
+  );
+}
+
+/** De kernbelofte: kun je vertrekken wanneer je wilt? Met de letterlijke bron als bewijs. */
+function Departure({ place }: { place: Place }) {
+  const free = place.departure === "vrij" || place.departure === "per24";
+  const title =
+    place.departure === "vrij"
+      ? "Geen vaste vertrektijd"
+      : place.departure === "per24"
+        ? "Geen vaste vertrektijd: je betaalt per 24 uur"
+        : place.departure === "vast"
+          ? place.checkoutUntil
+            ? `Vertrekken vóór ${place.checkoutUntil}`
+            : "Vaste vertrektijd"
+          : "Vertrektijd nog onbekend";
+  const lines = [
+    place.checkinFrom && `Aankomst vanaf ${place.checkinFrom}`,
+    place.accessHours && `Slagboom of poort open ${place.accessHours}`,
+    place.access24h && !place.accessHours && "24 uur per dag toegankelijk",
+    place.maxStayNights && `Maximaal ${pluralize(place.maxStayNights, "nacht", "nachten")}`,
+  ].filter(Boolean) as string[];
+  const fromOsm = place.timesNote === "Volgens OpenStreetMap";
+  return (
+    <section
+      aria-labelledby="vertrek"
+      className={`mt-4 rounded-2xl p-4 outline-1 outline ${free ? "bg-forest-tint outline-forest/40" : "bg-surface outline-line"}`}
+    >
+      <div className="flex items-center gap-3">
+        <Sign name="clock" size={34} state={place.departure ? "on" : "unknown"} />
+        <div className="min-w-0">
+          <p className="text-sm text-muted">Aankomen en vertrekken</p>
+          <h2 id="vertrek" className={`font-display text-lg leading-tight font-semibold ${place.departure ? (free ? "text-forest" : "") : "text-muted"}`}>
+            {title}
+          </h2>
+        </div>
+      </div>
+      {lines.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-ink-2">
+          {lines.map((l) => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
+      )}
+      {place.timesNote && !fromOsm && (
+        <p className="mt-3 border-l-4 border-line pl-3 text-sm text-ink-2">
+          Volgens de website{place.verifiedAt ? ` (gelezen ${formatDate(place.verifiedAt)})` : ""}: &ldquo;{place.timesNote}&rdquo;
+        </p>
+      )}
+      {fromOsm && <p className="mt-3 text-sm text-muted">Volgens OpenStreetMap.</p>}
+      {!place.departure && (
+        <div className="mt-2 text-sm">
+          <p className="text-ink-2">De website noemt geen aankomst- of vertrektijden. Bel bij twijfel even, of laat het ons weten als je het weet.</p>
+          <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd? Laat het weten" />
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Prijs zo transparant mogelijk: basistarief, bandbreedte en alle losse toeslagen die de website noemt */
+function PriceDetails({ place }: { place: Place }) {
+  const extras = place.priceExtras ?? [];
+  if (!place.priceNote && !extras.length && place.touristTaxIncluded === undefined) return null;
+  return (
+    <section aria-labelledby="prijs" className="mt-3 rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+      <h2 id="prijs" className="font-semibold">Prijs en extra kosten</h2>
+      {place.priceNote && <p className="mt-1 text-ink-2">{place.priceNote[0].toUpperCase() + place.priceNote.slice(1)}.</p>}
+      {place.touristTaxIncluded !== undefined && (
+        <p className="mt-1 text-ink-2">Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt bij de prijs"}.</p>
+      )}
+      {extras.length > 0 && (
+        <dl className="mt-2 divide-y divide-line">
+          {extras.map((x) => (
+            <div key={x.label} className="flex justify-between gap-4 py-2">
+              <dt className="text-ink-2">{x.label}</dt>
+              <dd className="text-right font-semibold">{extraLabel(x)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <p className="mt-2 text-sm text-muted">
+        Zoals de website van de plek het noemt{place.verifiedAt ? `, gelezen op ${formatDate(place.verifiedAt)}` : ""}. Prijzen kunnen per seizoen
+        verschillen.
+      </p>
+    </section>
   );
 }

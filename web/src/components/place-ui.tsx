@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
 import { FACILITIES, openStatus } from "@/lib/search";
 import { formatKm } from "@/lib/geo";
-import { priceLabel, scoreLabel, scoreWord } from "@/lib/format";
+import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
@@ -235,18 +235,13 @@ export function PlaceCard({
           {distance && <p className="mt-0.5 text-sm font-semibold text-forest">{distance}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <DepartureChip place={place} />
           <OpenChip place={place} />
           <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />
         </div>
         <div className="mt-auto flex items-end justify-between gap-2">
           <FacilitySigns place={place} max={stack ? 5 : 4} size={stack ? 28 : 26} />
-          <div className="ml-auto shrink-0 text-right">
-            {place.priceFrom && <p className="text-xs text-muted">vanaf</p>}
-            <p className={`font-display leading-none font-semibold ${place.priceEur === undefined ? "text-base text-muted" : "text-2xl text-ink"}`}>
-              {priceLabel(place.priceEur)}
-            </p>
-            {place.priceEur !== undefined && place.priceEur > 0 && <p className="mt-1 text-xs text-muted">per nacht</p>}
-          </div>
+          <CardPrice place={place} />
         </div>
       </div>
     </article>
@@ -267,6 +262,35 @@ export function CardSkeleton() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Vertrekregel op de kaart: groen als je kunt vertrekken wanneer je wilt */
+export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure" | "checkoutUntil"> }) {
+  const label = departureShort(place);
+  if (!label) return null;
+  const free = place.departure !== "vast";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold ${
+        free ? "bg-forest-tint text-forest" : "bg-sunken text-ink-2"
+      }`}
+    >
+      <Sign name="clock" size={18} state={free ? "on" : "unknown"} />
+      {label}
+    </span>
+  );
+}
+
+function CardPrice({ place }: { place: PlaceSummary }) {
+  const price = cardPrice(place);
+  if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
+  return (
+    <div className="ml-auto shrink-0 text-right">
+      {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
+      <p className="font-display text-2xl leading-none font-semibold text-ink">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
+      {(place.priceEur ?? 0) > 0 && <p className="mt-1 text-sm text-muted">per nacht{price.extras ? " + extra's" : ""}</p>}
     </div>
   );
 }

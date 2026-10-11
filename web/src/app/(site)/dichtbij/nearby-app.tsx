@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { distanceKm, formatKm, type LatLng } from "@/lib/geo";
+import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { formatDuration } from "@/lib/format";
 import { applyFilters, DEFAULT_FILTERS, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
 import { usePlaces } from "@/lib/store";
@@ -27,6 +27,7 @@ export function NearbyApp() {
   const [facilities, setFacilities] = useState<FacilityKey[]>([]);
   // Voor "vannacht" standaard aan: verbergt alleen plekken die nu zeker dicht zijn
   const [openNow, setOpenNow] = useState(true);
+  const [noFixedDeparture, setNoFixedDeparture] = useState(false);
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -59,17 +60,17 @@ export function NearbyApp() {
   // Dichtstbijzijnde plekken hemelsbreed, daarna echte rijafstand
   const nearest = useMemo(() => {
     if (!places || !pos) return null;
-    return applyFilters(places, { ...DEFAULT_FILTERS, facilities, openNow })
+    return applyFilters(places, { ...DEFAULT_FILTERS, facilities, openNow, noFixedDeparture })
       .map((r) => ({ place: r.place, km: distanceKm(pos, r.place) }))
       .filter((r) => r.km < 80)
       .sort((a, b) => a.km - b.km)
       .slice(0, MAX);
-  }, [places, pos, facilities, openNow]);
+  }, [places, pos, facilities, openNow, noFixedDeparture]);
 
   useEffect(() => {
     if (!pos || !nearest?.length) return;
     let alive = true;
-    const p = [`${pos.lat},${pos.lng}`, ...nearest.map((n) => `${n.place.lat},${n.place.lng}`)].join(";");
+    const p = [coarse(pos), ...nearest.map((n) => `${n.place.lat},${n.place.lng}`)].join(";");
     fetch(`/api/distances?p=${p}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((m: { distancesM: (number | null)[]; durationsS: (number | null)[] }) => {
@@ -141,7 +142,7 @@ export function NearbyApp() {
             <Icon name="refresh" size={18} /> Opnieuw
           </button>
         </div>
-        <ul className="mt-3 flex flex-wrap gap-2">
+        <ul className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
           <li className="shrink-0">
             <button
               type="button"
@@ -151,6 +152,17 @@ export function NearbyApp() {
             >
               <Sign name="calendar" size={28} state={openNow ? "on" : "unknown"} />
               Nu open
+            </button>
+          </li>
+          <li className="shrink-0">
+            <button
+              type="button"
+              aria-pressed={noFixedDeparture}
+              onClick={() => setNoFixedDeparture((o) => !o)}
+              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+            >
+              <Sign name="clock" size={28} state={noFixedDeparture ? "on" : "unknown"} />
+              Geen vaste vertrektijd
             </button>
           </li>
           {NEARBY_ORDER.map((key) => FACILITIES.find((f) => f.key === key)!).map((f) => {
