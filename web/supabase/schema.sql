@@ -143,6 +143,7 @@ create table if not exists public.osm_regions (
   last_run_at timestamp with time zone,
   places_req bigint,
   points_req bigint,
+  attempt integer default 0 not null,
   constraint osm_regions_pkey PRIMARY KEY (code)
 );
 alter table public.osm_regions enable row level security;
@@ -518,19 +519,21 @@ CREATE OR REPLACE FUNCTION private.next_osm_region()
  SECURITY DEFINER
  SET search_path TO ''
 AS $function$
-declare c text;
+declare r public.osm_regions;
 begin
   if exists (select 1 from public.osm_regions where places_req is not null) then return null; end if;
-  select code into c from public.osm_regions
+  select * into r from public.osm_regions
    where last_run_at is null or last_run_at < now() - interval '7 days'
    order by last_run_at nulls first limit 1;
-  if c is null then return null; end if;
+  if not found then return null; end if;
+  -- Bij een eerdere mislukte poging een andere Overpass-server
   update public.osm_regions
-     set last_run_at = now(), places_req = private.overpass_get('places', c), points_req = private.overpass_get('points', c)
-   where code = c;
-  return c;
-end;
-$function$
+     set last_run_at = now(),
+         places_req = private.overpass_get('places', r.code, r.attempt),
+         points_req = private.overpass_get('points', r.code, r.attempt)
+   where code = r.code;
+  return r.code;
+end $function$
 ;
 
 CREATE OR REPLACE FUNCTION private.log(p_level text, p_source text, p_message text, p_context jsonb DEFAULT '{}'::jsonb)
@@ -868,38 +871,6 @@ begin
 end $function$
 ;
 
-CREATE OR REPLACE FUNCTION private.collect_osm()
- RETURNS text
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
-declare r public.osm_regions; a_status int; b_status int; a_err text; b_err text; a_found boolean; b_found boolean;
-begin
-  select * into r from public.osm_regions where places_req is not null limit 1;
-  if not found then return null; end if;
-  select true, status_code, coalesce(error_msg, left(content::text, 200)) into a_found, a_status, a_err from net._http_response where id = r.places_req;
-  select true, status_code, coalesce(error_msg, left(content::text, 200)) into b_found, b_status, b_err from net._http_response where id = r.points_req;
-  if a_found is null or b_found is null then
-    -- Nog geen antwoord; na 10 minuten opgeven
-    if r.last_run_at < now() - interval '10 minutes' then
-      update public.osm_regions set places_req = null, points_req = null where code = r.code;
-    end if;
-    return 'wacht';
-  end if;
-  if a_status = 200 and b_status = 200 then
-    perform private.call_pipeline(jsonb_build_object('action', 'parse', 'region', r.code, 'places_req', r.places_req, 'points_req', r.points_req));
-  else
-    insert into public.app_logs (level, source, message, context) values ('error', 'pipeline',
-      'Overpass gaf geen data voor ' || r.name, jsonb_build_object('places', a_status, 'points', b_status, 'fout', coalesce(a_err, b_err)));
-    update public.osm_regions set last_run_at = now() - interval '167 hours' where code = r.code;
-  end if;
-  update public.osm_regions set places_req = null, points_req = null where code = r.code;
-  return r.code;
-end;
-$function$
-;
-
 CREATE OR REPLACE FUNCTION private.overpass_get(p_name text, p_region text)
  RETURNS bigint
  LANGUAGE sql
@@ -1010,6 +981,40 @@ begin
     verified_at = now()
   where t.id = p_id;
   update private.scrape_queue set done_at = now(), last_error = null where place_id = p_id;
+end $function$
+;
+
+CREATE OR REPLACE FUNCTION private.collect_osm()
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare r public.osm_regions; a_status int; b_status int; a_err text; b_err text; a_found boolean; b_found boolean;
+begin
+  select * into r from public.osm_regions where places_req is not null limit 1;
+  if not found then return null; end if;
+  select true, status_code, coalesce(error_msg, left(content::text, 200)) into a_found, a_status, a_err from net._http_response where id = r.places_req;
+  select true, status_code, coalesce(error_msg, left(content::text, 200)) into b_found, b_status, b_err from net._http_response where id = r.points_req;
+  if a_found is null or b_found is null then
+    if r.last_run_at < now() - interval '10 minutes' then
+      update public.osm_regions set places_req = null, points_req = null, attempt = attempt + 1,
+             last_run_at = now() - interval '7 days' + interval '10 minutes' where code = r.code;
+    end if;
+    return 'wacht';
+  end if;
+  if a_status = 200 and b_status = 200 then
+    perform private.call_pipeline(jsonb_build_object('action', 'parse', 'region', r.code, 'places_req', r.places_req, 'points_req', r.points_req));
+    update public.osm_regions set places_req = null, points_req = null, attempt = 0 where code = r.code;
+  else
+    insert into public.app_logs (level, source, message, context) values (case when r.attempt >= 3 then 'error' else 'warn' end, 'pipeline',
+      'Overpass gaf geen data voor ' || r.name || ' (poging ' || (r.attempt + 1) || ', volgende poging via andere server)',
+      jsonb_build_object('places', a_status, 'points', b_status));
+    -- Na 10 minuten opnieuw, via de volgende server
+    update public.osm_regions set places_req = null, points_req = null, attempt = attempt + 1,
+           last_run_at = now() - interval '7 days' + interval '10 minutes' where code = r.code;
+  end if;
+  return r.code;
 end $function$
 ;
 
@@ -1126,6 +1131,25 @@ begin
 end $function$
 ;
 
+CREATE OR REPLACE FUNCTION private.decode_entities(s text)
+ RETURNS text
+ LANGUAGE plpgsql
+ IMMUTABLE
+ SET search_path TO ''
+AS $function$
+declare m text[]; out text := s;
+begin
+  if out is null then return null; end if;
+  for m in select regexp_matches(out, '&#x([0-9a-fA-F]+);', 'g') loop
+    out := replace(out, '&#x' || m[1] || ';', chr(('x' || lpad(m[1], 8, '0'))::bit(32)::int));
+  end loop;
+  for m in select regexp_matches(out, '&#([0-9]+);', 'g') loop
+    out := replace(out, '&#' || m[1] || ';', chr(m[1]::int));
+  end loop;
+  return replace(out, '&amp;', '&');
+end $function$
+;
+
 CREATE OR REPLACE FUNCTION private.places_before_write()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -1133,6 +1157,12 @@ CREATE OR REPLACE FUNCTION private.places_before_write()
 AS $function$
 declare t numeric := coalesce((select (value #>> '{}')::numeric from public.site_settings where key = 'publish_threshold'), 0.8);
 begin
+  -- Foto-URL's met HTML-entiteiten (https&#x3A;&#x2F;…) leesbaar maken
+  if new.image_url like '%&#%' or new.photos::text like '%&#%' then
+    new.image_url := private.decode_entities(new.image_url);
+    new.photos := (select coalesce(jsonb_agg(jsonb_set(ph, '{url}', to_jsonb(private.decode_entities(ph->>'url')))), '[]'::jsonb)
+                     from jsonb_array_elements(new.photos) ph);
+  end if;
   new.updated_at := now();
   new.completeness := public.place_completeness(new);
   if not new.status_locked then
@@ -1140,6 +1170,22 @@ begin
   end if;
   return new;
 end $function$
+;
+
+CREATE OR REPLACE FUNCTION private.overpass_get(p_name text, p_region text, p_mirror integer DEFAULT 0)
+ RETURNS bigint
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select net.http_get(
+    (array['https://overpass-api.de/api/interpreter',
+           'https://overpass.kumi.systems/api/interpreter',
+           'https://overpass.private.coffee/api/interpreter'])[1 + (p_mirror % 3)],
+    params := jsonb_build_object('data', format((select template from public.osm_queries where name = p_name), p_region)),
+    headers := '{"User-Agent":"VrijStaanBot/1.0 (+https://vrijstaan.nl/bot)"}'::jsonb,
+    timeout_milliseconds := 120000);
+$function$
 ;
 
 CREATE TRIGGER places_before_write BEFORE INSERT OR UPDATE ON public.places FOR EACH ROW EXECUTE FUNCTION private.places_before_write();
