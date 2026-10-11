@@ -72,6 +72,22 @@ export function PlacePhoto({
   );
 }
 
+/** Foto met bronvermelding; de vermelding verdwijnt als de foto niet laadt (dan staat er een tekening) */
+export function CreditedPhoto({ src, alt, credit, className = "" }: { src?: string; alt: string; credit?: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const onFail = useCallback(() => setFailed(true), []);
+  return (
+    <>
+      <PlacePhoto src={src} alt={alt} className={className} onFail={onFail} />
+      {src && credit && !failed && (
+        <span className="absolute top-2 right-2 max-w-[70%] truncate rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">
+          Foto: {credit}
+        </span>
+      )}
+    </>
+  );
+}
+
 // ── Score ───────────────────────────────────────────────────────────────────
 
 export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: number; size?: "md" | "lg" }) {

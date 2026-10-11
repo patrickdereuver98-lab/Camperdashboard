@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { closeEnough, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
 import { usePlaces, useTowns } from "@/lib/store";
 import { track } from "@/lib/track";
@@ -43,8 +43,11 @@ export function DestinationSearch({
   base,
   initial = "",
   onPick,
+  children,
 }: {
   variant?: "hero" | "bar";
+  /** Extra velden tussen het zoekveld en de knop (startpagina: keuze voor vertrektijd) */
+  children?: ReactNode;
   /** Verfijningen die behouden blijven bij een nieuwe bestemming */
   base?: Filters;
   initial?: string;
@@ -178,8 +181,42 @@ export function DestinationSearch({
   const hero = variant === "hero";
   const listId = `${id}-lijst`;
 
+  const listbox = open && options.length > 0 && (
+    <ul
+      id={listId}
+      role="listbox"
+      className="absolute inset-x-0 top-full z-30 mt-2 max-h-[min(60vh,420px)] overflow-auto rounded-xl border border-line bg-surface py-1 text-ink shadow-lift"
+    >
+      {options.map((o, i) => (
+        <li
+          key={`${o.type}-${o.label}-${i}`}
+          id={`${id}-o${i}`}
+          role="option"
+          aria-selected={i === active}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            pick(o);
+          }}
+          onMouseEnter={() => setActive(i)}
+          className="flex min-h-12 cursor-pointer items-center gap-3 px-4 py-2 aria-selected:bg-forest-tint"
+        >
+          <Icon
+            name={o.type === "near" ? "locate" : o.type === "place" ? "home" : "pin"}
+            size={20}
+            className={o.type === "near" ? "text-forest" : "text-muted"}
+          />
+          <span className="min-w-0">
+            <span className={`block truncate ${o.type === "near" ? "font-semibold text-forest" : "font-semibold"}`}>{o.label}</span>
+            {"sub" in o && <span className="block truncate text-sm text-muted">{o.sub}</span>}
+            {o.type === "province" && <span className="block text-sm text-muted">Provincie</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
-    <div className="relative">
+    <div>
       <form
         role="search"
         onSubmit={(e) => {
@@ -187,72 +224,77 @@ export function DestinationSearch({
           if (open && options[active]) pick(options[active]);
           else submit();
         }}
-        className={hero ? "space-y-3" : "flex items-center gap-2"}
+        className={hero ? "flex flex-col gap-3 lg:flex-row lg:items-end" : "flex items-center gap-2"}
       >
-        <label htmlFor={`${id}-q`} className={hero ? "block font-semibold text-ink" : "sr-only"}>
-          Waar wil je staan?
-        </label>
-        <div
-          className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl text-ink ring-2 ring-line transition-shadow focus-within:ring-forest ${
-            hero ? "h-14 bg-paper px-4" : "h-12 bg-surface px-3"
-          }`}
-        >
-          <Icon name="search" size={hero ? 22 : 20} className="shrink-0 text-muted" />
-          <input
-            ref={inputRef}
-            id={`${id}-q`}
-            role="combobox"
-            aria-expanded={open}
-            aria-controls={listId}
-            aria-autocomplete="list"
-            aria-activedescendant={open ? `${id}-o${active}` : undefined}
-            autoComplete="off"
-            enterKeyHint="search"
-            value={text}
-            placeholder="Plaats, provincie of naam van de plek"
-            onChange={(e) => {
-              setNotFound(null);
-              setText(e.target.value);
-              setOpen(true);
-              setActive(e.target.value ? 1 : 0);
-            }}
-            onFocus={() => setOpen(true)}
-            onBlur={() => setTimeout(() => setOpen(false), 150)}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor={`${id}-q`} className={hero ? "mb-1.5 block text-sm font-semibold text-ink-2" : "sr-only"}>
+            Waar wil je staan?
+          </label>
+          <div
+            className={`flex min-w-0 items-center gap-2 rounded-xl text-ink ring-2 ring-line transition-shadow focus-within:ring-forest ${
+              hero ? "h-14 bg-paper px-4" : "h-12 bg-surface px-3"
+            }`}
+          >
+            <Icon name="search" size={hero ? 22 : 20} className="shrink-0 text-muted" />
+            <input
+              ref={inputRef}
+              id={`${id}-q`}
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-activedescendant={open ? `${id}-o${active}` : undefined}
+              autoComplete="off"
+              enterKeyHint="search"
+              value={text}
+              placeholder={hero ? "Plaats, streek of provincie" : "Plaats, provincie of naam van de plek"}
+              onChange={(e) => {
+                setNotFound(null);
+                setText(e.target.value);
                 setOpen(true);
-                setActive((a) => Math.min(options.length - 1, a + 1));
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setActive((a) => Math.max(0, a - 1));
-              } else if (e.key === "Escape") setOpen(false);
-            }}
-            className="h-full min-w-0 flex-1 bg-transparent text-[17px] placeholder:text-muted focus:outline-none"
-          />
-          {text && (
-            <button
-              type="button"
-              aria-label="Zoekveld leegmaken"
-              onClick={() => {
-                setText("");
-                inputRef.current?.focus();
+                setActive(e.target.value ? 1 : 0);
               }}
-              className="-mr-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken"
-            >
-              <Icon name="x" size={18} />
-            </button>
-          )}
+              onFocus={() => setOpen(true)}
+              onBlur={() => setTimeout(() => setOpen(false), 150)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setOpen(true);
+                  setActive((a) => Math.min(options.length - 1, a + 1));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActive((a) => Math.max(0, a - 1));
+                } else if (e.key === "Escape") setOpen(false);
+              }}
+              className="h-full min-w-0 flex-1 bg-transparent text-[17px] placeholder:text-muted focus:outline-none"
+            />
+            {text && (
+              <button
+                type="button"
+                aria-label="Zoekveld leegmaken"
+                onClick={() => {
+                  setText("");
+                  inputRef.current?.focus();
+                }}
+                className="-mr-1 grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken"
+              >
+                <Icon name="x" size={18} />
+              </button>
+            )}
+          </div>
+          {listbox}
         </div>
+        {children}
         <button
           type="submit"
           className={`font-semibold transition-colors ${
             hero
-              ? "flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-ember text-lg text-on-ember hover:brightness-95"
+              ? "flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-ember px-8 text-lg text-on-ember hover:brightness-95 lg:w-auto"
               : "h-12 shrink-0 rounded-xl bg-forest px-5 text-on-forest hover:bg-forest-deep"
           }`}
         >
-          {hero ? "Zoek een camperplaats" : "Zoek"}
+          {hero && <Icon name="search" size={20} />}
+          Zoeken
         </button>
       </form>
 
@@ -266,42 +308,6 @@ export function DestinationSearch({
         <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert">
           {geoError}
         </p>
-      )}
-
-      {open && options.length > 0 && (
-        <ul
-          id={listId}
-          role="listbox"
-          className={`absolute inset-x-0 z-30 mt-2 max-h-[min(60vh,420px)] overflow-auto rounded-xl border border-line bg-surface py-1 text-ink shadow-lift ${
-            hero ? "top-[5.25rem]" : "top-12"
-          }`}
-        >
-          {options.map((o, i) => (
-            <li
-              key={`${o.type}-${o.label}-${i}`}
-              id={`${id}-o${i}`}
-              role="option"
-              aria-selected={i === active}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                pick(o);
-              }}
-              onMouseEnter={() => setActive(i)}
-              className="flex min-h-12 cursor-pointer items-center gap-3 px-4 py-2 aria-selected:bg-forest-tint"
-            >
-              <Icon
-                name={o.type === "near" ? "locate" : o.type === "place" ? "home" : "pin"}
-                size={20}
-                className={o.type === "near" ? "text-forest" : "text-muted"}
-              />
-              <span className="min-w-0">
-                <span className={`block truncate ${o.type === "near" ? "font-semibold text-forest" : "font-semibold"}`}>{o.label}</span>
-                {"sub" in o && <span className="block truncate text-sm text-muted">{o.sub}</span>}
-                {o.type === "province" && <span className="block text-sm text-muted">Provincie</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );

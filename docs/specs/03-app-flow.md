@@ -18,7 +18,7 @@
 
 | Scherm | Route | Doel | Benodigde data |
 |---|---|---|---|
-| Start | `/` | Zoeken starten, snelle ingangen ("Zonder vertrektijd", "Uitslapers", "Nu open", stroom, lozen, honden), uitgelichte plekken, provincies | Statistieken, uitgelichte samenvattingen |
+| Start | `/` | Zoekkaart (bestemming + vertrekkeuze → `/zoeken`, `/zonder-vertrektijd` of `/uitslapers`), drie vertrekkaarten, populaire bestemmingen, uitgelichte plekken, voorzieningen (nu open, stroom, lozen, honden), uitleg in drie stappen | Statistieken, alle plekken (voor de bestemmingsfoto's), uitgelichte samenvattingen |
 | Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`) |
 | Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, alleen vertrekregel vrij of per 24 uur | Idem |
 | Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
@@ -38,7 +38,7 @@
 
 ## Hoofdroute: vannacht een plek vinden
 
-`Start` → typ plaats of streek (suggesties tijdens typen) → **Zoek** → `Zoeken` (lijst, gesorteerd op Aanbevolen) →
+`Start` → typ plaats of streek (suggesties tijdens typen) → kies bij **Vertrekken** eventueel "Zonder vertrektijd" → **Zoeken** → `Zoeken` (lijst, gesorteerd op Aanbevolen) →
 tik het tabblad **Zonder vertrektijd** (gaat naar `/zonder-vertrektijd` met dezelfde zoekopdracht) → tik een plek → `Plek` (beslispaneel) →
 **Route** (opent navigatie) of **Bellen** → **succes:** camperaar rijdt naar de plek.
 

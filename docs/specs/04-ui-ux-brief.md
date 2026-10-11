@@ -56,7 +56,8 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
 | Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis); vaste actiebalk op de plekpagina |
 | Meldingen | Korte toast na bewaren; inline statusregels (`role="status"`/`role="alert"`) |
-| Bronvermelding | Kleine grijze regel of citaat: "Volgens de website (gelezen 11 oktober 2026): …" |
+| Bronvermelding | Kleine grijze regel of citaat: "Volgens de website (gelezen 11 oktober 2026): …"; bij foto's "Foto: domein.nl" in de hoek, alleen zolang de foto laadt |
+| Zoekkaart (start) | Oppervlak met 3 px avondzon-rand en schaduw, half over het landschap; op mobiel gestapeld, vanaf `lg` op één rij |
 
 ## Layoutregels
 
@@ -69,7 +70,7 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 
 | Scherm | Belangrijkste inhoud, in volgorde |
 |---|---|
-| Start | Kop "Waar sta je vannacht?" met zoekveld → snelle ingangen (eerst "Zonder vertrektijd", dan "Uitslapers") → "Vertrekken wanneer je wilt" → provincies |
+| Start | Getekend landschap over de volle breedte met "Waar sta je vannacht?" → zoekkaart eroverheen (bestemming, keuze Vertrekken: Alle / Zonder vertrektijd / Uitslapers, knop Zoeken; avondzon-rand zoals de zoekbalk van Booking) → drie vertrouwenspunten → "Hoe wil je staan?" (drie kaarten naar de vertrekpagina's) → Populaire bestemmingen (provincietegels met een echte foto van een plek daar, met bron) → "Vertrekken wanneer je wilt" → zoeken op voorziening → "Zo werkt VrijStaan" in drie stappen → eigenaren |
 | Zoeken en vertrekpagina's | Zoekveld → vertrektabbladen → korte uitleg van de pagina → Filters + sortering → actieve filterchips → "n plekken in …" → kaarten → zwevende kaart/lijst-knop |
 | Plek | Foto/tekening → soort, naam, adres, open/dicht → kerngegevens (prijs, vertrekken, open, max. lengte) → **Aankomen en vertrekken** (met bron) → **Prijs en extra kosten** → contact → voorzieningen → route en kaart → praktisch → reviews → in de buurt → bronnen |
 | Dichtbij | Locatievraag → chips (zonder vertrektijd, uitslapers, nu open, voorzieningen) in één scrollrij → kaart → lijst op rijtijd |

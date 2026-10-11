@@ -101,14 +101,14 @@ function normalize(p: Place, websitePhotos = false): Place {
   const photos = (p.photos ?? [])
     .map((ph) => ({ ...ph, url: decodeEntities(ph.url) }))
     .filter((ph) => /^https:\/\//.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos))
-    .map((ph) => ({ ...ph, credit: ph.credit ?? sourceCredit(ph.url) }));
+    .map((ph) => ({ ...ph, credit: ph.credit?.replace(/^www\./, "") ?? sourceCredit(ph.url) }));
   const image = p.imageUrl ? decodeEntities(p.imageUrl) : undefined;
   const imageUrl = image && /^https:\/\//.test(image) && photoAllowed(image, p.photos?.find((ph) => ph.url === p.imageUrl)?.permission, websitePhotos) ? image : photos[0]?.url;
   return {
     ...p,
     photos,
     imageUrl,
-    imageCredit: imageUrl ? (imageUrl === image ? (p.imageCredit ?? sourceCredit(image)) : photos[0]?.credit) : undefined,
+    imageCredit: imageUrl ? (imageUrl === image ? (p.imageCredit?.replace(/^www\./, "") ?? sourceCredit(image)) : photos[0]?.credit) : undefined,
     // "vanaf € x": de laagste genoemde prijs, er zijn duurdere tarieven
     priceFrom: p.priceEur !== undefined && p.priceEur > 0 && /^vanaf/i.test(p.priceNote ?? "") ? true : undefined,
   };

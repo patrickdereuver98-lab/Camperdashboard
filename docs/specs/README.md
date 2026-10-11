@@ -51,3 +51,4 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 8 | Reviews: formulier belooft nog geen foto's en vertrektijdvraag ("binnenkort") | App Flow, PRD | Fase B (Implementatieplan M4) |
 | 9 | `/zoeken?waar=<onbekend>` toont het hele land met die plaatsnaam | App Flow | Fix in M5 |
 | 10 | Testtabellen `private.probe` en `private.probe2` staan nog in de database | Backend Schema | Verwijderen |
+| 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |
