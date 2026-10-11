@@ -42,7 +42,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 | Functie | Voordeel voor de gebruiker | Prioriteit |
 |---|---|---|
 | Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend) met de letterlijke bron | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
-| Filter "Geen vaste vertrektijd" (zoeken, Dichtbij, startpagina) | Direct de plekken die bij de belofte passen | Must |
+| Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (eerder of onbekend), met tabbladen boven de resultaten en chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
 | Prijs met "vanaf", hoogste tarief en losse toeslagen | Geen verrassingen bij aankomst | Must |
 | Zoeken op plaats, streek of eiland, vergeeft typfouten | Snel vinden | Must |
 | Lijst en kaart, filters in de URL | Overzicht en deelbare zoekopdrachten | Must |
@@ -88,8 +88,9 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
   leest, dan krijgt de plek vertrekregel **vrij** en staat de zin met de leesdatum op de plekpagina.
 - Gegeven een site die alleen "het hele seizoen komen en gaan" voor een **seizoensplaats** noemt, wanneer de scraper
   leest, dan blijft de vertrekregel **leeg**.
-- Gegeven het filter "Geen vaste vertrektijd", wanneer ik zoek, dan zie ik alleen plekken met vertrekregel vrij of per
-  24 uur, en een chip waarmee ik het filter weghaal.
+- Gegeven de pagina "Zonder vertrektijd", wanneer ik zoek, dan zie ik alleen plekken met vertrekregel vrij of per
+  24 uur; op "Uitslapers" alleen vaste vertrektijden van 12:00 of later; op "Overige" de rest. Via de tabbladen ga ik
+  met dezelfde zoekopdracht naar een andere pagina.
 - Gegeven een tarieflijst met "Kampeerplaats € 24,50" en "Extra volwassene € 5,00", wanneer de scraper leest, dan is
   de nachtprijs € 24,50 en staat "Per persoon € 5,00 per nacht" bij de extra kosten.
 - Gegeven een plek zonder bekende prijs, wanneer ik de kaart bekijk, dan staat er "Prijs onbekend" en wordt niets
@@ -102,10 +103,11 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 
 ## Open vragen
 
-1. **Hoe streng met vertrektijden?** A: alles tonen met badge en filter (nu zo). B: plekken met vaste vertrektijd
-   verbergen. C: alleen "zeker vrij" tonen. Advies: A.
+1. ~~Hoe streng met vertrektijden?~~ **Besloten (11 oktober 2026):** aparte pagina's "Zonder vertrektijd",
+   "Uitslapers" (vertrek 12:00 of later) en "Overige". Meer onderscheid mag als dat nodig blijkt.
 2. **Definitieve publicatiedrempel** na de herscrape (nu tijdelijk 55%).
-3. **Websitefoto's**: uit tot er toestemming is (nu zo), of per eigenaar om toestemming vragen.
+3. ~~Websitefoto's~~ **Besloten (11 oktober 2026):** overal aan, met bronvermelding en verwijdering op verzoek via
+   Meld inhoud. Uit te zetten in beheer (`website_photos`).
 4. **Bedrijfsvorm en gegevens** (naam, adres, KvK, btw) voor privacy en voorwaarden.
 5. **Verdienmodel**: blijft het gratis? Bij commercieel gebruik is Vercel Pro nodig.
 6. **Reviews verifiëren** met een bevestigingsmail (vraagt een mailprovider)?

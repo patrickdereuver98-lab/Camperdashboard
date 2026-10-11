@@ -1,9 +1,21 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { applyFilters, filtersToQuery, parseFilters, refinementCount, relaxations, type Filters, type SortKey } from "@/lib/search";
+import {
+  applyFilters,
+  DEPARTURE_PAGES,
+  filtersToQuery,
+  parseFilters,
+  refinementCount,
+  relaxations,
+  searchHref,
+  type DeparturePage,
+  type Filters,
+  type SortKey,
+} from "@/lib/search";
 import { usePlaces } from "@/lib/store";
 import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
@@ -33,17 +45,23 @@ function activeChips(f: Filters): { label: string; without: Filters }[] {
   if (f.free) chips.push({ label: "Gratis", without: { ...f, free: false } });
   if (f.maxPrice) chips.push({ label: `Tot € ${f.maxPrice}`, without: { ...f, maxPrice: undefined } });
   if (f.minLength) chips.push({ label: `Camper ${f.minLength} m`, without: { ...f, minLength: undefined } });
-  if (f.noFixedDeparture) chips.push({ label: "Geen vaste vertrektijd", without: { ...f, noFixedDeparture: false } });
   if (f.openNow) chips.push({ label: "Zonder gesloten plekken", without: { ...f, openNow: false } });
   if (f.priceUnknown && (f.free || f.maxPrice)) chips.push({ label: "Ook onbekende prijs", without: { ...f, priceUnknown: false } });
   if (f.minScore) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
   return chips;
 }
 
-export function SearchApp() {
+/** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
+function withPage(f: Filters, page?: DeparturePage): Filters {
+  if (!page) return f;
+  if (page === "overig") return { ...f, departure: f.departure === "vroeg" || f.departure === "onbekend" ? f.departure : "overig" };
+  return { ...f, departure: page };
+}
+
+export function SearchApp({ page }: { page?: DeparturePage }) {
   const router = useRouter();
   const params = useSearchParams();
-  const filters = useMemo(() => parseFilters(params), [params]);
+  const filters = useMemo(() => withPage(parseFilters(params), page), [params, page]);
   const key = filtersToQuery(filters);
   const { data: places, error } = usePlaces();
   const results = useMemo(() => (places ? applyFilters(places, filters) : null), [places, filters]);
@@ -53,10 +71,14 @@ export function SearchApp() {
   const hasReviews = useMemo(() => Boolean(places?.some((p) => p.ratingCount > 0)), [places]);
   const wide = useMediaQuery("(min-width: 1024px)");
 
-  const update = (f: Filters) => {
-    const q = filtersToQuery(f);
-    router.replace(q ? `/zoeken?${q}` : "/zoeken", { scroll: false });
-  };
+  // Elke vertrekgroep heeft een eigen pagina; een andere groep kiezen gaat naar die pagina
+  const update = (f: Filters) => router.replace(searchHref(f), { scroll: false });
+
+  // Oude links (/zoeken?vrij=1 of ?vertrek=…) naar de juiste pagina sturen
+  const misplaced = !page && filters.departure ? searchHref(filters) : null;
+  useEffect(() => {
+    if (misplaced) router.replace(misplaced);
+  }, [misplaced, router]);
 
   const focusCard = (slug: string) => {
     setHovered(slug);
@@ -82,7 +104,8 @@ export function SearchApp() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <div className="min-w-0">
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
-        <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-6">
+        <DepartureTabs page={page} filters={filters} places={places} />
+        <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} />
           <div className="mt-3 flex min-w-0 items-center gap-2">
             <button
@@ -193,6 +216,94 @@ export function SearchApp() {
 
       <FilterSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} filters={filters} places={places} onApply={update} showScore={hasReviews} />
     </div>
+  );
+}
+
+const INTRO: Record<DeparturePage, string> = {
+  vrij: "De website van de plek zegt letterlijk dat er geen vaste vertrektijd is, of dat je per 24 uur betaalt. Vertrekken wanneer je wilt.",
+  uitslapers: "Wel een vaste vertrektijd, maar pas om 12:00 of later. Rustig ontbijten, geen haast.",
+  overig: "Een vertrektijd vóór 12:00, of de website noemt geen tijd. Bel bij twijfel even.",
+};
+
+/** De drie pagina's als tabbladen, met het aantal plekken bij de huidige zoekopdracht */
+function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filters: Filters; places: PlaceSummary[] | null }) {
+  const counts = useMemo(() => {
+    if (!places) return null;
+    const base = { ...filters, departure: undefined };
+    return {
+      alle: applyFilters(places, base).length,
+      vrij: applyFilters(places, { ...base, departure: "vrij" }).length,
+      uitslapers: applyFilters(places, { ...base, departure: "uitslapers" }).length,
+      overig: applyFilters(places, { ...base, departure: "overig" }).length,
+    };
+  }, [places, filters]);
+  const tabs: { key: DeparturePage | "alle"; label: string; href: string }[] = [
+    { key: "alle", label: "Alle", href: searchHref({ ...filters, departure: undefined }) },
+    ...(Object.keys(DEPARTURE_PAGES) as DeparturePage[]).map((k) => ({
+      key: k,
+      label: DEPARTURE_PAGES[k].tab,
+      href: searchHref({ ...filters, departure: k }),
+    })),
+  ];
+  const active = page ?? "alle";
+  const list = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    // Actief tabblad in beeld schuiven, alleen horizontaal
+    const ul = list.current;
+    const el = ul?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (ul && el && (el.offsetLeft < ul.scrollLeft || el.offsetLeft + el.offsetWidth > ul.scrollLeft + ul.clientWidth)) {
+      ul.scrollLeft = el.offsetLeft - ul.offsetLeft - 12;
+    }
+  }, [active, counts]);
+  return (
+    <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-3 sm:px-6 lg:border-0 lg:bg-transparent lg:pt-6">
+      <ul ref={list} className="no-scrollbar -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+        {tabs.map((t) => (
+          <li key={t.key} className="shrink-0">
+            <Link
+              href={t.href}
+              replace
+              scroll={false}
+              aria-current={active === t.key ? "page" : undefined}
+              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-xl border-b-[3px] px-3 font-semibold ${
+                active === t.key ? "border-forest text-forest" : "border-transparent text-ink-2 hover:text-forest"
+              }`}
+            >
+              {t.label}
+              {counts && <span className="text-sm font-normal text-muted">{counts[t.key].toLocaleString("nl-NL")}</span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {page && (
+        <div className="pt-3 pb-1">
+          <h2 className="font-display text-xl font-semibold">{DEPARTURE_PAGES[page].title}</h2>
+          <p className="mt-1 text-ink-2">{INTRO[page]}</p>
+          {page === "overig" && (
+            <div className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
+              {(
+                [
+                  ["overig", "Alle"],
+                  ["vroeg", "Vóór 12:00"],
+                  ["onbekend", "Onbekend"],
+                ] as const
+              ).map(([g, label]) => (
+                <Link
+                  key={g}
+                  href={searchHref({ ...filters, departure: g })}
+                  replace
+                  scroll={false}
+                  aria-current={filters.departure === g ? "true" : undefined}
+                  className="flex h-11 shrink-0 items-center rounded-full border-2 border-line px-4 text-sm font-semibold whitespace-nowrap aria-[current=true]:border-forest aria-[current=true]:bg-forest-tint aria-[current=true]:text-forest"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </nav>
   );
 }
 

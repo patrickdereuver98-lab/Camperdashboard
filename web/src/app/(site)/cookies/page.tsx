@@ -90,8 +90,8 @@ export default function CookiePage() {
 
       <Section title="Externe diensten">
         <p>
-          De kaart laadt tegels van OpenFreeMap. Foto&apos;s komen van Wikimedia Commons, uit onze eigen opslag of, met
-          toestemming van de eigenaar, van de website van de plek. Deze servers zien technisch je IP-adres. Voor zover wij weten
+          De kaart laadt tegels van OpenFreeMap. Foto&apos;s komen van Wikimedia Commons, uit onze eigen opslag of van de
+          website van de plek. Deze servers zien technisch je IP-adres. Voor zover wij weten
           plaatsen ze geen cookies. De lettertypes staan op onze eigen server. &quot;Open in navigatie&quot; opent Google Maps;
           daar gelden de regels van Google.
         </p>

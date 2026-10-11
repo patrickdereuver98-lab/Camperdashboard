@@ -189,9 +189,8 @@ export default function PrivacyPage() {
           <li>De lettertypes staan op onze eigen server. Er gaan geen verzoeken naar Google Fonts.</li>
           <li>
             We tonen foto&apos;s van Wikimedia Commons (met naamsvermelding), foto&apos;s in onze eigen opslag en foto&apos;s
-            waarvoor de eigenaar toestemming heeft gegeven. Je browser laadt deze foto&apos;s rechtstreeks van Wikimedia, uit
-            onze opslag bij Supabase of, bij toestemming van de eigenaar, soms van de website van de plek. Die server ziet dan
-            je IP-adres.
+            van de openbare website van de plek (met bronvermelding). Je browser laadt deze foto&apos;s rechtstreeks van
+            Wikimedia, uit onze opslag bij Supabase of van de website van de plek. Die server ziet dan je IP-adres.
           </li>
         </ul>
       </Section>
@@ -211,7 +210,8 @@ export default function PrivacyPage() {
             openbaar heeft gemaakt.
           </li>
           <li>
-            Foto&apos;s van de website van een plek tonen we niet, tenzij de eigenaar daar toestemming voor geeft.
+            Foto&apos;s van de website van een plek tonen we met bronvermelding. Wil de eigenaar of maker dat een foto
+            verdwijnt, dan halen we die weg na een melding via <Link href="/melden">Meld inhoud</Link>.
           </li>
           <li>
             Bezwaar, correctie of verwijdering: gebruik het{" "}

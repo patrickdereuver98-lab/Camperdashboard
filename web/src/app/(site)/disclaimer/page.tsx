@@ -33,8 +33,8 @@ export default function DisclaimerPage() {
       <Section title="Foto's">
         <p>
           We tonen foto&apos;s van Wikimedia Commons (met naamsvermelding), foto&apos;s in onze eigen opslag en foto&apos;s
-          waarvoor de eigenaar toestemming heeft gegeven. Foto&apos;s van de website van een plek tonen we niet zonder
-          toestemming. Ben je rechthebbende en wil je dat een foto verdwijnt? Meld het via{" "}
+          van de openbare website van de plek. Bij die laatste staat altijd de bron. De rechten blijven bij de maker of de
+          eigenaar van de plek; we slaan de foto&apos;s niet zelf op. Ben je rechthebbende en wil je dat een foto verdwijnt? Meld het via{" "}
           <Link href="/melden">Meld inhoud</Link>; we halen hem dan zo snel mogelijk weg.
         </p>
       </Section>

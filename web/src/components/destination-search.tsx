@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState } from "react";
-import { closeEnough, DEFAULT_FILTERS, filtersToQuery, normalize, searchForm, type Filters } from "@/lib/search";
+import { closeEnough, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
 import { usePlaces, useTowns } from "@/lib/store";
 import { track } from "@/lib/track";
 import { PROVINCES, type Town } from "@/lib/types";
@@ -120,7 +120,7 @@ export function DestinationSearch({
   function go(f: Filters) {
     track("search", { waar: f.where ?? null, provincie: f.province ?? null });
     if (onPick) onPick(f);
-    else router.push(`/zoeken?${filtersToQuery(f)}`);
+    else router.push(searchHref(f));
   }
 
   function pick(o: Option) {

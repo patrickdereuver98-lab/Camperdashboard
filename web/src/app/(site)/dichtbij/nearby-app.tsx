@@ -27,7 +27,7 @@ export function NearbyApp() {
   const [facilities, setFacilities] = useState<FacilityKey[]>([]);
   // Voor "vannacht" standaard aan: verbergt alleen plekken die nu zeker dicht zijn
   const [openNow, setOpenNow] = useState(true);
-  const [noFixedDeparture, setNoFixedDeparture] = useState(false);
+  const [departure, setDeparture] = useState<"vrij" | "uitslapers" | undefined>(undefined);
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -60,12 +60,12 @@ export function NearbyApp() {
   // Dichtstbijzijnde plekken hemelsbreed, daarna echte rijafstand
   const nearest = useMemo(() => {
     if (!places || !pos) return null;
-    return applyFilters(places, { ...DEFAULT_FILTERS, facilities, openNow, noFixedDeparture })
+    return applyFilters(places, { ...DEFAULT_FILTERS, facilities, openNow, departure })
       .map((r) => ({ place: r.place, km: distanceKm(pos, r.place) }))
       .filter((r) => r.km < 80)
       .sort((a, b) => a.km - b.km)
       .slice(0, MAX);
-  }, [places, pos, facilities, openNow, noFixedDeparture]);
+  }, [places, pos, facilities, openNow, departure]);
 
   useEffect(() => {
     if (!pos || !nearest?.length) return;
@@ -154,17 +154,24 @@ export function NearbyApp() {
               Nu open
             </button>
           </li>
-          <li className="shrink-0">
-            <button
-              type="button"
-              aria-pressed={noFixedDeparture}
-              onClick={() => setNoFixedDeparture((o) => !o)}
-              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
-            >
-              <Sign name="clock" size={28} state={noFixedDeparture ? "on" : "unknown"} />
-              Geen vaste vertrektijd
-            </button>
-          </li>
+          {(
+            [
+              ["vrij", "Zonder vertrektijd"],
+              ["uitslapers", "Uitslapers"],
+            ] as const
+          ).map(([g, label]) => (
+            <li key={g} className="shrink-0">
+              <button
+                type="button"
+                aria-pressed={departure === g}
+                onClick={() => setDeparture((d) => (d === g ? undefined : g))}
+                className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+              >
+                <Sign name="clock" size={28} state={departure === g ? "on" : "unknown"} />
+                {label}
+              </button>
+            </li>
+          ))}
           {NEARBY_ORDER.map((key) => FACILITIES.find((f) => f.key === key)!).map((f) => {
             const on = facilities.includes(f.key);
             return (

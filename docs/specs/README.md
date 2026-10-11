@@ -45,7 +45,7 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 2 | Privacyverklaring belooft bewaartermijnen die nog niet automatisch worden toegepast | Backend Schema, privacy | `web/supabase/retention.sql` uitvoeren; tickets toevoegen |
 | 3 | `web/supabase/schema.sql` en de snapshot lopen achter op de live database | Backend Schema, TRD | Opnieuw genereren na de herscrape |
 | 4 | Publicatiedrempel tijdelijk 55%, terwijl "Over ons" spreekt van "genoeg weten" | PRD, site | Definitief vaststellen na de herscrape en de tekst laten kloppen |
-| 5 | Hoe streng met vertrektijden (A alles tonen, B vaste tijden verbergen, C alleen zeker vrij) | PRD open vraag 1 | Besluit van Patrick; advies A |
+| 5 | ~~Hoe streng met vertrektijden~~ | PRD open vraag 1 | **Opgelost:** aparte pagina's Zonder vertrektijd, Uitslapers, Overige; websitefoto's overal aan |
 | 6 | Vercel Hobby is niet-commercieel; verdienmodel nog onbekend | TRD, PRD | Bij inkomsten overstappen op Vercel Pro |
 | 7 | Bedrijfsgegevens ontbreken op privacy, voorwaarden en disclaimer | Release | Invullen in `web/src/lib/company.ts` |
 | 8 | Reviews: formulier belooft nog geen foto's en vertrektijdvraag ("binnenkort") | App Flow, PRD | Fase B (Implementatieplan M4) |

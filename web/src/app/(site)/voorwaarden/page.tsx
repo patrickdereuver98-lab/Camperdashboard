@@ -104,7 +104,8 @@ export default function TermsPage() {
           Ben je eigenaar of beheerder van een plek? Dan kun je je vermelding claimen, gegevens laten aanpassen of de plek laten
           verwijderen via <Link href="/plek-aanmelden?soort=eigenaar">het formulier voor eigenaren</Link> of de knop &quot;Klopt
           er iets niet?&quot; op de pagina van de plek. We verwerken dit meestal binnen twee werkdagen. Foto&apos;s van je eigen
-          website tonen we alleen als jij daar toestemming voor geeft.
+          website tonen we met bronvermelding; wil je dat een foto verdwijnt, meld het dan via{" "}
+          <Link href="/melden">Meld inhoud</Link> en we halen hem weg.
         </p>
         <p>
           Reviews van bezoekers kun je niet laten verwijderen omdat ze negatief zijn. Bevat een review volgens jou illegale

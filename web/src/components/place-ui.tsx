@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
-import { FACILITIES, openStatus } from "@/lib/search";
+import { departureKind, FACILITIES, openStatus } from "@/lib/search";
 import { formatKm } from "@/lib/geo";
 import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
@@ -270,14 +270,12 @@ export function CardSkeleton() {
 export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure" | "checkoutUntil"> }) {
   const label = departureShort(place);
   if (!label) return null;
-  const free = place.departure !== "vast";
+  const kind = departureKind(place);
+  const style =
+    kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold ${
-        free ? "bg-forest-tint text-forest" : "bg-sunken text-ink-2"
-      }`}
-    >
-      <Sign name="clock" size={18} state={free ? "on" : "unknown"} />
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold ${style}`}>
+      <Sign name="clock" size={18} state={kind === "vroeg" ? "unknown" : "on"} tone={kind === "uitslapers" ? "lake" : "forest"} />
       {label}
     </span>
   );

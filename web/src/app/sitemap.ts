@@ -6,6 +6,9 @@ import { PROVINCES } from "@/lib/types";
 const STATIC = [
   "",
   "/zoeken",
+  "/zonder-vertrektijd",
+  "/uitslapers",
+  "/overige-plekken",
   "/dichtbij",
   "/plek-aanmelden",
   "/veelgestelde-vragen",

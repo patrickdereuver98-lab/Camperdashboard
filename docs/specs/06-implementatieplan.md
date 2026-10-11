@@ -32,8 +32,8 @@
 
 ## Mijlpaal 3: hoofdroute ✅
 
-In afhankelijkheidsvolgorde, allemaal klaar: startpagina met zoeken → zoekresultaten met filters (inclusief "Geen vaste
-vertrektijd") en sortering → kaart → plekpagina met vertrekblok en prijsblok → Dichtbij met rijtijden → route naar
+In afhankelijkheidsvolgorde, allemaal klaar: startpagina met zoeken → zoekresultaten met filters en
+sortering → vertrekpagina's `/zonder-vertrektijd`, `/uitslapers`, `/overige-plekken` met tabbladen → kaart → plekpagina met vertrekblok en prijsblok → Dichtbij met rijtijden → route naar
 navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slagen.
 
 ## Mijlpaal 4: overige functies 🔄

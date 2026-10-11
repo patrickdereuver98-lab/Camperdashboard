@@ -99,7 +99,8 @@ Een websitewaarde die bij een volgende lezing niet meer op de site staat, wordt 
 - Beveiligingsheaders in `web/next.config.ts` (nosniff, referrer-policy, permissions-policy, frame-options).
 - Bewaartermijnen: statistieken 13 maanden, cookiekeuzes 24 maanden, systeemmeldingen 90 dagen, afgewezen reviews
   3 maanden, tickets 12 maanden na sluiten (laatste nog niet geautomatiseerd).
-- Websitefoto's standaard niet tonen (auteursrecht); instelling `website_photos`.
+- Websitefoto's standaard tonen (besluit eigenaar), altijd met bronvermelding ("website domein.nl"), niet zelf
+  opgeslagen, verwijdering op verzoek via Meld inhoud; uit te zetten met `website_photos`.
 
 ## Prestatie- en betrouwbaarheidsdoelen
 
@@ -135,5 +136,5 @@ met Node (`node test.mjs ./extract.ts`) op echte zinnen.
 | Overpass via `pg_net` in de database | Edge-IP's werden door Overpass geweigerd | Rechtstreeks vanuit de edge function |
 | Filteren in de browser | ~1.000 samenvattingen zijn klein genoeg; direct resultaat zonder server | Zoek-API met paginering |
 | Geen accounts voor bezoekers | Lage drempel, minder persoonsgegevens | Accounts met synchronisatie |
-| Websitefoto's uit | Auteursrecht; claims zijn duur | Foto's tonen met naamsvermelding (juridisch riskant) |
+| Websitefoto's aan, met bron | Besluit eigenaar: foto's helpen kiezen. Risico: auteursrechtclaims; beperkt door bronvermelding, geen kopie en snelle verwijdering | Websitefoto's uit tot er toestemming is |
 | Vercel Hobby | Gratis, beste ondersteuning voor Next.js 16 | Cloudflare/Netlify (gratis, commercieel toegestaan, minder zeker voor Next 16) |

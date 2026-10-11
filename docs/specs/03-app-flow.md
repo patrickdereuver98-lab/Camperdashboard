@@ -8,7 +8,8 @@
 - Zoekmachine of gedeelde link naar een plek: `/plek/<slug>`
 - Startpagina `/` (direct of vanaf het beginscherm als geïnstalleerde PWA)
 - Provinciepagina's `/camperplaatsen/<provincie>` (SEO)
-- Gedeelde zoekopdracht: `/zoeken?...` (alle filters staan in de URL)
+- Gedeelde zoekopdracht: `/zoeken?...`, `/zonder-vertrektijd?...`, `/uitslapers?...` of `/overige-plekken?...` (alle
+  filters staan in de URL)
 - Gedeelde reis: `/mijn-reis?r=<code>`
 - Supportlink uit een mail: `/support/<token>`
 - Beheer: `/admin` (alleen beheerders)
@@ -17,8 +18,11 @@
 
 | Scherm | Route | Doel | Benodigde data |
 |---|---|---|---|
-| Start | `/` | Zoeken starten, snelle ingangen ("Geen vaste vertrektijd", "Nu open", stroom, lozen, honden), uitgelichte plekken, provincies | Statistieken, uitgelichte samenvattingen |
-| Zoeken | `/zoeken` | Lijst of kaart met filters en sortering | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`) |
+| Start | `/` | Zoeken starten, snelle ingangen ("Zonder vertrektijd", "Uitslapers", "Nu open", stroom, lozen, honden), uitgelichte plekken, provincies | Statistieken, uitgelichte samenvattingen |
+| Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`) |
+| Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, alleen vertrekregel vrij of per 24 uur | Idem |
+| Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
+| Overige plekken | `/overige-plekken` | Zelfde zoekscherm, vertrek vóór 12:00 of onbekend, met keuze tussen die twee | Idem |
 | Filterscherm | sheet op `/zoeken` | Vertrekken, voorzieningen, prijs, soort, lengte, overig, met live teller | Samenvattingen |
 | Plek | `/plek/<slug>` | Beslissen: vertrek, open, prijs en extra kosten, voorzieningen, contact, route, reviews | Volledige plek, reviews, plekken in de buurt |
 | Dichtbij | `/dichtbij` | Plekken rond je locatie op rijtijd | Locatie (toestemming), samenvattingen, `/api/distances` |
@@ -35,7 +39,7 @@
 ## Hoofdroute: vannacht een plek vinden
 
 `Start` → typ plaats of streek (suggesties tijdens typen) → **Zoek** → `Zoeken` (lijst, gesorteerd op Aanbevolen) →
-tik **Filters** → zet **Geen vaste vertrektijd** aan → **Toon n plekken** → tik een plek → `Plek` (beslispaneel) →
+tik het tabblad **Zonder vertrektijd** (gaat naar `/zonder-vertrektijd` met dezelfde zoekopdracht) → tik een plek → `Plek` (beslispaneel) →
 **Route** (opent navigatie) of **Bellen** → **succes:** camperaar rijdt naar de plek.
 
 Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaan) → lijst op rijtijd → `Plek` → **Route**.
@@ -76,7 +80,7 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 - **Header**: logo naar Start, **+** naar Plek aanmelden, **?** naar Veelgestelde vragen. Op `/plek/*` een terugknop.
 - **Footer**: over VrijStaan, juridisch, Cookie-instellingen, Meld inhoud.
 - **Deep links `/zoeken`**: `waar`, `lat`, `lng`, `straal`, `provincie`, `v` (voorzieningen: stroom, water, lozen,
-  toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vrij` (geen vaste vertrektijd),
+  toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),
   `open`, `score`, `sort`, `kaart=1`.
 - Paginaovergangen met `<ViewTransition>`: de foto of tekening schuift mee van de lijst naar de plekpagina.
 

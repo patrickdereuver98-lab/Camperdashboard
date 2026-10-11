@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { applyFilters, DEFAULT_FILTERS, FACILITIES, relaxations, type Filters } from "@/lib/search";
+import { applyFilters, DEFAULT_FILTERS, FACILITIES, pageOf, relaxations, type DepartureGroup, type Filters } from "@/lib/search";
 import { KIND_LABEL, type PlaceKind, type PlaceSummary } from "@/lib/types";
 import { Sheet } from "./sheet";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
@@ -42,6 +42,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+const DEPARTURE_CHOICES: { value: DepartureGroup | undefined; label: string }[] = [
+  { value: undefined, label: "Alle plekken" },
+  { value: "vrij", label: "Zonder vertrektijd" },
+  { value: "uitslapers", label: "Uitslapers" },
+  { value: "overig", label: "Overige" },
+];
+
 export function FilterSheet({
   open,
   onClose,
@@ -65,6 +72,8 @@ export function FilterSheet({
   }
   const count = useMemo(() => (places ? applyFilters(places, draft).length : null), [places, draft]);
   const set = (patch: Partial<Filters>) => setDraft((d) => ({ ...d, ...patch }));
+  // "Overige" omvat ook de deelkeuzes "vóór 12:00" en "onbekend" van die pagina
+  const chosen = (v: DepartureGroup | undefined) => (v === "overig" ? pageOf(draft.departure) === "overig" : draft.departure === v);
   const knownLength = useMemo(() => places?.filter((p) => p.maxLengthM !== undefined).length ?? 0, [places]);
   // Bij nul resultaten: welke ene verruiming levert het meeste op?
   const suggestion = useMemo(() => (places && count === 0 ? (relaxations(places, draft)[0] ?? null) : null), [places, draft, count]);
@@ -98,7 +107,7 @@ export function FilterSheet({
           <button
             type="button"
             onClick={() =>
-              setDraft({ ...DEFAULT_FILTERS, where: draft.where, center: draft.center, province: draft.province, radiusKm: draft.radiusKm })
+              setDraft({ ...DEFAULT_FILTERS, where: draft.where, center: draft.center, province: draft.province, radiusKm: draft.radiusKm, departure: draft.departure })
             }
             className="h-12 rounded-xl px-4 font-semibold text-forest underline"
           >
@@ -132,11 +141,17 @@ export function FilterSheet({
       )}
 
       <Section title="Aankomen en vertrekken">
-        <Toggle pressed={draft.noFixedDeparture} onClick={() => set({ noFixedDeparture: !draft.noFixedDeparture })}>
-          <Sign name="clock" size={30} state={draft.noFixedDeparture ? "on" : "unknown"} />
-          Geen vaste vertrektijd
-        </Toggle>
-        <p className="mt-2 text-sm text-muted">Alleen plekken waarvan de website letterlijk zegt dat je kunt vertrekken wanneer je wilt.</p>
+        <div className="grid grid-cols-2 gap-2">
+          {DEPARTURE_CHOICES.map((c) => (
+            <Toggle key={c.label} pressed={chosen(c.value)} onClick={() => set({ departure: c.value })}>
+              <Sign name="clock" size={30} state={chosen(c.value) && c.value ? "on" : "unknown"} />
+              {c.label}
+            </Toggle>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-muted">
+          Zonder vertrektijd: de website zegt letterlijk dat je kunt vertrekken wanneer je wilt. Uitslapers: vertrek om 12:00 of later.
+        </p>
       </Section>
 
       <Section title="Voorzieningen">

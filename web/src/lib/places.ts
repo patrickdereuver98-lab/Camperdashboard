@@ -2,7 +2,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
-import { isOpenOn } from "./search";
+import { departureKind, isOpenOn } from "./search";
 import type { Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
@@ -76,11 +76,21 @@ export async function getPlaces(): Promise<Place[]> {
 /**
  * Foto's die we mogen tonen: Wikimedia Commons (met naamsvermelding), uploads in onze eigen opslag (bezoekers en
  * eigenaren, met licentie via de voorwaarden) en foto's waarvoor de eigenaar toestemming gaf. Foto's van de website
- * van de plek alleen als dat in beheer is aangezet: die zijn auteursrechtelijk beschermd.
+ * van de plek staan standaard aan (besluit eigenaar, met bronvermelding en verwijdering op verzoek); uit te zetten in beheer.
  */
 function photoAllowed(url: string, permission: boolean | undefined, websitePhotos: boolean) {
   if (websitePhotos || permission) return true;
   return /^https:\/\/(commons|upload)\.wikimedia\.org\//.test(url) || url.startsWith(`${SUPABASE_URL}/storage/`);
+}
+
+/** Bronvermelding voor een foto zonder credit: "website camping-x.nl" */
+function sourceCredit(url: string): string | undefined {
+  if (/^https:\/\/(commons|upload)\.wikimedia\.org\//.test(url) || url.startsWith(`${SUPABASE_URL}/storage/`)) return undefined;
+  try {
+    return `website ${new URL(url).hostname.replace(/^www\./, "")}`;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Sommige sites geven foto-URL's met HTML-entiteiten (https&#x3A;&#x2F;…) */
@@ -90,14 +100,15 @@ const decodeEntities = (s: string) =>
 function normalize(p: Place, websitePhotos = false): Place {
   const photos = (p.photos ?? [])
     .map((ph) => ({ ...ph, url: decodeEntities(ph.url) }))
-    .filter((ph) => /^https:\/\//.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos));
+    .filter((ph) => /^https:\/\//.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos))
+    .map((ph) => ({ ...ph, credit: ph.credit ?? sourceCredit(ph.url) }));
   const image = p.imageUrl ? decodeEntities(p.imageUrl) : undefined;
   const imageUrl = image && /^https:\/\//.test(image) && photoAllowed(image, p.photos?.find((ph) => ph.url === p.imageUrl)?.permission, websitePhotos) ? image : photos[0]?.url;
   return {
     ...p,
     photos,
     imageUrl,
-    imageCredit: imageUrl ? (imageUrl === image ? p.imageCredit : photos[0]?.credit) : undefined,
+    imageCredit: imageUrl ? (imageUrl === image ? (p.imageCredit ?? sourceCredit(image)) : photos[0]?.credit) : undefined,
     // "vanaf € x": de laagste genoemde prijs, er zijn duurdere tarieven
     priceFrom: p.priceEur !== undefined && p.priceEur > 0 && /^vanaf/i.test(p.priceNote ?? "") ? true : undefined,
   };
@@ -180,7 +191,9 @@ export async function getStats() {
     power: places.filter((p) => p.power).length,
     dump: places.filter((p) => p.dumpStation).length,
     dogs: places.filter((p) => p.dogs).length,
-    freeDeparture: places.filter((p) => p.departure === "vrij" || p.departure === "per24").length,
+    freeDeparture: places.filter((p) => departureKind(p) === "vrij").length,
+    lateCheckout: places.filter((p) => departureKind(p) === "uitslapers").length,
+    otherDeparture: places.filter((p) => ["vroeg", "onbekend"].includes(departureKind(p))).length,
     withPhoto: places.filter((p) => p.imageUrl).length,
     byProvince,
   };
@@ -191,13 +204,13 @@ export async function getStats() {
 export type SiteSettings = {
   contact: { email: string; response_days: number };
   announcement: { text: string; enabled: boolean };
-  /** Foto's van de websites van plekken tonen (alleen met toestemming van de rechthebbenden) */
+  /** Foto's van de websites van plekken tonen (standaard aan, met bronvermelding) */
   website_photos: boolean;
 };
 const DEFAULT_SETTINGS: SiteSettings = {
   contact: { email: "hallo@vrijstaan.nl", response_days: 2 },
   announcement: { text: "", enabled: false },
-  website_photos: false,
+  website_photos: true,
 };
 
 export async function getSettings(): Promise<SiteSettings> {

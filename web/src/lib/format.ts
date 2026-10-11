@@ -59,7 +59,7 @@ type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string
 export function departureShort(p: Departure): string | undefined {
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";
-  if (p.departure === "vast") return p.checkoutUntil ? `Vertrek vóór ${p.checkoutUntil}` : "Vaste vertrektijd";
+  if (p.departure === "vast") return p.checkoutUntil ? `Vertrek uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
   return undefined;
 }
 

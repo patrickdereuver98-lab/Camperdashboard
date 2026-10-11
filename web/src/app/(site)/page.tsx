@@ -28,7 +28,8 @@ export default async function Home() {
     .map(toSummary);
 
   const quick: { href: string; sign: SignName; label: string; count: number }[] = [
-    { href: searchHref({ noFixedDeparture: true }), sign: "clock", label: "Geen vaste vertrektijd", count: stats.freeDeparture },
+    { href: searchHref({ departure: "vrij" }), sign: "clock", label: "Zonder vertrektijd", count: stats.freeDeparture },
+    { href: searchHref({ departure: "uitslapers" }), sign: "clock", label: "Uitslapers", count: stats.lateCheckout },
     { href: searchHref({ openNow: true }), sign: "calendar", label: "Nu open", count: stats.openNow },
     { href: searchHref({ facilities: ["power"] }), sign: "power", label: "Met stroom", count: stats.power },
     { href: searchHref({ facilities: ["dumpStation"] }), sign: "dump", label: "Lozen mogelijk", count: stats.dump },
@@ -91,7 +92,7 @@ export default async function Home() {
             <h2 className="font-display text-2xl font-semibold sm:text-3xl">
               {stats.freeDeparture > 0 ? "Vertrekken wanneer je wilt" : "Meest complete informatie"}
             </h2>
-            <Link href={stats.freeDeparture > 0 ? searchHref({ noFixedDeparture: true }) : "/zoeken"} className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-forest hover:underline">
+            <Link href={stats.freeDeparture > 0 ? searchHref({ departure: "vrij" }) : "/zoeken"} className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-forest hover:underline">
               Alle plekken <Icon name="chevronRight" size={18} />
             </Link>
           </div>

@@ -31,7 +31,7 @@
 | `ink` / `ink-2` / `muted` | `#1F2B24` / `#46524A` / `#5C665E` | `#ECE7DB` / `#C7C2B6` / `#9AA39B` | Tekst |
 | `forest` (bosgroen) | `#2D5A43` | `#8DBF9F` | Hoofdkleur: knoppen, links, pictogrammen, "open", **geen vaste vertrektijd** |
 | `ember` (avondzon) | `#B9592A` | `#E8915C` | Accent: hoofdactie op de startpagina, geselecteerde plek op de kaart |
-| `lake` (meerblauw) | `#2F6F7E` | `#82BCC8` | Water en routes op de kaart |
+| `lake` (meerblauw) | `#2F6F7E` | `#82BCC8` | Water en routes op de kaart, **uitslapers** (vertrek 12:00 of later) |
 | `alert` | `#A8321D` | `#F08A72` | Fouten, "niet aanwezig" |
 
 Donkere modus "avond in het bos": volgt de systeeminstelling.
@@ -50,7 +50,8 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 | Knoppen | Minstens 44 px hoog (meestal 48–56 px); primair bosgroen, hoofdactie startpagina avondzon; secundair met rand |
 | Formulieren | Velden 48 px, label boven het veld, verplichte velden met `*`, foutmelding onder het veld, numeriek toetsenbord bij getallen |
 | Plekkaart | Foto of tekening links (rij) of boven (stapel), soort, naam, plaats, vertrekbadge, open/dicht, score, voorzieningen, prijs rechtsonder ("per nacht + extra's") |
-| Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; neutraal: "Vertrek vóór 11:00"; niets bij onbekend |
+| Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; meerblauw bij uitslapers: "Vertrek uiterlijk 12:00"; neutraal: "Vertrek uiterlijk 10:00"; niets bij onbekend |
+| Vertrektabbladen | Boven de resultaten: Alle / Zonder vertrektijd / Uitslapers / Overige, met aantal; horizontaal scrollbaar op mobiel |
 | Voorzieningenpictogrammen | Afgeronde bosgroene vierkanten (aanwezig), zandkleur (onbekend), doorgestreept (niet aanwezig) |
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
 | Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis); vaste actiebalk op de plekpagina |
@@ -68,10 +69,10 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 
 | Scherm | Belangrijkste inhoud, in volgorde |
 |---|---|
-| Start | Kop "Waar sta je vannacht?" met zoekveld → snelle ingangen (eerst "Geen vaste vertrektijd") → "Vertrekken wanneer je wilt" → provincies |
-| Zoeken | Zoekveld → Filters + sortering → actieve filterchips → "n plekken in …" → kaarten → zwevende kaart/lijst-knop |
+| Start | Kop "Waar sta je vannacht?" met zoekveld → snelle ingangen (eerst "Zonder vertrektijd", dan "Uitslapers") → "Vertrekken wanneer je wilt" → provincies |
+| Zoeken en vertrekpagina's | Zoekveld → vertrektabbladen → korte uitleg van de pagina → Filters + sortering → actieve filterchips → "n plekken in …" → kaarten → zwevende kaart/lijst-knop |
 | Plek | Foto/tekening → soort, naam, adres, open/dicht → kerngegevens (prijs, vertrekken, open, max. lengte) → **Aankomen en vertrekken** (met bron) → **Prijs en extra kosten** → contact → voorzieningen → route en kaart → praktisch → reviews → in de buurt → bronnen |
-| Dichtbij | Locatievraag → chips (geen vaste vertrektijd, nu open, voorzieningen) in één scrollrij → kaart → lijst op rijtijd |
+| Dichtbij | Locatievraag → chips (zonder vertrektijd, uitslapers, nu open, voorzieningen) in één scrollrij → kaart → lijst op rijtijd |
 | Mijn reis | Stops met nachten → startpunt → route en kosten → delen en navigatie |
 
 ## Toegankelijkheid
@@ -108,5 +109,5 @@ lijst naar detailpagina.
 | Logo en app-icoon | Aanwezig (`web/src/app/icon.svg`, manifest) |
 | Pictogrammen (voorzieningen, klok, soorten plek) | Aanwezig (`web/src/components/sign.tsx`, `icons.tsx`) |
 | Getekende landschappen | Aanwezig (`landscape.tsx`); meer varianten per type plek gewenst (fase C) |
-| Foto's van plekken | Nog nodig: van bezoekers, eigenaren en Wikimedia Commons (websitefoto's staan uit) |
+| Foto's van plekken | Websitefoto's staan aan (met bron); aanvullend nodig: van bezoekers, eigenaren en Wikimedia Commons |
 | Screenshots voor app-stores | Later (fase C) |

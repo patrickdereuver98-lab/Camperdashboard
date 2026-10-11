@@ -114,6 +114,8 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 4. **Vertrektijden (de kern)**: de scraper leest ook aankomst- en vertrektijden, slagboomtijden en "per 24 uur".
    Een plek krijgt *Geen vaste vertrektijd* alleen als de website dat letterlijk zegt; de zin zelf wordt bewaard en op de
    site getoond met de datum. Tijden voor chalets, verhuur, arrangementen of de receptie tellen niet mee.
+   De site verdeelt de plekken over drie pagina's: **Zonder vertrektijd** (`/zonder-vertrektijd`), **Uitslapers**
+   (vaste vertrektijd 12:00 of later, `/uitslapers`) en **Overige** (eerder of onbekend, `/overige-plekken`).
 5. **Prijzen**: de laagste nachtprijs voor een kampeerplek ("vanaf"), de hoogste genoemde prijs, en losse toeslagen
    (toeristenbelasting, stroom, per persoon, kind, hond, douche, water, lozen, extra auto) precies zoals de website ze noemt.
 6. **Publiceren**: een plek gaat automatisch online als:
@@ -123,8 +125,9 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
      stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1, honden 1, beschrijving 0,5, echte naam 0,5,
      douche 0,25, aantal plekken 0,25.
    Drempel aanpassen kan in **Instellingen**.
-7. **Foto's**: foto's van websites van plekken worden standaard niet getoond (auteursrecht). Alleen Wikimedia Commons,
-   uploads in onze eigen opslag en foto's met toestemming. Aanzetten kan in **Instellingen**, alleen met toestemming.
+7. **Foto's**: foto's van de websites van plekken worden getoond, altijd met de bron ("website domein.nl"). Vraagt een
+   rechthebbende via **Meld inhoud** om verwijdering, haal de foto dan weg bij de plek (Beheer → Plekken). Alles uitzetten
+   kan in **Instellingen**; dan blijven alleen Wikimedia Commons, eigen uploads en foto's met toestemming over.
 
 Automatische taken (pg_cron in Supabase):
 
