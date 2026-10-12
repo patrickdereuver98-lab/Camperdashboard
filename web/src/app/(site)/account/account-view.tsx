@@ -15,6 +15,8 @@ export function AccountView() {
   const { stops } = useTrip();
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   if (loading) return <p role="status" className="text-muted">Laden…</p>;
@@ -35,9 +37,19 @@ export function AccountView() {
   const avatar = meta.avatar_url ?? meta.picture;
   const via = PROVIDER_LABEL[String(user.app_metadata.provider)] ?? String(user.app_metadata.provider ?? "e-mail");
 
+  const typedOk = typed.trim().toUpperCase() === "VERWIJDEREN";
+
   async function remove() {
+    if (!typedOk) return;
     setErr(null);
-    const { error } = await supabase().rpc("delete_my_account");
+    setDeleting(true);
+    const sb = supabase();
+    // Eerst je papieren uit de privé-map: die verdwijnen niet vanzelf met het account
+    const { data: docs } = await sb.storage.from("vehicle-docs").list(user.id);
+    const files = (docs ?? []).filter((d) => d.id).map((d) => `${user.id}/${d.name}`);
+    if (files.length) await sb.storage.from("vehicle-docs").remove(files);
+    const { error } = await sb.rpc("delete_my_account", { p_confirm: typed });
+    setDeleting(false);
     if (error) {
       // Functie (nog) niet beschikbaar: verzoek via support, dan verwijderen we het handmatig
       if (/delete_my_account|function|schema cache/i.test(error.message)) {
@@ -45,6 +57,13 @@ export function AccountView() {
         return;
       }
       return setErr(errorMessage(error));
+    }
+    for (const key of ["vrijstaan:reis", "vrijstaan:samen", "vrijstaan:uitgaven", "vrijstaan:camper"]) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        /* opslag geblokkeerd */
+      }
     }
     await signOut();
     router.replace("/");
@@ -103,14 +122,31 @@ export function AccountView() {
           <div className="rounded-2xl bg-alert-tint p-4">
             <p className="font-semibold text-alert">Weet je het zeker?</p>
             <p className="mt-1 text-ink-2">
-              Je account en de reis in je account worden direct en definitief verwijderd. Reviews zijn niet aan je
-              account gekoppeld en blijven staan.
+              Je account wordt direct en definitief verwijderd, met je reis, je camper, je uitgaven en je papieren. Dit kun je
+              niet ongedaan maken. Reviews zijn niet aan je account gekoppeld en blijven staan.
             </p>
+            <label className="mt-3 block">
+              <span className="mb-1 block font-semibold">Typ VERWIJDEREN om te bevestigen</span>
+              <input
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                className="h-12 w-full rounded-xl border-2 border-line bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none"
+              />
+            </label>
             <div className="mt-3 flex gap-3">
-              <button onClick={remove} className="h-11 rounded-xl bg-alert px-4 font-semibold text-surface">
-                Ja, verwijderen
+              <button onClick={remove} disabled={!typedOk || deleting} className="h-11 rounded-xl bg-alert px-4 font-semibold text-surface disabled:opacity-40">
+                {deleting ? "Verwijderen…" : "Account definitief verwijderen"}
               </button>
-              <button onClick={() => setConfirm(false)} className="h-11 rounded-xl px-4 font-semibold">
+              <button
+                onClick={() => {
+                  setConfirm(false);
+                  setTyped("");
+                }}
+                className="h-11 rounded-xl px-4 font-semibold"
+              >
                 Annuleren
               </button>
             </div>

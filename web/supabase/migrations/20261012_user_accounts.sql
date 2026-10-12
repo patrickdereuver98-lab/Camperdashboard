@@ -1,4 +1,4 @@
--- Status: live toegepast op 2026-10-12, BEHALVE delete_my_account onderaan (wacht op bevestiging, zie PR).
+-- Status: live toegepast op 2026-10-12 (delete_my_account later die dag, na akkoord van Patrick, met tweestaps-bevestiging).
 -- Accounts voor bezoekers (Google, Apple, Facebook, magic link): profiel en "Mijn reis" in de cloud.
 -- Additief. Elke gebruiker ziet en wijzigt alleen zijn eigen rijen (RLS).
 
@@ -68,12 +68,14 @@ create trigger on_auth_user_confirmed after update of email_confirmed_at on auth
 insert into public.profiles (id, display_name)
 select id, left(split_part(email, '@', 1), 80) from auth.users on conflict (id) do nothing;
 
--- Zelf je account verwijderen (AVG art. 17). Profiel en reis verdwijnen via ON DELETE CASCADE.
-create or replace function public.delete_my_account()
+-- Zelf je account verwijderen (AVG art. 17). Profiel, reis, camper, uitgaven en volgers verdwijnen via ON DELETE CASCADE.
+-- Tweestaps: de knop in /account en daarna het woord VERWIJDEREN intypen; de functie controleert dat woord zelf.
+create or replace function public.delete_my_account(p_confirm text)
 returns void language plpgsql security definer set search_path = '' as $$
 begin
   if auth.uid() is null then raise exception 'Niet ingelogd'; end if;
+  if upper(trim(coalesce(p_confirm, ''))) <> 'VERWIJDEREN' then raise exception 'Typ VERWIJDEREN om je account te verwijderen'; end if;
   delete from auth.users where id = auth.uid();
 end $$;
-revoke all on function public.delete_my_account() from public, anon;
-grant execute on function public.delete_my_account() to authenticated;
+revoke all on function public.delete_my_account(text) from public, anon;
+grant execute on function public.delete_my_account(text) to authenticated;

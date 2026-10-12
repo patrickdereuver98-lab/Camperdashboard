@@ -96,6 +96,14 @@ const vehicleStore = createStore<Vehicle>("vrijstaan:camper", EMPTY_VEHICLE, (v)
 export const useVehicle = () => [vehicleStore.use(), (v: Vehicle) => vehicleStore.write(cleanVehicle(v))] as const;
 export const readVehicle = () => vehicleStore.read();
 
+// ── Samen plannen (gedeelde reis) ─────────────────────────────────────────
+
+export type SharedLink = { id: string; name: string; code: string };
+const sharedStore = createStore<SharedLink | null>("vrijstaan:samen", null, (v): v is SharedLink | null =>
+  v === null || (typeof v === "object" && typeof (v as SharedLink).id === "string" && typeof (v as SharedLink).code === "string"),
+);
+export const useSharedLink = () => [sharedStore.use(), sharedStore.write] as const;
+
 // ── Uitgaven onderweg ──────────────────────────────────────────────────────
 
 const EMPTY_EXPENSES: Expense[] = [];

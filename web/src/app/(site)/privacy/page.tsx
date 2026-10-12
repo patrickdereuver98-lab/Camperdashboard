@@ -16,6 +16,12 @@ const ROWS: string[][] = [
     "Tot je je account verwijdert",
   ],
   [
+    "Samen plannen",
+    "De gedeelde reis (plekken en nachten), wie hem het laatst wijzigde, en je naam zoals de andere deelnemers die zien. Alleen deelnemers kunnen de reis zien",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je doet zelf mee",
+    "Zolang de gedeelde reis bestaat; je deelname eindigt als je stopt of je account verwijdert",
+  ],
+  [
     "Uitgaven onderweg",
     "Datum, soort, bedrag, eventueel liters, de stop en je notitie. Zonder account alleen op je toestel; met account ook in je account",
     "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",

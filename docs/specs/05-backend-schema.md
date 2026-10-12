@@ -34,6 +34,7 @@
 | `push_subscriptions` | Push-abonnement van een browser, gekoppeld aan een account |
 | `user_vehicles` | Camperprofiel van een account (naam, maten, brandstof, verbruik) |
 | `user_expenses` | Uitgaven onderweg van een account (kosten- en brandstoftracker) |
+| `shared_trips` + `shared_trip_members` | Gedeelde reis (samen plannen) en wie meedoet |
 | Storage `vehicle-docs` | Privé-map per account voor papieren van de camper (PDF of foto, max. 5 MB) |
 | `crowd_watches` | Een ingelogde camperaar volgt een plek 24 uur en krijgt één pushmelding als het rustig wordt |
 
@@ -89,6 +90,8 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200), updated_at* | alleen eigen rij |
 | `place_photos` | id*, place_id*, user_id, storage_path* (`<user_id>/<uuid>.webp|jpg`), width/height (200–4.000), caption (≤ 140), credit (≤ 80), status* (`pending`, `approved`, `rejected`), reviewed_by, reviewed_at, created_at* | status `pending`; max. 20 per gebruiker per dag; vertrouwde gebruikers (`site_settings.trust`) worden automatisch goedgekeurd |
 | `duplicate_dismissals` | a*, b* (a < b), dismissed_by, created_at* | alleen beheer |
+| `shared_trips` | id*, owner_id*, name* (1–60), stops* (≤ 200), invite_code* (uniek, 18 hex), updated_by, updated_at*, created_at* | lezen en `stops`/`name` wijzigen alleen voor leden (`is_trip_member`); in de Realtime-publicatie; maken via `create_shared_trip`, meedoen via `join_shared_trip` (max. 6) |
+| `shared_trip_members` | trip_id* + user_id* (pk), display_name, joined_at*, left_at | verlaten via `leave_shared_trip` (zet left_at) |
 | `user_expenses` | user_id* (pk), entries* (jsonb-array ≤ 1.000: id, date, category, amountEur, liters?, placeSlug?, note?), updated_at* | alleen eigen rij; samenvoegen op id via `mergeExpenses` |
 | `user_vehicles` | user_id* (pk), data* (jsonb, < 2 kB), updated_at* | alleen eigen rij; waarden gecontroleerd door `cleanVehicle` |
 | Storage `vehicle-docs` | `<user_id>/<tijd>-<naam>` | niet openbaar; lezen, uploaden en weghalen alleen in je eigen map; openen via een ondertekende link van 60 seconden |

@@ -93,3 +93,50 @@ test.describe("ingelogd", () => {
     expect(pushed[0]).toMatchObject({ user_id: USER.id, stops: [{ slug: local, nights: 2 }, { slug: remote, nights: 3 }] });
   });
 });
+
+test("ingelogd: een latere wijziging aan Mijn reis gaat ook naar het account", async ({ page }) => {
+  await signIn(page);
+  await page.addInitScript((s) => localStorage.setItem("vrijstaan:reis", JSON.stringify([{ slug: s, nights: 1 }])), PLACES[0].slug);
+  await page.routeWebSocket(/realtime/, () => {});
+  const pushed: { stops: { nights: number }[] }[] = [];
+  const firstSync = page.waitForResponse((r) => r.url().includes("/rest/v1/user_trips") && r.request().method() === "GET");
+  await page.route(`${SUPABASE}/rest/v1/user_trips**`, async (r) => {
+    if (r.request().method() === "GET") return r.fulfill({ json: { stops: [{ slug: PLACES[0].slug, nights: 1 }] } });
+    pushed.push(r.request().postDataJSON());
+    return r.fulfill({ status: 201, json: [] });
+  });
+  await page.goto("/mijn-reis");
+  await firstSync;
+  await page.getByRole("button", { name: "Een nacht meer" }).first().click();
+  await expect.poll(() => pushed.at(-1)?.stops?.[0]?.nights, { timeout: 5000 }).toBe(2);
+});
+
+test("account verwijderen vraagt om VERWIJDEREN te typen en ruimt papieren op", async ({ page }) => {
+  await signIn(page);
+  await page.routeWebSocket(/realtime/, () => {});
+  for (const t of ["user_trips", "user_vehicles", "user_expenses"]) await page.route(`${SUPABASE}/rest/v1/${t}**`, (r) => r.fulfill({ json: null }));
+  await page.route(`${SUPABASE}/storage/v1/object/list/vehicle-docs`, (r) => r.fulfill({ json: [{ id: "1", name: "1-kenteken.pdf" }] }));
+  let removed: unknown = null;
+  await page.route(`${SUPABASE}/storage/v1/object/vehicle-docs`, async (r) => {
+    removed = r.request().postDataJSON();
+    await r.fulfill({ json: [] });
+  });
+  let confirm: unknown = null;
+  await page.route(`${SUPABASE}/rest/v1/rpc/delete_my_account**`, async (r) => {
+    confirm = r.request().postDataJSON();
+    await r.fulfill({ status: 204 });
+  });
+  await page.route(`${SUPABASE}/auth/v1/logout**`, (r) => r.fulfill({ status: 204 }));
+  await page.goto("/account");
+  await page.getByRole("button", { name: "Account verwijderen" }).click();
+  const go = page.getByRole("button", { name: "Account definitief verwijderen" });
+  await expect(go).toBeDisabled();
+  await page.getByLabel("Typ VERWIJDEREN om te bevestigen").fill("verwijder");
+  await expect(go).toBeDisabled();
+  await page.getByLabel("Typ VERWIJDEREN om te bevestigen").fill("verwijderen");
+  await expect(go).toBeEnabled();
+  await go.click();
+  await page.waitForURL((u) => u.pathname === "/");
+  expect(confirm).toEqual({ p_confirm: "verwijderen" });
+  expect(removed).toEqual({ prefixes: [`${USER.id}/1-kenteken.pdf`] });
+});

@@ -2,11 +2,22 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "@/lib/auth";
-import { useExpenses, useTrip, useVehicle } from "@/lib/store";
+import { useExpenses, useSharedLink, useTrip, useVehicle } from "@/lib/store";
 import { mergeExpenses, type Expense } from "@/lib/expenses";
 import { cleanVehicle, hasVehicle, type Vehicle } from "@/lib/vehicle";
 import { supabase } from "@/lib/supabase-browser";
 import { mergeTrips, sameTrip, type Stop } from "@/lib/trip-merge";
+
+/**
+ * Een Supabase-query wordt pas verstuurd als je hem afwacht of `.then()` aanroept. Voor "versturen en vergeten"
+ * (de uitgestelde synchronisatie) dus altijd via deze helper, nooit met een losse `void`.
+ */
+function send(query: PromiseLike<unknown>) {
+  query.then(
+    () => undefined,
+    () => undefined,
+  );
+}
 
 /** Houdt "Mijn reis" en "Mijn camper" gelijk tussen dit toestel en het account (alleen als je bent ingelogd) */
 export function TripSync() {
@@ -15,6 +26,7 @@ export function TripSync() {
       <TripSyncInner />
       <VehicleSync />
       <ExpenseSync />
+      <SharedTripSync />
     </>
   );
 }
@@ -57,7 +69,7 @@ function VehicleSync() {
     if (lastPushed.current && sameVehicle(lastPushed.current, vehicle)) return;
     const t = setTimeout(() => {
       lastPushed.current = vehicle;
-      void supabase().from("user_vehicles").upsert({ user_id: userId, data: cleanVehicle(vehicle), updated_at: new Date().toISOString() });
+      send(supabase().from("user_vehicles").upsert({ user_id: userId, data: cleanVehicle(vehicle), updated_at: new Date().toISOString() }));
     }, 800);
     return () => clearTimeout(t);
   }, [vehicle, userId]);
@@ -105,7 +117,7 @@ function ExpenseSync() {
     if (lastPushed.current && sameExpenses(lastPushed.current, list)) return;
     const t = setTimeout(() => {
       lastPushed.current = list;
-      void supabase().from("user_expenses").upsert({ user_id: userId, entries: list, updated_at: new Date().toISOString() });
+      send(supabase().from("user_expenses").upsert({ user_id: userId, entries: list, updated_at: new Date().toISOString() }));
     }, 800);
     return () => clearTimeout(t);
   }, [list, userId]);
@@ -113,6 +125,65 @@ function ExpenseSync() {
   useEffect(() => {
     if (!userId) pulled.current = null;
   }, [userId]);
+
+  return null;
+}
+
+/**
+ * Gedeelde reis: de reis in de database is leidend. Wijzigingen van de anderen komen realtime binnen en vervangen
+ * de reis op dit toestel; eigen wijzigingen gaan kort uitgesteld naar de database (laatste wijziging wint).
+ */
+function SharedTripSync() {
+  const { session } = useSession();
+  const userId = session?.user.id;
+  const [link, setLink] = useSharedLink();
+  const { stops, replace } = useTrip();
+  const lastSynced = useRef<Stop[] | null>(null);
+  const tripId = userId ? link?.id : undefined;
+
+  useEffect(() => {
+    if (!tripId) return;
+    let alive = true;
+    const sb = supabase();
+    const apply = (remote: unknown) => {
+      const next = mergeTrips([], remote);
+      lastSynced.current = next;
+      replace(next);
+    };
+    void sb
+      .from("shared_trips")
+      .select("stops")
+      .eq("id", tripId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!alive || error) return;
+        // Geen toegang meer (verlaten of verwijderd): koppeling losmaken, je eigen reis blijft staan
+        if (!data) return setLink(null);
+        apply(data.stops);
+      });
+    const channel = sb
+      .channel(`reis-${tripId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "shared_trips", filter: `id=eq.${tripId}` }, (payload) => {
+        const remote = mergeTrips([], (payload.new as { stops?: unknown }).stops);
+        if (lastSynced.current && sameTrip(remote, lastSynced.current)) return;
+        apply(remote);
+      })
+      .subscribe();
+    return () => {
+      alive = false;
+      void sb.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId]);
+
+  useEffect(() => {
+    if (!tripId || !lastSynced.current || sameTrip(lastSynced.current, stops)) return;
+    const t = setTimeout(() => {
+      lastSynced.current = stops;
+      send(supabase().from("shared_trips").update({ stops }).eq("id", tripId));
+    }, 500);
+    return () => clearTimeout(t);
+  }, [stops, tripId]);
 
   return null;
 }
@@ -153,7 +224,7 @@ function TripSyncInner() {
     if (lastPushed.current && sameTrip(lastPushed.current, stops)) return;
     const t = setTimeout(() => {
       lastPushed.current = stops;
-      void supabase().from("user_trips").upsert({ user_id: userId, stops, updated_at: new Date().toISOString() });
+      send(supabase().from("user_trips").upsert({ user_id: userId, stops, updated_at: new Date().toISOString() }));
     }, 800);
     return () => clearTimeout(t);
   }, [stops, userId]);

@@ -34,13 +34,14 @@
 | ⬜ Strikte OSM-query live zetten + edge function deployen | Patrick | Besluit (zie README #12) | `migrations/20261012_strict_osm_query.sql` | Volgende import gebruikt de nieuwe regels | Besluit |
 | ✅ Optionele bezoekersaccounts + synchronisatie Mijn reis | Agent | Opdracht Patrick | `/inloggen`, `/account`, `user_trips` | E2E groen | — |
 | ⬜ OAuth-sleutels Google, Apple, Facebook + SMTP | Patrick | Handleiding stap 4 | Supabase-instellingen | Inloggen met elke dienst werkt | Vercel-adres |
-| ⬜ `delete_my_account` toepassen | Patrick | Bevestiging | `migrations/20261012_user_accounts.sql` (onderaan) | Knop verwijdert account direct | — |
+| 🔄 `delete_my_account` met tweestaps-bevestiging | Agent + Patrick | Akkoord Patrick (12 okt) | UI klaar; SQL onderaan `migrations/20261012_user_accounts.sql` | Live na uitvoeren van de SQL (de MCP-bevestiging verliep) | — |
 | ✅ Foto-upload door bezoekers met moderatie en trust-score | Agent | Opdracht Patrick | Storage, `place_photos`, `/admin/fotos` | Foto verschijnt na goedkeuring; geen EXIF | Accounts |
 | ✅ Live drukte (crowdsourced: rustig, druk, vol) | Agent | Opdracht Patrick (Fase 5) | `crowd_reports`, kaart op de plekpagina | Alleen echte meldingen van de laatste 3 uur, met aantal en tijd | Accounts |
 | ✅ Pushmelding als een gevolgde plek rustig wordt | Agent | Fase 5 | Edge function `push`, `crowd_watches`, `push_subscriptions`, service worker | Versleutelde melding (getest met web-push tegen een nep-pushdienst); één melding per volger | Drukte |
 | ✅ Voertuigkluis: camperprofiel met automatisch lengtefilter, papieren in een privé-map | Agent | Opdracht Patrick (Fase 5) | `/mijn-camper`, `user_vehicles`, Storage `vehicle-docs` | Lengtefilter vanzelf aan; uitzetten blijft uit; papieren alleen voor de eigenaar | Accounts |
 | ✅ Kosten- en brandstoftracker in Mijn reis | Agent | Opdracht Patrick (Fase 5) | `ExpensesPanel`, `user_expenses` | Uitgaven naast de begroting; werkt zonder account | Mijn reis |
 | ✅ Reisstatistieken (dashboard) | Agent | Opdracht Patrick (Fase 5) | `/mijn-reis/statistieken`, `trip-stats.ts` | Alleen berekend uit bekende gegevens; tabel bij elke grafiek | Mijn reis, uitgaven |
+| ✅ Samen een reis plannen (realtime) | Agent | Opdracht Patrick (Fase 5) | `shared_trips`, `/samen/<code>`, `SharedCard` | Leden zien wijzigingen direct; buitenstaanders niet | Accounts |
 | ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
 | ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 

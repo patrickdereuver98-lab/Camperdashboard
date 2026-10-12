@@ -14,6 +14,7 @@ import { PlaceMap } from "@/components/place-map";
 import { OpenChip, PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
 import { ExpensesPanel } from "./expenses-panel";
+import { SharedCard } from "./shared-card";
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
 type Stop = TripStop & { place: PlaceSummary };
@@ -413,6 +414,8 @@ export function TripApp() {
               <Icon name="route" size={19} /> Open route in Google Maps
             </a>
           </div>
+
+          <SharedCard />
 
           <ExpensesPanel stops={stops.map((s) => ({ slug: s.slug, name: s.place.name }))} budget={{ stay, fuel, tax }} />
 
