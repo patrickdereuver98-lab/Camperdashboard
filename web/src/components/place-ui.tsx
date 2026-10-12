@@ -10,12 +10,21 @@ import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
+import { SUPABASE_URL } from "@/lib/env";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
 import { Landscape } from "./landscape";
 import { Sign, type SignName } from "./sign";
 
 // ── Foto met nette terugval ─────────────────────────────────────────────────
+
+/**
+ * Externe foto's lopen via wsrv.nl: een gratis, open-source beelddienst die de foto verkleint (WebP, juiste breedte)
+ * en in de cache houdt. Scheelt op een telefoon vaak megabytes per foto. Lukt dat niet, dan het origineel.
+ */
+export function photoProxy(src: string, width: number): string {
+  return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${width}&fit=cover&output=webp&q=72&we`;
+}
 
 export function PlacePhoto({
   src,
@@ -34,23 +43,26 @@ export function PlacePhoto({
   sizes?: "small" | "large";
   onFail?: () => void;
 }) {
-  // Eerst de grote versie bij de beeldbank; mislukt die, dan het origineel zoals de site het gaf
+  // Volgorde: verkleinde WebP van de grote versie (wsrv.nl), de grote versie zelf, het origineel van de site.
+  // wsrv.nl vergroot nooit (&we), dus de echte breedte blijft meetbaar voor de scherptecheck hieronder.
+  const w = sizes === "large" ? 1280 : 640;
   const upgraded = src ? upgradePhotoUrl(src) : undefined;
-  const [useOriginal, setUseOriginal] = useState(false);
+  const ownStorage = !!src?.startsWith(`${SUPABASE_URL}/storage/`);
+  const sources = src && upgraded ? [...new Set([...(ownStorage ? [] : [photoProxy(upgraded, w)]), upgraded, src])] : [];
+  const [stage, setStage] = useState(0);
   const [failed, setFailed] = useState(false);
   // Logo, tekening of een foto met een heel andere verhouding: passend tonen in plaats van half bijsnijden
   const [fit, setFit] = useState<"cover" | "photo" | "graphic">(src && looksLikeGraphic(src) ? "graphic" : "cover");
   const ref = useRef<HTMLImageElement>(null);
-  const current = useOriginal ? src : upgraded;
+  const current = sources[stage];
+  const proxied = !ownStorage && stage === 0 && !!upgraded;
   const pos = /\babsolute\b/.test(className) ? "" : "relative";
-  const fail = useCallback(() => {
-    if (!useOriginal && upgraded !== src) {
-      setUseOriginal(true);
-      return;
-    }
-    setFailed(true);
-    onFail?.();
-  }, [onFail, upgraded, src, useOriginal]);
+  // Volgende bron proberen; als alle bronnen op zijn, valt de foto af (tekening of volgende foto)
+  const fail = useCallback(() => setStage((s) => s + 1), []);
+  const exhausted = sources.length > 0 && stage >= sources.length;
+  useEffect(() => {
+    if (exhausted) onFail?.();
+  }, [exhausted, onFail]);
   const loaded = useCallback(() => {
     const img = ref.current;
     if (!img?.naturalWidth) return;
@@ -77,7 +89,7 @@ export function PlacePhoto({
     if (img.naturalWidth === 0) fail();
     else loaded();
   }, [fail, loaded]);
-  if (!current || failed) {
+  if (!current || failed || exhausted) {
     // Geen foto: een getekend landschap (duidelijk een illustratie, geen nepfoto)
     return (
       <div className={`${pos} overflow-hidden ${className}`} role="img" aria-label={`${alt} (nog geen foto)`}>
@@ -97,14 +109,15 @@ export function PlacePhoto({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={current} alt="" aria-hidden="true" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
       )}
-      {/* Externe foto's van de plek zelf; geen optimalisatieproxy zodat de bron zichtbaar blijft */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={ref}
         key={current}
         src={current}
+        srcSet={proxied && upgraded ? `${photoProxy(upgraded, w / 2)} ${w / 2}w, ${photoProxy(upgraded, w)} ${w}w` : undefined}
+        sizes={sizes === "large" ? "100vw" : "(min-width: 640px) 360px, 50vw"}
         alt={alt}
-        loading="lazy"
+        loading={sizes === "large" ? "eager" : "lazy"}
         decoding="async"
         referrerPolicy="no-referrer"
         onError={fail}

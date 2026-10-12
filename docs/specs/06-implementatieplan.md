@@ -20,9 +20,9 @@
 |---|---|---|---|---|---|
 | ✅ Schema, RLS en RPC's | Agent | Backend Schema | Tabellen, policies, functies | Anon leest alleen gepubliceerde data; beheer via `is_admin()` | M1 |
 | ✅ OSM-import per provincie | Agent | OSM-tags | `osm_regions`, cron, edge function | Alle 12 provincies binnen 7 dagen ververst | Schema |
-| ✅ Website-scraper (prijs, toeslagen, seizoen, voorzieningen, vertrektijden) | Agent | Echte voorbeeldzinnen | Edge function `pipeline` v15 | Testscripts geven verwacht resultaat; steekproef van 10 plekken klopt | Schema |
-| 🔄 Herscrape alle websites met v17 (12 okt 13:38 opnieuw gestart, ±3.150 sites, ±1,5 uur) | Agent | — | Bijgewerkte plekken | `private.scrape_queue` leeg; steekproef "vrij" en toeslagen correct | Scraper |
-| ⬜ Publicatiedrempel definitief instellen | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | ±1.000 plekken van goede kwaliteit online | Herscrape |
+| ✅ Website-scraper (prijs, toeslagen, seizoen, voorzieningen, vertrektijden) | Agent | Echte voorbeeldzinnen | Edge function `pipeline` v17 | Testscripts geven verwacht resultaat; steekproef van 10 plekken klopt | Schema |
+| ✅ Herscrape alle websites met v17 (12 okt 13:38–±15:30, 3.211 sites; 322 fouten aan de kant van de sites: 404, 403, onbereikbaar, time-out) | Agent | — | Bijgewerkte plekken | `private.scrape_queue` leeg; steekproef foto's en teksten correct | Scraper |
+| ✅ Publicatiedrempel definitief instellen (0,45) | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | 1.509 plekken online, allemaal met contact en 2 van 4 kernfeiten | Herscrape |
 | ✅ Beheeraccounts via uitnodiging | Agent | E-mail Patrick | `private.admin_invites`, trigger | Patrick kan inloggen | Schema |
 | ⬜ Rollen `admin` en `support` echt scheiden | Agent | Besluit Patrick | Policies per rol | Support kan geen instellingen of plekken verwijderen | Besluit |
 | ⬜ Bewaartermijnen activeren | Patrick | `web/supabase/retention.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
@@ -49,7 +49,11 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Reviewformulier: vertrektijdvraag, bezoekdatum, foto-upload (max. 5, verkleind, zonder EXIF) | Agent | Fase B | Supabase Storage-bucket, RPC, formulier, moderatie | Foto verschijnt na goedkeuring; geen locatie in het bestand | M2 |
 | ⬜ "Volgens n bezoekers" bij de vertrekregel | Agent | Reviewantwoorden | Weergave op de plekpagina | Bron (website of bezoekers) is altijd duidelijk | Reviewformulier |
 | ⬜ Eigenaar claimen en zelf bewerken (incl. toestemming foto's) | Agent | Fase B | Claimflow + beheer | Eigenaar past gegevens aan na controle | M2 |
-| ⬜ Aanmeldformulier: vertrektijd, lengte, ondergrond | Agent | Audit | Extra velden | Velden komen in `submissions.payload` | — |
+| ✅ Websites zoeken voor plekken zonder website (edge function `discover`, cron `discover`) | Agent | Verzoek Patrick | `discover.ts`, `next_discover_batch`, `apply_discovery` | Gevonden site staat in `sources->'discovery'` en gaat de scrape-wachtrij in | Scraper |
+| ✅ Pagina "Doe mee" voor de Facebookgroep: vertrektijden invullen per provincie | Agent | Verzoek Patrick | `/doe-mee` | Inzending komt in Beheer → Inzendingen | — |
+| ⬜ Inzending "vertrektijd" met één klik overnemen in beheer | Agent | Eerste inzendingen | Knop in Inzendingen | Beheerder hoeft niet apart naar Plekken | Doe mee |
+| ✅ Aanmeldformulier: vertrektijd en maximale lengte | Agent | Audit | Extra velden | Velden komen in `submissions.payload` (`vertrek`, `vertrek_uiterlijk`, `max_lengte_m`) | — |
+| ✅ Foto's: verkleind via wsrv.nl met terugval, kapotte adressen hersteld, logo's overgeslagen; scraper v16 leest ook achtergrondfoto's en `<picture>` | Agent | Verzoek Patrick | `place-ui.tsx`, `places.ts`, `extract.ts` | 93 plekken zonder foto opnieuw gescraped | — |
 | ⬜ Tarieven uit PDF lezen | Agent | Voorbeeld-PDF's | Uitbreiding extractor | Steekproef van 10 PDF's klopt | Scraper |
 | ⬜ Reis met datums en waarschuwing bij gesloten plek | Agent | Fase B | Mijn reis | Waarschuwing bij seizoen buiten de datum | — |
 

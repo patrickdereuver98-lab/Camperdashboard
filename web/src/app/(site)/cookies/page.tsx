@@ -91,7 +91,7 @@ export default function CookiePage() {
       <Section title="Externe diensten">
         <p>
           De kaart laadt tegels van OpenFreeMap. Foto&apos;s komen van Wikimedia Commons, uit onze eigen opslag of van de
-          website van de plek. Die servers zien je IP-adres, omdat je browser daar iets ophaalt. Voor zover wij weten plaatsen
+          website van de plek, meestal verkleind via de beelddienst wsrv.nl. Die servers zien je IP-adres, omdat je browser daar iets ophaalt. Voor zover wij weten plaatsen
           ze geen cookies. De lettertypes staan op onze eigen server. De knop &quot;Open in navigatie&quot; opent Google Maps.
           Daar gelden de regels van Google.
         </p>

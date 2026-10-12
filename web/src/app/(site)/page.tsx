@@ -269,12 +269,17 @@ export default async function Home() {
                 Meld je plek aan of vul de gegevens aan, zoals je vertrektijd en tarieven. Aanmelden is gratis.
               </p>
             </div>
-            <Link
-              href="/plek-aanmelden?soort=eigenaar"
-              className="flex h-12 shrink-0 items-center justify-center rounded-xl bg-forest px-6 font-semibold text-on-forest hover:bg-forest-deep"
-            >
-              Plek aanmelden
-            </Link>
+            <div className="flex shrink-0 flex-col gap-1 sm:items-end">
+              <Link
+                href="/plek-aanmelden?soort=eigenaar"
+                className="flex h-12 items-center justify-center rounded-xl bg-forest px-6 font-semibold text-on-forest hover:bg-forest-deep"
+              >
+                Plek aanmelden
+              </Link>
+              <Link href="/doe-mee" className="flex h-11 items-center justify-center font-semibold text-forest hover:underline">
+                Weet je een vertrektijd? Doe mee
+              </Link>
+            </div>
           </div>
         </div>
       </section>

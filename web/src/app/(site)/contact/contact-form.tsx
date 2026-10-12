@@ -52,7 +52,7 @@ export function ContactForm() {
           <Icon name="check" size={24} /> Bericht ontvangen (#{done.number})
         </p>
         <p className="mt-2 text-ink-2">
-          Bewaar deze link. Daar zie je ons antwoord en kun je reageren, ook zonder account.
+          Bewaar de link hieronder. Daar zie je ons antwoord en kun je reageren, zonder account.
         </p>
         <Link href={`/support/${done.token}`} className="mt-4 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
           Naar mijn bericht

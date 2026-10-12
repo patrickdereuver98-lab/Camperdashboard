@@ -19,7 +19,7 @@ export default async function FaqPage() {
     <div className="mx-auto max-w-2xl px-4 pt-8 sm:px-6">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <h1 className="font-display text-3xl font-semibold sm:text-4xl">Veelgestelde vragen</h1>
-      <p className="mt-3 text-lg text-ink-2">Staat je vraag er niet bij? <Link href="/contact" className="font-semibold text-forest underline">Stel hem ons</Link>.</p>
+      <p className="mt-3 text-lg text-ink-2">Staat je vraag er niet bij, stel hem dan via het <Link href="/contact" className="font-semibold text-forest underline">contactformulier</Link>.</p>
       <FaqList items={faq} />
     </div>
   );

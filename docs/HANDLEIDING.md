@@ -122,7 +122,7 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 6. **Publiceren**: een plek gaat automatisch online als:
    - er een website of telefoonnummer is, én
    - minstens twee van de vier beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom en prijs, én
-   - de gewogen score de drempel haalt (nu 55%). Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs 2,
+   - de gewogen score de drempel haalt (nu 45%). Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs 2,
      stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1, honden 1, beschrijving 0,5, echte naam 0,5,
      douche 0,25, aantal plekken 0,25.
    Drempel aanpassen kan in **Instellingen**.
@@ -164,3 +164,25 @@ openbare OSRM-server van de OpenStreetMap-gemeenschap.
 | Rijtijden "niet beschikbaar" | De routeserver is tijdelijk onbereikbaar; de site valt terug op hemelsbrede afstand en zegt dat er eerlijk bij. Met `ORS_API_KEY` heb je een tweede bron |
 | Pipeline lijkt stil te staan | **Admin → Logs → Systeem en fouten** en **Data-imports**. Knop **Nieuwe websites lezen** in Instellingen plant ze opnieuw in |
 | Database opnieuw opzetten in een ander project | Voer `web/supabase/schema.sql` en daarna `web/supabase/seed.sql` uit, deploy `web/supabase/functions/pipeline` (zonder JWT-controle), zet een geheime sleutel in `public.internal_secrets` (`name = 'pipeline_key'`) en pas de projectnaam in `private.call_pipeline` aan |
+
+
+## Scraper uitrollen (edge function `pipeline`)
+
+De functie in Supabase bestaat uit één regel die de code uit GitHub haalt, vastgezet op een commit:
+
+```ts
+import "https://raw.githubusercontent.com/patrickdereuver98-lab/Camperdashboard/<commit>/web/supabase/functions/pipeline/index.ts";
+```
+
+Supabase bundelt die code bij het uitrollen; daarna hangt de functie niet meer van GitHub af. Nieuwe versie: commit en
+push de wijziging in `web/supabase/functions/pipeline/`, zet de nieuwe commit in die regel en rol uit met
+`verify_jwt` uit (de functie controleert zelf de `x-pipeline-key`).
+
+## Meer plekken vinden
+
+- **Websites zoeken** (automatisch, cron `discover`, eigen edge function `discover`): voor plekken zonder website
+  probeert de functie adressen uit de
+  naam (zoals `campingdekraai.nl`). Een site telt alleen als de pagina de naam én de plaats, postcode of het
+  telefoonnummer noemt. Gevonden sites worden daarna gewoon gescraped. Resultaat per plek: `places.sources->'discovery'`.
+- **Doe mee** (`/doe-mee`): deel deze link in de Facebookgroep. Leden vullen de vertrektijd in van plekken waar die
+  nog onbekend is. Alles komt binnen in **Beheer → Inzendingen**; pas de plek daarna aan in **Beheer → Plekken**.

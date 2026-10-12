@@ -17,6 +17,7 @@ export function SubmitForm() {
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [checked, setChecked] = useState<string[]>([]);
+  const [departure, setDeparture] = useState<"" | "vrij" | "per24" | "vast">("");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,6 +44,9 @@ export function SubmitForm() {
         prijs_per_nacht: f.get("price"),
         aantal_plekken: f.get("capacity"),
         seizoen: f.get("season"),
+        vertrek: departure || null,
+        vertrek_uiterlijk: departure === "vast" ? f.get("checkout") || null : null,
+        max_lengte_m: f.get("max_length") || null,
         voorzieningen: facilities,
         toelichting: f.get("notes"),
       },
@@ -60,7 +64,7 @@ export function SubmitForm() {
         <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
-        <p className="mt-2 text-ink-2">We controleren de gegevens en zetten de plek online zodra alles klopt. Dat duurt meestal een paar werkdagen.</p>
+        <p className="mt-2 text-ink-2">We controleren de gegevens en zetten de plek online als alles klopt. Dat duurt meestal een paar werkdagen.</p>
       </div>
     );
 
@@ -124,7 +128,39 @@ export function SubmitForm() {
 
       <fieldset className="space-y-4">
         <legend className="mb-2 font-display text-xl font-semibold">Wat je zeker weet</legend>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div role="radiogroup" aria-labelledby="vertrek-label">
+          <span id="vertrek-label" className="mb-1.5 block font-semibold">
+            Hoe laat moet je weg?
+          </span>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["", "Weet ik niet"],
+                ["vrij", "Geen vaste tijd"],
+                ["per24", "24 uur na aankomst"],
+                ["vast", "Op een vaste tijd"],
+              ] as const
+            ).map(([v, l]) => (
+              <button
+                key={v || "onbekend"}
+                type="button"
+                role="radio"
+                aria-checked={departure === v}
+                onClick={() => setDeparture(v)}
+                className="min-h-12 rounded-xl border-2 border-line px-3 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          {departure === "vast" && (
+            <label className="mt-3 block">
+              <span className="mb-1.5 block font-semibold">Uiterlijk weg om</span>
+              <input name="checkout" type="time" step={900} defaultValue="11:00" className={`${field} max-w-40`} />
+            </label>
+          )}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block font-semibold">Prijs per nacht (€)</span>
             <input name="price" inputMode="decimal" className={field} />
@@ -135,7 +171,11 @@ export function SubmitForm() {
           </label>
           <label className="block">
             <span className="mb-1.5 block font-semibold">Open</span>
-            <input name="season" placeholder="bijv. april – oktober" className={field} />
+            <input name="season" placeholder="bijv. april t/m oktober" className={field} />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block font-semibold">Langste camper (m)</span>
+            <input name="max_length" inputMode="decimal" placeholder="bijv. 8" className={field} />
           </label>
         </div>
         <p className="text-sm text-muted">Tik aan wat er zeker is. Wat je niet aantikt, laten we op onbekend staan.</p>
@@ -179,7 +219,7 @@ export function SubmitForm() {
             <input name="contact_email" type="email" required={owner} className={field} autoComplete="email" />
           </label>
         </div>
-        <p className="text-sm text-muted">Alleen voor vragen over je aanmelding. Niet zichtbaar op de site.</p>
+        <p className="text-sm text-muted">We gebruiken dit alleen als we een vraag hebben over je aanmelding. Het staat niet op de site.</p>
       </fieldset>
 
       <input name="website_hp" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
