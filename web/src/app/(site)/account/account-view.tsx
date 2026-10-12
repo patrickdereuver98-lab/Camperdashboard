@@ -1,0 +1,116 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { signOut, useSession } from "@/lib/auth";
+import { useTrip } from "@/lib/store";
+import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { Icon } from "@/components/icons";
+
+const PROVIDER_LABEL: Record<string, string> = { google: "Google", apple: "Apple", facebook: "Facebook", email: "e-mail" };
+
+export function AccountView() {
+  const { session, loading } = useSession();
+  const { stops } = useTrip();
+  const router = useRouter();
+  const [confirm, setConfirm] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (loading) return <p role="status" className="text-muted">Laden…</p>;
+  if (!session)
+    return (
+      <>
+        <h1 className="font-display text-3xl font-semibold">Mijn account</h1>
+        <p className="mt-3 text-lg text-ink-2">Log in om je reis op al je apparaten te bewaren.</p>
+        <Link href="/inloggen?next=/account" className="mt-6 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
+          Inloggen
+        </Link>
+      </>
+    );
+
+  const user = session.user;
+  const meta = user.user_metadata as { avatar_url?: string; picture?: string; full_name?: string; name?: string };
+  const name = meta.full_name ?? meta.name ?? user.email?.split("@")[0];
+  const avatar = meta.avatar_url ?? meta.picture;
+  const via = PROVIDER_LABEL[String(user.app_metadata.provider)] ?? String(user.app_metadata.provider ?? "e-mail");
+
+  async function remove() {
+    setErr(null);
+    const { error } = await supabase().rpc("delete_my_account");
+    if (error) {
+      // Functie (nog) niet beschikbaar: verzoek via support, dan verwijderen we het handmatig
+      if (/delete_my_account|function|schema cache/i.test(error.message)) {
+        router.push("/contact?onderwerp=privacy");
+        return;
+      }
+      return setErr(errorMessage(error));
+    }
+    await signOut();
+    router.replace("/");
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-4">
+        {avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-16 w-16 rounded-full object-cover" />
+        ) : (
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-forest-tint text-forest">
+            <Icon name="user" size={30} />
+          </span>
+        )}
+        <div className="min-w-0">
+          <h1 className="truncate font-display text-3xl font-semibold">{name}</h1>
+          <p className="truncate text-ink-2">{user.email}</p>
+        </div>
+      </div>
+      <p className="mt-4 text-sm text-muted">Ingelogd via {via}.</p>
+
+      <Link href="/mijn-reis" className="mt-6 flex items-center justify-between rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+        <span className="flex items-center gap-3 font-semibold">
+          <Icon name="heart" size={22} /> Mijn reis
+        </span>
+        <span className="text-ink-2">
+          {stops.length} {stops.length === 1 ? "plek" : "plekken"}, bewaard in je account
+        </span>
+      </Link>
+
+      <button
+        onClick={async () => {
+          await signOut();
+          router.replace("/");
+        }}
+        className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-forest"
+      >
+        <Icon name="logout" size={20} /> Uitloggen
+      </button>
+
+      <div className="mt-10 border-t border-line pt-6">
+        {!confirm ? (
+          <button onClick={() => setConfirm(true)} className="font-semibold text-alert underline">
+            Account verwijderen
+          </button>
+        ) : (
+          <div className="rounded-2xl bg-alert-tint p-4">
+            <p className="font-semibold text-alert">Weet je het zeker?</p>
+            <p className="mt-1 text-ink-2">
+              Je account en de reis in je account worden direct en definitief verwijderd. Reviews zijn niet aan je
+              account gekoppeld en blijven staan.
+            </p>
+            <div className="mt-3 flex gap-3">
+              <button onClick={remove} className="h-11 rounded-xl bg-alert px-4 font-semibold text-surface">
+                Ja, verwijderen
+              </button>
+              <button onClick={() => setConfirm(false)} className="h-11 rounded-xl px-4 font-semibold">
+                Annuleren
+              </button>
+            </div>
+          </div>
+        )}
+        {err && <p role="alert" className="mt-3 text-alert">{err}</p>}
+      </div>
+    </>
+  );
+}

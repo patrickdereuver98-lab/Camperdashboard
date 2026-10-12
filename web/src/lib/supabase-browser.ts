@@ -8,7 +8,8 @@ let client: SupabaseClient | null = null;
 /** Supabase in de browser: publieke formulieren en de beheeromgeving (beveiligd met RLS). */
 export function supabase(): SupabaseClient {
   client ??= createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, storageKey: "vrijstaan-auth", autoRefreshToken: true },
+    // PKCE: OAuth en magic links komen terug met ?code= dat de client zelf (één keer) inwisselt
+    auth: { persistSession: true, storageKey: "vrijstaan-auth", autoRefreshToken: true, flowType: "pkce", detectSessionInUrl: true },
   });
   return client;
 }

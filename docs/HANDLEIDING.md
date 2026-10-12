@@ -61,9 +61,29 @@ In het [Supabase-dashboard](https://supabase.com/dashboard/project/qkrmthrhwmmmw
 
 1. **Authentication → URL Configuration**
    - *Site URL*: je domein, bijv. `https://vrijstaan.nl`
-   - *Redirect URLs*: voeg toe `https://vrijstaan.nl/admin` en `http://localhost:3000/admin`
+   - *Redirect URLs*: voeg toe `https://vrijstaan.nl/admin`, `https://vrijstaan.nl/auth/callback`,
+     `http://localhost:3000/admin` en `http://localhost:3000/auth/callback`
 2. **Authentication → Emails → SMTP Settings** (aanbevolen): koppel een eigen mailprovider
    (bijv. Resend, Postmark of Brevo). De ingebouwde mail van Supabase verstuurt maar een paar mails per uur.
+
+### Inloggen voor bezoekers (Google, Apple, Facebook, inloglink)
+
+Bezoekers loggen in op `/inloggen`. De inloglink per e-mail werkt meteen (wel eigen SMTP instellen, zie hierboven:
+de ingebouwde mail haalt een drukke lancering niet). De drie diensten zet je aan in **Authentication → Sign In /
+Providers**. Bij elke dienst vul je als *redirect/callback URL* in:
+`https://qkrmthrhwmmmwswmfgwc.supabase.co/auth/v1/callback`
+
+| Dienst | Waar maak je de sleutels | Wat vul je in bij Supabase |
+|---|---|---|
+| Google | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth client ID (type *Web application*) | Client ID en Client Secret |
+| Apple | [Apple Developer](https://developer.apple.com/account/resources/identifiers) → Services ID met *Sign in with Apple* + een Key | Services ID, Team ID, Key ID en de .p8-sleutel |
+| Facebook | [Meta for Developers](https://developers.facebook.com/apps) → app met *Facebook Login*, alleen `email` en `public_profile` | App ID en App Secret |
+
+Staat een dienst nog niet aan, dan krijgt de bezoeker een nette melding en kan die met e-mail inloggen.
+Zet bij Facebook de app op **Live** vóór de lancering, anders kunnen alleen testers inloggen.
+
+Veiligheid: alleen een **bevestigd** e-mailadres uit `private.admin_invites` wordt beheerder. Gewone accounts
+zien in `/admin` alleen "Geen beheertoegang".
 
 ### Je beheeraccount aanmaken
 
@@ -143,6 +163,7 @@ openbare OSRM-server van de OpenStreetMap-gemeenschap.
 
 - [ ] Domein koppelen en `NEXT_PUBLIC_SITE_URL` instellen (stap 3)
 - [ ] Site URL en redirect-URL's in Supabase Auth (stap 4) en eigen SMTP
+- [ ] Google, Apple en Facebook aanzetten in Supabase Auth (stap 4) en Facebook-app op Live
 - [ ] Beheeraccount aanmaken (stap 4)
 - [ ] In **Instellingen** het echte contactadres invullen (nu staat er `hallo@vrijstaan.nl`)
 - [ ] Bedrijfsgegevens (naam, adres, KvK, btw) invullen in `web/src/lib/company.ts` (privacy, voorwaarden en

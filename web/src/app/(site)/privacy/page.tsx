@@ -10,6 +10,12 @@ const HEAD = ["Doel", "Gegevens", "Grondslag (AVG)", "Bewaartermijn"];
 
 const ROWS: string[][] = [
   [
+    "Account (optioneel)",
+    "E-mailadres, naam en profielfoto zoals Google, Apple of Facebook die doorgeven, de manier van inloggen, je bewaarde reis en tijdstippen van aanmaken en inloggen",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je kiest zelf voor een account",
+    "Tot je je account verwijdert",
+  ],
+  [
     "Statistieken",
     "Naam van de gebeurtenis (pagina bekeken, zoekopdracht, plek bekeken, link naar buiten, route, bewaard), het pad van de pagina, een klein detail zoals de zoekterm of de plek, een willekeurig sessienummer en het tijdstip",
     "Toestemming (art. 6 lid 1 sub a)",
@@ -130,9 +136,13 @@ export default function PrivacyPage() {
       <Section title="In het kort">
         <ul>
           <li>Je hebt geen account nodig. We plaatsen geen cookies bij bezoekers en tonen geen advertenties.</li>
+          <li>Kies je toch voor een account, dan bewaren we alleen wat nodig is om je reis op al je apparaten te tonen.</li>
           <li>Statistieken verzamelen we alleen als je dat toestaat, zonder IP-adres en zonder cookies.</li>
           <li>We verkopen geen gegevens en delen ze niet voor reclame.</li>
-          <li>Je bewaarde reis en instellingen staan alleen op je eigen apparaat. Wij kunnen ze niet zien.</li>
+          <li>
+            Zonder account staan je bewaarde reis en instellingen alleen op je eigen apparaat; wij kunnen ze niet zien. Met
+            een account bewaren we je reis ook in onze database.
+          </li>
         </ul>
       </Section>
 
@@ -141,6 +151,20 @@ export default function PrivacyPage() {
         <p>
           Bij de bewaartermijnen gaat het om onze eigen database. Daarna verwijderen we de gegevens of maken we ze anoniem. We
           nemen geen besluiten over je op basis van alleen automatische verwerking en we maken geen profielen.
+        </p>
+      </Section>
+
+      <Section title="Een account (optioneel)">
+        <p>
+          Je kunt inloggen met Google, Apple, Facebook of een inloglink per e-mail. Log je in via een van die diensten, dan
+          krijgen we van hen alleen je naam, e-mailadres en profielfoto. We plaatsen nooit iets namens je en vragen geen
+          toegang tot je contacten of berichten. Bij Apple kun je je e-mailadres verbergen.
+        </p>
+        <p>
+          Met een account bewaren we je reis (de plekken en het aantal nachten) zodat je hem op al je apparaten ziet. Om
+          ingelogd te blijven staat er een sessiesleutel in de lokale opslag van je browser; dat is strikt noodzakelijk en
+          geen tracking-cookie. Je verwijdert je account zelf op <Link href="/account">Mijn account</Link>; je profiel en reis
+          verdwijnen dan direct.
         </p>
       </Section>
 
@@ -232,6 +256,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Supabase</strong> levert onze database en backend, in de regio Frankfurt (EU). Met Supabase hebben we een
             verwerkersovereenkomst; voor hun subverwerkers gelden de standaardcontractbepalingen van de Europese Commissie.
+          </li>
+          <li>
+            <strong>Google</strong>, <strong>Apple</strong> of <strong>Meta (Facebook)</strong> als je via hen inlogt. Daarvoor
+            gelden ook hun eigen privacyregels.
           </li>
           <li>
             <strong>OpenRouteService</strong> (HeiGIT gGmbH) of <strong>FOSSGIS e.V.</strong> krijgen coördinaten als je een
