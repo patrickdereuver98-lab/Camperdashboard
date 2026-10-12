@@ -1,10 +1,10 @@
-import type { Photo } from "./types";
-
 /**
  * Websitefoto's netjes maken: veel sites geven ons een miniatuur (WordPress "-300x200.jpg", Wix "w_288,blur_2",
  * "?width=576"), een keurmerk of een vlaggetje. Hier vragen we bij bekende beeldbanken de grote versie op, gooien we
  * plaatjes weg die geen foto van de plek zijn, en zetten we de beste foto vooraan. Werkt alleen op de URL; wat dan
  * nog te klein blijkt, valt in de browser alsnog af (zie PlacePhoto).
+ *
+ * Dit bestand heeft bewust geen imports: de scraper (supabase/functions/pipeline/extract.ts, Deno) gebruikt het ook.
  */
 
 /** Breedte die we vragen bij beeldbanken die op maat schalen: scherp op een telefoon met 3× pixels */
@@ -132,11 +132,11 @@ export function photoScore(url: string, original = url): number | null {
  * Gefilterd en gesorteerd: beste foto vooraan, bij gelijke score de volgorde van de site. De URL's blijven de
  * originele; PlacePhoto vraagt de grote versie op en valt bij een fout terug op het origineel.
  */
-export function rankPhotos(photos: Photo[]): Photo[] {
+export function rankPhotos<P extends { url: string }>(photos: P[]): P[] {
   const seen = new Set<string>();
   return photos
     .map((p, i) => ({ p, i, score: photoScore(upgradePhotoUrl(p.url), p.url) }))
-    .filter((x): x is { p: Photo; i: number; score: number } => {
+    .filter((x): x is { p: P; i: number; score: number } => {
       if (x.score === null || seen.has(x.p.url)) return false;
       seen.add(x.p.url);
       return true;

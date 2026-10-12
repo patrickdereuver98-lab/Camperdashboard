@@ -3,6 +3,8 @@
  * "[&hellip;]"), bevat losse links of is geen tekst over de plek (CMS-standaardzin, Duits, alleen trefwoorden).
  * We tonen alleen hele zinnen in het Nederlands; wat overblijft na het opschonen en te kort is, tonen we niet.
  * We schrijven zelf niets bij: geen tekst is beter dan een halve of verzonnen tekst.
+ *
+ * Geen imports: de scraper (supabase/functions/pipeline/extract.ts, Deno) gebruikt dit bestand ook.
  */
 
 const ENTITIES: Record<string, string> = { amp: "&", quot: '"', apos: "'", nbsp: " ", hellip: "…", rsquo: "’", lsquo: "‘", ldquo: "“", rdquo: "”", ndash: "–", mdash: "—", euro: "€" };

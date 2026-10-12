@@ -99,7 +99,7 @@ export function TripApp() {
     const merged = [...trip.stops, ...incomingStops.filter((s) => !trip.has(s.slug))];
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 pb-10">
-        <h1 className="font-display text-3xl font-semibold">Gedeelde reis</h1>
+        <h1 className="font-display text-2xl font-semibold sm:text-3xl">Gedeelde reis</h1>
         <p className="mt-2 text-ink-2">Iemand heeft deze reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld.</p>
         <ol className="mt-5 space-y-2">
           {incomingStops.map((s, i) => {
@@ -148,8 +148,8 @@ export function TripApp() {
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-[1.75rem] shadow-lift">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-8 font-display text-3xl font-semibold sm:text-4xl">Je reis is nog leeg</h1>
-        <p className="mt-3 text-lg text-ink-2">
+        <h1 className="mt-6 font-display text-2xl font-semibold sm:text-4xl">Je reis is nog leeg</h1>
+        <p className="mt-2 text-ink-2 sm:text-lg">
           Tik op het hartje bij een plek om hem te bewaren. Hier zet je ze op volgorde en zie je de echte rijtijd en wat de reis ongeveer kost.
         </p>
         <Link href="/zoeken" className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-forest px-7 font-display text-lg font-semibold text-on-forest">
@@ -184,11 +184,11 @@ export function TripApp() {
   })();
 
   return (
-    <div className="mx-auto max-w-6xl px-3 pt-5 pb-10 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="mx-auto max-w-6xl px-3 pt-3 pb-10 sm:px-6 sm:pt-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Mijn reis</h1>
-          <p className="text-ink-2">
+          <h1 className="font-display text-xl font-semibold sm:text-3xl">Mijn reis</h1>
+          <p className="text-sm text-ink-2 sm:text-base">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
         </div>
@@ -201,7 +201,7 @@ export function TripApp() {
           <button
             type="button"
             onClick={() => trip.replace(optimize(stops, start).map(({ slug, nights: n }) => ({ slug, nights: n })))}
-            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest"
+            className="flex h-11 items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 text-[0.9375rem] font-semibold hover:border-forest"
           >
             <Icon name="route" size={18} /> Slimste volgorde
           </button>
@@ -215,14 +215,14 @@ export function TripApp() {
                 setTimeout(() => setShared(false), 2500);
               }
             }}
-            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest"
+            className="flex h-11 items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 text-[0.9375rem] font-semibold hover:border-forest"
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
+      <div className="mt-4 grid gap-6 sm:mt-6 sm:gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
           {/* Vertrekpunt */}
           <div className="mb-3 flex items-center gap-3 rounded-2xl bg-surface p-3 shadow-low">
@@ -292,7 +292,7 @@ export function TripApp() {
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-display text-lg font-semibold hover:text-forest">
+                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
                           {s.place.name}
                         </Link>
                         <OpenChip place={s.place} />
@@ -340,7 +340,7 @@ export function TripApp() {
         </div>
 
         <aside className="min-w-0 space-y-4">
-          <div className="rounded-2xl bg-surface p-5 shadow-low">
+          <div className="rounded-2xl bg-surface p-4 shadow-low sm:p-5">
             <h2 className="font-display text-xl font-semibold">Overzicht</h2>
             <dl className="mt-3 space-y-2">
               <div className="flex justify-between">

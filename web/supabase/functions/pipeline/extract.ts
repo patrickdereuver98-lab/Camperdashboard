@@ -2,6 +2,10 @@
 // Regel: alleen wat expliciet op de site staat. Ontkenningen ("geen honden") gaan voor.
 // Niets wordt afgeleid of aangenomen; een veld zonder vermelding blijft leeg.
 
+// Gedeeld met de site, zodat scraper en weergave dezelfde regels volgen
+import { cleanDescription } from "../../../src/lib/description.ts";
+import { rankPhotos, upgradePhotoUrl } from "../../../src/lib/photos.ts";
+
 const MONTHS_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 const MONTH_ALIASES: Record<string, number> = {
   jan: 0, januari: 0, january: 0, januar: 0,
@@ -58,6 +62,26 @@ function decode(s: string) {
   return s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&nbsp;/g, " ").trim();
 }
 
+/**
+ * De eerste echte alinea's van de pagina (geen menu, kop, voet of cookiemelding), samen hooguit ±700 tekens.
+ * cleanDescription knipt daarna af op een hele zin en keurt slechte tekst af.
+ */
+function introText(html: string): string {
+  const body = html
+    .replace(/<(script|style|noscript|nav|header|footer|aside|form)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+(cookie|consent|gdpr)[^>]*>[\s\S]*?<\/div>/gi, " ");
+  let text = "";
+  for (const m of body.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
+    const p = decode(m[1].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    if (p.length < 60 || !/[.!?]/.test(p)) continue;
+    text = text ? `${text} ${p}` : p;
+    if (text.length >= 250) break;
+  }
+  if (text.length <= 700) return text;
+  const cut = text.slice(0, 700);
+  return cut.slice(0, Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? ")) + 1);
+}
+
 function flag(text: string, pos: RegExp, neg: RegExp): boolean | undefined {
   if (neg.test(text)) return false;
   if (pos.test(text)) return true;
@@ -83,7 +107,11 @@ const NOT_A_PHOTO = /logo|icon|favicon|sprite|avatar|placeholder|banner-ad|badge
 function absolute(src: string | undefined, base: URL): string | undefined {
   if (!src) return undefined;
   try {
-    const u = new URL(decode(src.split(" ")[0]), base);
+    let raw = decode(src.trim().split(/\s+/)[0]);
+    // Sommige sites zetten een volledig adres als relatief pad: "https://site.nl/https://cdn…/foto.jpg"
+    const last = raw.lastIndexOf("http");
+    if (last > 0 && /^https?:\/\//.test(raw.slice(last))) raw = raw.slice(last);
+    const u = new URL(raw, base);
     if (u.protocol !== "https:") return undefined;
     if (!/\.(jpe?g|webp|png|avif)(\?|$)/i.test(u.pathname + u.search) && !/image|img|photo|foto|media|upload|wp-content/i.test(u.href)) return undefined;
     if (/\.svg($|\?)/i.test(u.pathname) || /\.gif($|\?)/i.test(u.pathname) || NOT_A_PHOTO.test(u.pathname)) return undefined;
@@ -96,23 +124,34 @@ function absolute(src: string | undefined, base: URL): string | undefined {
 /** Grote foto's uit de pagina zelf (hero, slider, galerij), geen logo's of iconen */
 function contentImages(html: string, base: URL): string[] {
   const out: string[] = [];
-  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
+  for (const m of html.matchAll(/<(?:img|source)\b[^>]*>/gi)) {
     const tag = m[0];
+    // srcset: "a.jpg 640w, b.jpg 1280w" → grootste kandidaat, zonder de breedte-aanduiding
+    const set = /\s(?:data-)?srcset=["']([^"']+)["']/i.exec(tag)?.[1]?.split(",").pop()?.trim().split(/\s+/)[0];
     const src =
-      /\sdata-(?:src|lazy-src|original)=["']([^"']+)["']/i.exec(tag)?.[1] ??
-      /\ssrcset=["']([^"']+)["']/i.exec(tag)?.[1]?.split(",").pop()?.trim() ??
-      /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
+      /\sdata-(?:src|lazy-src|original)=["']([^"']+)["']/i.exec(tag)?.[1] ?? set ?? /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
     if (!src || src.startsWith("data:")) continue;
-    const w = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
-    const h = Number(/\sheight=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
-    if ((w && w < 400) || (h && h < 250)) continue;
     if (NOT_A_PHOTO.test(tag.replace(/src(set)?=["'][^"']*["']/gi, ""))) continue;
     const url = absolute(src, base);
-    if (url && !out.includes(url)) out.push(url);
-    if (out.length >= 8) break;
+    if (!url) continue;
+    // Klein getoond is pas een probleem als er geen grotere versie bestaat (WordPress, Wix … geven die wel)
+    const w = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
+    const h = Number(/\sheight=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
+    const min = upgradePhotoUrl(url) !== url ? [120, 80] : [400, 250];
+    if ((w && w < min[0]) || (h && h < min[1])) continue;
+    if (!out.includes(url)) out.push(url);
+    if (out.length >= 16) break;
   }
-  const order = EXTRA_KINDS.map((k) => k.label);
-  return out.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+  // Achtergrondfoto's van headers en sliders (style="background-image:url(…)", data-bg, data-background)
+  if (out.length < 16) {
+    const bg = /background(?:-image)?\s*:\s*url\(\s*(?:&quot;|["'])?([^"')&]+?)(?:&quot;|["'])?\s*\)|\sdata-(?:bg|background|background-image)=["']([^"']+)["']/gi;
+    for (const m of html.matchAll(bg)) {
+      const url = absolute(m[1] ?? m[2], base);
+      if (url && !out.includes(url) && !NOT_A_PHOTO.test(url)) out.push(url);
+      if (out.length >= 16) break;
+    }
+  }
+  return out;
 }
 
 function money(s: string): number {
@@ -152,22 +191,29 @@ export function extract(pages: string[], base: URL) {
   }
 
   // ── Beschrijving en foto's ──────────────────────────────────────────────
-  const desc = meta(pages[0], "og:description") ?? meta(pages[0], "description");
-  if (desc) {
-    const d = decode(desc);
-    if (d.length >= 40 && d.length <= 400 && !/cookie|javascript|lorem ipsum/i.test(d)) out.description = d;
-  }
-  const photos: string[] = [];
-  const add = (u?: string) => u && !photos.includes(u) && photos.push(u);
+  // Dezelfde regels als de site (web/src/lib/description.ts): alleen hele Nederlandse zinnen. De meta-omschrijving
+  // is vaak afgekapt ("Lees meer"); de eerste alinea's van de pagina zelf zijn meestal vollediger.
+  const metaDesc = cleanDescription(decode(meta(pages[0], "og:description") ?? meta(pages[0], "description") ?? ""));
+  const intro = cleanDescription(introText(pages[0]));
+  const description = intro && intro.length > (metaDesc?.length ?? 0) ? intro : metaDesc;
+  if (description) out.description = description;
+
+  // Foto's: alles verzamelen, dan dezelfde rangorde als de site (web/src/lib/photos.ts): een echte foto van de plek
+  // vooraan, keurmerken en logo's van anderen, stockfoto's en miniaturen eruit. De URL blijft het origineel.
+  const candidates: string[] = [];
+  const add = (u?: string) => u && !candidates.includes(u) && candidates.push(u);
   add(out.image_url as string | undefined);
   for (const p of pages) {
     add(absolute(meta(p, "og:image") ?? meta(p, "og:image:secure_url") ?? meta(p, "twitter:image"), base));
   }
   for (const p of pages) for (const u of contentImages(p, base)) add(u);
+  const photos = rankPhotos(candidates.map((url) => ({ url, credit: base.host }))).slice(0, 8);
   if (photos.length) {
-    out.image_url = photos[0];
+    out.image_url = photos[0].url;
     out.image_credit = base.host;
-    out.photos = photos.slice(0, 8).map((url) => ({ url, credit: base.host }));
+    out.photos = photos;
+  } else {
+    delete out.image_url;
   }
 
   // ── Contact ──────────────────────────────────────────────────────────────

@@ -75,19 +75,19 @@ export default async function Home() {
     <>
       {/* Kop: landschap over de volle breedte, zoekkaart eroverheen */}
       <section className="relative">
-        <div className="relative h-[17.5rem] overflow-hidden sm:h-[22rem] lg:h-[27rem]">
+        <div className="relative h-[14rem] overflow-hidden sm:h-[22rem] lg:h-[27rem]">
           <Landscape seed="vrijstaan-avond" variant={2} water wide className="absolute inset-0 h-full w-full" />
           <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
-          <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-end px-4 pb-20 sm:px-6 sm:pb-24 lg:pb-28">
-            <h1 className="animate-rise max-w-3xl font-display text-[2.4rem] leading-[1.02] font-semibold text-[#fffcf6] [text-shadow:0_2px_24px_rgb(10_24_16/0.45)] sm:text-5xl lg:text-[4rem]">
+          <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-end px-4 pb-16 sm:px-6 sm:pb-24 lg:pb-28">
+            <h1 className="animate-rise max-w-3xl font-display text-[2rem] leading-[1.05] font-semibold text-[#fffcf6] [text-shadow:0_2px_24px_rgb(10_24_16/0.45)] sm:text-5xl lg:text-[4rem]">
               Waar sta je vannacht?
             </h1>
-            <p className="animate-rise mt-2 max-w-xl text-[#efe9dc] [animation-delay:80ms] sm:text-lg">
+            <p className="animate-rise mt-1.5 max-w-xl text-[0.9375rem] text-[#efe9dc] [animation-delay:80ms] sm:text-lg">
               {nf.format(stats.total)} camperplaatsen in Nederland, met vertrektijd en prijs.
             </p>
           </div>
         </div>
-        <div className="relative z-10 mx-auto -mt-16 max-w-6xl px-3 sm:-mt-20 sm:px-6">
+        <div className="relative z-10 mx-auto -mt-12 max-w-6xl px-3 sm:-mt-20 sm:px-6">
           <HomeSearch />
         </div>
       </section>
@@ -111,26 +111,26 @@ export default async function Home() {
       </section>
 
       {/* Hoe wil je staan: de drie vertrekpagina's */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Hoe wil je staan?</h2>
-        <p className="mt-1 text-ink-2">Voor camperaars is de vertrektijd vaak belangrijker dan de prijs.</p>
-        <ul className="no-scrollbar -mx-3 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-xl font-semibold sm:text-3xl">Hoe wil je staan?</h2>
+        <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">Voor camperaars is de vertrektijd vaak belangrijker dan de prijs.</p>
+        <ul className="no-scrollbar -mx-3 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:mt-4 sm:grid sm:grid-cols-3 sm:px-0">
           {ways.map((w) => (
-            <li key={w.title} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
+            <li key={w.title} className="w-[70vw] max-w-xs shrink-0 snap-start sm:w-auto sm:max-w-none">
               <Link
                 href={w.href}
                 className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] bg-surface shadow-low transition-shadow duration-200 hover:shadow-raised"
               >
-                <div className="relative h-32 overflow-hidden">
+                <div className="relative h-24 overflow-hidden sm:h-32">
                   <Landscape seed={`soort-${w.title}`} variant={w.variant} water={w.variant === 1} className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-105" />
                   <span className={`absolute top-3 left-3 rounded-full px-3 py-1 text-sm font-semibold ${w.tone}`}>
                     {nf.format(w.count)} plekken
                   </span>
                 </div>
-                <div className="flex flex-1 flex-col p-4">
-                  <h3 className="font-display text-xl font-semibold">{w.title}</h3>
-                  <p className="mt-1 flex-1 text-ink-2">{w.text}</p>
-                  <span className="mt-3 flex items-center gap-1 font-semibold text-forest">
+                <div className="flex flex-1 flex-col p-3.5 sm:p-4">
+                  <h3 className="font-display text-lg font-semibold sm:text-xl">{w.title}</h3>
+                  <p className="mt-0.5 flex-1 text-[0.9375rem] text-ink-2 sm:text-base">{w.text}</p>
+                  <span className="mt-2 flex items-center gap-1 font-semibold text-forest">
                     Bekijk plekken <Icon name="chevronRight" size={18} />
                   </span>
                 </div>
@@ -141,15 +141,15 @@ export default async function Home() {
       </section>
 
       {/* Populaire bestemmingen met echte foto's */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Populaire bestemmingen</h2>
-        <p className="mt-1 text-ink-2">Hier staan de meeste plekken.</p>
-        <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-12">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-xl font-semibold sm:text-3xl">Populaire bestemmingen</h2>
+        <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">Hier staan de meeste plekken.</p>
+        <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-12">
           {destinations.map((d, i) => (
             <li key={d.prov} className={i < 2 ? "col-span-2 sm:col-span-1 lg:col-span-6" : "lg:col-span-3"}>
               <Link
                 href={`/camperplaatsen/${d.prov.toLowerCase()}`}
-                className={`group relative block overflow-hidden bg-sunken shadow-raised ${i < 2 ? "h-48 rounded-[1.5rem] sm:h-56 lg:h-64" : "h-36 rounded-[1.25rem] sm:h-44"}`}
+                className={`group relative block overflow-hidden bg-sunken shadow-raised ${i < 2 ? "h-36 rounded-[1.25rem] sm:h-56 lg:h-64" : "h-28 rounded-2xl sm:h-44"}`}
               >
                 <CreditedPhoto
                   src={d.cover?.imageUrl}
@@ -159,19 +159,19 @@ export default async function Home() {
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
                 <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                  <h3 className={`font-display font-semibold text-[#fffcf6] ${i < 2 ? "text-2xl sm:text-3xl" : "text-xl"}`}>{d.prov}</h3>
+                  <h3 className={`font-display font-semibold text-[#fffcf6] ${i < 2 ? "text-xl sm:text-3xl" : "text-lg sm:text-xl"}`}>{d.prov}</h3>
                   <p className="text-sm font-semibold text-[#efe9dc]">{nf.format(d.count)} plekken</p>
                 </div>
               </Link>
             </li>
           ))}
         </ul>
-        <ul className="mt-4 flex flex-wrap gap-2">
+        <ul className="mt-3 flex flex-wrap gap-2">
           {provinces.slice(6).map((prov) => (
             <li key={prov}>
               <Link
                 href={`/camperplaatsen/${prov.toLowerCase()}`}
-                className="flex h-11 items-center gap-2 rounded-full bg-surface px-4 font-semibold shadow-low transition-shadow hover:shadow-raised"
+                className="flex h-11 items-center gap-1.5 rounded-full bg-surface px-3.5 text-[0.9375rem] font-semibold shadow-low transition-shadow hover:shadow-raised"
               >
                 {prov} <span className="font-normal text-muted">{nf.format(stats.byProvince[prov] ?? 0)}</span>
               </Link>
@@ -182,9 +182,9 @@ export default async function Home() {
 
       {/* Uitgelicht */}
       {featured.length > 0 && (
-        <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl font-semibold sm:text-3xl">
+        <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+          <div className="mb-3 flex items-end justify-between gap-4">
+            <h2 className="font-display text-xl font-semibold sm:text-3xl">
               {stats.freeDeparture > 0 ? "Vertrekken wanneer je wilt" : "Meest complete informatie"}
             </h2>
             <Link href={stats.freeDeparture > 0 ? searchHref({ departure: "vrij" }) : "/zoeken"} className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-forest hover:underline">
@@ -193,7 +193,7 @@ export default async function Home() {
           </div>
           <ul className="no-scrollbar -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
             {featured.map((p) => (
-              <li key={p.id} className="w-[82vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
+              <li key={p.id} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
                 <PlaceCard place={p} layout="stack" />
               </li>
             ))}
@@ -202,18 +202,18 @@ export default async function Home() {
       )}
 
       {/* Zoeken op voorziening */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Zoek op wat je nodig hebt</h2>
-        <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-xl font-semibold sm:text-3xl">Zoek op wat je nodig hebt</h2>
+        <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-4">
           {facilities
             .filter((f) => f.count > 0)
             .map((f) => (
               <li key={f.label}>
                 <Link
                   href={f.href}
-                  className="flex h-full min-h-20 items-center gap-3 rounded-2xl bg-surface p-3 shadow-low transition-shadow hover:shadow-raised sm:p-4"
+                  className="flex h-full min-h-16 items-center gap-2.5 rounded-2xl bg-surface p-3 shadow-low transition-shadow hover:shadow-raised sm:min-h-20 sm:gap-3 sm:p-4"
                 >
-                  <Sign name={f.sign} size={40} />
+                  <Sign name={f.sign} size={34} />
                   <span className="min-w-0">
                     <span className="block font-semibold leading-tight">{f.label}</span>
                     <span className="block text-sm text-muted">{nf.format(f.count)} plekken</span>
@@ -225,9 +225,9 @@ export default async function Home() {
       </section>
 
       {/* Zo werkt het */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Zo werkt VrijStaan</h2>
-        <ol className="mt-5 grid gap-6 md:grid-cols-3 md:gap-8">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-xl font-semibold sm:text-3xl">Zo werkt VrijStaan</h2>
+        <ol className="mt-3 grid gap-4 md:mt-5 md:grid-cols-3 md:gap-8">
           {[
             {
               sign: "pin" as SignName,
@@ -245,14 +245,14 @@ export default async function Home() {
               text: "Je ziet hoe lang je nog moet rijden. Met één tik open je de route in je eigen navigatie.",
             },
           ].map((s, i) => (
-            <li key={s.title} className="flex gap-4 border-t-2 border-line pt-5 md:flex-col">
+            <li key={s.title} className="flex gap-4 border-t-2 border-line pt-4 md:flex-col md:pt-5">
               <div className="relative shrink-0">
-                <Sign name={s.sign} size={48} />
+                <Sign name={s.sign} size={40} />
                 <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-ember text-sm font-bold text-on-ember">{i + 1}</span>
               </div>
               <div>
-                <h3 className="font-display text-xl font-semibold">{s.title}</h3>
-                <p className="mt-1 text-ink-2">{s.text}</p>
+                <h3 className="font-display text-lg font-semibold sm:text-xl">{s.title}</h3>
+                <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">{s.text}</p>
               </div>
             </li>
           ))}
@@ -260,11 +260,11 @@ export default async function Home() {
       </section>
 
       {/* Eigenaren */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
         <div className="relative overflow-hidden rounded-2xl bg-forest-tint">
-          <div className="relative flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="relative flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-8">
             <div>
-              <h2 className="font-display text-2xl font-semibold text-forest">Heb je een camperplaats?</h2>
+              <h2 className="font-display text-xl font-semibold text-forest sm:text-2xl">Heb je een camperplaats?</h2>
               <p className="mt-1 max-w-xl text-ink-2">
                 Meld je plek aan of vul de gegevens aan, zoals je vertrektijd en tarieven. Aanmelden is gratis.
               </p>

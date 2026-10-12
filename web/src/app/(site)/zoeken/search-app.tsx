@@ -200,8 +200,9 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
               {filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}
             </span>
           </h1>
-          {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
-          <div className="-my-1 flex flex-wrap items-center gap-x-5">
+          {/* Eén regel: datum, uitleg en afstand; loopt door op een smal scherm */}
+          <div className="-mb-1 flex flex-wrap items-center gap-x-4">
+            {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
             <Legend label="Uitleg icoontjes" />
             <DistanceToggle />
           </div>

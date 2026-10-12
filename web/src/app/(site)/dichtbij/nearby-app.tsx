@@ -104,8 +104,8 @@ export function NearbyApp() {
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-[1.75rem] shadow-lift">
           <Landscape seed="dichtbij" variant={0} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-8 font-display text-3xl font-semibold sm:text-4xl">Waar kun je vannacht staan?</h1>
-        <p className="mt-3 text-lg text-ink-2">
+        <h1 className="mt-6 font-display text-2xl font-semibold sm:text-4xl">Waar kun je vannacht staan?</h1>
+        <p className="mt-2 text-ink-2 sm:text-lg">
           Deel je locatie en we zetten de plekken om je heen op een rij, gesorteerd op echte rijtijd.
         </p>
         <button
@@ -135,22 +135,22 @@ export function NearbyApp() {
   const list = sorted ?? [];
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
-      <section className="min-w-0 px-3 pt-5 pb-8 sm:px-6">
+      <section className="min-w-0 px-3 pt-3 pb-8 sm:px-6 sm:pt-5">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-2xl font-semibold sm:text-3xl">Dichtbij jou</h1>
+          <h1 className="font-display text-xl font-semibold sm:text-3xl">Dichtbij jou</h1>
           <button type="button" onClick={locate} className="flex h-11 items-center gap-1.5 font-semibold text-forest">
             <Icon name="refresh" size={18} /> Opnieuw
           </button>
         </div>
-        <ul className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+        <ul className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:mt-3 sm:flex-wrap sm:px-0">
           <li className="shrink-0">
             <button
               type="button"
               aria-pressed={openNow}
               onClick={() => setOpenNow((o) => !o)}
-              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
             >
-              <Sign name="calendar" size={28} state={openNow ? "on" : "unknown"} />
+              <Sign name="calendar" size={24} state={openNow ? "on" : "unknown"} />
               Nu open
             </button>
           </li>
@@ -165,9 +165,9 @@ export function NearbyApp() {
                 type="button"
                 aria-pressed={departure === g}
                 onClick={() => setDeparture((d) => (d === g ? undefined : g))}
-                className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
               >
-                <Sign name="clock" size={28} state={departure === g ? "on" : "unknown"} />
+                <Sign name="clock" size={24} state={departure === g ? "on" : "unknown"} />
                 {label}
               </button>
             </li>
@@ -180,9 +180,9 @@ export function NearbyApp() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => setFacilities((x) => (on ? x.filter((k) => k !== f.key) : [...x, f.key]))}
-                  className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                  className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
                 >
-                  <Sign name={f.icon as SignName} size={28} state={on ? "on" : "unknown"} />
+                  <Sign name={f.icon as SignName} size={24} state={on ? "on" : "unknown"} />
                   {f.label}
                 </button>
               </li>
@@ -191,23 +191,23 @@ export function NearbyApp() {
         </ul>
 
         {!wide && list.length > 0 && (
-          <PlaceMap places={list.map((r) => r.place)} user={pos} fitKey={`${pos.lat}-${list.length}`} className="mt-4 h-56 rounded-2xl shadow-low" />
+          <PlaceMap places={list.map((r) => r.place)} user={pos} fitKey={`${pos.lat}-${list.length}`} className="mt-3 h-44 rounded-2xl shadow-low sm:h-56" />
         )}
 
-        <p className="mt-5 text-ink-2" aria-live="polite">
+        <p className="mt-3 text-sm text-ink-2" aria-live="polite">
           {!places
             ? "Plekken laden…"
             : list.length === 0
               ? "Geen plekken binnen 80 km met deze keuzes."
               : drives
-                ? `${list.length} dichtstbijzijnde plekken, gesorteerd op rijtijd.`
+                ? `${list.length} plekken, dichtstbij eerst (rijtijd).`
                 : driveError
-                  ? `${list.length} dichtstbijzijnde plekken. Rijtijden zijn even niet beschikbaar; we tonen de afstand hemelsbreed.`
+                  ? `${list.length} plekken, dichtstbij eerst. Rijtijden lukken nu niet, je ziet de afstand hemelsbreed.`
                   : `${list.length} plekken gevonden. Rijtijden berekenen…`}
-          {openNow && list.length > 0 && " Plekken die nu dicht zijn, laten we weg."}
+          {openNow && list.length > 0 && " Wat nu dicht is, staat er niet bij."}
         </p>
         {!places && <CardSkeleton />}
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-2 space-y-2.5 sm:mt-3 sm:space-y-3">
           {list.map(({ place, km }) => (
             <li key={place.id}>
               <PlaceCard place={place as PlaceSummary} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />

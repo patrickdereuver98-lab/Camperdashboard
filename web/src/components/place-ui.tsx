@@ -62,9 +62,14 @@ export function PlacePhoto({
     }
     const ratio = img.naturalWidth / img.naturalHeight;
     const box = img.parentElement ? img.parentElement.clientWidth / Math.max(1, img.parentElement.clientHeight) : 1.6;
+    // Een PNG die groot is en een fotoverhouding heeft, is een foto (luchtfoto, sfeerbeeld), geen logo
+    if (fit === "graphic" && src && !/logo|embleem/i.test(src) && img.naturalWidth >= 800 && ratio >= 1.2 && ratio <= 2.2) {
+      setFit("cover");
+      return;
+    }
     // Alleen in de grote galerij; een smalle kaartfoto mag gewoon bijgesneden worden
     if (sizes === "large" && fit === "cover" && (ratio / box > 1.8 || box / ratio > 1.45)) setFit("photo");
-  }, [sizes, onFail, fit]);
+  }, [sizes, onFail, fit, src]);
   // Een foto die al vóór de hydratatie laadde of faalde, mist het load- of error-event
   useEffect(() => {
     const img = ref.current;
