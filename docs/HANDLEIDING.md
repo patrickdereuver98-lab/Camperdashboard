@@ -149,6 +149,22 @@ openbare OSRM-server van de OpenStreetMap-gemeenschap.
       disclaimer gebruiken die automatisch) en de teksten laten nalezen door een jurist
 - [ ] Optioneel: OpenRouteService-sleutel voor eigen rijtijden-quotum
 
+### Drukte op de eerste dag (verbindingen en caching)
+
+De website opent zelf **geen** databaseverbindingen: alle data loopt via de Supabase REST-API (PostgREST), die
+een eigen pool van verbindingen beheert. Bij veel bezoekers houden drie lagen de database rustig:
+
+1. **Next.js-cache** (`"use cache"` in `web/src/lib/places.ts`): de lijst met plekken wordt hoogstens eens per
+   paar minuten opgehaald, ongeacht het aantal bezoekers. Detailpagina's halen alleen hun eigen plek op.
+2. **CDN-cache van Vercel** (`s-maxage` op `/api/places` en `/api/towns`): de kaart- en zoekdata komt van de edge.
+3. **Vangnet**: bij een 429/5xx probeert de site het één keer opnieuw en valt daarna terug op de snapshot.
+
+Heb je ooit een directe Postgres-verbinding nodig (scripts, migraties, eigen server-code), gebruik dan de
+**Supavisor-pooler in transaction mode (poort 6543)**, nooit `db.<ref>.supabase.co:5432`. Het gratis project heeft
+maar 60 verbindingen. Zie `web/.env.example` voor het formaat.
+
+- [ ] Vóór de lancering in Supabase → Reports controleren dat het aantal verbindingen ruim onder de 60 blijft
+
 ---
 
 ## 8. Problemen oplossen

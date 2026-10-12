@@ -14,13 +14,21 @@ const PLACE_COLUMNS =
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
   "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras";
 
+/** Bij drukte (429) of een haperende database (5xx) één keer opnieuw proberen voordat we op de snapshot terugvallen */
+async function fetchWithRetry(url: string, init: RequestInit, retries = 1): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) });
+    if (res.ok || attempt >= retries || !(res.status === 429 || res.status >= 500)) return res;
+    await new Promise((r) => setTimeout(r, 300 * 2 ** attempt + Math.random() * 200));
+  }
+}
+
 async function rest<T>(path: string): Promise<T[]> {
   const out: T[] = [];
   for (let offset = 0; ; offset += 1000) {
     const sep = path.includes("?") ? "&" : "?";
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${sep}limit=1000&offset=${offset}`, {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${path}${sep}limit=1000&offset=${offset}`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
     const rows = (await res.json()) as T[];

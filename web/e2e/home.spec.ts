@@ -26,6 +26,8 @@ test.describe("startpagina", () => {
 test("API levert een lijst met plekken", async ({ request }) => {
   const res = await request.get("/api/places");
   expect(res.ok()).toBe(true);
+  // CDN-cache: bij burst traffic komt de kaartdata van de edge, niet van de database
+  expect(res.headers()["cache-control"]).toContain("s-maxage=");
   const body = (await res.json()) as { slug: string; lat: number; lng: number }[];
   expect(body.length).toBeGreaterThan(100);
   expect(body[0]).toEqual(expect.objectContaining({ slug: expect.any(String), lat: expect.any(Number), lng: expect.any(Number) }));
