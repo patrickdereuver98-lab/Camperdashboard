@@ -1,5 +1,9 @@
 # Ontwerpsysteem VrijStaan: "natuur & vrijheid"
 
+> **Let op (12 oktober 2026):** typografie, vormen, iconen en beweging staan nu in `docs/stijlgids.md`, die voorgaat.
+> Fraunces en Inter zijn vervangen door Geist; getekende landschappen en gevulde icoonblokjes zijn verdwenen van
+> kaarten en de startpagina. De kleuren hieronder gelden nog.
+
 ## Uitgangspunt
 
 VrijStaan gaat over het gevoel van vrij staan: een avond aan de bosrand, een plek aan het water, de camper onder

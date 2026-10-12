@@ -9,7 +9,7 @@ code niet bij de documenten, dan is dat een open punt (zie onder).
 | 1 | [Product Requirements Document](01-PRD.md) | Wat het product moet doen en hoe we succes meten |
 | 2 | [Technical Requirements Document](02-TRD.md) | Techniek, diensten, architectuur, beveiliging |
 | 3 | [App Flow](03-app-flow.md) | Elk scherm, elk pad, wat elke tik doet |
-| 4 | [UI en UX Design Brief](04-ui-ux-brief.md) | Thema "natuur & vrijheid", componenten, toegankelijkheid |
+| 4 | [UI en UX Design Brief](04-ui-ux-brief.md) | Wat er op welk scherm staat, componenten, toegankelijkheid; uiterlijk in de [stijlgids](../stijlgids.md) |
 | 5 | [Backend Schema](05-backend-schema.md) | Tabellen, relaties, rechten, bewaartermijnen |
 | 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
 
@@ -35,8 +35,8 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
   hoofdletterlabels, geen verkooppraat).
 - **Prijzen zo transparant mogelijk**: basisprijs plus alle losse toeslagen zoals de website ze noemt.
 - **Mobiel eerst** (iPhone-formaat), 50-plussers, tikdoelen van minstens 44 px.
-- **Thema "natuur & vrijheid"** blijft: zandpapier, bosgroen, avondzon, meerblauw, Fraunces en Inter, bosachtige
-  donkere modus.
+- **Kleuren "natuur & vrijheid"** blijven: zandpapier, bosgroen, avondzon, meerblauw, bosachtige donkere modus.
+  Lettertype Geist, vormen en beweging volgens `docs/stijlgids.md` (besluit eigenaar 12 oktober 2026).
 - **Nederlands eerst**; Engels en Duits later.
 - **Geen cookies of tracking van derden**; statistieken alleen met toestemming.
 
@@ -59,3 +59,4 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 14 | Foto's: 448 plekken met WordPress-miniaturen, keurmerken (SVR, Zoover) als eerste foto | Scraper, UI/UX Brief | **Opgelost (12 okt):** site en scraper (v17) gebruiken `photos.ts`; de site vraagt de grote versie op |
 | 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |
 | 15 | Drie concept-PR's (#3, #4, #5) wijzigen deels dezelfde bestanden (`place-ui.tsx`, `extract.ts`, specs) | Alle | Na elke merge de andere PR's bijwerken met `main`; `extract.ts` in #5 bouwt al voort op #3 (v16) |
+| 16 | Brief en vaardigheden zeiden "thema staat vast, Fraunces + Inter"; eigenaar vond de site "te AI, te kinderlijk, niet professioneel" | UI/UX Brief, `vrijstaan-stijl` | **Opgelost (12 okt):** kleuren blijven, typografie (Geist), hoeken, schaduw, iconen en beweging volgens de nieuwe `docs/stijlgids.md` |
