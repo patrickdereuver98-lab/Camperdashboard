@@ -14,6 +14,7 @@ import { PlaceMap } from "@/components/place-map";
 import { Legend } from "@/components/legend";
 import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 import { PhotoUpload } from "./photo-upload";
+import { CrowdStatusCard } from "./crowd-status";
 
 // Alleen de top-100 tijdens de build: alle plekken prerenderen liep op Vercel stuk (RangeError). De rest wordt bij het
 // eerste bezoek gerenderd ("blocking": params worden buiten <Suspense> afgewacht) en daarna uit de cache geserveerd.
@@ -174,6 +175,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         </dl>
         <Departure place={place} />
         <PriceDetails place={place} />
+        <CrowdStatusCard placeId={place.id} slug={place.slug} />
 
         {/* Contact op mobiel (op grotere schermen in de zijkolom) */}
         {(place.website || tel || place.email) && (

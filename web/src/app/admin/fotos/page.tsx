@@ -80,13 +80,13 @@ export default function Photos() {
                 <p>
                   <Badge tone={trust[p.user_id].rejected ? "red" : trust[p.user_id].trusted ? "green" : "neutral"}>
                     {trust[p.user_id].approved} goedgekeurd, {trust[p.user_id].rejected} afgewezen
-                    {trust[p.user_id].trusted ? " · vertrouwd" : ""}
+                    {trust[p.user_id].trusted ? ", vertrouwd" : ""}
                   </Badge>
                 </p>
               )}
               <p className="text-sm text-muted">
-                {p.credit ?? "Geen naam"} · {when(p.created_at)}
-                {p.width && p.height ? ` · ${p.width}×${p.height}` : ""}
+                {p.credit ?? "Geen naam"}, {when(p.created_at)}
+                {p.width && p.height ? `, ${p.width} × ${p.height} pixels` : ""}
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 {p.status !== "approved" && <button className={primary} onClick={() => set(p.id, "approved")}>Goedkeuren</button>}

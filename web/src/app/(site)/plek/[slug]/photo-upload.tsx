@@ -145,7 +145,7 @@ export function PhotoUpload({ placeId, slug, placeName }: { placeId: string; slu
       {step.kind === "done" && (
         <p role="status" className="mt-2 flex items-center gap-2 rounded-xl bg-forest-tint px-3 py-2 font-semibold text-forest">
           <Icon name="check" size={20} />
-          {step.approved ? "Bedankt! Je foto staat binnen een paar minuten online." : "Bedankt! We bekijken je foto en zetten hem daarna online."}
+          {step.approved ? "Bedankt. Je foto staat binnen een paar minuten online." : "Bedankt. We bekijken je foto en zetten hem daarna online."}
         </p>
       )}
 

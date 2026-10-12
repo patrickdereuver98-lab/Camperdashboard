@@ -30,6 +30,7 @@
 | `user_trips` | Mijn reis van een ingelogde bezoeker (`stops` jsonb, ≤ 200) |
 | `place_photos` | Foto van een bezoeker bij een plek, met moderatiestatus; goedgekeurd → `places.photos` |
 | `duplicate_dismissals` | Paren plekken die beheer als "geen dubbel" heeft gemarkeerd |
+| `crowd_reports` | Drukte-melding van een ingelogde camperaar (rustig, druk, vol); de site toont alleen de laatste 3 uur |
 
 ## Tabellen
 
@@ -83,6 +84,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200), updated_at* | alleen eigen rij |
 | `place_photos` | id*, place_id*, user_id, storage_path* (`<user_id>/<uuid>.webp|jpg`), width/height (200–4.000), caption (≤ 140), credit (≤ 80), status* (`pending`, `approved`, `rejected`), reviewed_by, reviewed_at, created_at* | status `pending`; max. 20 per gebruiker per dag; vertrouwde gebruikers (`site_settings.trust`) worden automatisch goedgekeurd |
 | `duplicate_dismissals` | a*, b* (a < b), dismissed_by, created_at* | alleen beheer |
+| `crowd_reports` | id*, place_id*, user_id*, level* (`rustig`, `druk`, `vol`), created_at* | melden via `report_crowd` (1 per persoon per plek per 30 min, max. 30 per dag); lezen via `crowd_status` (geaggregeerd, zonder persoonsgegevens); cron `crowd-retention` wist na 30 dagen |
 | `reviews` | id*, place_id*, author_name*, author_email, rating* (1–10), score_location/quiet/facilities/value (1–10), title (≤120), body* (20–3.000), vehicle (`camper`, `buscamper`, `caravan`, `overig`), visited_month, status*, admin_note, created_at* | status `pending`; index op place_id |
 | `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, created_at* | status `nieuw` |
 | `tickets` | id*, number* (uniek), access_token* (uniek, willekeurig), name* (2–80), email*, subject* (3–140), category*, status*, priority*, place_id, assignee, created_at*, updated_at* | category `vraag`, status `open`, priority `normaal` |

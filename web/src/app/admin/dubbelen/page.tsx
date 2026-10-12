@@ -181,7 +181,7 @@ export default function Duplicates() {
                             {keep.id === s.id ? <Badge tone="green">blijft</Badge> : <Badge tone="red">gaat op in de ander</Badge>}
                           </span>
                           <span className="block text-sm text-muted">
-                            {s.status === "published" ? "online" : s.status} · {s.osm ? "OpenStreetMap" : "inzending"} · {Math.round(s.completeness * 100)}% compleet ·{" "}
+                            {s.status === "published" ? "Online" : "Concept"}, uit {s.osm ? "OpenStreetMap" : "een inzending"}, {Math.round(s.completeness * 100)}% compleet.{" "}
                             <Link href={`/plek/${s.slug}`} target="_blank" className="underline">bekijken</Link>
                           </span>
                         </span>
