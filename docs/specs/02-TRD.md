@@ -29,6 +29,7 @@
 | API | Supabase REST (PostgREST) met de publishable key in de browser; alle schrijfacties via `SECURITY DEFINER`-functies (RPC) |
 | Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key` |
 | Taken | `pg_cron` + `pg_net` in de database (zie Architectuur) |
+| Routecache | Next-cache in `web/src/lib/routing.ts` (routes `weeks`, afstanden `days`); de tabel `route_cache` wordt niet gebruikt (audit C5) |
 | Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en `cacheLife("minutes")`, terugval op de snapshot |
 
 ## Authenticatie en rollen
@@ -80,7 +81,9 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `osm-staging` | elke minuut | 300 rijen uit `osm_staging` verwerken met `ingest_osm` |
 | `scrape` | elke 15 s | 8 websites lezen zolang er werk in `private.scrape_queue` staat |
 | `scrape-enqueue` | elk half uur | Nieuwe plekken met een website inplannen |
-| `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd |
+| `discover` | elke minuut | Websites zoeken voor plekken zonder website (edge function `discover`) |
+| `crowd-retention` | dagelijks 03:17 | Hoort bij de onbeschreven drukte-functie (zie open punt 12 in `docs/specs/README.md`) |
+| `retention` | dagelijks | **Bestaat niet**: `web/supabase/retention.sql` moet nog worden uitgevoerd; ook `apply_retention` ontbreekt live |
 
 **Volgorde van gezag bij gegevens:** beheer (`sources.beheer`) > eigen website (`sources.website_fields`) > OSM.
 Een websitewaarde die bij een volgende lezing niet meer op de site staat, wordt gewist.

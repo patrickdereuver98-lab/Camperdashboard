@@ -30,9 +30,9 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 
 | Doel | Meetbaar signaal | Nu (11 okt 2026) | Doel versie 1 |
 |---|---|---|---|
-| Zekerheid over vertrektijden | Gepubliceerde plekken met bekende vertrekregel | ±800 van 3.596 in de database | 40% van de gepubliceerde plekken |
-| Plekken zonder vaste vertrektijd | Plekken met vertrekregel "vrij" of "per 24 uur" | 32 | 150 (via websites, eigenaren en bezoekers) |
-| Transparante prijzen | Gepubliceerde plekken met prijs of prijs per persoon | ±57% | 75% |
+| Zekerheid over vertrektijden | Gepubliceerde plekken met bekende vertrekregel | 762 van 1.510 gepubliceerd (50%, 12 okt) | 40% van de gepubliceerde plekken |
+| Plekken zonder vaste vertrektijd | Plekken met vertrekregel "vrij" of "per 24 uur" | 21 gepubliceerd (12 okt; was 32) | 150 (via websites, eigenaren en bezoekers) |
+| Transparante prijzen | Gepubliceerde plekken met prijs of prijs per persoon | 57% (866 van 1.510) | 75% |
 | Bruikbare dekking | Gepubliceerde plekken | 1.509 (drempel 0,45, 12 oktober 2026) | Zoveel mogelijk plekken met contact en 2 van 4 kernfeiten |
 | Vertrouwen | Goedgekeurde reviews | 0 | 200 |
 | Gebruik | Bezoeken per week (alleen met toestemming gemeten) | nog niet live | wordt vastgesteld na livegang |

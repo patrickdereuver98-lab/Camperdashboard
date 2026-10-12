@@ -14,7 +14,7 @@ code niet bij de documenten, dan is dat een open punt (zie onder).
 | 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
 
 Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `docs/design.md` (ontwerpdetails),
-`docs/onderzoek.md` (vooronderzoek).
+`docs/onderzoek.md` (vooronderzoek), `docs/audit-2026-10.md` (audit, feedbackronde en verbeterplan van 12 oktober 2026).
 
 ## Zo gebruik je ze
 
@@ -40,7 +40,7 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 - **Nederlands eerst**; Engels en Duits later.
 - **Geen cookies of tracking van derden**; statistieken alleen met toestemming.
 
-## Gevonden tegenstrijdigheden en open punten (11 oktober 2026)
+## Gevonden tegenstrijdigheden en open punten (bijgewerkt 12 oktober 2026)
 
 | # | Wat | Waar | Voorstel |
 |---|---|---|---|
@@ -55,3 +55,10 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 9 | `/zoeken?waar=<onbekend>` toont het hele land met die plaatsnaam | App Flow | Fix in M5 |
 | 10 | Testtabellen `private.probe` en `private.probe2` staan nog in de database | Backend Schema | Verwijderen |
 | 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |
+| 12 | Database bevat accounts voor bezoekers, foto-uploads, voertuigdocumenten, push en drukte (9 tabellen, 2 buckets, 7 RPC's, cron `crowd-retention`) die nergens in code of documenten staan | PRD ("geen accounts"), Backend Schema, privacy | Besluit Patrick: verwijderen (advies) of beschrijven. Audit C1, verbeterplan 0.1–0.2 |
+| 13 | Openbare aanmelding in Supabase Auth staat aan; elke aanmelding krijgt een profiel | TRD, Backend Schema | Aanmelding uit, beheerders uitnodigen. Audit C2 |
+| 14 | Er is nog geen beheeraccount (0 gebruikers), terwijl het implementatieplan inloggen als klaar meldt | Implementatieplan M2 | Patrick maakt het account aan. Audit D1 |
+| 15 | `apply_retention` bestaat niet in de database; de bewaartermijnen uit de privacyverklaring worden niet toegepast | Privacy, Backend Schema | `retention.sql` uitvoeren. Audit C3 |
+| 16 | Privacy noemt "een paar dagen" cache voor rijtijden; code bewaart routes weken. `route_cache`/`cache_route` worden niet gebruikt | Privacy, TRD, Backend Schema | Code op dagen zetten. Audit C5 |
+| 17 | Mijn reis telt losse toeslagen niet mee in het totaal | PRD (prijzen met alle toeslagen) | Audit B1, verbeterplan 1.5 |
+| 18 | Maar 21 plekken zonder vaste vertrektijd (PRD noemde 32, doel 150) | PRD | Campagne en extractorcontrole. Audit A1 |

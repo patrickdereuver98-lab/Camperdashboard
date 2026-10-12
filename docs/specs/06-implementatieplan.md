@@ -1,7 +1,7 @@
 # 6. Implementatieplan
 
 > Doel: een geordende bouwvolgorde met controlepunten, voor mensen en AI-agents.
-> Bijgewerkt: 11 oktober 2026. Status: ✅ klaar, 🔄 bezig, ⬜ open.
+> Bijgewerkt: 12 oktober 2026 (verbeterplan uit `docs/audit-2026-10.md` toegevoegd als mijlpaal 7). Status: ✅ klaar, 🔄 bezig, ⬜ open.
 > Eigenaar: "Patrick" = de eigenaar van VrijStaan; "Agent" = een AI-codeeragent (Claude Code) in deze repository.
 
 ## Mijlpaal 1: projectopzet ✅
@@ -23,7 +23,7 @@
 | ✅ Website-scraper (prijs, toeslagen, seizoen, voorzieningen, vertrektijden) | Agent | Echte voorbeeldzinnen | Edge function `pipeline` v16 | Testscripts geven verwacht resultaat; steekproef van 10 plekken klopt | Schema |
 | ✅ Herscrape alle websites met v15 | Agent | — | Bijgewerkte plekken | `private.scrape_queue` leeg; steekproef "vrij" en toeslagen correct | Scraper |
 | ✅ Publicatiedrempel definitief instellen (0,45) | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | 1.509 plekken online, allemaal met contact en 2 van 4 kernfeiten | Herscrape |
-| ✅ Beheeraccounts via uitnodiging | Agent | E-mail Patrick | `private.admin_invites`, trigger | Patrick kan inloggen | Schema |
+| 🔄 Beheeraccounts via uitnodiging | Agent + Patrick | E-mail Patrick | `private.admin_invites`, trigger | Patrick kan inloggen (12 okt: uitnodiging staat klaar, nog geen account aangemaakt) | Schema |
 | ⬜ Rollen `admin` en `support` echt scheiden | Agent | Besluit Patrick | Policies per rol | Support kan geen instellingen of plekken verwijderen | Besluit |
 | ⬜ Bewaartermijnen activeren | Patrick | `web/supabase/retention.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
 | ⬜ Tickets na 12 maanden opruimen | Agent | Privacyverklaring | Uitbreiding van `apply_retention` | Gesloten tickets ouder dan 12 maanden verdwijnen | Bewaartermijnen |
@@ -81,6 +81,31 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Testplan uitvoeren | Patrick + Agent | Acceptatiecriteria PRD | Testverslag | Alle criteria geslaagd op iPhone en Android | M3–M5 |
 | ⬜ Monitoring | Agent | — | Controle op `app_logs`, Vercel-logs, wekelijkse controle pipeline | Fouten worden binnen een dag gezien | Vercel |
 | ⬜ Terugdraaien | — | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/HANDLEIDING.md` | Vercel |
+
+## Mijlpaal 7: verbeterplan uit de audit van 12 oktober 2026 ⬜
+
+Details, bewijs en volgorde: `docs/audit-2026-10.md` §4 en §7. Fase 0 gaat vóór livegang.
+
+| Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
+|---|---|---|---|---|---|
+| ⬜ 0.1 Besluit over onbeschreven tabellen, buckets en RPC's (accounts, foto's, voertuigen, push, drukte) | Patrick | Audit C1 | Besluit in `docs/specs/README.md` | Besluit genoteerd | — |
+| ⬜ 0.2 Besluit uitvoeren (verwijderen of documenteren) | Agent | Besluit 0.1 | Migratie of bijgewerkte PRD, schema en privacy | Supabase-adviezen tonen alleen bedoelde functies | 0.1 |
+| ⬜ 0.3 Openbare aanmelding uit, beheerders uitnodigen | Patrick + Agent | Audit C2 | Auth-instelling, aangepaste beheerflow | Aanmelden met een vreemd adres lukt niet | Beheeraccount |
+| ⬜ 0.5 Cachetermijn routes gelijk aan privacyverklaring | Agent | Audit C5 | `routing.ts` | Code en tekst zeggen hetzelfde | — |
+| ⬜ 0.6 Rate limit op `/api/route` en `/api/distances` | Agent | Audit C4 | Limiet per IP | Boven de limiet antwoord 429 | — |
+| ⬜ 1.1 Campagne "zonder vertrektijd" (Doe mee, Facebookgroep, eigenaren) | Patrick + Agent | Audit A1 | Top-100 in Doe mee | 75 plekken zonder vaste vertrektijd | Beheeraccount |
+| ⬜ 1.2 Extractor nalopen op "per 24 uur" met testset | Agent | Audit A1 | Testset echte zinnen | Steekproef van 20 sites klopt | — |
+| ⬜ 1.4 Migraties in de repo; snapshot wekelijks verversen | Agent | Audit D2, A5 | `web/supabase/migrations/`, workflow | Snapshot ≤ 7 dagen oud | — |
+| ⬜ 1.5 Mijn reis: toeslagen meetellen | Agent | Audit B1 | `trip-app.tsx` | Toeslag per persoon telt mee | — |
+| ⬜ 1.6 Tikdoelen ≥ 44 px in lijsten (Doe mee, uitgelicht, in de buurt) | Agent | Audit B3 | Klikbare rijen | Rooktest vindt geen links < 44 px buiten de footer | — |
+| ⬜ 1.7 Eerste resultaten server-side op zoek- en vertrekpagina's | Agent | Audit B4 | `search-app.tsx` + pagina's | HTML bevat plekken met links | — |
+| ⬜ 1.8 Door `discover` gevonden websites eerst laten bevestigen | Agent | Audit A4 | Inzending per vondst | Geen ongecontroleerde vondst in de scrape | — |
+| ⬜ 1.9 Scherm Dubbelen in beheer | Agent | Audit A3 | `/admin/plekken` | 20 huidige paren beoordeeld | Beheeraccount |
+| ⬜ 1.10 Mail voor tickets en eigenaren (EU-provider) | Patrick + Agent | Audit B5, PRD open vraag 6 | Mailkoppeling | Klant krijgt bevestiging en antwoordmelding | Domein |
+| ⬜ 2.x Monitoring, CSP, robots.txt-parser, service worker, slankere dataset | Agent | Audit §7 fase 2 | Zie audit | Zie audit | — |
+
+Al eerder gepland en hier niet herhaald: bewaartermijnen (M2), onbekende plaats en kaartmarkers (M5), tests en CI
+(M5), bedrijfsgegevens (M6).
 
 ## Voor je verdergaat (bij elke mijlpaal)
 

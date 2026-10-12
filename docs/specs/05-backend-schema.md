@@ -4,6 +4,12 @@
 > Bron: live database `qkrmthrhwmmmwswmfgwc` op 11 oktober 2026. Let op: `web/supabase/schema.sql` loopt achter
 > (vertrektijden, toeslagen, `admin_stats` ontbreken) en moet opnieuw worden gegenereerd.
 
+> **Audit 12 oktober 2026:** de live database bevat ook `profiles`, `user_trips`, `user_vehicles`, `place_photos`,
+> `push_subscriptions`, `crowd_reports`, `crowd_watches`, `duplicate_dismissals`, `private.secrets`, de buckets
+> `place-photos` en `vehicle-docs` en de RPC's `report_crowd`, `crowd_status`, `watch_place`, `push_subscribe`,
+> `push_public_key`, `user_trust`, `place_redirect`, `admin_duplicate_candidates`, `admin_merge_places`. Ze zijn leeg
+> en worden niet door de site gebruikt. Besluit volgt (open punt 12, `docs/audit-2026-10.md` C1).
+
 ## Entiteiten
 
 | Entiteit | Wat het is |
