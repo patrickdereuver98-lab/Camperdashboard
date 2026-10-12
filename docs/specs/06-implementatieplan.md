@@ -49,7 +49,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Reviewformulier: vertrektijdvraag, bezoekdatum, foto-upload (max. 5, verkleind, zonder EXIF) | Agent | Fase B | Supabase Storage-bucket, RPC, formulier, moderatie | Foto verschijnt na goedkeuring; geen locatie in het bestand | M2 |
 | ⬜ "Volgens n bezoekers" bij de vertrekregel | Agent | Reviewantwoorden | Weergave op de plekpagina | Bron (website of bezoekers) is altijd duidelijk | Reviewformulier |
 | ⬜ Eigenaar claimen en zelf bewerken (incl. toestemming foto's) | Agent | Fase B | Claimflow + beheer | Eigenaar past gegevens aan na controle | M2 |
-| ✅ Websites zoeken voor plekken zonder website (actie `discover`, cron `discover`) | Agent | Verzoek Patrick | `discover.ts`, `next_discover_batch`, `apply_discovery` | Gevonden site staat in `sources->'discovery'` en gaat de scrape-wachtrij in | Scraper |
+| ✅ Websites zoeken voor plekken zonder website (edge function `discover`, cron `discover`) | Agent | Verzoek Patrick | `discover.ts`, `next_discover_batch`, `apply_discovery` | Gevonden site staat in `sources->'discovery'` en gaat de scrape-wachtrij in | Scraper |
 | ✅ Pagina "Doe mee" voor de Facebookgroep: vertrektijden invullen per provincie | Agent | Verzoek Patrick | `/doe-mee` | Inzending komt in Beheer → Inzendingen | — |
 | ⬜ Inzending "vertrektijd" met één klik overnemen in beheer | Agent | Eerste inzendingen | Knop in Inzendingen | Beheerder hoeft niet apart naar Plekken | Doe mee |
 | ✅ Aanmeldformulier: vertrektijd en maximale lengte | Agent | Audit | Extra velden | Velden komen in `submissions.payload` (`vertrek`, `vertrek_uiterlijk`, `max_lengte_m`) | — |

@@ -180,7 +180,8 @@ push de wijziging in `web/supabase/functions/pipeline/`, zet de nieuwe commit in
 
 ## Meer plekken vinden
 
-- **Websites zoeken** (automatisch, cron `discover`): voor plekken zonder website probeert de pipeline adressen uit de
+- **Websites zoeken** (automatisch, cron `discover`, eigen edge function `discover`): voor plekken zonder website
+  probeert de functie adressen uit de
   naam (zoals `campingdekraai.nl`). Een site telt alleen als de pagina de naam én de plaats, postcode of het
   telefoonnummer noemt. Gevonden sites worden daarna gewoon gescraped. Resultaat per plek: `places.sources->'discovery'`.
 - **Doe mee** (`/doe-mee`): deel deze link in de Facebookgroep. Leden vullen de vertrektijd in van plekken waar die
