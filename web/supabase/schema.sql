@@ -1868,3 +1868,16 @@ create policy "eigen documenten uploaden" on storage.objects for insert to authe
   with check (bucket_id = 'vehicle-docs' and (storage.foldername(name))[1] = (select auth.uid())::text);
 create policy "eigen documenten weghalen" on storage.objects for delete to authenticated
   using (bucket_id = 'vehicle-docs' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+-- ── Migratie 20261012_expenses (zie supabase/migrations/) ─────────────────────
+-- Fase 5c: uitgaven onderweg (kosten- en brandstoftracker) per account. Zonder account alleen op het toestel.
+create table if not exists public.user_expenses (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  entries jsonb not null default '[]'::jsonb check (jsonb_typeof(entries) = 'array' and jsonb_array_length(entries) <= 1000),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_expenses enable row level security;
+create policy "eigen uitgaven" on public.user_expenses for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+revoke all on public.user_expenses from anon;
+grant select, insert, update on public.user_expenses to authenticated;

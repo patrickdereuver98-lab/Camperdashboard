@@ -16,6 +16,12 @@ const ROWS: string[][] = [
     "Tot je je account verwijdert",
   ],
   [
+    "Uitgaven onderweg",
+    "Datum, soort, bedrag, eventueel liters, de stop en je notitie. Zonder account alleen op je toestel; met account ook in je account",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",
+    "Tot je ze weghaalt of je account verwijdert",
+  ],
+  [
     "Mijn camper",
     "Naam, maten, brandstof en verbruik die je zelf invult. Zonder account alleen op je toestel; met account ook in je account",
     "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",

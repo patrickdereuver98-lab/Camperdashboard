@@ -1,5 +1,6 @@
 "use client";
 
+import { ExpensesPanel } from "./expenses-panel";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -409,6 +410,8 @@ export function TripApp() {
               <Icon name="route" size={19} /> Open route in Google Maps
             </a>
           </div>
+
+          <ExpensesPanel stops={stops.map((s) => ({ slug: s.slug, name: s.place.name }))} budget={{ stay, fuel, tax }} />
 
           <PlaceMap
             places={stops.map((s) => s.place)}

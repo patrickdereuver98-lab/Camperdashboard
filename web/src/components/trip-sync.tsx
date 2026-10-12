@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "@/lib/auth";
-import { useTrip, useVehicle } from "@/lib/store";
+import { useExpenses, useTrip, useVehicle } from "@/lib/store";
+import { mergeExpenses, type Expense } from "@/lib/expenses";
 import { cleanVehicle, hasVehicle, type Vehicle } from "@/lib/vehicle";
 import { supabase } from "@/lib/supabase-browser";
 import { mergeTrips, sameTrip, type Stop } from "@/lib/trip-merge";
@@ -13,6 +14,7 @@ export function TripSync() {
     <>
       <TripSyncInner />
       <VehicleSync />
+      <ExpenseSync />
     </>
   );
 }
@@ -59,6 +61,54 @@ function VehicleSync() {
     }, 800);
     return () => clearTimeout(t);
   }, [vehicle, userId]);
+
+  useEffect(() => {
+    if (!userId) pulled.current = null;
+  }, [userId]);
+
+  return null;
+}
+
+const sameExpenses = (a: Expense[], b: Expense[]) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Uitgaven: samenvoegen op id (toestel wint), daarna wijzigingen doorzetten */
+function ExpenseSync() {
+  const { session } = useSession();
+  const userId = session?.user.id;
+  const { list, replace } = useExpenses();
+  const pulled = useRef<string | null>(null);
+  const lastPushed = useRef<Expense[] | null>(null);
+
+  useEffect(() => {
+    if (!userId || pulled.current === userId) return;
+    let alive = true;
+    void (async () => {
+      const sb = supabase();
+      const { data, error } = await sb.from("user_expenses").select("entries").eq("user_id", userId).maybeSingle();
+      if (!alive || error) return;
+      const merged = mergeExpenses(list, data?.entries);
+      if (!sameExpenses(merged, list)) replace(merged);
+      if (!data || !sameExpenses(merged, mergeExpenses([], data.entries))) {
+        await sb.from("user_expenses").upsert({ user_id: userId, entries: merged, updated_at: new Date().toISOString() });
+      }
+      lastPushed.current = merged;
+      pulled.current = userId;
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || pulled.current !== userId) return;
+    if (lastPushed.current && sameExpenses(lastPushed.current, list)) return;
+    const t = setTimeout(() => {
+      lastPushed.current = list;
+      void supabase().from("user_expenses").upsert({ user_id: userId, entries: list, updated_at: new Date().toISOString() });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [list, userId]);
 
   useEffect(() => {
     if (!userId) pulled.current = null;

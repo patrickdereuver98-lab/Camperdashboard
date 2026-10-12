@@ -33,6 +33,7 @@
 | `crowd_reports` | Drukte-melding van een ingelogde camperaar (rustig, druk, vol); de site toont alleen de laatste 3 uur |
 | `push_subscriptions` | Push-abonnement van een browser, gekoppeld aan een account |
 | `user_vehicles` | Camperprofiel van een account (naam, maten, brandstof, verbruik) |
+| `user_expenses` | Uitgaven onderweg van een account (kosten- en brandstoftracker) |
 | Storage `vehicle-docs` | Privé-map per account voor papieren van de camper (PDF of foto, max. 5 MB) |
 | `crowd_watches` | Een ingelogde camperaar volgt een plek 24 uur en krijgt één pushmelding als het rustig wordt |
 
@@ -88,6 +89,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200), updated_at* | alleen eigen rij |
 | `place_photos` | id*, place_id*, user_id, storage_path* (`<user_id>/<uuid>.webp|jpg`), width/height (200–4.000), caption (≤ 140), credit (≤ 80), status* (`pending`, `approved`, `rejected`), reviewed_by, reviewed_at, created_at* | status `pending`; max. 20 per gebruiker per dag; vertrouwde gebruikers (`site_settings.trust`) worden automatisch goedgekeurd |
 | `duplicate_dismissals` | a*, b* (a < b), dismissed_by, created_at* | alleen beheer |
+| `user_expenses` | user_id* (pk), entries* (jsonb-array ≤ 1.000: id, date, category, amountEur, liters?, placeSlug?, note?), updated_at* | alleen eigen rij; samenvoegen op id via `mergeExpenses` |
 | `user_vehicles` | user_id* (pk), data* (jsonb, < 2 kB), updated_at* | alleen eigen rij; waarden gecontroleerd door `cleanVehicle` |
 | Storage `vehicle-docs` | `<user_id>/<tijd>-<naam>` | niet openbaar; lezen, uploaden en weghalen alleen in je eigen map; openen via een ondertekende link van 60 seconden |
 | `push_subscriptions` | id*, user_id*, endpoint* (uniek, https), p256dh*, auth*, created_at*, disabled_at | alleen via `push_subscribe`; uitgezet bij 404/410 van de pushdienst |

@@ -39,6 +39,7 @@
 | ✅ Live drukte (crowdsourced: rustig, druk, vol) | Agent | Opdracht Patrick (Fase 5) | `crowd_reports`, kaart op de plekpagina | Alleen echte meldingen van de laatste 3 uur, met aantal en tijd | Accounts |
 | ✅ Pushmelding als een gevolgde plek rustig wordt | Agent | Fase 5 | Edge function `push`, `crowd_watches`, `push_subscriptions`, service worker | Versleutelde melding (getest met web-push tegen een nep-pushdienst); één melding per volger | Drukte |
 | ✅ Voertuigkluis: camperprofiel met automatisch lengtefilter, papieren in een privé-map | Agent | Opdracht Patrick (Fase 5) | `/mijn-camper`, `user_vehicles`, Storage `vehicle-docs` | Lengtefilter vanzelf aan; uitzetten blijft uit; papieren alleen voor de eigenaar | Accounts |
+| ✅ Kosten- en brandstoftracker in Mijn reis | Agent | Opdracht Patrick (Fase 5) | `ExpensesPanel`, `user_expenses` | Uitgaven naast de begroting; werkt zonder account | Mijn reis |
 | ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
 | ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 

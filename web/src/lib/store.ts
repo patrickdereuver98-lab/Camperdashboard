@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { bboxKey, snapBbox, type Bbox } from "./bbox";
 import type { PlaceSummary, Town } from "./types";
 import { cleanVehicle, type Vehicle } from "./vehicle";
+import { cleanExpenses, type Expense } from "./expenses";
 
 // ── Kleine localStorage-store met abonnement ───────────────────────────────
 
@@ -94,6 +95,21 @@ const EMPTY_VEHICLE: Vehicle = {};
 const vehicleStore = createStore<Vehicle>("vrijstaan:camper", EMPTY_VEHICLE, (v): v is Vehicle => typeof v === "object" && v !== null && !Array.isArray(v));
 export const useVehicle = () => [vehicleStore.use(), (v: Vehicle) => vehicleStore.write(cleanVehicle(v))] as const;
 export const readVehicle = () => vehicleStore.read();
+
+// ── Uitgaven onderweg ──────────────────────────────────────────────────────
+
+const EMPTY_EXPENSES: Expense[] = [];
+const expenseStore = createStore<Expense[]>("vrijstaan:uitgaven", EMPTY_EXPENSES, (v): v is Expense[] => Array.isArray(v));
+export function useExpenses() {
+  const list = expenseStore.use();
+  const set = (next: Expense[]) => expenseStore.write(cleanExpenses(next));
+  return {
+    list,
+    replace: set,
+    add: (e: Expense) => set([e, ...list.filter((x) => x.id !== e.id)].sort((a, b) => b.date.localeCompare(a.date))),
+    remove: (id: string) => set(list.filter((x) => x.id !== id)),
+  };
+}
 
 // ── Reisinstellingen (verbruik, brandstofprijs) ────────────────────────────
 
