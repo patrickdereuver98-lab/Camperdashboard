@@ -7,11 +7,11 @@ code niet bij de documenten, dan is dat een open punt (zie onder).
 | # | Document | Waarvoor |
 |---|---|---|
 | 1 | [Product Requirements Document](01-PRD.md) | Wat het product moet doen en hoe we succes meten |
+| 1 | Rol `support` bestaat, maar `is_admin()` geeft elke beheerder alle rechten | Schema, TRD | Besluiten wat support niet mag; policies per rol (Implementatieplan M2) |
 | 2 | [Technical Requirements Document](02-TRD.md) | Techniek, diensten, architectuur, beveiliging |
+| 2 | Privacyverklaring belooft bewaartermijnen die nog niet automatisch worden toegepast | Backend Schema, privacy | `web/supabase/retention.sql` uitvoeren; tickets toevoegen |
 | 3 | [App Flow](03-app-flow.md) | Elk scherm, elk pad, wat elke tik doet |
-| 4 | [UI en UX Design Brief](04-ui-ux-brief.md) | Thema "natuur & vrijheid", componenten, toegankelijkheid |
-| 5 | [Backend Schema](05-backend-schema.md) | Tabellen, relaties, rechten, bewaartermijnen |
-| 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
+| 3 | `web/supabase/schema.sql` en de snapshot lopen achter op de live database | Backend Schema, TRD | Opnieuw genereren na de herscrape |
 
 Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `docs/design.md` (ontwerpdetails),
 `docs/onderzoek.md` (vooronderzoek).
@@ -44,11 +44,11 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 
 | # | Wat | Waar | Voorstel |
 |---|---|---|---|
-| 1 | Rol `support` bestaat, maar `is_admin()` geeft elke beheerder alle rechten | Schema, TRD | Besluiten wat support niet mag; policies per rol (Implementatieplan M2) |
-| 2 | Privacyverklaring belooft bewaartermijnen die nog niet automatisch worden toegepast | Backend Schema, privacy | `web/supabase/retention.sql` uitvoeren; tickets toevoegen |
-| 3 | `web/supabase/schema.sql` en de snapshot lopen achter op de live database | Backend Schema, TRD | Opnieuw genereren na de herscrape |
+| 4 | [UI en UX Design Brief](04-ui-ux-brief.md) | Thema "natuur & vrijheid", componenten, toegankelijkheid |
 | 4 | ~~Publicatiedrempel~~ | PRD, site | **Opgelost (12 oktober 2026):** 0,45 na de herscrape. Elke plek heeft contact en 2 van 4 kernfeiten; dat geeft 1.509 plekken (bij 0,55: 1.277). Aantal plekken is de prioriteit van de eigenaar. Aan te passen in Beheer → Instellingen |
+| 5 | [Backend Schema](05-backend-schema.md) | Tabellen, relaties, rechten, bewaartermijnen |
 | 5 | ~~Hoe streng met vertrektijden~~ | PRD open vraag 1 | **Opgelost:** aparte pagina's Zonder vertrektijd, Uitslapers, Overige; websitefoto's overal aan |
+| 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
 | 6 | Vercel Hobby is niet-commercieel; verdienmodel nog onbekend | TRD, PRD | Bij inkomsten overstappen op Vercel Pro |
 | 7 | Bedrijfsgegevens ontbreken op privacy, voorwaarden en disclaimer | Release | Invullen in `web/src/lib/company.ts` |
 | 8 | Reviews: formulier belooft nog geen foto's en vertrektijdvraag ("binnenkort") | App Flow, PRD | Fase B (Implementatieplan M4) |
@@ -58,7 +58,7 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 12 | Strikte OSM-toelating (alleen `caravan_site` of `motorhome=yes`) zou ~900 gepubliceerde campings zonder die tag niet meer verversen | PRD (aantal plekken), opdracht 12 okt | Besluit Patrick vóór het live zetten van de query en de edge function |
 | 13 | ~~PRD: geen accounts voor bezoekers~~ | PRD, TRD | **Gewijzigd 12 okt:** accounts optioneel (opdracht Patrick); zonder account werkt alles |
 | 14 | Opdracht Fase 6 (advertenties) botst met PRD "geen advertenties en tracking van derden" en het Vercel Hobby-plan | PRD, TRD | Besluit Patrick vóór Fase 6; alleen advertenties zonder tracking/cookies passen bij de spelregels |
-| 18 | Opdracht: camper-afmetingen "gekoppeld aan auto-filters"; plekken hebben alleen een bekende maximale lengte, geen hoogte of gewicht | Backend Schema | Alleen op lengte filteren; hoogte en gewicht bewaren voor later (bv. als OSM `maxheight`/`maxweight` wordt meegenomen) |
 | 15 | Implementatieplan noemde foto-upload via het reviewformulier (max. 5); gebouwd is een losse knop "Foto toevoegen" per plek | Implementatieplan M4 | Reviewformulier later koppelen aan dezelfde `place_photos` |
 | 16 | Live drukte is door gebruikers gemeld, geen feit uit een bron | Spelregel "nooit verzinnen" | Altijd tonen als melding met aantal en tijdstip; niets tonen zonder meldingen van de laatste 3 uur |
 | 17 | Pushmeldingen lopen via de pushdienst van de browser (Google, Apple, Mozilla) | Spelregel "geen tracking van derden" | Alleen na toestemming, geen inhoud buiten de melding; vermelden in de privacyverklaring |
+| 18 | Opdracht: camper-afmetingen "gekoppeld aan auto-filters"; plekken hebben alleen een bekende maximale lengte, geen hoogte of gewicht | Backend Schema | Alleen op lengte filteren; hoogte en gewicht bewaren voor later (bv. als OSM `maxheight`/`maxweight` wordt meegenomen) |

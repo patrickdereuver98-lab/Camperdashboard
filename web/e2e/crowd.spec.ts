@@ -56,6 +56,11 @@ test("ingelogd bij drukte: melding aanzetten vraagt toestemming en volgt de plek
     const key = new Uint8Array(65).fill(4).buffer;
     const fake = { endpoint: "https://push.example/abc", getKey: (n: string) => (n === "auth" ? new Uint8Array(16).fill(7).buffer : key) };
     Object.defineProperty(window, "PushManager", { value: function PushManager() {}, configurable: true });
+    // Niet elke (headless) Chromium heeft een bruikbare Notification-API: ook die nabootsen
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: Object.assign(function Notification() {}, { permission: "default", requestPermission: async () => "granted" }),
+    });
     Object.defineProperty(navigator, "serviceWorker", {
       configurable: true,
       value: { register: async () => ({}), ready: Promise.resolve({ pushManager: { getSubscription: async () => null, subscribe: async () => fake } }) },

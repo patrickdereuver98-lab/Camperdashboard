@@ -17,6 +17,8 @@ test.describe("detailpagina", () => {
     // Bij een gestreamde (PPR) eerste render kan de status al 200 zijn; zoekmachines krijgen dan noindex
     expect([200, 404]).toContain(res?.status());
     await expect(page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Verkeerd afgeslagen");
+    // De 404-pagina (src/app/not-found.tsx)
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Deze pagina bestaat niet");
+    await expect(page.locator('main a[href="/zoeken"]')).toBeVisible();
   });
 });
