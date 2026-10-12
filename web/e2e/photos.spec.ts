@@ -32,8 +32,11 @@ test("ingelogd: foto wordt verkleind, geüpload en ter controle ingestuurd", asy
     await r.fulfill({ json: { Key: `place-photos/${uploaded.path}` } });
   });
   await page.route(`${SUPABASE}/rest/v1/place_photos**`, async (r) => {
-    inserted = r.request().postDataJSON();
-    await r.fulfill({ status: 201, json: { status: "pending" } });
+    if (r.request().method() === "POST") {
+      inserted = r.request().postDataJSON();
+      return r.fulfill({ status: 201, json: { id: "22222222-2222-4222-8222-222222222222" } });
+    }
+    return r.fulfill({ json: { status: "pending" } });
   });
   await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
 
@@ -62,4 +65,18 @@ test("ingelogd: te kleine foto wordt geweigerd vóór het uploaden", async ({ pa
   await page.getByTestId("photo-input").setInputFiles({ name: "klein.png", mimeType: "image/png", buffer: await pngBuffer(page, 300, 200) });
   await expect(page.getByRole("alert").filter({ hasText: "te klein" })).toBeVisible();
   expect(uploads).toBe(0);
+});
+
+test("vertrouwde inzender: foto gaat direct online", async ({ page }) => {
+  await signIn(page);
+  await page.route(`${SUPABASE}/storage/v1/object/place-photos/**`, (r) => r.fulfill({ json: {} }));
+  await page.route(`${SUPABASE}/rest/v1/place_photos**`, (r) =>
+    r.fulfill(r.request().method() === "POST" ? { status: 201, json: { id: "33333333-3333-4333-8333-333333333333" } } : { json: { status: "approved" } }),
+  );
+  await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
+  await page.goto(`/plek/${slug}`);
+  await page.getByTestId("photo-input").setInputFiles({ name: "plek.png", mimeType: "image/png", buffer: await pngBuffer(page) });
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Foto versturen" }).click();
+  await expect(page.getByText("staat binnen een paar minuten online")).toBeVisible();
 });

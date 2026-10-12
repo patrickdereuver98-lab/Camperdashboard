@@ -110,7 +110,9 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 | **Plekken** | Zoeken, filteren, elke plek bewerken. Ja/Nee/Onbekend per voorziening. Status handmatig vastzetten. Wat je hier invult wordt nooit door de pipeline overschreven |
 | **Support** | Berichten van het contactformulier. Antwoorden, interne notities, status en prioriteit, standaardantwoorden. De klant leest het antwoord via een persoonlijke link (knop "Mail de klant") |
 | **Inzendingen** | Nieuwe plekken, correcties en eigenaarsclaims van bezoekers. Controleer ze en verwerk ze in Plekken |
+| **Dubbelen** | Kaart en lijst van plekken die binnen 50/150/500 m van elkaar liggen, met een zekerheid (afstand + gelijkende naam). Kies per paar welke plek blijft, of selecteer alle "hoog" en voeg ze in één keer samen. Lege velden worden aangevuld, reviews en foto's verhuizen mee en de oude link stuurt permanent door. "Geen dubbel" verbergt een paar voorgoed |
 | **Reviews** | Reviews goedkeuren, afwijzen of verwijderen. Alleen goedgekeurde reviews zijn zichtbaar |
+| **Foto's** | Foto's van bezoekers goedkeuren of afwijzen, met per inzender hoeveel foto's eerder zijn goedgekeurd/afgewezen. Na 3 goedgekeurde en 0 afgewezen foto's (en een account van minstens een dag oud) is iemand "vertrouwd" en gaan diens foto's automatisch online. Aanpassen: `update site_settings set value = '{"auto_approve_min_approved": 5, "min_account_age_days": 7}' where key = 'trust';` |
 | **FAQ** | Vragen toevoegen, bewerken, verbergen en ordenen. Verschijnt op `/veelgestelde-vragen` |
 | **Logs** | Systeemfouten, alle wijzigingen door beheerders (auditlog), data-imports en cookietoestemmingen |
 | **Statistieken** | Bezoeken per dag, populaire pagina's, zoekopdrachten en plekken (alleen bezoekers die toestemming gaven) |

@@ -172,6 +172,24 @@ export async function getPlace(slug: string): Promise<Place | undefined> {
   );
 }
 
+/** Slug van de plek waarin een samengevoegde (dubbele) plek is opgegaan, voor een permanente doorverwijzing */
+export async function getPlaceRedirect(slug: string): Promise<string | undefined> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("places", `place-${slug}`);
+  if (OFFLINE_BUILD || !/^[a-z0-9-]{1,120}$/.test(slug)) return undefined;
+  try {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/rpc/place_redirect?p_slug=${slug}`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return undefined;
+    const target = (await res.json()) as string | null;
+    return target && target !== slug ? target : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function getTopPlaceSlugs(limit = PRERENDER_LIMIT): Promise<string[]> {
   return rankForPrerender(await getSummaries(), limit).map((p) => p.slug);
 }

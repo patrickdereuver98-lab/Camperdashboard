@@ -74,10 +74,12 @@ export function PhotoUpload({ placeId, slug, placeName }: { placeId: string; slu
           caption: String(form.get("caption") || "").trim() || null,
           credit: String(form.get("credit") || "").trim() || null,
         })
-        .select("status")
+        .select("id")
         .single();
       if (error) throw error;
-      setStep({ kind: "done", approved: data?.status === "approved" });
+      // Vertrouwde inzenders worden direct ná het opslaan goedgekeurd: status opnieuw lezen
+      const { data: row } = await sb.from("place_photos").select("status").eq("id", data.id).maybeSingle();
+      setStep({ kind: "done", approved: row?.status === "approved" });
     } catch (e) {
       setErr(errorMessage(e));
       setStep({ kind: "idle" });
