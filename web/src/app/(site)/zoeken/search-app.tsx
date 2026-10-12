@@ -4,7 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { applyFilters, filtersToQuery, parseFilters, refinementCount, relaxations, type Filters, type SortKey } from "@/lib/search";
-import { usePlaces } from "@/lib/store";
+import { usePlaces, useViewportPlaces } from "@/lib/store";
+import type { Bbox } from "@/lib/bbox";
 import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
 import { DestinationSearch } from "@/components/destination-search";
@@ -52,6 +53,14 @@ export function SearchApp() {
   const [mapOpen, setMapOpen] = useState(params.get("kaart") === "1");
   const hasReviews = useMemo(() => Boolean(places?.some((p) => p.ratingCount > 0)), [places]);
   const wide = useMediaQuery("(min-width: 1024px)");
+  // Kaart: alleen plekken binnen het zichtbare gebied (PostGIS-bbox), met dezelfde filters als de lijst
+  const [viewport, setViewport] = useState<Bbox | null>(null);
+  const viewportPlaces = useViewportPlaces(viewport);
+  const mapPlaces = useMemo(
+    () => (viewportPlaces ? applyFilters(viewportPlaces, filters) : (results ?? [])).map((r) => r.place),
+    [viewportPlaces, results, filters],
+  );
+  const fitPlaces = useMemo(() => results?.map((r) => r.place), [results]);
 
   const update = (f: Filters) => {
     const q = filtersToQuery(f);
@@ -69,7 +78,9 @@ export function SearchApp() {
 
   const map = results && (
     <PlaceMap
-      places={results.slice(0, 600).map((r) => r.place)}
+      places={mapPlaces}
+      fitPlaces={fitPlaces}
+      onViewportChange={setViewport}
       highlight={hovered}
       onSelect={focusCard}
       fitKey={key}

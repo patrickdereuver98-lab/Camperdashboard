@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
+import type { Bbox } from "@/lib/bbox";
 import type { LatLng } from "@/lib/geo";
 import { priceLabel } from "@/lib/format";
 import type { PlaceSummary } from "@/lib/types";
@@ -81,8 +82,10 @@ function popupNode(p: { slug: string; name: string; town: string; price: string;
 
 export function PlaceMap({
   places,
+  fitPlaces,
   highlight,
   onSelect,
+  onViewportChange,
   fitKey,
   route,
   user,
@@ -90,8 +93,12 @@ export function PlaceMap({
   className = "",
 }: {
   places: MapPlace[];
+  /** Plekken om naartoe te zoomen bij een nieuwe fitKey (standaard `places`) */
+  fitPlaces?: Pick<MapPlace, "lat" | "lng">[];
   highlight?: string | null;
   onSelect?: (slug: string) => void;
+  /** Zichtbaar gebied na elke verplaatsing of zoom (voor laden per bounding box) */
+  onViewportChange?: (bbox: Bbox) => void;
   /** Verandert deze waarde, dan zoomt de kaart naar de huidige plekken. */
   fitKey?: string;
   /** Lijn over de weg (lng/lat), bijvoorbeeld van de routeplanner */
@@ -106,9 +113,9 @@ export function PlaceMap({
   const userMarker = useRef<{ remove(): void } | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const latest = useRef({ places, onSelect, cluster });
+  const latest = useRef({ places, onSelect, onViewportChange, cluster });
   useEffect(() => {
-    latest.current = { places, onSelect, cluster };
+    latest.current = { places, onSelect, onViewportChange, cluster };
   });
 
   // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
@@ -237,6 +244,13 @@ export function PlaceMap({
             .setDOMContent(popupNode(props))
             .addTo(map);
         });
+        const reportViewport = () => {
+          if (!map) return;
+          const b = map.getBounds();
+          latest.current.onViewportChange?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+        };
+        map.on("moveend", reportViewport);
+        reportViewport();
         for (const id of ["clusters", "points"]) {
           map.on("mouseenter", id, () => map && (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", id, () => map && (map.getCanvas().style.cursor = ""));
@@ -277,7 +291,7 @@ export function PlaceMap({
     const map = mapRef.current;
     if (!ready || !map) return;
     const pts: [number, number][] = [
-      ...places.map((p) => [p.lng, p.lat] as [number, number]),
+      ...(fitPlaces ?? places).map((p) => [p.lng, p.lat] as [number, number]),
       ...(user ? [[user.lng, user.lat] as [number, number]] : []),
     ];
     if (!pts.length) return;

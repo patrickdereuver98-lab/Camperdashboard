@@ -4,6 +4,7 @@ import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
 import { isOpenOn } from "./search";
 import { PRERENDER_LIMIT, rankForPrerender } from "./prerender";
+import { inBbox, type Bbox } from "./bbox";
 import type { Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
@@ -132,6 +133,27 @@ export async function getSummaries(): Promise<PlaceSummary[]> {
 }
 
 /** Eén plek, apart gecachet: een on-demand render van een detailpagina laadt niet de hele dataset */
+/**
+ * Plekken binnen een (op het raster afgeronde) bounding box, via PostGIS (`places_in_bbox`, GIST-index).
+ * Gecachet per bbox: bezoekers die hetzelfde gebied bekijken delen één database-aanvraag.
+ */
+export async function getSummariesInBbox(bbox: Bbox): Promise<PlaceSummary[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places");
+  const [w, s, e, n] = bbox;
+  const { website_photos } = await getSettings();
+  return withFallback(
+    async () =>
+      (
+        await rest<Record<string, unknown>>(
+          `rpc/places_in_bbox?min_lng=${w}&min_lat=${s}&max_lng=${e}&max_lat=${n}&select=${PLACE_COLUMNS}`,
+        )
+      ).map((r) => toSummary(normalize(toCamel<Place>(r), website_photos))),
+    () => SNAP.places.filter((p) => inBbox(p, bbox)).map((p) => toSummary(normalize(p, website_photos))),
+  );
+}
+
 export async function getPlace(slug: string): Promise<Place | undefined> {
   "use cache";
   cacheLife("minutes");

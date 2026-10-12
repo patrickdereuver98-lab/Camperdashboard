@@ -1265,3 +1265,32 @@ select cron.schedule('scrape-enqueue', '*/30 * * * *', 'select public.enqueue_sc
 select cron.schedule('osm-collect', '* * * * *', 'select private.collect_osm()');
 
 select cron.schedule('scrape', '15 seconds', 'select private.call_pipeline(''{"action":"scrape","n":8}''::jsonb) where exists (select 1 from private.scrape_queue where done_at is null and next_attempt_at <= now() and attempts < 3)');
+
+-- ── Migratie 20261012_places_bbox (zie supabase/migrations/) ─────────────────────
+
+create extension if not exists postgis with schema extensions;
+
+alter table public.places
+  add column if not exists geom extensions.geometry(Point, 4326)
+  generated always as (extensions.st_setsrid(extensions.st_makepoint(lng, lat), 4326)) stored;
+
+create index if not exists places_geom_gist on public.places using gist (geom) where status = 'published';
+
+create or replace function public.places_in_bbox(min_lng double precision, min_lat double precision,
+                                                 max_lng double precision, max_lat double precision)
+returns setof public.places
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select p.*
+  from public.places p
+  where p.status = 'published'
+    and p.geom operator(extensions.&&) extensions.st_makeenvelope(min_lng, min_lat, max_lng, max_lat, 4326)
+  order by p.slug
+  limit 5000;
+$$;
+
+revoke all on function public.places_in_bbox(double precision, double precision, double precision, double precision) from public;
+grant execute on function public.places_in_bbox(double precision, double precision, double precision, double precision) to anon, authenticated;
