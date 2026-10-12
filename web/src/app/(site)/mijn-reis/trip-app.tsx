@@ -1,6 +1,5 @@
 "use client";
 
-import { ExpensesPanel } from "./expenses-panel";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -14,6 +13,7 @@ import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
 import { OpenChip, PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
+import { ExpensesPanel } from "./expenses-panel";
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
 type Stop = TripStop & { place: PlaceSummary };
@@ -220,6 +220,9 @@ export function TripApp() {
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
+          <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest">
+            <Icon name="chart" size={18} /> Statistieken
+          </Link>
         </div>
       </div>
 
