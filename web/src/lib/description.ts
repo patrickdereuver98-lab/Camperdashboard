@@ -39,9 +39,12 @@ export function cleanDescription(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   let s = decode(raw)
     // Losse links, ook "(https://svr.nl/)"; begint daarna een nieuwe zin, dan komt er een punt
-    .replace(/\s*\(?\bhttps?:\/\/[^\s)]+\)?(?=\s+[A-Z])/g, ".")
-    .replace(/\s*\(?\bhttps?:\/\/[^\s)]+\)?/gi, "")
-    .replace(/\s*\bwww\.[^\s)]+/gi, "")
+    .replace(/\s*\(?\s*\bhttps?:\/\/[^\s)]+\s*\)?(?=\s+[A-Z])/g, ".")
+    .replace(/\s*\(?\s*\bhttps?:\/\/[^\s)]+\s*\)?/gi, "")
+    .replace(/\s*\(?\s*\bwww\.[^\s)]+\s*\)?/gi, "")
+    // Wat van een link overblijft: "()", "( )" of een haakje voor een leesteken
+    .replace(/\s*\(\s*\)/g, "")
+    .replace(/\s*\(\s*(?=[.,;:!?])/g, "")
     .replace(/\s+/g, " ")
     .trim();
 

@@ -108,6 +108,8 @@ export function photoScore(url: string, original = url): number | null {
     return null;
   }
   if (NOT_THE_PLACE.test(path)) return null;
+  // Opmaak van het WordPress-thema of een plug-in (knoppen, prijsbolletjes, sliders) is nooit een foto van de plek
+  if (/\/wp-content\/(?:themes|plugins)\//i.test(path)) return null;
   // Formaten die een browser niet toont
   if (/\.(heic|heif|tiff?|bmp|psd)$/i.test(path)) return null;
   // Wix-stockfoto's (account 11062b, Unsplash-koppeling of zonder eigen account) zijn geen foto van de plek
