@@ -232,10 +232,10 @@ export function DestinationSearch({
           </label>
           <div
             className={`flex min-w-0 items-center gap-2 rounded-xl text-ink ring-2 ring-line transition-shadow focus-within:ring-forest ${
-              hero ? "h-14 bg-paper px-4 shadow-[inset_0_1px_3px_rgb(0_0_0/0.06)]" : "h-12 bg-surface px-3"
+              hero ? "h-14 bg-paper px-4 shadow-[inset_0_1px_3px_rgb(0_0_0/0.06)]" : "h-11 bg-surface px-3 sm:h-12"
             }`}
           >
-            <Icon name="search" size={hero ? 22 : 20} className="shrink-0 text-muted" />
+            <Icon name="search" size={hero ? 22 : 18} className="shrink-0 text-muted" />
             <input
               ref={inputRef}
               id={`${id}-q`}
@@ -247,7 +247,7 @@ export function DestinationSearch({
               autoComplete="off"
               enterKeyHint="search"
               value={text}
-              placeholder={hero ? "Plaats, streek of provincie" : "Plaats, provincie of naam van de plek"}
+              placeholder={hero ? "Plaats, streek of provincie" : "Plaats, provincie of naam"}
               onChange={(e) => {
                 setNotFound(null);
                 setText(e.target.value);
@@ -266,7 +266,7 @@ export function DestinationSearch({
                   setActive((a) => Math.max(0, a - 1));
                 } else if (e.key === "Escape") setOpen(false);
               }}
-              className="h-full min-w-0 flex-1 bg-transparent text-[17px] placeholder:text-muted focus:outline-none"
+              className={`h-full min-w-0 flex-1 bg-transparent placeholder:text-muted focus:outline-none ${hero ? "text-[17px]" : "text-base sm:text-[17px]"}`}
             />
             {text && (
               <button
@@ -290,7 +290,7 @@ export function DestinationSearch({
           className={`font-semibold transition-colors ${
             hero
               ? "flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-ember px-8 text-lg text-on-ember shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_8px_20px_-8px_var(--ember)] transition-[filter,transform] hover:brightness-105 active:scale-[0.98] lg:w-auto"
-              : "h-12 shrink-0 rounded-xl bg-forest px-5 text-on-forest hover:bg-forest-deep"
+              : "h-11 shrink-0 rounded-xl bg-forest px-4 text-on-forest hover:bg-forest-deep sm:h-12 sm:px-5"
           }`}
         >
           {hero && <Icon name="search" size={20} />}

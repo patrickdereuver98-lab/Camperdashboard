@@ -61,8 +61,8 @@ Typografie:
 ```
 
 Resultaten op mobiel: compacte rijen met foto (of landschap) links, naam, plaats, seizoensstatus, pictogrammen en
-de prijs rechtsonder. Filters in een bottom sheet met een live teller ("Toon 128 plekken"). Lijst en kaart wisselen
-via een zwevende knop boven de tabbalk.
+de prijs rechtsonder. Filters in een bottom sheet met een live teller ("Toon 128 plekken"). Boven de lijst één rij
+zoals bij Booking: Filters, Sorteren en Kaart (wisselt naar Lijst); geen zwevende knop meer over de kaarten.
 
 ## Beweging
 

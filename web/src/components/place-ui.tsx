@@ -257,7 +257,7 @@ export function PlaceCard({
     >
       <div
         className={`relative shrink-0 ${
-          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-28 self-stretch min-[400px]:w-32 sm:w-60"
+          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-[34%] max-w-36 self-stretch sm:w-60 sm:max-w-none"
         }`}
       >
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
@@ -268,22 +268,18 @@ export function PlaceCard({
         )}
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
-      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-2 right-2"}`}>
+      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-1 right-1 sm:top-2 sm:right-2"}`}>
         <SaveButton slug={place.slug} />
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col gap-2 ${stack ? "p-4" : "p-3 sm:p-4"}`}>
-        <div className={`min-w-0 ${stack ? "pr-12" : "pr-11"}`}>
-          <p className="text-sm text-muted">{place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}</p>
-          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-lg sm:text-xl"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-1.5 p-3 sm:gap-2 sm:p-4"}`}>
+        <div className={`min-w-0 ${stack ? "pr-12" : "pr-10 sm:pr-11"}`}>
+          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-[1.0625rem] sm:text-xl"}`}>
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
           </h3>
-          <p className="mt-0.5 flex items-center gap-1 text-sm text-ink-2 sm:text-base">
-            <Icon name="pin" size={15} className="shrink-0 text-muted" />
-            <span className="truncate">
-              {place.town}, {place.province}
-            </span>
+          <p className="mt-0.5 line-clamp-2 text-sm text-ink-2 sm:text-base">
+            {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}, {place.province}
           </p>
           {distance && <p className="mt-0.5 text-sm font-semibold text-forest">{distance}</p>}
         </div>
@@ -292,8 +288,8 @@ export function PlaceCard({
           <OpenChip place={place} />
           <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />
         </div>
-        <div className="mt-auto flex items-end justify-between gap-2">
-          <FacilitySigns place={place} max={stack ? 5 : 4} size={stack ? 28 : 26} />
+        <div className="mt-auto flex items-end justify-between gap-2 pt-0.5">
+          <FacilitySigns place={place} max={stack ? 5 : 3} size={stack ? 28 : 22} />
           <CardPrice place={place} />
         </div>
       </div>
@@ -304,7 +300,7 @@ export function PlaceCard({
 export function CardSkeleton() {
   return (
     <div className="flex overflow-hidden rounded-2xl bg-surface shadow-low">
-      <div className="h-40 w-28 shrink-0 animate-pulse bg-sunken min-[400px]:w-32 sm:h-48 sm:w-60" />
+      <div className="h-36 w-[34%] max-w-36 shrink-0 animate-pulse bg-sunken sm:h-48 sm:w-60 sm:max-w-none" />
       <div className="flex-1 space-y-3 p-3 sm:p-4">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
         <div className="h-6 w-3/4 animate-pulse rounded bg-sunken" />
@@ -327,8 +323,8 @@ export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure"
   const style =
     kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold ${style}`}>
-      <Sign name="clock" size={18} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm leading-tight font-semibold ${style}`}>
+      <Sign name="clock" size={16} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
       {label}
     </span>
   );
@@ -338,10 +334,16 @@ function CardPrice({ place }: { place: PlaceSummary }) {
   const price = cardPrice(place);
   if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
   return (
-    <div className="ml-auto shrink-0 text-right">
+    <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
-      <p className="font-display text-2xl leading-none font-semibold text-ink">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
-      {(place.priceEur ?? 0) > 0 && <p className="mt-1 text-sm text-muted">per nacht{price.extras ? " + extra's" : ""}</p>}
+      <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
+      {(place.priceEur ?? 0) > 0 && (
+        <p className="mt-1 text-sm text-muted">
+          per nacht
+          {/* Op een smalle kaart op een eigen regel, anders valt het buiten de kaart */}
+          {price.extras && <span className="block sm:inline"> + extra&apos;s</span>}
+        </p>
+      )}
     </div>
   );
 }
