@@ -15,7 +15,7 @@ const TARGET = 1600;
  * knoppen, opvulling. Een eigen logo mag wel; dat zetten we achteraan en tonen we passend (looksLikeGraphic).
  */
 const NOT_THE_PLACE =
-  /embleem|emblem|keurmerk|svr[._-]?\d*\.|svr_|\/svr\.|anwb|acsi|zoover|tripadvisor|campercontact|park4night|booking[._-]?com|google|facebook|instagram|whatsapp|youtube|fietserswelkom|fietsers-welkom|wandelaarswelkom|groene[._-]?sleutel|green[._-]?key|award|sterren|stars?\b|rating|\breviews?\b|drapeaux|\bflags?\b|\bvlag(?:gen|getje)?\b|dummy|placeholder|spacer|blank\.|pixel|loader|loading|icon|sprite|button|knop|banner-ad|polaroid|qr[._-]|tumbnail|thumbnail-video|video-thumb|play[._-]?button|signature|handtekening|mascotte|cropped-favicon/i;
+  /embleem|emblem|keurmerk|svr[._-]?\d*\.|svr_|\/svr\.|anwb|acsi|zoover|tripadvisor|campercontact|park4night|booking[._-]?com|google|facebook|instagram|whatsapp|youtube|fietserswelkom|fietsers-welkom|wandelaarswelkom|groene[._-]?sleutel|green[._-]?key|award|sterren|stars?\b|rating|\breviews?\b|drapeaux|\bflags?\b|\bvlag(?:gen|getje)?\b|dummy|placeholder|spacer|blank\.|pixel|loader|loading|icon|sprite|button|knop|banner-ad|polaroid|qr[._-]|tumbnail|thumbnail-video|video-thumb|play[._-]?button|signature|handtekening|mascotte|cropped-favicon|sticker/i;
 
 /** Kies per beeldbank de grootste versie die de URL toelaat */
 export function upgradePhotoUrl(raw: string): string {
@@ -108,6 +108,11 @@ export function photoScore(url: string, original = url): number | null {
     return null;
   }
   if (NOT_THE_PLACE.test(path)) return null;
+  // Video's en beelden van keurmerken, boekingssites en sociale media (svr.nl/px/ok.jpg, Facebook-cdn) zijn geen foto van de plek
+  if (/\.(webm|mp4|mov|m4v|ogv|avi)$/i.test(path)) return null;
+  if (/(^|\.)(svr\.nl|anwb\.nl|acsi\.(eu|nl|com)|zoover\.(nl|com|be)|campercontact\.com|park4night\.com|tripadvisor\.[a-z.]+|booking\.com|google\.[a-z.]+|googleusercontent\.com|facebook\.com|fbcdn\.net|instagram\.com)$/i.test(new URL(url).hostname)) return null;
+  // Bestand dat alleen "svr" heet (met een maat of kwaliteit erachter) is het SVR-logo
+  if (/\/svr(?:[-_.](?:high|low|small|large|klein|groot|\d+))?\.[a-z]+$/i.test(path)) return null;
   // Opmaak van het WordPress-thema of een plug-in (knoppen, prijsbolletjes, sliders) is nooit een foto van de plek
   if (/\/wp-content\/(?:themes|plugins)\//i.test(path)) return null;
   // Formaten die een browser niet toont

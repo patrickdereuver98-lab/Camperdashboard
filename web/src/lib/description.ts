@@ -17,13 +17,13 @@ function decode(s: string) {
 }
 
 /** Tekst die geen beschrijving van de plek is */
-const BOILERPLATE = /joomla|wordpress|just another|lorem ipsum|cookie|javascript|coming soon|under construction|website (is )?in onderhoud|page not found|pagina niet gevonden|copyright|alle rechten/i;
+const BOILERPLATE = /joomla|wordpress|just another|lorem ipsum|cookie|javascript|coming soon|under construction|website (is )?in onderhoud|page not found|pagina niet gevonden|copyright|alle rechten|stel (hieronder )?(je|jouw|uw) vraag|contactformulier|vul (het|dit) formulier|bel (ons )?gerust/i;
 
 /**
  * Geen lopende tekst: SEO-titels ("Camping X | Veluwe ✓ Wifi ✓"), prijslijsten (die staan al in het prijsblok en
  * kunnen verouderd zijn), telefoonnummers, kapotte tekens, of stukjes met "..." ertussen.
  */
-const SCRAPED = /[|✓✔•►]|€\s?\d|\d+[.,]\d{2}\s?(euro|eur)\b|\b0\d[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}\b|Ã|â€|\s\.\.\.\s|\s…\s|%$|password|wachtwoord/i;
+const SCRAPED = /[|✓✔•►]|€\s?\d|\d+[.,]\d{2}\s?(euro|eur)\b|\b0\d[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}\b|\b0\d{2,3}\s?[-–]\s?\d{6,7}\b|\+31\s?\d|(?:\s[–-]\s.*){2}|\b(?:TIP|NIEUW|LET OP):|Ã|â€|\s\.\.\.\s|\s…\s|%$|password|wachtwoord/i;
 /** Aan elkaar geplakte stukken van de pagina: "CamperplaatsDe Bronckhorst", "ErkemederstrandDeze" */
 const GLUED = /[a-zà-ÿ](?:De|Het|Een|Deze|Dit|Onze|Wij|Welkom|Op|In|Met|Bij)\s/;
 /** Een zin die met een kleine letter begint, is een los stuk van de pagina ("…camping. of even lekker eten.") */
