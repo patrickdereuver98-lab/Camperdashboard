@@ -26,6 +26,8 @@ const BOILERPLATE = /joomla|wordpress|just another|lorem ipsum|cookie|javascript
 const SCRAPED = /[|✓✔•►]|€\s?\d|\d+[.,]\d{2}\s?(euro|eur)\b|\b0\d[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}\b|Ã|â€|\s\.\.\.\s|\s…\s|%$|password|wachtwoord/i;
 /** Aan elkaar geplakte stukken van de pagina: "CamperplaatsDe Bronckhorst", "ErkemederstrandDeze" */
 const GLUED = /[a-zà-ÿ](?:De|Het|Een|Deze|Dit|Onze|Wij|Welkom|Op|In|Met|Bij)\s/;
+/** Een zin die met een kleine letter begint, is een los stuk van de pagina ("…camping. of even lekker eten.") */
+const FRAGMENT = /^[a-zà-ÿ]|[.!?]\s+[a-zà-ÿ]/;
 /** Drie of meer woorden in hoofdletters achter elkaar */
 const SHOUTING = /\b[A-Z]{3,}\s+[A-Z]{3,}\s+[A-Z]{3,}\b/;
 
@@ -54,6 +56,8 @@ export function cleanDescription(raw: string | undefined): string | undefined {
 
   // Een punt zonder spatie erachter ("heuvelland.Met slechts") is een gemiste zinsgrens
   s = s.replace(/([a-zà-ÿ)])\.([A-Z])/g, "$1. $2").trim();
+  // Knopteksten als zin ("Lees hier de leukste activiteiten.", "Klik hier voor de tarieven.") horen er niet bij
+  s = s.replace(/(^|[.!?]\s+)(?:Lees|Klik|Bekijk|Kijk|Ontdek|Boek|Reserveer|Vraag)\s+(?:hier|nu|direct|snel|meer|verder|online)\b[^.!?]*[.!?]?/g, "$1").replace(/\s+/g, " ").trim();
 
   // Een korte zin zonder punt is meestal gewoon af; een lange is waarschijnlijk afgekapt (meta-omschrijvingen
   // worden rond 155 tekens afgebroken)
@@ -66,7 +70,7 @@ export function cleanDescription(raw: string | undefined): string | undefined {
     s = s.slice(0, end + 1).trim();
   }
 
-  if (s.length < 40 || BOILERPLATE.test(s) || SCRAPED.test(s) || GLUED.test(s) || SHOUTING.test(s)) return undefined;
+  if (s.length < 40 || BOILERPLATE.test(s) || SCRAPED.test(s) || GLUED.test(s) || SHOUTING.test(s) || FRAGMENT.test(s)) return undefined;
   // Geen Nederlandse tekst (Duitse of Engelse omschrijving): niet tonen, de site is Nederlands eerst
   const nl = s.match(DUTCH)?.length ?? 0;
   const other = s.match(FOREIGN)?.length ?? 0;

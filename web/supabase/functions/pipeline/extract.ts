@@ -73,7 +73,8 @@ function introText(html: string): string {
   let text = "";
   for (const m of body.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
     const p = decode(m[1].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
-    if (p.length < 60 || !/[.!?]/.test(p)) continue;
+    // Alleen gewone alinea's: hoofdletter vooraan, minstens één hele zin, geen knoptekst ("Lees hier …")
+    if (p.length < 60 || !/^[A-ZÀ-Ý0-9'‘"“]/.test(p) || !/[.!?]/.test(p) || /^(lees|klik|bekijk|boek|reserveer)\b/i.test(p)) continue;
     text = text ? `${text} ${p}` : p;
     if (text.length >= 250) break;
   }
