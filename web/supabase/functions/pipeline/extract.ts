@@ -83,7 +83,11 @@ const NOT_A_PHOTO = /logo|icon|favicon|sprite|avatar|placeholder|banner-ad|badge
 function absolute(src: string | undefined, base: URL): string | undefined {
   if (!src) return undefined;
   try {
-    const u = new URL(decode(src.split(" ")[0]), base);
+    let raw = decode(src.trim().split(/\s+/)[0]);
+    // Sommige sites zetten een volledig adres als relatief pad: "https://site.nl/https://cdn…/foto.jpg"
+    const last = raw.lastIndexOf("http");
+    if (last > 0 && /^https?:\/\//.test(raw.slice(last))) raw = raw.slice(last);
+    const u = new URL(raw, base);
     if (u.protocol !== "https:") return undefined;
     if (!/\.(jpe?g|webp|png|avif)(\?|$)/i.test(u.pathname + u.search) && !/image|img|photo|foto|media|upload|wp-content/i.test(u.href)) return undefined;
     if (/\.svg($|\?)/i.test(u.pathname) || /\.gif($|\?)/i.test(u.pathname) || NOT_A_PHOTO.test(u.pathname)) return undefined;
@@ -96,12 +100,12 @@ function absolute(src: string | undefined, base: URL): string | undefined {
 /** Grote foto's uit de pagina zelf (hero, slider, galerij), geen logo's of iconen */
 function contentImages(html: string, base: URL): string[] {
   const out: string[] = [];
-  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
+  for (const m of html.matchAll(/<(?:img|source)\b[^>]*>/gi)) {
     const tag = m[0];
+    // srcset: "a.jpg 640w, b.jpg 1280w" → grootste kandidaat, zonder de breedte-aanduiding
+    const set = /\s(?:data-)?srcset=["']([^"']+)["']/i.exec(tag)?.[1]?.split(",").pop()?.trim().split(/\s+/)[0];
     const src =
-      /\sdata-(?:src|lazy-src|original)=["']([^"']+)["']/i.exec(tag)?.[1] ??
-      /\ssrcset=["']([^"']+)["']/i.exec(tag)?.[1]?.split(",").pop()?.trim() ??
-      /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
+      /\sdata-(?:src|lazy-src|original)=["']([^"']+)["']/i.exec(tag)?.[1] ?? set ?? /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
     if (!src || src.startsWith("data:")) continue;
     const w = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
     const h = Number(/\sheight=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
@@ -111,8 +115,16 @@ function contentImages(html: string, base: URL): string[] {
     if (url && !out.includes(url)) out.push(url);
     if (out.length >= 8) break;
   }
-  const order = EXTRA_KINDS.map((k) => k.label);
-  return out.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+  // Achtergrondfoto's van headers en sliders (style="background-image:url(…)", data-bg, data-background)
+  if (out.length < 8) {
+    const bg = /background(?:-image)?\s*:\s*url\(\s*(?:&quot;|["'])?([^"')&]+?)(?:&quot;|["'])?\s*\)|\sdata-(?:bg|background|background-image)=["']([^"']+)["']/gi;
+    for (const m of html.matchAll(bg)) {
+      const url = absolute(m[1] ?? m[2], base);
+      if (url && !out.includes(url) && !NOT_A_PHOTO.test(url)) out.push(url);
+      if (out.length >= 8) break;
+    }
+  }
+  return out;
 }
 
 function money(s: string): number {

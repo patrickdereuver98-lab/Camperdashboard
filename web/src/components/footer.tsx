@@ -6,9 +6,12 @@ import { CookieSettingsLink } from "./cookie-banner";
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
-    title: "Ontdekken",
+    title: "Camperplaatsen",
     links: [
       { href: "/zoeken", label: "Alle camperplaatsen" },
+      { href: "/zonder-vertrektijd", label: "Zonder vertrektijd" },
+      { href: "/uitslapers", label: "Voor uitslapers" },
+      { href: "/overige-plekken", label: "Overige plekken" },
       { href: "/dichtbij", label: "Plekken dichtbij" },
       { href: searchHref({ free: true }), label: "Gratis overnachten" },
       { href: "/mijn-reis", label: "Mijn reis plannen" },
@@ -19,6 +22,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/veelgestelde-vragen", label: "Veelgestelde vragen" },
       { href: "/contact", label: "Contact en support" },
+      { href: "/doe-mee", label: "Doe mee" },
       { href: "/plek-aanmelden", label: "Plek aanmelden" },
       { href: "/plek-aanmelden?soort=eigenaar", label: "Voor eigenaren" },
     ],
@@ -48,8 +52,8 @@ export function Footer() {
             <span className="font-display text-xl font-semibold text-forest">VrijStaan</span>
           </Link>
           <p className="mt-4 max-w-xs text-ink-2">
-            Onafhankelijke gids voor camperplaatsen in Nederland. We tonen alleen plekken waarvan de belangrijkste
-            gegevens bekend zijn, uit OpenStreetMap en de eigen website van de plek.
+            Onafhankelijke gids voor camperplaatsen in Nederland. Je ziet hier alleen plekken waarvan we de belangrijkste
+            gegevens kennen.
           </p>
         </div>
         {COLUMNS.map((c) => (

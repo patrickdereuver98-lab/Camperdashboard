@@ -37,7 +37,7 @@ export function ReportForm() {
     const reason = REASONS.find((r) => r.value === f.get("reason")) ?? REASONS[4];
     const url = fullUrl(String(f.get("url") ?? ""));
     const explanation = String(f.get("explanation") ?? "").trim();
-    const subject = `Melding: ${reason.short} – ${url}`;
+    const subject = `Melding over ${reason.short}: ${url}`;
     const body = [
       "Melding van illegale of onjuiste inhoud (art. 16 DSA)",
       `Reden: ${reason.label}`,
@@ -71,12 +71,13 @@ export function ReportForm() {
         </p>
         <p className="mt-2 text-ink-2">Dank je wel. Dit gebeurt er nu:</p>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2">
-          <li>Iemand van ons bekijkt je melding zorgvuldig. We gebruiken hiervoor geen automatische systemen.</li>
+          <li>Iemand van ons bekijkt je melding. Daar gebruiken we geen automatische systemen voor.</li>
           <li>We reageren zo snel mogelijk, uiterlijk binnen 5 werkdagen.</li>
-          <li>Je hoort wat we besluiten, waarom, en hoe je bezwaar kunt maken als je het er niet mee eens bent.</li>
+          <li>Je hoort wat we besluiten en waarom. Ben je het er niet mee eens, dan lees je ook hoe je bezwaar maakt.</li>
         </ul>
         <p className="mt-3 text-ink-2">
-          Bewaar deze persoonlijke link. Daar zie je de status en ons antwoord, en kun je reageren, ook zonder account.
+          Bewaar de link hieronder. Daar zie je hoe het ervoor staat en wat we antwoorden. Je kunt er ook reageren, zonder
+          account.
         </p>
         <Link href={`/support/${done.token}`} className="mt-4 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
           Naar mijn melding
@@ -110,7 +111,7 @@ export function ReportForm() {
           placeholder="https://vrijstaan.nl/plek/…"
           className={field}
         />
-        <span className="mt-1 block text-sm text-muted">Het precieze adres van de pagina. Gaat het om één review of foto, zeg in je uitleg welke.</span>
+        <span className="mt-1 block text-sm text-muted">Het precieze adres van de pagina. Gaat het om één review of foto, schrijf dan in je uitleg welke.</span>
       </label>
       <label className="block">
         <span className="mb-1.5 block font-semibold">Uitleg</span>
@@ -121,7 +122,7 @@ export function ReportForm() {
           maxLength={4000}
           rows={6}
           className={`${field} h-auto py-2`}
-          placeholder="Waarom is deze inhoud volgens jou illegaal of onjuist? Noem bij auteursrecht ook wie de rechthebbende is."
+          placeholder="Leg uit waarom deze inhoud volgens jou illegaal of onjuist is. Gaat het om auteursrecht, noem dan ook wie de rechthebbende is."
         />
       </label>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -135,9 +136,9 @@ export function ReportForm() {
         </label>
       </div>
       <p className="text-sm text-muted">
-        De wet (art. 16 Digital Services Act) vraagt je naam en e-mailadres bij een melding. We gebruiken ze alleen om je
-        melding te behandelen en je te laten weten wat we besluiten. Gaat het om seksueel misbruik van kinderen? Dan hoef je je
-        naam niet te geven; vul &quot;Anoniem&quot; in. Een e-mailadres hebben we nodig om je te kunnen antwoorden. Zie de{" "}
+        De wet (art. 16 Digital Services Act) vraagt bij een melding je naam en e-mailadres. We gebruiken ze alleen om je
+        melding te behandelen en je te laten weten wat we besluiten. Gaat het om seksueel misbruik van kinderen, dan hoef je
+        je naam niet te geven. Vul dan &quot;Anoniem&quot; in. Je e-mailadres hebben we nodig om je te kunnen antwoorden. Zie de{" "}
         <Link href="/privacy" className="underline">privacyverklaring</Link>.
       </p>
       <label className="flex items-start gap-3">

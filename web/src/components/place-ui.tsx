@@ -8,12 +8,21 @@ import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
+import { SUPABASE_URL } from "@/lib/env";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
 import { Landscape } from "./landscape";
 import { Sign, type SignName } from "./sign";
 
 // ── Foto met nette terugval ─────────────────────────────────────────────────
+
+/**
+ * Externe foto's lopen via wsrv.nl: een gratis, open-source beelddienst die de foto verkleint (WebP, juiste breedte)
+ * en in de cache houdt. Scheelt op een telefoon vaak megabytes per foto. Lukt dat niet, dan het origineel.
+ */
+export function photoProxy(src: string, width: number): string {
+  return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${width}&fit=cover&output=webp&q=72&we`;
+}
 
 export function PlacePhoto({
   src,
@@ -32,18 +41,19 @@ export function PlacePhoto({
   sizes?: "small" | "large";
   onFail?: () => void;
 }) {
-  const [failed, setFailed] = useState(false);
+  // 0 = verkleinde versie, 1 = origineel van de site, 2 = mislukt (tekening)
+  const [stage, setStage] = useState(0);
   const ref = useRef<HTMLImageElement>(null);
-  const fail = useCallback(() => {
-    setFailed(true);
-    onFail?.();
-  }, [onFail]);
+  const next = useCallback(() => setStage((s) => s + 1), []);
+  useEffect(() => {
+    if (stage >= 2) onFail?.();
+  }, [stage, onFail]);
   // Een foto die al vóór de hydratatie faalde, mist het onError-event
   useEffect(() => {
     const img = ref.current;
-    if (img?.complete && img.naturalWidth === 0) fail();
-  }, [fail]);
-  if (!src || failed) {
+    if (img?.complete && img.naturalWidth === 0) next();
+  }, [next, stage]);
+  if (!src || stage >= 2) {
     // Geen foto: een getekend landschap (duidelijk een illustratie, geen nepfoto)
     return (
       <div className={`relative overflow-hidden ${className}`} role="img" aria-label={`${alt} (nog geen foto)`}>
@@ -56,17 +66,21 @@ export function PlacePhoto({
       </div>
     );
   }
+  const w = sizes === "large" ? 1280 : 640;
+  const proxied = stage === 0 && !src.startsWith(`${SUPABASE_URL}/storage/`);
   return (
-    // Externe foto's van de plek zelf; geen optimalisatieproxy zodat de bron zichtbaar blijft
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      key={stage}
       ref={ref}
-      src={src}
+      src={proxied ? photoProxy(src, w) : src}
+      srcSet={proxied ? `${photoProxy(src, w / 2)} ${w / 2}w, ${photoProxy(src, w)} ${w}w` : undefined}
+      sizes={sizes === "large" ? "100vw" : "(min-width: 640px) 360px, 50vw"}
       alt={alt}
-      loading="lazy"
+      loading={sizes === "large" ? "eager" : "lazy"}
       decoding="async"
       referrerPolicy="no-referrer"
-      onError={fail}
+      onError={next}
       className={`object-cover ${className}`}
     />
   );

@@ -27,6 +27,7 @@
 | Plek | `/plek/<slug>` | Beslissen: vertrek, open, prijs en extra kosten, voorzieningen, contact, route, reviews | Volledige plek, reviews, plekken in de buurt |
 | Dichtbij | `/dichtbij` | Plekken rond je locatie op rijtijd | Locatie (toestemming), samenvattingen, `/api/distances` |
 | Mijn reis | `/mijn-reis` | Bewaarde plekken, volgorde, nachten, kosten, route, delen | `localStorage`, samenvattingen, `/api/route` |
+| Doe mee | `/doe-mee` | Camperaars (o.a. de Facebookgroep) vullen vertrektijden in van plekken waar die onbekend is, of melden een plek | Samenvattingen; formulier → `submit_place` (soort `correctie`, onderwerp `vertrektijd`) → Beheer → Inzendingen |
 | Plek aanmelden | `/plek-aanmelden` | Nieuwe plek of eigenaarsclaim indienen | Formulier → `submit_place` |
 | Contact | `/contact` | Vraag stellen, ticket maken | Formulier → `create_ticket` |
 | Ticket | `/support/<token>` | Antwoord lezen en reageren | `get_ticket`, `reply_ticket` |

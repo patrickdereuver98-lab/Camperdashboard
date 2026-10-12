@@ -33,7 +33,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 | Zekerheid over vertrektijden | Gepubliceerde plekken met bekende vertrekregel | ±800 van 3.596 in de database | 40% van de gepubliceerde plekken |
 | Plekken zonder vaste vertrektijd | Plekken met vertrekregel "vrij" of "per 24 uur" | 32 | 150 (via websites, eigenaren en bezoekers) |
 | Transparante prijzen | Gepubliceerde plekken met prijs of prijs per persoon | ±57% | 75% |
-| Bruikbare dekking | Gepubliceerde plekken | 883–1.263 (drempel tijdelijk 55%) | ±1.000 plekken van goede kwaliteit |
+| Bruikbare dekking | Gepubliceerde plekken | 1.509 (drempel 0,45, 12 oktober 2026) | Zoveel mogelijk plekken met contact en 2 van 4 kernfeiten |
 | Vertrouwen | Goedgekeurde reviews | 0 | 200 |
 | Gebruik | Bezoeken per week (alleen met toestemming gemeten) | nog niet live | wordt vastgesteld na livegang |
 
@@ -107,7 +107,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 1. ~~Hoe streng met vertrektijden?~~ **Besloten (11 oktober 2026):** aparte pagina's "Zonder vertrektijd",
    "Uitslapers" (vertrek 12:00 of later) en "Overige". Aangevuld 11 oktober: binnen Overige onderscheid tussen
    "ruim" (11:00 tot 12:00, de norm) en "vroeg" (vóór 11:00, ongebruikelijk). Bronzinnen niet meer op de site.
-2. **Definitieve publicatiedrempel** na de herscrape (nu tijdelijk 55%).
+2. ~~Definitieve publicatiedrempel~~ **Besloten:** 0,45 (1.509 plekken), omdat het aantal plekken voorgaat.
 3. ~~Websitefoto's~~ **Besloten (11 oktober 2026):** overal aan, met bronvermelding en verwijdering op verzoek via
    Meld inhoud. Uit te zetten in beheer (`website_photos`).
 4. **Bedrijfsvorm en gegevens** (naam, adres, KvK, btw) voor privacy en voorwaarden.

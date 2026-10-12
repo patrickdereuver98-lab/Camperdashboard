@@ -244,9 +244,10 @@ export default function PrivacyPage() {
           <li>De lettertypes staan op onze eigen server. Er gaan geen verzoeken naar Google Fonts.</li>
           <li>
             We tonen foto&apos;s van Wikimedia Commons, uit onze eigen opslag en van de openbare website van de plek. Op
-            foto&apos;s van Wikimedia en van websites staat klein van wie ze zijn. Je browser haalt deze foto&apos;s
-            rechtstreeks op bij Wikimedia, uit onze opslag bij Supabase of bij de website van de plek. Die server ziet dan je
-            IP-adres.
+            foto&apos;s van Wikimedia en van websites staat klein van wie ze zijn. Foto&apos;s van buiten
+            laten we verkleinen door wsrv.nl, een gratis beelddienst (open source, via Cloudflare), zodat ze snel laden op je
+            telefoon. Je browser haalt de foto dan op bij wsrv.nl, en als dat niet lukt bij Wikimedia, uit onze opslag bij
+            Supabase of bij de website van de plek. Die server ziet dan je IP-adres. wsrv.nl bewaart geen cookies.
           </li>
         </ul>
       </Section>
@@ -302,8 +303,8 @@ export default function PrivacyPage() {
             rijtijd laat berekenen.
           </li>
           <li>
-            <strong>OpenFreeMap</strong>, <strong>Wikimedia</strong> en de website van een plek zien je IP-adres als je
-            browser daar kaarttegels of foto&apos;s laadt.
+            <strong>OpenFreeMap</strong>, <strong>wsrv.nl</strong>, <strong>Wikimedia</strong> en de website van een plek
+            zien je IP-adres als je browser daar kaarttegels of foto&apos;s laadt.
           </li>
         </ul>
         <p>Als de wet ons verplicht, geven we gegevens aan een bevoegde instantie.</p>

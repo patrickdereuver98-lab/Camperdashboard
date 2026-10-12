@@ -65,7 +65,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   if (loadError && ticket === undefined)
     return (
       <div className="mx-auto max-w-xl px-4 pt-12 text-center">
-        <h1 className="font-display text-2xl font-semibold">Je bericht kon niet worden geladen</h1>
+        <h1 className="font-display text-2xl font-semibold">We konden je bericht niet laden</h1>
         <p className="mt-2 text-ink-2">{loadError}</p>
         <button type="button" onClick={load} className="mt-6 h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
           Opnieuw proberen
@@ -77,7 +77,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-12 text-center">
         <h1 className="font-display text-2xl font-semibold">Bericht niet gevonden</h1>
-        <p className="mt-2 text-ink-2">Controleer of je de volledige link hebt gebruikt.</p>
+        <p className="mt-2 text-ink-2">Kijk of je de hele link hebt gebruikt. Plak hem anders opnieuw in je browser.</p>
       </div>
     );
 

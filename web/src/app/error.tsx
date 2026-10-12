@@ -16,7 +16,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
         <Icon name="alert" size={28} className="text-alert" />
         <h1 className="mt-3 font-display text-2xl font-semibold">Er ging iets mis</h1>
         <p className="mt-2 text-ink-2">
-          Deze pagina kon niet worden geladen. We hebben de fout automatisch gemeld. Probeer het nog een keer.
+          Deze pagina laadde niet. We krijgen automatisch een melding van de fout. Probeer het nog een keer.
         </p>
       </div>
       <div className="mt-6 grid gap-3">
