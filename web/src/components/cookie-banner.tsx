@@ -60,8 +60,8 @@ export function CookieBanner() {
         Cookies en statistieken
       </h2>
       <p className="mt-1.5 text-ink-2">
-        We gebruiken alleen wat nodig is om de site te laten werken. Met jouw toestemming tellen we ook anoniem hoe de site
-        wordt gebruikt, zonder cookies van derden. <Link href="/cookies" className="font-semibold text-forest underline">Meer weten</Link>
+        We slaan alleen op wat nodig is om de site te laten werken. Geef je toestemming, dan tellen we ook hoe de site wordt
+        gebruikt. Dat doen we zonder IP-adres en zonder cookies van derden. <Link href="/cookies" className="font-semibold text-forest underline">Meer weten</Link>
       </p>
       {details && (
         <div className="mt-4 space-y-3 rounded-xl bg-sunken p-4">
@@ -80,9 +80,10 @@ export function CookieBanner() {
               className="mt-1 h-5 w-5 accent-[var(--forest)]"
             />
             <span>
-              <span className="font-semibold">Anonieme statistieken</span>
+              <span className="font-semibold">Statistieken</span>
               <span className="block text-sm text-muted">
-                Welke pagina&apos;s en zoekopdrachten populair zijn. Opgeslagen in onze eigen database in de EU, zonder IP-adres.
+                We tellen welke pagina&apos;s en zoekopdrachten veel worden gebruikt. Dat staat in onze eigen database in de EU,
+                zonder IP-adres.
               </span>
             </span>
           </label>

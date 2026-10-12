@@ -60,7 +60,7 @@ export function SubmitForm() {
         <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
-        <p className="mt-2 text-ink-2">We controleren de gegevens en zetten de plek online zodra alles klopt. Dat duurt meestal een paar werkdagen.</p>
+        <p className="mt-2 text-ink-2">We controleren de gegevens en zetten de plek online als alles klopt. Dat duurt meestal een paar werkdagen.</p>
       </div>
     );
 
@@ -135,7 +135,7 @@ export function SubmitForm() {
           </label>
           <label className="block">
             <span className="mb-1.5 block font-semibold">Open</span>
-            <input name="season" placeholder="bijv. april – oktober" className={field} />
+            <input name="season" placeholder="bijv. april t/m oktober" className={field} />
           </label>
         </div>
         <p className="text-sm text-muted">Tik aan wat er zeker is. Wat je niet aantikt, laten we op onbekend staan.</p>
@@ -179,7 +179,7 @@ export function SubmitForm() {
             <input name="contact_email" type="email" required={owner} className={field} autoComplete="email" />
           </label>
         </div>
-        <p className="text-sm text-muted">Alleen voor vragen over je aanmelding. Niet zichtbaar op de site.</p>
+        <p className="text-sm text-muted">We gebruiken dit alleen als we een vraag hebben over je aanmelding. Het staat niet op de site.</p>
       </fieldset>
 
       <input name="website_hp" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
