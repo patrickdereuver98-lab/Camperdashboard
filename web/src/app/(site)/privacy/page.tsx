@@ -16,6 +16,12 @@ const ROWS: string[][] = [
     "Tot je je account verwijdert",
   ],
   [
+    "Foto's die je toevoegt",
+    "De foto (verkleind in je browser, zonder locatie- of cameragegevens), het bijschrift, de naam die je bij de foto zet, je account-id en het tijdstip",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je plaatst de foto zelf",
+    "Zolang de foto online staat of tot je om verwijdering vraagt; bij het verwijderen van je account blijft een goedgekeurde foto staan zonder koppeling aan jou",
+  ],
+  [
     "Statistieken",
     "Naam van de gebeurtenis (pagina bekeken, zoekopdracht, plek bekeken, link naar buiten, route, bewaard), het pad van de pagina, een klein detail zoals de zoekterm of de plek, een willekeurig sessienummer en het tijdstip",
     "Toestemming (art. 6 lid 1 sub a)",

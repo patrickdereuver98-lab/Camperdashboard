@@ -12,6 +12,7 @@ import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
 import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
+import { PhotoUpload } from "./photo-upload";
 
 // Alleen de top-100 tijdens de build: alle plekken prerenderen liep op Vercel stuk (RangeError). De rest wordt bij het
 // eerste bezoek gerenderd ("blocking": params worden buiten <Suspense> afgewacht) en daarna uit de cache geserveerd.
@@ -111,6 +112,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           <span className="truncate text-ink-2">{place.name}</span>
         </nav>
         <Gallery slug={place.slug} name={place.name} photos={photos} kind={place.kind} town={place.town} />
+      </div>
+      <div className="mx-auto min-h-14 max-w-6xl px-4 pt-3 sm:px-6">
+        <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
       </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">

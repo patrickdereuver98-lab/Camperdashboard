@@ -15,6 +15,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/support", label: "Support", icon: "inbox" },
   { href: "/admin/inzendingen", label: "Inzendingen", icon: "plus" },
   { href: "/admin/reviews", label: "Reviews", icon: "star" },
+  { href: "/admin/fotos", label: "Foto's", icon: "eye" },
   { href: "/admin/faq", label: "FAQ", icon: "help" },
   { href: "/admin/logs", label: "Logs", icon: "log" },
   { href: "/admin/instellingen", label: "Instellingen", icon: "settings" },
