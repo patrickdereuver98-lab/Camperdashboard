@@ -15,11 +15,11 @@ const PLACE_COLUMNS =
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
   "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras";
 
-/** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten, beschrijvingen of tijdregels */
+/** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten of beschrijvingen */
 const SUMMARY_COLUMNS =
   "id,slug,name,kind,lat,lng,town,province,price_eur,price_note,tourist_tax_included,power,water,dump_station,toilet," +
   "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
-  "completeness,departure,checkout_until,price_extras";
+  "completeness,departure,checkout_until,price_extras,checkin_from,access_24h,access_hours";
 
 async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
   const out: T[] = [];
@@ -118,6 +118,7 @@ const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
   "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
   "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "priceExtras", "imageCredit",
+  "checkinFrom", "access24h", "accessHours",
 ];
 
 export function toSummary(p: Place): PlaceSummary {

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
 import { departureKind, FACILITIES, openStatus } from "@/lib/search";
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
-import { formatKm } from "@/lib/geo";
+import { distanceKm, formatKm } from "@/lib/geo";
+import { useMyLocation } from "@/lib/my-location";
 import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
 import { useHydrated } from "@/lib/use-media";
@@ -150,7 +151,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
 
 // ── Bewaren ─────────────────────────────────────────────────────────────────
 
-export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?: "icon" | "full" }) {
+export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?: "icon" | "full" | "plain" }) {
   const trip = useTrip();
   const saved = trip.has(slug);
   const toggle = (e: React.MouseEvent) => {
@@ -180,7 +181,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
       onClick={toggle}
       aria-pressed={saved}
       aria-label={saved ? "Verwijderen uit mijn reis" : "Bewaren in mijn reis"}
-      className="grid h-11 w-11 place-items-center rounded-full bg-surface/95 shadow-lift transition-transform active:scale-90"
+      className={`grid h-11 w-11 place-items-center rounded-full transition-transform active:scale-90 ${variant === "plain" ? "" : "bg-surface/95 shadow-lift"}`}
     >
       <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop text-alert" : "text-ink"} />
     </button>
@@ -208,17 +209,25 @@ function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max
 // ── Resultaatkaart ──────────────────────────────────────────────────────────
 
 /** Seizoensstatus als klein label; alleen als het seizoen bekend is */
-export function OpenChip({ place }: { place: Pick<PlaceSummary, "openAllYear" | "season"> }) {
+export function OpenChip({ place, onlyClosed = false }: { place: Pick<PlaceSummary, "openAllYear" | "season">; onlyClosed?: boolean }) {
   // "Nu open" hangt af van de datum van de bezoeker: pas na hydratatie berekenen
   const hydrated = useHydrated();
   const status = hydrated ? openStatus(place) : undefined;
-  if (!status) return null;
+  if (!status || (onlyClosed && status.open)) return null;
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${status.open ? "text-forest" : "text-alert"}`}>
       <span className={`h-2 w-2 rounded-full ${status.open ? "bg-forest" : "bg-alert"}`} aria-hidden="true" />
       {status.label}
     </span>
   );
+}
+
+/** Aankomst of toegang in een paar woorden, alleen wat de bron noemt */
+function arrivalShort(p: Pick<PlaceSummary, "checkinFrom" | "access24h" | "accessHours">): string | undefined {
+  if (p.checkinFrom) return `Aankomst vanaf ${p.checkinFrom}`;
+  if (p.access24h) return "Dag en nacht open";
+  if (p.accessHours) return `Poort open ${p.accessHours}`;
+  return undefined;
 }
 
 export function PlaceCard({
@@ -239,25 +248,35 @@ export function PlaceCard({
 }) {
   const stack = layout === "stack";
   const hasPhoto = Boolean(place.imageUrl);
+  // Afstand: rijtijd van de pagina, anders vanaf je eigen locatie (blijft op het apparaat), anders vanaf de zoekplek
+  const me = useMyLocation().pos;
+  const fromMe = me ? distanceKm(me, place) : undefined;
   const distance =
     distanceLabel ??
-    (km !== undefined && (
+    (fromMe !== undefined ? (
       <span className="inline-flex items-center gap-1">
-        <Icon name="locate" size={15} className="shrink-0" /> {formatKm(km)} hemelsbreed
+        <Icon name="locate" size={14} className="shrink-0" /> {formatKm(fromMe)} van je locatie
       </span>
+    ) : (
+      km !== undefined && (
+        <span className="inline-flex items-center gap-1">
+          <Icon name="locate" size={14} className="shrink-0" /> {formatKm(km)} hemelsbreed
+        </span>
+      )
     ));
+  const arrival = arrivalShort(place);
   return (
     <article
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      className={`group relative flex overflow-hidden rounded-[1.25rem] bg-surface transition-[box-shadow,outline-color] duration-200 ${
+      className={`group relative flex overflow-hidden rounded-2xl bg-surface transition-[box-shadow,outline-color] duration-200 ${
         active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent hover:shadow-raised"
       } outline ${stack ? "flex-col" : "flex-row"}`}
     >
       <div
         className={`relative shrink-0 ${
-          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-[34%] max-w-36 self-stretch sm:w-60 sm:max-w-none"
+          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-[32%] max-w-36 self-stretch sm:w-56 sm:max-w-none"
         }`}
       >
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
@@ -268,28 +287,36 @@ export function PlaceCard({
         )}
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
-      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-1 right-1 sm:top-2 sm:right-2"}`}>
-        <SaveButton slug={place.slug} />
+      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-0.5 right-0.5 sm:top-2 sm:right-2"}`}>
+        <SaveButton slug={place.slug} variant={stack ? "icon" : "plain"} />
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-1.5 p-3 sm:gap-2 sm:p-4"}`}>
-        <div className={`min-w-0 ${stack ? "pr-12" : "pr-10 sm:pr-11"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-2 py-2.5 pr-3 pl-3 sm:p-4"}`}>
+        {/* Waar: naam, soort en plaats, afstand */}
+        <div className={`min-w-0 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
           <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-[1.0625rem] sm:text-xl"}`}>
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
           </h3>
-          <p className="mt-0.5 line-clamp-2 text-sm text-ink-2 sm:text-base">
-            {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}, {place.province}
+          <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
+            {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
           </p>
-          {distance && <p className="mt-0.5 text-sm font-semibold text-forest">{distance}</p>}
+          {distance && <p className="text-sm font-semibold text-forest">{distance}</p>}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <DepartureChip place={place} />
-          <OpenChip place={place} />
-          <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />
-        </div>
+
+        {/* Wanneer: vertrekken en aankomen, en alleen een seizoensmelding als het nu dicht is */}
+        {(departureShort(place) || arrival) && (
+          <div className="min-w-0 space-y-0.5">
+            <DepartureChip place={place} />
+            {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
+          </div>
+        )}
+        <OpenChip place={place} onlyClosed={!stack} />
+        {place.ratingCount > 0 && <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />}
+
+        {/* Wat en hoeveel: voorzieningen links, prijs rechts */}
         <div className="mt-auto flex items-end justify-between gap-2 pt-0.5">
-          <FacilitySigns place={place} max={stack ? 5 : 3} size={stack ? 28 : 22} />
+          <FacilitySigns place={place} max={stack ? 5 : 3} size={stack ? 26 : 22} />
           <CardPrice place={place} />
         </div>
       </div>
@@ -333,17 +360,14 @@ export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure"
 function CardPrice({ place }: { place: PlaceSummary }) {
   const price = cardPrice(place);
   if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
+  // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina
+  const surcharges = price.extras || place.touristTaxIncluded === false;
   return (
     <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
       <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
-      {(place.priceEur ?? 0) > 0 && (
-        <p className="mt-1 text-sm text-muted">
-          per nacht
-          {/* Op een smalle kaart op een eigen regel, anders valt het buiten de kaart */}
-          {price.extras && <span className="block sm:inline"> + extra&apos;s</span>}
-        </p>
-      )}
+      {(place.priceEur ?? 0) > 0 && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
+      {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
     </div>
   );
 }

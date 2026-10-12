@@ -18,6 +18,7 @@ import {
   type SortKey,
 } from "@/lib/search";
 import { usePlaces } from "@/lib/store";
+import { requestMyLocation, useMyLocation } from "@/lib/my-location";
 import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
 import { DestinationSearch } from "@/components/destination-search";
@@ -199,9 +200,10 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
               {filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}
             </span>
           </h1>
-          <div className="-mt-1 flex flex-wrap items-center justify-between gap-x-4">
-            {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
-            <Legend className="-my-1.5" />
+          {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
+          <div className="-my-1 flex flex-wrap items-center gap-x-5">
+            <Legend label="Uitleg icoontjes" />
+            <DistanceToggle />
           </div>
 
           {error && (
@@ -225,6 +227,23 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
 
       <FilterSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} filters={filters} places={places} onApply={update} showScore={hasReviews} />
     </div>
+  );
+}
+
+/** "Afstand tonen": vraagt één keer je locatie; daarna staat bij elke plek hoe ver het hemelsbreed is */
+function DistanceToggle() {
+  const { status } = useMyLocation();
+  if (status === "ready" || status === "unavailable") return null;
+  if (status === "denied") return <span className="text-sm text-muted">Locatie staat uit, afstand onbekend</span>;
+  return (
+    <button
+      type="button"
+      onClick={requestMyLocation}
+      disabled={status === "locating"}
+      className="inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-forest hover:underline disabled:opacity-60"
+    >
+      <Icon name="locate" size={17} /> {status === "locating" ? "Locatie bepalen…" : "Afstand tonen"}
+    </button>
   );
 }
 
