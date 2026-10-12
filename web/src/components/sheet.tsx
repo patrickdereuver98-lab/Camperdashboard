@@ -2,6 +2,8 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useHydrated } from "@/lib/use-media";
 import { Icon } from "./icons";
 
 /**
@@ -24,6 +26,8 @@ export function Sheet({
   const id = useId();
   const panel = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
+  // Via een portal naar <body>: zo ligt de sheet altijd boven vaste balken, waar hij ook staat
+  const hydrated = useHydrated();
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +62,8 @@ export function Sheet({
     };
   }, [open, onClose]);
 
-  return (
+  if (!hydrated) return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
@@ -74,7 +79,7 @@ export function Sheet({
             role="dialog"
             aria-modal="true"
             aria-labelledby={id}
-            className="relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-surface shadow-lift sm:max-w-lg sm:rounded-3xl"
+            className="relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-surface shadow-float sm:max-w-lg sm:rounded-3xl"
             initial={reduce ? { opacity: 0 } : { y: "100%" }}
             animate={reduce ? { opacity: 1 } : { y: 0 }}
             exit={reduce ? { opacity: 0 } : { y: "100%" }}
@@ -107,6 +112,7 @@ export function Sheet({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

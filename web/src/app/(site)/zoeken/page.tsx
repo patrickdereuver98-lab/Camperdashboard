@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CardSkeleton } from "@/components/place-ui";
+import { formatDate } from "@/lib/format";
+import { getStats } from "@/lib/places";
 import { SearchApp } from "./search-app";
 
 export const metadata: Metadata = {
   title: "Camperplaats zoeken",
-  description: "Zoek camperplaatsen op plaats, provincie, voorzieningen en prijs. Met kaart, filters en echte afstanden.",
+  description: "Zoek camperplaatsen op plaats, provincie, vertrektijd, voorzieningen en prijs.",
 };
 
-export default function SearchPage() {
+export default async function SearchPage() {
+  const { updatedAt } = await getStats();
   return (
     <Suspense
       fallback={
@@ -19,7 +22,7 @@ export default function SearchPage() {
         </div>
       }
     >
-      <SearchApp />
+      <SearchApp updated={updatedAt ? formatDate(updatedAt) : undefined} />
     </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPlaces, toSummary } from "@/lib/places";
+import { getSummaries } from "@/lib/places";
 import { searchHref } from "@/lib/search";
 import { PROVINCES } from "@/lib/types";
 import { eur, pluralize } from "@/lib/format";
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/camperplaatsen/[p
   if (!prov) return {};
   return {
     title: `Camperplaatsen in ${prov}`,
-    description: `Camperplaatsen in ${prov} met prijzen, voorzieningen, openingsperiode en route, uit echte bronnen. Vind je plek voor vannacht.`,
+    description: `Camperplaatsen in ${prov} met vertrektijd, prijs, voorzieningen en route.`,
     alternates: { canonical: `/camperplaatsen/${prov.toLowerCase()}` },
   };
 }
@@ -27,12 +27,12 @@ export async function generateMetadata({ params }: PageProps<"/camperplaatsen/[p
 export default async function ProvincePage({ params }: PageProps<"/camperplaatsen/[provincie]">) {
   const prov = bySlug((await params).provincie);
   if (!prov) notFound();
-  const places = (await getPlaces()).filter((p) => p.province === prov);
+  const places = (await getSummaries()).filter((p) => p.province === prov);
   const priced = places.filter((p) => p.priceEur !== undefined && p.priceEur > 0).map((p) => p.priceEur!);
   const avg = priced.length ? priced.reduce((a, b) => a + b, 0) / priced.length : null;
   const free = places.filter((p) => p.priceEur === 0).length;
   const towns = [...new Set(places.map((p) => p.town))].sort((a, b) => a.localeCompare(b, "nl"));
-  const top = [...places].sort((a, b) => b.completeness - a.completeness || Number(!!b.imageUrl) - Number(!!a.imageUrl) || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0)).slice(0, 12).map(toSummary);
+  const top = [...places].sort((a, b) => b.completeness - a.completeness || Number(!!b.imageUrl) - Number(!!a.imageUrl) || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0)).slice(0, 12);
 
   return (
     <div className="mx-auto max-w-6xl px-3 pt-6 sm:px-6">
@@ -44,8 +44,8 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
       <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">Camperplaatsen in {prov}</h1>
       <p className="mt-3 max-w-2xl text-lg text-ink-2">
         {places.length
-          ? `${pluralize(places.length, "plek", "plekken")} met complete gegevens in ${prov}${free ? `, waarvan ${free} gratis` : ""}.${avg ? ` Een nacht kost gemiddeld ${eur(avg)}.` : ""}`
-          : `We hebben nog geen plekken in ${prov} die aan onze kwaliteitseisen voldoen.`}
+          ? `${pluralize(places.length, "plek", "plekken")} in ${prov}${free ? `, waarvan ${free} gratis` : ""}.${avg ? ` Een nacht kost gemiddeld ${eur(avg)}.` : ""}`
+          : `Er staan nog geen plekken in ${prov} in de gids.`}
       </p>
       <div className="mt-5 flex flex-wrap gap-2">
         <Link href={`${searchHref({ province: prov, where: prov })}&kaart=1`} className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
@@ -64,7 +64,7 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
 
       {top.length > 0 && (
         <section className="mt-10">
-          <h2 className="font-display text-2xl font-semibold">Meest complete informatie</h2>
+          <h2 className="font-display text-2xl font-semibold">Uitgelicht in {prov}</h2>
           <ul className="mt-4 grid gap-3 lg:grid-cols-2">
             {top.map((p) => (
               <li key={p.id}>
@@ -85,7 +85,7 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
                 <li key={t}>
                   <Link
                     href={searchHref({ where: t, center: { lat: p.lat, lng: p.lng }, radiusKm: 10 })}
-                    className="inline-flex h-11 items-center rounded-full bg-surface px-4 outline-1 outline-line outline hover:outline-forest"
+                    className="inline-flex h-11 items-center rounded-full bg-surface px-4 shadow-low transition-shadow hover:shadow-raised"
                   >
                     {t}
                   </Link>

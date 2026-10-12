@@ -25,6 +25,11 @@
   --alert-tint: #f8e1da;
   --scrim: rgb(31 43 36 / 0.45);
   --lift: 0 1px 2px rgb(40 35 20 / 0.05), 0 6px 20px rgb(40 35 20 / 0.09);
+  /* Diepte in drie lagen, warm getint zodat schaduw op zandpapier niet grauw wordt.
+     De binnenrand vervangt losse borders: kaarten blijven scherp zonder harde lijn. */
+  --elev-low: 0 1px 1px rgb(70 52 24 / 0.04), 0 2px 8px -2px rgb(70 52 24 / 0.1), inset 0 0 0 1px rgb(70 52 24 / 0.07);
+  --elev-raised: 0 1px 2px rgb(70 52 24 / 0.06), 0 10px 28px -8px rgb(70 52 24 / 0.22), inset 0 0 0 1px rgb(70 52 24 / 0.06);
+  --elev-float: 0 2px 6px rgb(50 38 18 / 0.08), 0 24px 56px -16px rgb(50 38 18 / 0.34), 0 0 0 1px rgb(50 38 18 / 0.05);
   color-scheme: light;
 }
 
@@ -50,6 +55,10 @@
     --alert-tint: #3a1f19;
     --scrim: rgb(0 0 0 / 0.6);
     --lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.45);
+    /* In het donker: schaduw plus een zacht licht randje boven, zoals maanlicht op een dak */
+    --elev-low: 0 1px 2px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.04), inset 0 0 0 1px rgb(255 255 255 / 0.05);
+    --elev-raised: 0 12px 30px -10px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+    --elev-float: 0 28px 64px -16px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.07), 0 0 0 1px rgb(255 255 255 / 0.07);
     color-scheme: dark;
   }
 }
@@ -76,6 +85,9 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
   --shadow-lift: var(--lift);
+  --shadow-low: var(--elev-low);
+  --shadow-raised: var(--elev-raised);
+  --shadow-float: var(--elev-float);
   --text-base: 1.0625rem;
   --text-base--line-height: 1.55;
 }

@@ -105,6 +105,7 @@ export type PlaceSummary = Pick<
   | "ratingAvg"
   | "ratingCount"
   | "completeness"
+  | "imageCredit"
 >;
 
 export interface Review {
