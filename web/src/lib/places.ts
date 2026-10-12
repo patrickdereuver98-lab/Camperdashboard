@@ -278,6 +278,7 @@ export async function getStats() {
     freeDeparture: places.filter((p) => departureKind(p) === "vrij").length,
     lateCheckout: places.filter((p) => departureKind(p) === "uitslapers").length,
     roomyCheckout: places.filter((p) => departureKind(p) === "ruim").length,
+    unknownDeparture: places.filter((p) => departureKind(p) === "onbekend").length,
     otherDeparture: places.filter((p) => ["ruim", "vroeg", "onbekend"].includes(departureKind(p))).length,
     withPhoto: places.filter((p) => p.imageUrl).length,
     updatedAt,

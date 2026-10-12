@@ -177,3 +177,11 @@ import "https://raw.githubusercontent.com/patrickdereuver98-lab/Camperdashboard/
 Supabase bundelt die code bij het uitrollen; daarna hangt de functie niet meer van GitHub af. Nieuwe versie: commit en
 push de wijziging in `web/supabase/functions/pipeline/`, zet de nieuwe commit in die regel en rol uit met
 `verify_jwt` uit (de functie controleert zelf de `x-pipeline-key`).
+
+## Meer plekken vinden
+
+- **Websites zoeken** (automatisch, cron `discover`): voor plekken zonder website probeert de pipeline adressen uit de
+  naam (zoals `campingdekraai.nl`). Een site telt alleen als de pagina de naam én de plaats, postcode of het
+  telefoonnummer noemt. Gevonden sites worden daarna gewoon gescraped. Resultaat per plek: `places.sources->'discovery'`.
+- **Doe mee** (`/doe-mee`): deel deze link in de Facebookgroep. Leden vullen de vertrektijd in van plekken waar die
+  nog onbekend is. Alles komt binnen in **Beheer → Inzendingen**; pas de plek daarna aan in **Beheer → Plekken**.
