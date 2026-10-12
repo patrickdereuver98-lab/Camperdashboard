@@ -3,6 +3,7 @@ import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
 import { isOpenOn } from "./search";
+import { PRERENDER_LIMIT, rankForPrerender } from "./prerender";
 import type { Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
@@ -122,8 +123,27 @@ export async function getSummaries(): Promise<PlaceSummary[]> {
   return (await getPlaces()).map(toSummary);
 }
 
+/** Eén plek, apart gecachet: een on-demand render van een detailpagina laadt niet de hele dataset */
 export async function getPlace(slug: string): Promise<Place | undefined> {
-  return (await getPlaces()).find((p) => p.slug === slug);
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places", `place-${slug}`);
+  if (!/^[a-z0-9-]{1,120}$/.test(slug)) return undefined;
+  const { website_photos } = await getSettings();
+  return withFallback(
+    async () => {
+      const [row] = await rest<Record<string, unknown>>(`places?select=${PLACE_COLUMNS}&status=eq.published&slug=eq.${slug}`);
+      return row ? normalize(toCamel<Place>(row), website_photos) : undefined;
+    },
+    () => {
+      const p = SNAP.places.find((x) => x.slug === slug);
+      return p ? normalize(p, website_photos) : undefined;
+    },
+  );
+}
+
+export async function getTopPlaceSlugs(limit = PRERENDER_LIMIT): Promise<string[]> {
+  return rankForPrerender(await getSummaries(), limit).map((p) => p.slug);
 }
 
 export async function getNearby(place: Pick<Place, "id" | "lat" | "lng">, limit = 6) {

@@ -1,8 +1,8 @@
-import { expect, PLACES, test } from "./fixtures";
+import { expect, ON_DEMAND, PRERENDERED, test } from "./fixtures";
 
 test.describe("detailpagina", () => {
-  for (const place of [PLACES[0], PLACES[PLACES.length - 1]]) {
-    test(`toont ${place.slug}`, async ({ page }) => {
+  for (const [label, place] of [["geprerenderd", PRERENDERED[0]], ["on-demand", ON_DEMAND[0]], ["on-demand", ON_DEMAND[ON_DEMAND.length - 1]]] as const) {
+    test(`${label}: toont ${place.slug}`, async ({ page }) => {
       const res = await page.goto(`/plek/${place.slug}`);
       expect(res?.status()).toBe(200);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(place.name);

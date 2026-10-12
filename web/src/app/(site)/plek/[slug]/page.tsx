@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getNearby, getPlace, getPlaces, getReviews } from "@/lib/places";
+import { getNearby, getPlace, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { searchHref } from "@/lib/search";
 import { cardPrice, departureShort, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
@@ -13,9 +13,10 @@ import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-
 import { PlaceMap } from "@/components/place-map";
 import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 
+// Alleen de top-100 tijdens de build: alle plekken prerenderen liep op Vercel stuk (RangeError). De rest wordt bij het
+// eerste bezoek gerenderd ("blocking": params worden buiten <Suspense> afgewacht) en daarna uit de cache geserveerd.
 export async function generateStaticParams() {
-  const places = await getPlaces();
-  return places.map((p) => ({ slug: p.slug }));
+  return (await getTopPlaceSlugs()).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): Promise<Metadata> {
