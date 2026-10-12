@@ -10,7 +10,7 @@ import { looksLikeGraphic } from "@/lib/photos";
 
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
-const SCRIM = "from-[#14281d]/90 via-[#14281d]/40 to-transparent";
+const SCRIM = "from-[#14281d]/80 via-[#14281d]/20 to-transparent";
 
 export default async function Home() {
   const [stats, places] = await Promise.all([getStats(), getSummaries()]);
@@ -231,13 +231,13 @@ export default async function Home() {
               text: "Je ziet hoe lang je nog moet rijden. Met één tik open je de route in je eigen navigatie.",
             },
           ].map((s, i) => (
-            <li key={s.title} className="flex gap-4 border-t-2 border-line pt-4 md:flex-col md:pt-5">
-              <div className="relative shrink-0">
-                <Sign name={s.sign} size={40} />
-                <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-ember text-sm font-bold text-on-ember">{i + 1}</span>
-              </div>
+            <li key={s.title} className="flex gap-3 border-t border-line pt-4 md:flex-col md:gap-3 md:pt-5">
+              <Sign name={s.sign} size={32} />
               <div>
-                <h3 className="font-display text-lg font-semibold sm:text-xl">{s.title}</h3>
+                <h3 className="font-display text-base font-semibold sm:text-lg">
+                  <span className="mr-1.5 text-muted tabular-nums">{i + 1}.</span>
+                  {s.title}
+                </h3>
                 <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">{s.text}</p>
               </div>
             </li>
