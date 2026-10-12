@@ -135,7 +135,7 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
   }
 
   return (
-    <div className="rounded-2xl bg-surface p-5 outline-1 outline-line outline">
+    <div className="rounded-2xl bg-surface p-5 shadow-low">
       <h2 className="font-display text-xl font-semibold">Hoe ver is het?</h2>
       {state.s === "ok" ? (
         <p className="mt-2 text-lg">
@@ -212,7 +212,7 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
     <>
       <ul className="space-y-3">
         {shown.map((r) => (
-          <li key={r.id} className="rounded-2xl bg-surface p-5 outline-1 outline-line outline">
+          <li key={r.id} className="rounded-2xl bg-surface p-5 shadow-low">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold">{r.authorName}</p>

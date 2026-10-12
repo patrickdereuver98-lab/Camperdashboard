@@ -20,7 +20,7 @@ export default function SettingsPage() {
       contact: (map.contact as Settings["contact"]) ?? { email: "", response_days: 2 },
       announcement: (map.announcement as Settings["announcement"]) ?? { text: "", enabled: false },
       publish_threshold: Number(map.publish_threshold ?? 0.7),
-      website_photos: map.website_photos === true,
+      website_photos: map.website_photos !== false,
     };
   }, [data]);
   const [edited, setS] = useState<Settings | null>(null);
@@ -89,8 +89,9 @@ export default function SettingsPage() {
           <Card className="space-y-3">
             <h2 className="font-display text-lg font-semibold">Foto&apos;s van websites</h2>
             <p className="text-sm text-muted">
-              Foto&apos;s op de websites van plekken zijn auteursrechtelijk beschermd. Zet dit alleen aan als je toestemming hebt van de
-              rechthebbenden. Uit: alleen Wikimedia Commons, uploads van bezoekers en eigenaren, en foto&apos;s die je per plek als
+              Aan (standaard): foto&apos;s van de website van de plek worden getoond, met bronvermelding. Ze zijn
+              auteursrechtelijk beschermd; vraagt een rechthebbende om verwijdering (via Meld inhoud), haal de foto dan weg bij
+              de plek. Uit: alleen Wikimedia Commons, uploads van bezoekers en eigenaren, en foto&apos;s die je per plek als
               &quot;toestemming&quot; hebt gemarkeerd.
             </p>
             <label className="flex min-h-11 items-center gap-3">

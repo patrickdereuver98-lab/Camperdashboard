@@ -1,15 +1,29 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { applyFilters, filtersToQuery, parseFilters, refinementCount, relaxations, type Filters, type SortKey } from "@/lib/search";
+import {
+  applyFilters,
+  DEPARTURE_PAGES,
+  filtersToQuery,
+  pageOf,
+  parseFilters,
+  refinementCount,
+  relaxations,
+  searchHref,
+  type DeparturePage,
+  type Filters,
+  type SortKey,
+} from "@/lib/search";
 import { usePlaces, useViewportPlaces } from "@/lib/store";
 import type { Bbox } from "@/lib/bbox";
 import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
 import { DestinationSearch } from "@/components/destination-search";
 import { FilterSheet } from "@/components/filter-sheet";
+import { Legend } from "@/components/legend";
 import { CardSkeleton, PlaceCard } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
@@ -34,17 +48,23 @@ function activeChips(f: Filters): { label: string; without: Filters }[] {
   if (f.free) chips.push({ label: "Gratis", without: { ...f, free: false } });
   if (f.maxPrice) chips.push({ label: `Tot € ${f.maxPrice}`, without: { ...f, maxPrice: undefined } });
   if (f.minLength) chips.push({ label: `Camper ${f.minLength} m`, without: { ...f, minLength: undefined } });
-  if (f.noFixedDeparture) chips.push({ label: "Geen vaste vertrektijd", without: { ...f, noFixedDeparture: false } });
   if (f.openNow) chips.push({ label: "Zonder gesloten plekken", without: { ...f, openNow: false } });
   if (f.priceUnknown && (f.free || f.maxPrice)) chips.push({ label: "Ook onbekende prijs", without: { ...f, priceUnknown: false } });
   if (f.minScore) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
   return chips;
 }
 
-export function SearchApp() {
+/** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
+function withPage(f: Filters, page?: DeparturePage): Filters {
+  if (!page) return f;
+  if (page === "overig") return { ...f, departure: f.departure && pageOf(f.departure) === "overig" ? f.departure : "overig" };
+  return { ...f, departure: page };
+}
+
+export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: string }) {
   const router = useRouter();
   const params = useSearchParams();
-  const filters = useMemo(() => parseFilters(params), [params]);
+  const filters = useMemo(() => withPage(parseFilters(params), page), [params, page]);
   const key = filtersToQuery(filters);
   const { data: places, error } = usePlaces();
   const results = useMemo(() => (places ? applyFilters(places, filters) : null), [places, filters]);
@@ -62,10 +82,14 @@ export function SearchApp() {
   );
   const fitPlaces = useMemo(() => results?.map((r) => r.place), [results]);
 
-  const update = (f: Filters) => {
-    const q = filtersToQuery(f);
-    router.replace(q ? `/zoeken?${q}` : "/zoeken", { scroll: false });
-  };
+  // Elke vertrekgroep heeft een eigen pagina; een andere groep kiezen gaat naar die pagina
+  const update = (f: Filters) => router.replace(searchHref(f), { scroll: false });
+
+  // Oude links (/zoeken?vrij=1 of ?vertrek=…) naar de juiste pagina sturen
+  const misplaced = !page && filters.departure ? searchHref(filters) : null;
+  useEffect(() => {
+    if (misplaced) router.replace(misplaced);
+  }, [misplaced, router]);
 
   const focusCard = (slug: string) => {
     setHovered(slug);
@@ -93,7 +117,8 @@ export function SearchApp() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <div className="min-w-0">
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
-        <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-6">
+        <DepartureTabs page={page} filters={filters} places={places} />
+        <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} />
           <div className="mt-3 flex min-w-0 items-center gap-2">
             <button
@@ -167,6 +192,10 @@ export function SearchApp() {
               {filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}
             </span>
           </h1>
+          <div className="flex flex-wrap items-center justify-between gap-x-4">
+            {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
+            <Legend className="-my-1" />
+          </div>
 
           {error && (
             <p className="mt-4 rounded-2xl bg-alert-tint p-5 text-alert">
@@ -204,6 +233,95 @@ export function SearchApp() {
 
       <FilterSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} filters={filters} places={places} onApply={update} showScore={hasReviews} />
     </div>
+  );
+}
+
+const INTRO: Record<DeparturePage, string> = {
+  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst.",
+  uitslapers: "Je hoeft pas om 12:00 of later weg. Genoeg tijd voor een rustig ontbijt.",
+  overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet weten.",
+};
+
+/** De drie pagina's als tabbladen, met het aantal plekken bij de huidige zoekopdracht */
+function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filters: Filters; places: PlaceSummary[] | null }) {
+  const counts = useMemo(() => {
+    if (!places) return null;
+    const base = { ...filters, departure: undefined };
+    return {
+      alle: applyFilters(places, base).length,
+      vrij: applyFilters(places, { ...base, departure: "vrij" }).length,
+      uitslapers: applyFilters(places, { ...base, departure: "uitslapers" }).length,
+      overig: applyFilters(places, { ...base, departure: "overig" }).length,
+    };
+  }, [places, filters]);
+  const tabs: { key: DeparturePage | "alle"; label: string; href: string }[] = [
+    { key: "alle", label: "Alle", href: searchHref({ ...filters, departure: undefined }) },
+    ...(Object.keys(DEPARTURE_PAGES) as DeparturePage[]).map((k) => ({
+      key: k,
+      label: DEPARTURE_PAGES[k].tab,
+      href: searchHref({ ...filters, departure: k }),
+    })),
+  ];
+  const active = page ?? "alle";
+  const list = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    // Actief tabblad in beeld schuiven, alleen horizontaal
+    const ul = list.current;
+    const el = ul?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (ul && el && (el.offsetLeft < ul.scrollLeft || el.offsetLeft + el.offsetWidth > ul.scrollLeft + ul.clientWidth)) {
+      ul.scrollLeft = el.offsetLeft - ul.offsetLeft - 12;
+    }
+  }, [active, counts]);
+  return (
+    <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-3 sm:px-6 lg:border-0 lg:bg-transparent lg:pt-6">
+      <ul ref={list} className="no-scrollbar -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+        {tabs.map((t) => (
+          <li key={t.key} className="shrink-0">
+            <Link
+              href={t.href}
+              replace
+              scroll={false}
+              aria-current={active === t.key ? "page" : undefined}
+              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-xl border-b-[3px] px-3 font-semibold ${
+                active === t.key ? "border-forest text-forest" : "border-transparent text-ink-2 hover:text-forest"
+              }`}
+            >
+              {t.label}
+              {counts && <span className="text-sm font-normal text-muted">{counts[t.key].toLocaleString("nl-NL")}</span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {page && (
+        <div className="pt-3 pb-1">
+          <h2 className="font-display text-xl font-semibold">{DEPARTURE_PAGES[page].title}</h2>
+          <p className="mt-1 text-ink-2">{INTRO[page]}</p>
+          {page === "overig" && (
+            <div className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
+              {(
+                [
+                  ["overig", "Alle"],
+                  ["ruim", "11:00 tot 12:00"],
+                  ["vroeg", "Vóór 11:00"],
+                  ["onbekend", "Onbekend"],
+                ] as const
+              ).map(([g, label]) => (
+                <Link
+                  key={g}
+                  href={searchHref({ ...filters, departure: g })}
+                  replace
+                  scroll={false}
+                  aria-current={filters.departure === g ? "true" : undefined}
+                  className="flex h-11 shrink-0 items-center rounded-full border-2 border-line px-4 text-sm font-semibold whitespace-nowrap aria-[current=true]:border-forest aria-[current=true]:bg-forest-tint aria-[current=true]:text-forest"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </nav>
   );
 }
 
@@ -248,7 +366,7 @@ function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceS
   // Concrete alternatieven met het aantal plekken dat ze opleveren
   const options = relaxations(places, filters).slice(0, 4);
   return (
-    <div className="mt-6 rounded-2xl bg-surface p-6 outline-1 outline-line outline">
+    <div className="mt-6 rounded-2xl bg-surface p-6 shadow-low">
       <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
       <p className="mt-2 text-ink-2">{options.length ? "Met één aanpassing vind je wel iets:" : "Probeer een andere plaats of streek."}</p>
       <div className="mt-4 flex flex-wrap gap-2">

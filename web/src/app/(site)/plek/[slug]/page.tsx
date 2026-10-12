@@ -11,6 +11,7 @@ import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
 import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
+import { Legend } from "@/components/legend";
 import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 import { PhotoUpload } from "./photo-upload";
 
@@ -48,7 +49,7 @@ function keyFacts(p: Place): Fact[] {
     {
       sign: "calendar",
       label: "Open",
-      value: p.openAllYear ? "Hele jaar" : (p.season ?? "Onbekend"),
+      value: p.openAllYear ? "Hele jaar" : (p.season?.replace(" – ", " t/m ") ?? "Onbekend"),
       known: p.openAllYear === true || !!p.season,
     },
     {
@@ -140,8 +141,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                 </a>
               </span>
             </p>
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               <OpenChip place={place} />
+              {(place.verifiedAt ?? place.updatedAt) && (
+                <span className="text-sm text-muted">Laatste update: {formatDate((place.verifiedAt ?? place.updatedAt)!)}</span>
+              )}
             </div>
           </div>
           {place.ratingCount > 0 && (
@@ -157,7 +161,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         </div>
 
         {/* Kerngegevens */}
-        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-line outline-1 outline-line outline md:grid-cols-4">
+        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-line shadow-low md:grid-cols-4">
           {keyFacts(place).map((f) => (
             <div key={f.label} className="flex items-center gap-3 bg-surface p-4">
               <Sign name={f.sign} size={34} state={f.known ? "on" : "unknown"} />
@@ -198,12 +202,15 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-1">
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">
-              <h2 id="voorzieningen" className="font-display text-2xl font-semibold">Voorzieningen</h2>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                <h2 id="voorzieningen" className="font-display text-2xl font-semibold">Voorzieningen</h2>
+                <Legend />
+              </div>
               <ul className="mt-4 grid grid-cols-2 gap-2">
                 {FACILITY_ROWS.map((f) => {
                   const v = place[f.key] as boolean | undefined;
                   return (
-                    <li key={f.label} className="flex items-center gap-2.5 rounded-xl bg-surface p-2.5 outline-1 outline-line outline sm:gap-3 sm:p-3">
+                    <li key={f.label} className="flex items-center gap-2.5 rounded-xl bg-surface p-2.5 shadow-low sm:gap-3 sm:p-3">
                       <Sign name={f.sign} size={32} state={v === true ? "on" : v === false ? "off" : "unknown"} />
                       <span className="min-w-0">
                         <span className="block leading-tight font-semibold">{f.label}</span>
@@ -221,10 +228,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {place.description && (
               <section aria-labelledby="over">
                 <h2 id="over" className="font-display text-2xl font-semibold">Over deze plek</h2>
-                <blockquote className="mt-3 border-l-4 border-forest pl-4 text-lg text-ink-2">{place.description}</blockquote>
-                <p className="mt-2 text-sm text-muted">
-                  {place.descriptionSource === "website" ? "Volgens de website van de plek" : "Uit OpenStreetMap"}
-                </p>
+                <p className="mt-3 max-w-prose text-lg text-ink-2">{place.description}</p>
               </section>
             )}
 
@@ -239,7 +243,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Praktisch */}
             <section aria-labelledby="praktisch">
               <h2 id="praktisch" className="font-display text-2xl font-semibold">Praktisch</h2>
-              <dl className="mt-3 divide-y divide-line rounded-2xl bg-surface outline-1 outline-line outline">
+              <dl className="mt-3 divide-y divide-line rounded-2xl bg-surface shadow-low">
                 {[
                   ["Reserveren", place.reservation === undefined ? "Onbekend" : place.reservation ? "Ja" : "Nee"],
                   ["Aantal plekken", place.capacity ? String(place.capacity) : "Onbekend"],
@@ -275,7 +279,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                   <ReviewList reviews={reviews} />
                 </div>
               ) : (
-                <p className="mt-4 rounded-2xl bg-surface p-5 text-ink-2 outline-1 outline-line outline">
+                <p className="mt-4 rounded-2xl bg-surface p-5 text-ink-2 shadow-low">
                   Nog geen reviews. Ben je hier geweest? Help andere camperaars met je ervaring.
                 </p>
               )}
@@ -330,7 +334,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby: PlaceSummary[] }) {
   return (
     <>
-      <div className="hidden rounded-2xl bg-surface p-5 outline-1 outline-line outline md:block">
+      <div className="hidden rounded-2xl bg-surface p-5 shadow-low md:block">
         <p className="font-display text-3xl font-semibold">
           {cardPrice(place)?.value ?? "Prijs onbekend"}
           {place.priceEur ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
@@ -363,18 +367,15 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
           highlight={place.slug}
           fitKey={place.slug}
           cluster={false}
-          className="h-72 rounded-2xl outline-1 outline-line outline"
+          className="h-72 rounded-2xl shadow-low"
         />
       </section>
 
-      <div className="rounded-2xl bg-surface p-5 text-sm text-ink-2 outline-1 outline-line outline">
+      <div className="rounded-2xl bg-surface p-5 text-sm text-ink-2 shadow-low">
         <p className="flex items-center gap-2 font-semibold text-ink">
           <Icon name="shield" size={18} className="text-forest" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
         </p>
-        <p className="mt-1">
-          Bronnen: OpenStreetMap{place.verifiedAt ? " en de website van de plek" : ""}.
-          {place.verifiedAt ? ` Gegevens bijgewerkt op ${formatDate(place.verifiedAt)}.` : ""} Onbekende gegevens laten we leeg in plaats van te gokken.
-        </p>
+        <p className="mt-1">Zie je iets dat niet klopt, of weet je meer? Laat het ons weten, dan passen we het aan.</p>
         <div className="mt-2">
           <ReportProblem placeId={place.id} placeName={place.name} />
         </div>
@@ -383,7 +384,7 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
   );
 }
 
-/** De kernbelofte: kun je vertrekken wanneer je wilt? Met de letterlijke bron als bewijs. */
+/** De kernvraag: kun je vertrekken wanneer je wilt? (De bronzin staat in beheer, niet op de site.) */
 function Departure({ place }: { place: Place }) {
   const free = place.departure === "vrij" || place.departure === "per24";
   const title =
@@ -393,7 +394,7 @@ function Departure({ place }: { place: Place }) {
         ? "Geen vaste vertrektijd: je betaalt per 24 uur"
         : place.departure === "vast"
           ? place.checkoutUntil
-            ? `Vertrekken vóór ${place.checkoutUntil}`
+            ? `Vertrekken uiterlijk om ${place.checkoutUntil}`
             : "Vaste vertrektijd"
           : "Vertrektijd nog onbekend";
   const lines = [
@@ -402,7 +403,6 @@ function Departure({ place }: { place: Place }) {
     place.access24h && !place.accessHours && "24 uur per dag toegankelijk",
     place.maxStayNights && `Maximaal ${pluralize(place.maxStayNights, "nacht", "nachten")}`,
   ].filter(Boolean) as string[];
-  const fromOsm = place.timesNote === "Volgens OpenStreetMap";
   return (
     <section
       aria-labelledby="vertrek"
@@ -424,15 +424,9 @@ function Departure({ place }: { place: Place }) {
           ))}
         </ul>
       )}
-      {place.timesNote && !fromOsm && (
-        <p className="mt-3 border-l-4 border-line pl-3 text-sm text-ink-2">
-          Volgens de website{place.verifiedAt ? ` (gelezen ${formatDate(place.verifiedAt)})` : ""}: &ldquo;{place.timesNote}&rdquo;
-        </p>
-      )}
-      {fromOsm && <p className="mt-3 text-sm text-muted">Volgens OpenStreetMap.</p>}
       {!place.departure && (
         <div className="mt-2 text-sm">
-          <p className="text-ink-2">De website noemt geen aankomst- of vertrektijden. Bel bij twijfel even, of laat het ons weten als je het weet.</p>
+          <p className="text-ink-2">We weten nog niet hoe laat je hier weg moet. Bel even voor je gaat.</p>
           <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd? Laat het weten" />
         </div>
       )}
@@ -440,12 +434,12 @@ function Departure({ place }: { place: Place }) {
   );
 }
 
-/** Prijs zo transparant mogelijk: basistarief, bandbreedte en alle losse toeslagen die de website noemt */
+/** Prijs met basistarief, bandbreedte en alle losse toeslagen die de website noemt */
 function PriceDetails({ place }: { place: Place }) {
   const extras = place.priceExtras ?? [];
   if (!place.priceNote && !extras.length && place.touristTaxIncluded === undefined) return null;
   return (
-    <section aria-labelledby="prijs" className="mt-3 rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+    <section aria-labelledby="prijs" className="mt-3 rounded-2xl bg-surface p-4 shadow-low">
       <h2 id="prijs" className="font-semibold">Prijs en extra kosten</h2>
       {place.priceNote && <p className="mt-1 text-ink-2">{place.priceNote[0].toUpperCase() + place.priceNote.slice(1)}.</p>}
       {place.touristTaxIncluded !== undefined && (
@@ -461,10 +455,7 @@ function PriceDetails({ place }: { place: Place }) {
           ))}
         </dl>
       )}
-      <p className="mt-2 text-sm text-muted">
-        Zoals de website van de plek het noemt{place.verifiedAt ? `, gelezen op ${formatDate(place.verifiedAt)}` : ""}. Prijzen kunnen per seizoen
-        verschillen.
-      </p>
+      <p className="mt-2 text-sm text-muted">Prijzen kunnen per seizoen verschillen.</p>
     </section>
   );
 }

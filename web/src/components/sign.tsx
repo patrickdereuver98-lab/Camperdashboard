@@ -59,6 +59,7 @@ export function Sign({
   name,
   size = 36,
   state = "on",
+  tone = "forest",
   title,
   className = "",
 }: {
@@ -66,10 +67,13 @@ export function Sign({
   size?: number;
   /** on = aanwezig, off = niet aanwezig, unknown = onbekend */
   state?: "on" | "off" | "unknown";
+  /** kleur van het vlak bij "on" */
+  tone?: "forest" | "lake";
   title?: string;
   className?: string;
 }) {
   const on = state === "on";
+  const bg = on ? `var(--${tone})` : "var(--sunken)";
   return (
     <svg
       width={size}
@@ -79,9 +83,9 @@ export function Sign({
       aria-label={title}
       aria-hidden={title ? undefined : true}
       className={`shrink-0 ${className}`}
-      style={{ ["--sign-bg" as string]: on ? "var(--forest)" : "var(--sunken)" }}
+      style={{ ["--sign-bg" as string]: bg }}
     >
-      <rect width="32" height="32" rx="10" fill={on ? "var(--forest)" : "var(--sunken)"} />
+      <rect width="32" height="32" rx="10" fill={bg} />
       <g transform="translate(4 4)" color={on ? "var(--on-forest)" : "var(--muted)"}>
         {GLYPHS[name]}
       </g>

@@ -3,6 +3,13 @@ import { USER, signIn, SUPABASE } from "./session";
 
 const slug = PLACES[0].slug;
 
+/** Pas een foto kiezen als de pagina gehydrateerd is en de sessie bekend is (anders kan de component nog hermounten) */
+async function openPlace(page: import("@playwright/test").Page) {
+  await page.goto(`/plek/${slug}`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByTestId("account-button").filter({ visible: true })).toHaveAttribute("data-state", "in");
+}
+
 // Klein maar groot genoeg testbeeld (800×600) als PNG, gemaakt in de browser
 async function pngBuffer(page: import("@playwright/test").Page, w = 800, h = 600) {
   const b64 = await page.evaluate(([w, h]) => {
@@ -40,7 +47,7 @@ test("ingelogd: foto wordt verkleind, geüpload en ter controle ingestuurd", asy
   });
   await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
 
-  await page.goto(`/plek/${slug}`);
+  await openPlace(page);
   await page.getByTestId("photo-input").setInputFiles({ name: "plek.png", mimeType: "image/png", buffer: await pngBuffer(page, 2400, 1800) });
   await expect(page.getByAltText("Gekozen foto")).toBeVisible();
   await page.getByLabel(/Wat zie je op de foto/).fill("Uitzicht op het water");
@@ -61,7 +68,7 @@ test("ingelogd: te kleine foto wordt geweigerd vóór het uploaden", async ({ pa
     uploads++;
     return r.fulfill({ json: {} });
   });
-  await page.goto(`/plek/${slug}`);
+  await openPlace(page);
   await page.getByTestId("photo-input").setInputFiles({ name: "klein.png", mimeType: "image/png", buffer: await pngBuffer(page, 300, 200) });
   await expect(page.getByRole("alert").filter({ hasText: "te klein" })).toBeVisible();
   expect(uploads).toBe(0);
@@ -74,7 +81,7 @@ test("vertrouwde inzender: foto gaat direct online", async ({ page }) => {
     r.fulfill(r.request().method() === "POST" ? { status: 201, json: { id: "33333333-3333-4333-8333-333333333333" } } : { json: { status: "approved" } }),
   );
   await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
-  await page.goto(`/plek/${slug}`);
+  await openPlace(page);
   await page.getByTestId("photo-input").setInputFiles({ name: "plek.png", mimeType: "image/png", buffer: await pngBuffer(page) });
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Foto versturen" }).click();

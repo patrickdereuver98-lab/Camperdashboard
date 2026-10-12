@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: "VrijStaan: camperplaatsen in Nederland", template: "%s | VrijStaan" },
   description:
-    "Vind een camperplaats in Nederland met prijzen, voorzieningen en openingsperiode uit echte bronnen. Plan je route met echte rijtijden.",
+    "Camperplaatsen in Nederland met vertrektijd, prijs en voorzieningen. Zoek op plaats of kijk wat er bij jou in de buurt is.",
   applicationName: "VrijStaan",
   appleWebApp: { capable: true, title: "VrijStaan", statusBarStyle: "default" },
   formatDetection: { telephone: false },

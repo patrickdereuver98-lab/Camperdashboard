@@ -5,7 +5,7 @@ import { COMPANY } from "@/lib/company";
 
 export const metadata: Metadata = {
   title: "Reviews en ranking",
-  description: "Hoe VrijStaan reviews controleert, wat we niet controleren en hoe de volgorde van zoekresultaten tot stand komt.",
+  description: "Hoe VrijStaan reviews controleert, wat we niet controleren en hoe we de volgorde van zoekresultaten bepalen.",
 };
 
 export default function ReviewsRankingPage() {
@@ -18,10 +18,10 @@ export default function ReviewsRankingPage() {
     >
       <Section title="Wie een review kan schrijven">
         <p>
-          Iedereen kan een review schrijven, zonder account. We vragen een totaalcijfer van 1 tot 10 en je ervaring (minstens
-          20 tekens). Optioneel geef je cijfers voor ligging, rust, voorzieningen en prijs/kwaliteit, een titel, de maand van je
-          bezoek en je soort voertuig. Je naam staat bij je review. Je e-mailadres is optioneel en nooit zichtbaar; we gebruiken
-          het alleen voor vragen over je review.
+          Iedereen kan een review schrijven, zonder account. We vragen een totaalcijfer van 1 tot 10 en je ervaring, in minstens
+          20 tekens. Als je wilt, geef je ook cijfers voor ligging, rust, voorzieningen en prijs/kwaliteit, een titel, de maand
+          van je bezoek en je soort voertuig. Je naam staat bij je review. Je e-mailadres hoef je niet te geven en is nooit
+          zichtbaar. We gebruiken het alleen als we een vraag hebben over je review.
         </p>
       </Section>
 
@@ -30,11 +30,11 @@ export default function ReviewsRankingPage() {
           <li>Elke review wordt gelezen door iemand van ons voordat hij online komt. Dat gebeurt meestal binnen twee werkdagen.</li>
           <li>We kijken of de review over de plek zelf gaat.</li>
           <li>We weigeren reviews met persoonsgegevens van anderen, beledigingen, haat, reclame of andere inhoud die niet mag volgens de <Link href="/voorwaarden">gebruiksvoorwaarden</Link>.</li>
-          <li>We beperken misbruik: per e-mailadres kun je maximaal 5 reviews per uur sturen, en we hebben een filter tegen automatische inzendingen.</li>
+          <li>Tegen misbruik: per e-mailadres kun je maximaal 5 reviews per uur sturen, en een filter houdt automatische inzendingen tegen.</li>
         </ul>
         <p>
-          We plaatsen een review zoals hij is, of niet. We passen de tekst niet aan. Negatieve reviews plaatsen we net zo goed
-          als positieve, zolang ze aan de regels voldoen. Over reviews beslist altijd een mens, nooit een computer.
+          We plaatsen een review zoals hij is, of niet. We passen de tekst niet aan. Een negatieve review plaatsen we net zo goed
+          als een positieve, zolang hij aan de regels voldoet. Over reviews beslist altijd een mens, nooit een computer.
         </p>
       </Section>
 
@@ -62,61 +62,64 @@ export default function ReviewsRankingPage() {
 
       <Section title="Je eigen review laten verwijderen">
         <p>
-          Wil je je review laten weghalen? Mail naar {mail} met de naam van de plek en de naam bij je review. Gebruik als het kan
-          hetzelfde e-mailadres als bij je review.
+          Mail naar {mail} met de naam van de plek en de naam bij je review. Gebruik als het kan hetzelfde e-mailadres als bij je
+          review. Dan halen we hem weg.
         </p>
       </Section>
 
-      <Section title="Klopt een review niet?">
+      <Section title="Een review melden">
         <p>
-          Bevat een review volgens jou illegale inhoud, persoonsgegevens of onjuiste informatie? Meld het via{" "}
+          Bevat een review volgens jou illegale inhoud, persoonsgegevens of onjuiste informatie, meld het dan via{" "}
           <Link href="/melden">Meld inhoud</Link>. We bekijken elke melding en laten je weten wat we besluiten.
         </p>
       </Section>
 
       <Section title="Binnenkort">
-        <p>Deze onderdelen zijn nog niet beschikbaar. We voegen ze binnenkort toe:</p>
+        <p>Deze twee dingen kun je nog niet, maar komen er binnenkort bij:</p>
         <ul>
-          <li>Binnenkort: foto&apos;s toevoegen bij je review. Ook die lezen we eerst voordat ze online komen.</li>
-          <li>Binnenkort: de vraag &quot;Moest je voor een vaste tijd vertrekken?&quot; in het reviewformulier.</li>
+          <li>Foto&apos;s toevoegen bij je review. Ook die bekijken we eerst voordat ze online komen.</li>
+          <li>De vraag &quot;Moest je voor een vaste tijd vertrekken?&quot; in het reviewformulier.</li>
         </ul>
       </Section>
 
       <Section title="Hoe de volgorde van zoekresultaten werkt">
         <p>
-          Je kiest zelf hoe je zoekresultaten sorteert. Niemand kan betalen voor een hogere plek: betaalde plaatsing bestaat
-          niet op VrijStaan en we krijgen geen commissie van plekken. Filters halen plekken weg die niet passen; ze veranderen de
-          volgorde niet.
+          Je kiest zelf hoe je de zoekresultaten sorteert. Niemand kan betalen voor een hogere plek. Betaalde plaatsing bestaat
+          niet op VrijStaan en we krijgen geen commissie van plekken. Filters halen plekken weg die niet passen. De volgorde
+          veranderen ze niet.
         </p>
         <p>
           <strong>Aanbevolen</strong> is de standaard. Elke plek krijgt punten:
         </p>
         <ul>
           <li>
-            <strong>Volledigheid, tot 2 punten.</strong> Hoeveel van 15 belangrijke gegevens we kennen: een echte naam, soort
+            <strong>Volledigheid, tot 2 punten.</strong> Hoeveel we weten van 15 belangrijke gegevens: een echte naam, soort
             plek, woonplaats, prijs, stroom, water, lozen, toilet, douche, honden, aantal plekken, seizoen, website of telefoon,
             een foto en een beschrijving.
           </li>
           <li>
-            <strong>Reviews, tot 1 punt.</strong> Het gemiddelde cijfer gedeeld door 10. Dit telt pas volledig mee vanaf 5
-            goedgekeurde reviews; met minder reviews telt het naar verhouding minder.
+            <strong>Reviews, tot 1 punt.</strong> Het gemiddelde cijfer gedeeld door 10. Dit telt helemaal mee vanaf 5
+            goedgekeurde reviews. Met minder reviews telt het naar verhouding minder.
           </li>
           <li>
             <strong>Foto, 0,3 punt.</strong> Als we een foto hebben die we mogen tonen.
           </li>
           <li>
-            <strong>Geen vaste vertrektijd, 0,3 punt.</strong> Als de website van de plek letterlijk zegt dat je geen vaste
-            vertrektijd hebt, of dat je per 24 uur betaalt.
+            <strong>Zonder vertrektijd, 0,3 punt.</strong> Als de website van de plek zegt dat je vertrekt wanneer je wilt, of
+            dat je per 24 uur betaalt.
           </li>
           <li>
-            <strong>Afstand, punten eraf.</strong> Alleen als je een bestemming kiest. Per afstand gelijk aan je zoekstraal (minimaal
-            10 km) gaat er 1 punt af. Zoek je binnen 25 km, dan staat een plek op 25 km dus 1 punt lager dan een plek in het
-            centrum.
+            <strong>Uitslapers, 0,15 punt.</strong> Als de vaste vertrektijd 12:00 of later is.
+          </li>
+          <li>
+            <strong>Afstand, punten eraf.</strong> Alleen als je een bestemming kiest. Voor elke afstand zo groot als je
+            zoekstraal (minimaal 10 km) gaat er 1 punt af. Zoek je binnen 25 km, dan krijgt een plek op 25 km dus 1 punt minder
+            dan een plek in het centrum.
           </li>
         </ul>
         <p>
-          <strong>Afstand</strong>: de dichtstbijzijnde plek eerst, in een rechte lijn vanaf je bestemming. Alleen beschikbaar
-          als je een bestemming kiest.
+          <strong>Afstand</strong>: de dichtstbijzijnde plek eerst, in een rechte lijn vanaf je bestemming. Dit kan alleen als
+          je een bestemming kiest.
         </p>
         <p>
           <strong>Laagste prijs</strong>: de laagste prijs per nacht eerst. Plekken zonder bekende prijs staan onderaan.
@@ -126,8 +129,8 @@ export default function ReviewsRankingPage() {
           gelijke cijfers telt de score van Aanbevolen.
         </p>
         <p>
-          Bij elke sortering staan plekken die volgens hun seizoen nu zeker gesloten zijn altijd onderaan. Is het seizoen
-          onbekend, dan blijft de plek gewoon staan.
+          Plekken die volgens hun seizoen nu zeker dicht zijn, staan bij elke sortering onderaan. Is het seizoen onbekend, dan
+          blijft de plek gewoon staan.
         </p>
       </Section>
 
@@ -143,12 +146,24 @@ export default function ReviewsRankingPage() {
         </ul>
       </Section>
 
-      <Section title={'Wat "Geen vaste vertrektijd" betekent'}>
+      <Section title="Zonder vertrektijd, uitslapers en overige plekken">
+        <p>We verdelen de plekken in drie groepen, elk met een eigen pagina:</p>
+        <ul>
+          <li>
+            <Link href="/zonder-vertrektijd">Zonder vertrektijd</Link>: de website van de plek zegt dat je vertrekt wanneer
+            je wilt, of je betaalt per 24 uur vanaf je aankomst.
+          </li>
+          <li>
+            <Link href="/uitslapers">Uitslapers</Link>: de vaste vertrektijd is 12:00 of later.
+          </li>
+          <li>
+            <Link href="/overige-plekken">Overige plekken</Link>: je vertrekt om 11:00 of 11:30, eerder dan 11:00, of we
+            weten de vertrektijd nog niet.
+          </li>
+        </ul>
         <p>
-          Bij een plek met &quot;Geen vaste vertrektijd&quot; zegt de website van de plek letterlijk dat je kunt vertrekken
-          wanneer je wilt, of dat je per 24 uur betaalt vanaf je aankomst. We bewaren de zin van de website als bewijs. Tijden
-          voor chalets, verhuur of de receptie tellen niet mee. Staan er tegenstrijdige dingen op de website, dan vullen we niets
-          in. Met het filter &quot;Geen vaste vertrektijd&quot; zie je alleen deze plekken.
+          Een plek komt alleen bij &quot;Zonder vertrektijd&quot; als de website dat echt zegt. Tijden voor chalets, verhuur
+          of de receptie tellen niet mee. Staat er iets tegenstrijdigs op de website, dan laten we de vertrektijd leeg.
         </p>
       </Section>
     </ProsePage>

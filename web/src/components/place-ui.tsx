@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
-import { FACILITIES, openStatus } from "@/lib/search";
+import { departureKind, FACILITIES, openStatus } from "@/lib/search";
 import { formatKm } from "@/lib/geo";
 import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
@@ -69,6 +69,22 @@ export function PlacePhoto({
       onError={fail}
       className={`object-cover ${className}`}
     />
+  );
+}
+
+/** Foto met bronvermelding; de vermelding verdwijnt als de foto niet laadt (dan staat er een tekening) */
+export function CreditedPhoto({ src, alt, credit, className = "" }: { src?: string; alt: string; credit?: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const onFail = useCallback(() => setFailed(true), []);
+  return (
+    <>
+      <PlacePhoto src={src} alt={alt} className={className} onFail={onFail} />
+      {src && credit && !failed && (
+        <span className="absolute top-2 right-2 max-w-[70%] truncate rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">
+          Foto: {credit}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -198,9 +214,9 @@ export function PlaceCard({
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      className={`group relative flex overflow-hidden rounded-2xl bg-surface transition-[box-shadow,outline-color] ${
-        active ? "outline-2 outline-forest" : "outline-1 outline-line"
-      } outline hover:shadow-lift ${stack ? "flex-col" : "flex-row"}`}
+      className={`group relative flex overflow-hidden rounded-[1.25rem] bg-surface transition-[box-shadow,outline-color] duration-200 ${
+        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent hover:shadow-raised"
+      } outline ${stack ? "flex-col" : "flex-row"}`}
     >
       <div
         className={`relative shrink-0 ${
@@ -250,7 +266,7 @@ export function PlaceCard({
 
 export function CardSkeleton() {
   return (
-    <div className="flex overflow-hidden rounded-2xl bg-surface outline-1 outline-line outline">
+    <div className="flex overflow-hidden rounded-2xl bg-surface shadow-low">
       <div className="h-40 w-28 shrink-0 animate-pulse bg-sunken min-[400px]:w-32 sm:h-48 sm:w-60" />
       <div className="flex-1 space-y-3 p-3 sm:p-4">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
@@ -270,14 +286,12 @@ export function CardSkeleton() {
 export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure" | "checkoutUntil"> }) {
   const label = departureShort(place);
   if (!label) return null;
-  const free = place.departure !== "vast";
+  const kind = departureKind(place);
+  const style =
+    kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold ${
-        free ? "bg-forest-tint text-forest" : "bg-sunken text-ink-2"
-      }`}
-    >
-      <Sign name="clock" size={18} state={free ? "on" : "unknown"} />
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold ${style}`}>
+      <Sign name="clock" size={18} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
       {label}
     </span>
   );

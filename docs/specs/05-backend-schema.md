@@ -1,0 +1,182 @@
+# 5. Backend Schema
+
+> Doel: vastleggen welke data we opslaan, hoe die samenhangt en wie wat mag.
+> Bron: live database `qkrmthrhwmmmwswmfgwc` op 11 oktober 2026. Let op: `web/supabase/schema.sql` loopt achter
+> (vertrektijden, toeslagen, `admin_stats` ontbreken) en moet opnieuw worden gegenereerd.
+
+## Entiteiten
+
+| Entiteit | Wat het is |
+|---|---|
+| `places` | Een plek om met de camper te staan (camperplaats, camping, camperparkeerplaats, boerderij, jachthaven) |
+| `reviews` | Ervaring van een bezoeker met een plek, gemodereerd |
+| `submissions` | Aanmelding van een nieuwe plek, correctie of eigenaarsclaim |
+| `tickets` + `ticket_messages` | Supportvraag of DSA-melding, met berichten tussen klant en support |
+| `faq` | Veelgestelde vraag met antwoord |
+| `site_settings` | Instellingen als sleutel/waarde (contact, mededeling, `publish_threshold`, `website_photos`, `departure_mode`) |
+| `admins` | Beheerder of supportmedewerker (gekoppeld aan Supabase Auth) |
+| `events` | Anonieme gebeurtenis voor statistieken (alleen met toestemming) |
+| `consent_log` | Bewijs van cookiekeuze |
+| `audit_log` | Wie heeft wat veranderd in beheer |
+| `app_logs` | Systeem- en pipelinemeldingen, clientfouten |
+| `ingest_runs` | Verloop van data-imports |
+| `nl_towns` | Woonplaatsen met coördinaten (zoeken en dichtstbijzijnde plaats) |
+| `route_cache` | Gecachete routes en rijtijden |
+| `osm_regions`, `osm_queries`, `osm_staging` | OSM-import per provincie: planning, queries en wachtrij |
+| `internal_secrets` | Sleutel waarmee de database de edge function aanroept |
+| `private.scrape_queue` | Wachtrij van websites die de scraper moet lezen |
+| `private.admin_invites` | E-mailadressen die een beheeraccount mogen aanmaken |
+
+## Tabellen
+
+### `places`
+
+| Veld | Type | Verplicht | Standaard | Opmerking |
+|---|---|---|---|---|
+| `id` | uuid | ja | `gen_random_uuid()` | |
+| `slug` | text | ja | | uniek, URL `/plek/<slug>` |
+| `osm_type`, `osm_id` | text, bigint | | | samen uniek; leeg voor handmatige plekken |
+| `name`, `name_is_generic` | text, boolean | ja | `false` | generiek = "Camperplaats Leek" omdat OSM geen naam had |
+| `kind` | text | | | `camperplaats`, `camping`, `parkeerplaats`, `boerderij`, `jachthaven` |
+| `lat`, `lng` | double | ja | | |
+| `street`, `postcode`, `town`, `province` | text | | | |
+| `description`, `description_source` | text | | | bron `website` of `openstreetmap` |
+| `price_eur` | numeric | | | ≥ 0; laagste nachtprijs voor een kampeerplek |
+| `price_note` | text | | | "vanaf € x per nacht; hoogste genoemde tarief € y" |
+| `price_extras` | jsonb | | | `[{label, amount, unit?}]`, bv. Toeristenbelasting, Stroom, Per persoon, Kind, Hond, Douche, Water, Lozen, Extra auto |
+| `tourist_tax_included` | boolean | | | |
+| `power`, `water`, `dump_station`, `toilet`, `shower`, `wifi`, `dogs` | boolean | | | `null` = onbekend |
+| `power_note` | text | | | |
+| `capacity` | integer | | | 1–1.999 |
+| `max_length_m` | numeric | | | |
+| `surface` | text | | | `verhard`, `gras`, `gemengd`, `grind` |
+| `open_all_year`, `season` | boolean, text | | | seizoen als "1 april – 31 oktober" |
+| `reservation` | boolean | | | |
+| `max_stay_nights` | integer | | | |
+| `departure` | text | | | `vrij`, `per24`, `vast`; `null` = onbekend |
+| `checkout_until`, `checkin_from` | text | | | formaat `uu:mm` |
+| `access_hours` | text | | | slagboom of poort, bv. `07:30–23:00` |
+| `access_24h` | boolean | | | |
+| `times_note` | text | | | letterlijke zin(nen) van de bron, of "Volgens OpenStreetMap" |
+| `website`, `phone`, `email` | text | | | |
+| `image_url`, `image_credit`, `photos` | text, text, jsonb | | `[]` | foto's: `[{url, credit, permission?, license?, source?}]` |
+| `rating_avg`, `rating_count` | numeric, integer | | `0` | bijgewerkt bij goedgekeurde reviews |
+| `completeness` | numeric | ja | `0` | gewogen score 0–1, berekend door trigger |
+| `status` | text | ja | `draft` | `draft`, `published`, `hidden` |
+| `status_locked` | boolean | ja | `false` | handmatig vastgezet; trigger verandert de status dan niet |
+| `sources` | jsonb | ja | `{}` | `osm`, `website` (tijdstip), `website_fields`, `beheer` (velden die beheer invulde), `duplicate_of` |
+| `last_scraped_at`, `verified_at`, `created_at`, `updated_at` | timestamptz | | | |
+
+Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, trigram op `name`.
+
+### Overige tabellen
+
+| Tabel | Velden (verplicht met *) | Standaarden en indexen |
+|---|---|---|
+| `reviews` | id*, place_id*, author_name*, author_email, rating* (1–10), score_location/quiet/facilities/value (1–10), title (≤120), body* (20–3.000), vehicle (`camper`, `buscamper`, `caravan`, `overig`), visited_month, status*, admin_note, created_at* | status `pending`; index op place_id |
+| `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, created_at* | status `nieuw` |
+| `tickets` | id*, number* (uniek), access_token* (uniek, willekeurig), name* (2–80), email*, subject* (3–140), category*, status*, priority*, place_id, assignee, created_at*, updated_at* | category `vraag`, status `open`, priority `normaal` |
+| `ticket_messages` | id*, ticket_id*, author* (`klant`, `support`), admin_id, body* (1–5.000), internal* | internal `false`; index op ticket_id |
+| `faq` | id*, category*, question*, answer*, position*, published*, updated_at* | published `true` |
+| `site_settings` | key*, value* (jsonb) | |
+| `admins` | user_id* (→ auth.users), email*, role* (`admin`, `support`), created_at* | role `admin` |
+| `events` | id*, ts*, name* (page_view, search, place_view, outbound, route, save, review, ticket), path, props*, session_id | index op ts |
+| `consent_log` | id*, ts*, consent_id*, analytics*, marketing*, version* | |
+| `audit_log` | id*, ts*, actor, actor_email, action*, entity*, entity_id, details* | |
+| `app_logs` | id*, ts*, level* (debug, info, warn, error), source*, message*, context* | index op ts |
+| `ingest_runs` | id*, kind*, started_at*, finished_at, status* (running, ok, error), stats* | |
+| `nl_towns` | id*, name*, province*, lat*, lng* | |
+| `route_cache` | key*, distance_m*, duration_s*, geometry, provider*, created_at* | |
+| `osm_regions` | code*, name*, last_run_at, places_req, points_req, attempt* | attempt `0` |
+| `osm_staging` | id*, kind* (`place`, `point`), row*, created_at*, processed_at | index op onverwerkte rijen |
+| `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
+
+## Relaties
+
+- `places` 1 → n `reviews` (`ON DELETE CASCADE`)
+- `places` 1 → n `submissions`, `tickets` (`ON DELETE SET NULL`)
+- `tickets` 1 → n `ticket_messages` (`CASCADE`)
+- `admins` 1 → n `tickets.assignee`, `ticket_messages.admin_id` (`SET NULL`)
+- `auth.users` 1 → 1 `admins` (`CASCADE`)
+- `places` 1 → 1 `private.scrape_queue` (`CASCADE`)
+
+## Eigendom van records
+
+- Bezoekers hebben geen account en bezitten geen records in de database. Bewaarde plekken, reis en cookiekeuze staan
+  alleen op het apparaat (`localStorage`).
+- Een ticket is van wie het `access_token` heeft (de persoonlijke link).
+- Reviews en inzendingen zijn na indienen van VrijStaan (licentie via de voorwaarden); de indiener kan verwijdering
+  vragen via contact.
+- Alle beheerdata is van de beheerders samen; er is geen scheiding per team.
+
+## Authenticatie
+
+1. **Aanmelden:** `/admin` → "Nog geen account? Aanmaken" met een e-mailadres uit `private.admin_invites`.
+2. Supabase stuurt een bevestigingsmail; na bevestigen maakt een trigger de rij in `admins` (rol uit de uitnodiging).
+3. **Inloggen:** e-mail en wachtwoord (minstens 10 tekens). Sessie via Supabase Auth in de browser.
+4. **Wachtwoord vergeten:** Supabase-resetmail (eigen SMTP aanbevolen, de ingebouwde mail is beperkt).
+5. **Uitloggen:** knop in beheer; de sessie verloopt volgens de Supabase-instellingen.
+
+## Autorisatie (Row Level Security)
+
+| Tabel | Lezen | Aanmaken | Wijzigen | Verwijderen |
+|---|---|---|---|---|
+| `places` | iedereen: alleen `published`; beheer: alles | beheer | beheer | beheer |
+| `reviews` | iedereen: alleen `approved`; beheer: alles | via `submit_review` | beheer | beheer |
+| `faq` | iedereen: alleen `published`; beheer: alles | beheer | beheer | beheer |
+| `site_settings`, `nl_towns`, `route_cache` | iedereen | beheer (instellingen), `cache_route` | beheer | — |
+| `submissions` | beheer | via `submit_place` | beheer | beheer |
+| `tickets`, `ticket_messages` | beheer; klant via `get_ticket(token)` | via `create_ticket`, `reply_ticket` | beheer | beheer |
+| `events`, `consent_log` | beheer | via `track`, `log_consent` | — | — |
+| `admins`, `audit_log`, `app_logs`, `ingest_runs` | beheer | systeem | — | — |
+| `internal_secrets`, `private.*` | niemand via de API | systeem | systeem | systeem |
+
+"Beheer" = `public.is_admin()`: elke gebruiker in `admins`, ongeacht rol.
+
+**Functies (RPC):**
+
+| Functie | Wie | Wat |
+|---|---|---|
+| `submit_review`, `submit_place`, `create_ticket`, `reply_ticket`, `get_ticket` | iedereen | Invoer met validatie |
+| `track`, `log_consent`, `report_client_error` | iedereen | Statistieken (na toestemming), cookiekeuze, clientfouten |
+| `cache_route` | server | Routecache vullen |
+| `admin_overview`, `admin_stats(p_days)`, `admin_pipeline(p_action)` | beheer | Dashboard, statistieken, pipeline-knoppen (`scrape-missing`, `scrape-all`, `osm-refresh`, `apply-threshold`) |
+| `apply_scrape`, `next_scrape_batch`, `enqueue_scrape`, `ingest_osm`, `ingest_osm_points`, `process_osm_staging`, `osm_response`, `export_snapshot` | pipeline/systeem | Data-import |
+| `place_completeness(p)`, `place_meets_must_haves(p)` | trigger | Score en harde eisen voor publicatie |
+
+## Datavalidatie en bedrijfsregels
+
+- CHECK-constraints zoals in de tabellen hierboven (kind, surface, departure, status, scores, lengtes, e-mailformaat).
+- `checkout_until` en `checkin_from` in `uu:mm`.
+- **Publicatie** (trigger `places_before_write`): een plek wordt `published` als
+  1. er een website of telefoonnummer is, én
+  2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs, én
+  3. `completeness` ≥ `site_settings.publish_threshold` (nu 0,55).
+  Gewichten (20 punten): vertrekregel 4, seizoen 3, prijs 2, stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1,
+  honden 1, beschrijving 0,5, echte naam 0,5, douche 0,25, aantal plekken 0,25. `status_locked` slaat dit over.
+- **Gezag:** velden in `sources.beheer` worden nooit door de pipeline overschreven; websitewaarden gaan voor OSM bij
+  prijs, seizoen en tijden; een websitewaarde die verdwijnt wordt gewist.
+- **Niets verzinnen:** een veld zonder letterlijke bron blijft `null`.
+
+## Bewaren en verwijderen
+
+| Data | Termijn | Geautomatiseerd? |
+|---|---|---|
+| `events` | 13 maanden | Nee, `web/supabase/retention.sql` nog uitvoeren |
+| `consent_log` | 24 maanden | Idem |
+| `app_logs` (geen errors) | 90 dagen | Idem |
+| Afgewezen `reviews` | 3 maanden | Idem |
+| `tickets` | 12 maanden na sluiten | Nee, nog te bouwen |
+| `places` | Zolang relevant; verwijderen op verzoek van de eigenaar | Handmatig |
+| Inzendingen | Zolang nodig voor verwerking | Handmatig |
+
+Exporteren: `export_snapshot()` geeft alle gepubliceerde plekken, woonplaatsen, FAQ en reviews als JSON.
+
+## Migraties en startdata
+
+- Wijzigingen via Supabase-migraties (MCP `apply_migration` of de SQL-editor). Na elke wijziging
+  `web/supabase/schema.sql` opnieuw genereren.
+- Startdata: `web/supabase/seed.sql` (instellingen, FAQ, woonplaatsen, OSM-queries en provincies).
+- Nieuw project opzetten: `schema.sql` → `seed.sql` → edge function `pipeline` deployen (zonder JWT) → sleutel in
+  `internal_secrets` (`pipeline_key`) → projectnaam aanpassen in `private.call_pipeline`.
+- **Opruimen:** de testtabellen `private.probe` en `private.probe2` mogen weg.

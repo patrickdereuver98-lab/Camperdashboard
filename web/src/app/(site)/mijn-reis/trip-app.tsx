@@ -105,7 +105,7 @@ export function TripApp() {
           {incomingStops.map((s, i) => {
             const p = bySlug.get(s.slug);
             return (
-              <li key={s.slug} className="flex items-center gap-3 rounded-2xl bg-surface p-3 outline-1 outline-line outline">
+              <li key={s.slug} className="flex items-center gap-3 rounded-2xl bg-surface p-3 shadow-low">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">{i + 1}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p?.name ?? s.slug}</span>
@@ -225,7 +225,7 @@ export function TripApp() {
       <div className="mt-6 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
           {/* Vertrekpunt */}
-          <div className="mb-3 flex items-center gap-3 rounded-2xl bg-surface p-3 outline-1 outline-line outline">
+          <div className="mb-3 flex items-center gap-3 rounded-2xl bg-surface p-3 shadow-low">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sunken text-ink-2">
               <Icon name="locate" size={20} />
             </span>
@@ -283,7 +283,7 @@ export function TripApp() {
                           : `${formatKm(distanceKm(i === 0 ? start! : stops[i - 1].place, s.place))} hemelsbreed`}
                     </div>
                   )}
-                  <div className="rounded-2xl bg-surface p-3 outline-1 outline-line outline">
+                  <div className="rounded-2xl bg-surface p-3 shadow-low">
                     <div className="flex gap-3">
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
                         <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
@@ -340,7 +340,7 @@ export function TripApp() {
         </div>
 
         <aside className="min-w-0 space-y-4">
-          <div className="rounded-2xl bg-surface p-5 outline-1 outline-line outline">
+          <div className="rounded-2xl bg-surface p-5 shadow-low">
             <h2 className="font-display text-xl font-semibold">Overzicht</h2>
             <dl className="mt-3 space-y-2">
               <div className="flex justify-between">
@@ -416,7 +416,7 @@ export function TripApp() {
             user={start}
             cluster={false}
             fitKey={routeKey ?? stops.map((s) => s.slug).join()}
-            className="h-80 rounded-2xl outline-1 outline-line outline"
+            className="h-80 rounded-2xl shadow-low"
           />
           <p className="flex items-center gap-2 text-sm text-muted">
             <Sign name="camper" size={22} /> Route over de weg via OpenRouteService of OSRM.

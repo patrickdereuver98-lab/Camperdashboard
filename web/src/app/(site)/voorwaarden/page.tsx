@@ -20,7 +20,7 @@ export default function TermsPage() {
           <li>Telefoon: {company("phone")}</li>
         </ul>
         <p>
-          Door VrijStaan te gebruiken, ga je akkoord met deze voorwaarden. Plaats je een review, foto of melding, dan gelden ze
+          Als je VrijStaan gebruikt, ga je akkoord met deze voorwaarden. Plaats je een review, foto of melding, dan gelden ze
           als afspraak tussen jou en ons.
         </p>
       </Section>
@@ -34,16 +34,17 @@ export default function TermsPage() {
         <p>
           De gegevens komen uit OpenStreetMap, van de openbare website van de plek en van bezoekers en eigenaren. Prijzen tonen
           we zoals de website van de plek ze noemt: de basisprijs en de extra kosten die erbij staan, zoals toeristenbelasting,
-          stroom, per persoon of voor een hond, met de bron en de datum. We doen ons best, maar kunnen niet garanderen dat alles
-          klopt of actueel is. Controleer belangrijke zaken bij de plek zelf. Zie ook de <Link href="/disclaimer">disclaimer</Link>.
+          stroom, per persoon of voor een hond. Bovenaan de pagina van een plek staat wanneer we de gegevens voor het laatst
+          hebben bijgewerkt. We doen ons best, maar we kunnen niet garanderen dat alles klopt of nog actueel is. Controleer
+          belangrijke dingen bij de plek zelf. Zie ook de <Link href="/disclaimer">disclaimer</Link>.
         </p>
       </Section>
 
       <Section title="3. Gebruik van de site">
         <p>
-          Je mag VrijStaan gebruiken voor persoonlijk, niet-commercieel gebruik. Het is niet toegestaan de site op grote schaal
-          automatisch uit te lezen, de dienst te verstoren of beveiliging te omzeilen. Kaartgegevens zijn afkomstig van
-          OpenStreetMap (© OpenStreetMap-bijdragers, ODbL).
+          Je mag VrijStaan gebruiken voor jezelf, niet voor commerciële doelen. Je mag de site niet op grote schaal automatisch
+          uitlezen, de dienst niet verstoren en de beveiliging niet omzeilen. De kaartgegevens komen van OpenStreetMap
+          (© OpenStreetMap-bijdragers, ODbL).
         </p>
       </Section>
 
@@ -55,7 +56,7 @@ export default function TermsPage() {
           <li>Geen reclame, links naar eigen bedrijven of reviews in ruil voor een beloning.</li>
           <li>Geen haat, discriminatie, bedreigingen of beledigingen.</li>
           <li>Geen inhoud die in strijd is met de wet of met rechten van anderen, zoals auteursrecht.</li>
-          <li>Ben je eigenaar of werk je voor een plek? Schrijf dan geen review over die plek of een concurrent.</li>
+          <li>Ben je eigenaar van een plek of werk je er, schrijf dan geen review over die plek of over een concurrent.</li>
         </ul>
       </Section>
 
@@ -74,22 +75,22 @@ export default function TermsPage() {
 
       <Section title="6. Controle en verwijderen">
         <p>
-          Reviews komen pas online nadat iemand van ons ze heeft gelezen. We weigeren of verwijderen bijdragen die niet aan deze
-          regels voldoen of die illegaal zijn. Een bijdrage aanpassen doen we niet: we plaatsen hem zoals hij is, of niet. We
-          beslissen niet automatisch; er kijkt altijd een mens naar. Hoe we reviews controleren en wat we niet controleren, lees
-          je op <Link href="/reviews-en-ranking">Reviews en ranking</Link>.
+          Reviews komen pas online nadat iemand van ons ze heeft gelezen. Bijdragen die niet aan deze regels voldoen of die
+          illegaal zijn, weigeren of verwijderen we. We passen een bijdrage niet aan: we plaatsen hem zoals hij is, of niet.
+          Dat besluit neemt altijd een mens, nooit een computer. Hoe we reviews controleren en wat we niet controleren, lees je
+          op <Link href="/reviews-en-ranking">Reviews en ranking</Link>.
         </p>
         <p>
           Weigeren of verwijderen we je bijdrage en heb je een e-mailadres opgegeven, dan sturen we je een bericht met de reden:
-          welke regel of wet het betreft, wat we hebben gedaan en hoe je bezwaar maakt (art. 17 Digital Services Act). Ben je het
-          er niet mee eens? Mail naar {mail}. Iemand die niet bij het eerste besluit betrokken was, kijkt er opnieuw naar, als dat
-          kan. Je kunt ook naar de rechter.
+          om welke regel of wet het gaat, wat we hebben gedaan en hoe je bezwaar maakt (art. 17 Digital Services Act). Ben je
+          het er niet mee eens, mail dan naar {mail}. Als het kan, kijkt iemand die niet bij het eerste besluit betrokken was er
+          opnieuw naar. Je kunt ook naar de rechter.
         </p>
       </Section>
 
       <Section title="7. Inhoud melden">
         <p>
-          Zie je iets op VrijStaan dat volgens jou illegaal is, inbreuk maakt op je rechten of niet klopt? Meld het via{" "}
+          Zie je iets op VrijStaan dat volgens jou illegaal is, inbreuk maakt op je rechten of niet klopt, meld het dan via{" "}
           <Link href="/melden">Meld inhoud</Link>. Je krijgt een bevestiging en we laten je weten wat we met je melding doen.
           We reageren zo snel mogelijk, uiterlijk binnen 5 werkdagen.
         </p>
@@ -101,20 +102,21 @@ export default function TermsPage() {
 
       <Section title="8. Eigenaren van plekken">
         <p>
-          Ben je eigenaar of beheerder van een plek? Dan kun je je vermelding claimen, gegevens laten aanpassen of de plek laten
-          verwijderen via <Link href="/plek-aanmelden?soort=eigenaar">het formulier voor eigenaren</Link> of de knop &quot;Klopt
-          er iets niet?&quot; op de pagina van de plek. We verwerken dit meestal binnen twee werkdagen. Foto&apos;s van je eigen
-          website tonen we alleen als jij daar toestemming voor geeft.
+          Als eigenaar of beheerder van een plek kun je je vermelding claimen, gegevens laten aanpassen of de plek laten
+          verwijderen. Gebruik daarvoor <Link href="/plek-aanmelden?soort=eigenaar">het formulier voor eigenaren</Link> of de
+          knop &quot;Klopt er iets niet?&quot; op de pagina van de plek. We verwerken dit meestal binnen twee werkdagen. Op
+          foto&apos;s van je eigen website staat klein waar ze vandaan komen. Wil je dat een foto verdwijnt, meld het dan via{" "}
+          <Link href="/melden">Meld inhoud</Link>. Dan halen we hem weg.
         </p>
         <p>
-          Reviews van bezoekers kun je niet laten verwijderen omdat ze negatief zijn. Bevat een review volgens jou illegale
-          inhoud of breekt hij de regels uit artikel 4? Meld hem dan via <Link href="/melden">Meld inhoud</Link>.
+          Een review van een bezoeker kun je niet laten verwijderen omdat hij negatief is. Bevat een review volgens jou illegale
+          inhoud, of breekt hij de regels uit artikel 4, meld hem dan via <Link href="/melden">Meld inhoud</Link>.
         </p>
       </Section>
 
       <Section title="9. Volgorde van plekken">
         <p>
-          Hoe de volgorde van zoekresultaten tot stand komt en welke factoren meewegen, lees je op{" "}
+          Hoe we de volgorde van zoekresultaten bepalen en wat daarbij meetelt, lees je op{" "}
           <Link href="/reviews-en-ranking">Reviews en ranking</Link>. Niemand kan betalen voor een hogere plek.
         </p>
       </Section>
@@ -122,23 +124,23 @@ export default function TermsPage() {
       <Section title="10. Aansprakelijkheid">
         <p>
           VrijStaan is gratis en geeft informatie zonder garantie. We zijn niet aansprakelijk voor schade door het gebruik van
-          die informatie, door bijdragen van anderen, door websites waar we naar linken of doordat de site tijdelijk niet werkt.
-          Dit geldt niet bij opzet of bewuste roekeloosheid van ons, en niet voor zover de wet dat niet toestaat.
+          die informatie, door bijdragen van anderen, door websites waar we naar linken of doordat de site even niet werkt.
+          Dit geldt niet bij opzet of bewuste roekeloosheid van onze kant, en ook niet als de wet dat niet toestaat.
         </p>
       </Section>
 
       <Section title="11. Wijzigingen">
         <p>
-          We kunnen deze voorwaarden aanpassen. De datum bovenaan laat zien wanneer dat voor het laatst gebeurde. Voor
-          bijdragen die je al hebt geplaatst, gelden de voorwaarden van dat moment, tenzij een wijziging in je voordeel is.
+          We kunnen deze voorwaarden aanpassen. Aan de datum bovenaan zie je wanneer dat voor het laatst gebeurde. Voor
+          bijdragen die je al hebt geplaatst, gelden de voorwaarden van dat moment, behalve als een wijziging in je voordeel is.
         </p>
       </Section>
 
       <Section title="12. Toepasselijk recht">
         <p>
           Op deze voorwaarden is Nederlands recht van toepassing. Woon je in een ander EU-land, dan houd je de bescherming die
-          het recht van dat land je als consument geeft. Geschillen leggen we voor aan de bevoegde rechter in Nederland, tenzij
-          de wet een andere rechter aanwijst.
+          het recht van dat land je als consument geeft. Een geschil leggen we voor aan de bevoegde rechter in Nederland, behalve
+          als de wet een andere rechter aanwijst.
         </p>
       </Section>
     </ProsePage>

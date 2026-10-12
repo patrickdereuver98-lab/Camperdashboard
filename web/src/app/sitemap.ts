@@ -1,11 +1,14 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/env";
-import { getPlaces } from "@/lib/places";
+import { getSlugs } from "@/lib/places";
 import { PROVINCES } from "@/lib/types";
 
 const STATIC = [
   "",
   "/zoeken",
+  "/zonder-vertrektijd",
+  "/uitslapers",
+  "/overige-plekken",
   "/dichtbij",
   "/plek-aanmelden",
   "/veelgestelde-vragen",
@@ -19,7 +22,7 @@ const STATIC = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const places = await getPlaces();
+  const places = await getSlugs();
   return [
     ...STATIC.map((path) => ({ url: `${SITE_URL}${path}`, changeFrequency: "weekly" as const, priority: path ? 0.6 : 1 })),
     ...PROVINCES.map((p) => ({ url: `${SITE_URL}/camperplaatsen/${p.toLowerCase()}`, changeFrequency: "weekly" as const, priority: 0.7 })),
