@@ -50,13 +50,15 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 | Knoppen | Minstens 44 px hoog (meestal 48–56 px); primair bosgroen, hoofdactie startpagina avondzon; secundair met rand |
 | Formulieren | Velden 48 px, label boven het veld, verplichte velden met `*`, foutmelding onder het veld, numeriek toetsenbord bij getallen |
 | Plekkaart | Foto of tekening links (rij) of boven (stapel), soort, naam, plaats, vertrekbadge, open/dicht, score, voorzieningen, prijs rechtsonder ("per nacht + extra's") |
-| Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; meerblauw bij uitslapers: "Vertrek uiterlijk 12:00"; neutraal: "Vertrek uiterlijk 10:00"; niets bij onbekend |
+| Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; meerblauw bij uitslapers (12:00 of later): "Vertrek uiterlijk 12:00"; neutraal bij 11:00 tot 12:00 en eerder: "Vertrek uiterlijk 11:00"; niets bij onbekend |
 | Vertrektabbladen | Boven de resultaten: Alle / Zonder vertrektijd / Uitslapers / Overige, met aantal; horizontaal scrollbaar op mobiel |
 | Voorzieningenpictogrammen | Afgeronde bosgroene vierkanten (aanwezig), zandkleur (onbekend), doorgestreept (niet aanwezig) |
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
 | Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis); vaste actiebalk op de plekpagina |
 | Meldingen | Korte toast na bewaren; inline statusregels (`role="status"`/`role="alert"`) |
-| Bronvermelding | Kleine grijze regel of citaat: "Volgens de website (gelezen 11 oktober 2026): …"; bij foto's "Foto: domein.nl" in de hoek, alleen zolang de foto laadt |
+| Laatste update | Eén kleine grijze regel bovenaan elke plek- en lijstpagina: "Laatste update: 11 oktober 2026". Geen bronzinnen of "volgens de website" bij losse gegevens (besluit eigenaar). Alleen foto's houden "Foto: domein.nl" in de hoek, zolang de foto laadt |
+| Legenda | Link "Wat betekenen de icoontjes?" bij de resultaten en bij Voorzieningen; opent een sheet met voorzieningen, kleuren (groen, zand, doorgestreept), vertrekbadges en open/dicht |
+| Diepte | Drie schaduwlagen in `globals.css`: `shadow-low` (kaarten), `shadow-raised` (hover, tegels), `shadow-float` (zoekkaart, sheets). Warm getint; in het donker met een licht randje bovenaan. Geen losse grijze randen om kaarten |
 | Zoekkaart (start) | Oppervlak met 3 px avondzon-rand en schaduw, half over het landschap; op mobiel gestapeld, vanaf `lg` op één rij |
 
 ## Layoutregels

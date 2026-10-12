@@ -11,7 +11,7 @@ const HEAD = ["Doel", "Gegevens", "Grondslag (AVG)", "Bewaartermijn"];
 const ROWS: string[][] = [
   [
     "Statistieken",
-    "Naam van de gebeurtenis (pagina bekeken, zoekopdracht, plek bekeken, link naar buiten, route, bewaard), het pad van de pagina, een klein detail zoals de zoekterm of de plek, een willekeurig sessienummer en het tijdstip",
+    "Wat er gebeurde (pagina bekeken, zoekopdracht, plek bekeken, link naar buiten, route, bewaard), het pad van de pagina, een klein detail zoals de zoekterm of de plek, een willekeurig sessienummer en het tijdstip",
     "Toestemming (art. 6 lid 1 sub a)",
     "13 maanden",
   ],
@@ -24,7 +24,7 @@ const ROWS: string[][] = [
   [
     "Contact en support",
     "Naam, e-mailadres, onderwerp, categorie, je berichten en onze antwoorden, eventueel de plek waar het over gaat",
-    "Gerechtvaardigd belang (je vraag beantwoorden) en uitvoering van je verzoek (art. 6 lid 1 sub b en f)",
+    "Gerechtvaardigd belang (je vraag beantwoorden) en het uitvoeren van je verzoek (art. 6 lid 1 sub b en f)",
     "12 maanden nadat het bericht is gesloten",
   ],
   [
@@ -43,18 +43,18 @@ const ROWS: string[][] = [
     "Plek aanmelden, correcties en verzoeken van eigenaren",
     "De gegevens van de plek die je invult, je toelichting en, als je die opgeeft, je naam en e-mailadres (verplicht voor eigenaren)",
     "Overeenkomst: de gebruiksvoorwaarden (art. 6 lid 1 sub b)",
-    "Zolang nodig om de inzending te verwerken en te kunnen laten zien waar een wijziging vandaan komt",
+    "Zolang nodig om de inzending te verwerken en om te kunnen laten zien waar een wijziging vandaan komt",
   ],
   [
     "Moderatie en beveiliging",
-    "Foutmeldingen uit de browser (melding en pagina), het aantal inzendingen per e-mailadres om misbruik te beperken, een logboek van wat beheerders wijzigen",
+    "Foutmeldingen uit de browser (de melding en de pagina), het aantal inzendingen per e-mailadres om misbruik te beperken en een logboek van wat beheerders wijzigen",
     "Gerechtvaardigd belang: de site veilig en betrouwbaar houden (art. 6 lid 1 sub f)",
     "Zolang nodig voor dat doel",
   ],
   [
     "Gegevens van plekken en eigenaren",
     "Zakelijke gegevens die de plek zelf openbaar heeft gemaakt: naam, adres, telefoon, e-mail, website, prijzen en voorzieningen",
-    "Gerechtvaardigd belang: een gratis, openbare gids (art. 6 lid 1 sub f)",
+    "Gerechtvaardigd belang: een gratis, openbare gids maken (art. 6 lid 1 sub f)",
     "Zolang de plek in de gids staat",
   ],
   [
@@ -113,7 +113,7 @@ export default function PrivacyPage() {
   return (
     <ProsePage
       title="Privacyverklaring"
-      intro="We verwerken zo weinig persoonsgegevens als mogelijk. Hier lees je welke, waarom, op welke grondslag en hoe lang."
+      intro="We verwerken zo weinig persoonsgegevens als we kunnen. Hier lees je welke, waarom, op welke grondslag en hoe lang."
       updated="11 oktober 2026"
     >
       <Section title="Wie zijn wij">
@@ -122,8 +122,8 @@ export default function PrivacyPage() {
           Wij zijn verwerkingsverantwoordelijke voor de persoonsgegevens op deze site.
         </p>
         <p>
-          Vragen over privacy? Mail naar {mail} of gebruik <Link href="/contact?onderwerp=privacy">het contactformulier</Link>{" "}
-          (kies &quot;Privacy en mijn gegevens&quot;).
+          Heb je een vraag over privacy, mail dan naar {mail} of gebruik{" "}
+          <Link href="/contact?onderwerp=privacy">het contactformulier</Link> en kies &quot;Privacy en mijn gegevens&quot;.
         </p>
       </Section>
 
@@ -139,44 +139,45 @@ export default function PrivacyPage() {
       <Section title="Wat we verwerken, waarom en hoe lang">
         <Table head={HEAD} rows={ROWS} />
         <p>
-          Bij de bewaartermijnen gaat het om onze eigen database. Daarna verwijderen we de gegevens of maken we ze anoniem. We
-          nemen geen besluiten over je op basis van alleen automatische verwerking en we maken geen profielen.
+          De bewaartermijnen gelden voor onze eigen database. Daarna verwijderen we de gegevens of maken we ze anoniem. We
+          nemen geen besluiten over je die alleen door een computer worden genomen, en we maken geen profielen.
         </p>
       </Section>
 
       <Section title="Statistieken">
         <p>
-          Alleen als je kiest voor &quot;Statistieken toestaan&quot; houden we bij hoe de site wordt gebruikt. Dat staat in onze
+          Alleen als je kiest voor &quot;Statistieken toestaan&quot;, houden we bij hoe de site wordt gebruikt. Dat staat in onze
           eigen database (tabel <em>events</em>): de soort gebeurtenis, het pad van de pagina, een klein detail zoals de zoekterm
           of de plek, een willekeurig sessienummer en het tijdstip. We slaan geen IP-adres op, gebruiken geen cookies, koppelen
           het niet aan andere gegevens en delen het met niemand.
         </p>
         <p>
           Het sessienummer staat in de sessieopslag van je browser en verdwijnt als je het tabblad sluit. Volgens art. 11.7a
-          Telecommunicatiewet hoeft voor statistieken met weinig gevolgen voor je privacy soms geen toestemming te worden
-          gevraagd. We vragen het toch.
+          Telecommunicatiewet is voor statistieken met weinig gevolgen voor je privacy soms geen toestemming nodig. We vragen
+          het toch.
         </p>
         <p>
-          Je keuze leggen we vast als bewijs: een willekeurig id, je keuze, de versie van de melding en het tijdstip. Je wijzigt
-          je keuze net zo makkelijk als je hem gaf, via &quot;Cookie-instellingen&quot; onderaan elke pagina.
+          Je keuze leggen we vast als bewijs: een willekeurig id, je keuze, de versie van de melding en het tijdstip. Je
+          wijzigt je keuze net zo makkelijk als je hem gaf, via &quot;Cookie-instellingen&quot; onderaan elke pagina.
         </p>
         <CookieSettingsLink className="!font-semibold !text-forest underline" />
       </Section>
 
       <Section title="Je locatie en routes">
         <p>
-          Je locatie gebruiken we alleen als je daar zelf om vraagt en je browser er toestemming voor geeft. Je telefoon rondt
-          hem eerst af op ongeveer 1 kilometer; je precieze locatie verlaat je apparaat dus niet. Onze server stuurt die
-          afgeronde coördinaten en de bestemming naar een routeplanner om de rijtijd te berekenen:
+          Je locatie gebruiken we alleen als je daar zelf om vraagt en je browser het toestaat. Je telefoon rondt hem eerst af
+          op ongeveer 1 kilometer. Je precieze locatie verlaat je apparaat dus niet. Onze server stuurt de afgeronde
+          coördinaten en de bestemming naar een routeplanner om de rijtijd uit te rekenen:
         </p>
         <ul>
           <li>OpenRouteService van HeiGIT gGmbH in Heidelberg (Duitsland), als we daar een sleutel voor hebben ingesteld;</li>
           <li>anders de openbare routeplanner routing.openstreetmap.de van FOSSGIS e.V. (Duitsland).</li>
         </ul>
         <p>
-          We gebruiken de afgeronde locatie alleen voor die berekening en slaan hem niet op in onze database of bij andere
-          gegevens over jou. Om de routeplanner niet te overbelasten bewaart de server de uitkomst (rijtijd bij een afgerond
-          punt) een paar dagen in een technische cache, zonder iets wat naar jou herleidbaar is. De knop &quot;Open in navigatie&quot; opent Google Maps. Daar gelden de privacyregels van Google.
+          We gebruiken de afgeronde locatie alleen voor die berekening. We slaan hem niet op in onze database en koppelen hem
+          niet aan andere gegevens over jou. Zodat de routeplanner niet te veel vragen krijgt, bewaart de server de uitkomst
+          (de rijtijd bij een afgerond punt) een paar dagen in een technische cache. Daarin staat niets wat naar jou te
+          herleiden is. De knop &quot;Open in navigatie&quot; opent Google Maps. Daar gelden de privacyregels van Google.
         </p>
       </Section>
 
@@ -188,35 +189,36 @@ export default function PrivacyPage() {
           </li>
           <li>De lettertypes staan op onze eigen server. Er gaan geen verzoeken naar Google Fonts.</li>
           <li>
-            We tonen foto&apos;s van Wikimedia Commons (met naamsvermelding), foto&apos;s in onze eigen opslag en foto&apos;s
-            van de openbare website van de plek (met bronvermelding). Je browser laadt deze foto&apos;s rechtstreeks van
-            Wikimedia, uit onze opslag bij Supabase of van de website van de plek. Die server ziet dan je IP-adres.
+            We tonen foto&apos;s van Wikimedia Commons, uit onze eigen opslag en van de openbare website van de plek. Op
+            foto&apos;s van Wikimedia en van websites staat klein van wie ze zijn. Je browser haalt deze foto&apos;s
+            rechtstreeks op bij Wikimedia, uit onze opslag bij Supabase of bij de website van de plek. Die server ziet dan je
+            IP-adres.
           </li>
         </ul>
       </Section>
 
       <Section title="Gegevens over plekken en eigenaren">
         <p>
-          De plekken in de gids komen uit OpenStreetMap (ODbL) en van de openbare website van de plek zelf. Daarvan nemen we
+          De plekken in de gids komen uit OpenStreetMap (ODbL) en van de openbare website van de plek zelf. We nemen daarvan
           alleen zakelijke gegevens over: naam, adres, telefoon, e-mail, website, prijzen en voorzieningen. Is de eigenaar een
-          natuurlijk persoon, zoals een boer met een camperplek of een eenmanszaak, dan zijn dit persoonsgegevens die we niet bij
-          jou zelf hebben verzameld (art. 14 AVG).
+          natuurlijk persoon, zoals een boer met een camperplek of iemand met een eenmanszaak, dan zijn dit persoonsgegevens
+          die we niet bij die persoon zelf hebben verzameld (art. 14 AVG).
         </p>
         <ul>
           <li>Bron: OpenStreetMap en de website van de plek.</li>
           <li>Soort gegevens: zakelijke contactgegevens, adres, prijzen en voorzieningen.</li>
           <li>
-            Grondslag: gerechtvaardigd belang. We bieden een gratis, openbare gids en tonen alleen wat het bedrijf zelf al
+            Grondslag: gerechtvaardigd belang. We maken een gratis, openbare gids en tonen alleen wat het bedrijf zelf al
             openbaar heeft gemaakt.
           </li>
           <li>
-            Foto&apos;s van de website van een plek tonen we met bronvermelding. Wil de eigenaar of maker dat een foto
-            verdwijnt, dan halen we die weg na een melding via <Link href="/melden">Meld inhoud</Link>.
+            Op foto&apos;s van de website van een plek staat klein waar ze vandaan komen. Wil de eigenaar of maker dat een
+            foto verdwijnt, dan halen we hem weg na een melding via <Link href="/melden">Meld inhoud</Link>.
           </li>
           <li>
-            Bezwaar, correctie of verwijdering: gebruik het{" "}
-            <Link href="/plek-aanmelden?soort=eigenaar">formulier voor eigenaren</Link>, de knop &quot;Klopt er iets
-            niet?&quot; op de pagina van de plek, of mail naar {mail}.
+            Bezwaar maken, iets laten verbeteren of laten verwijderen kan via het{" "}
+            <Link href="/plek-aanmelden?soort=eigenaar">formulier voor eigenaren</Link>, met de knop &quot;Klopt er iets
+            niet?&quot; op de pagina van de plek, of per mail naar {mail}.
           </li>
         </ul>
       </Section>
@@ -231,7 +233,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Supabase</strong> levert onze database en backend, in de regio Frankfurt (EU). Met Supabase hebben we een
-            verwerkersovereenkomst; voor hun subverwerkers gelden de standaardcontractbepalingen van de Europese Commissie.
+            verwerkersovereenkomst. Voor hun subverwerkers gelden de standaardcontractbepalingen van de Europese Commissie.
           </li>
           <li>
             <strong>OpenRouteService</strong> (HeiGIT gGmbH) of <strong>FOSSGIS e.V.</strong> krijgen coördinaten als je een
@@ -248,19 +250,20 @@ export default function PrivacyPage() {
       <Section title="Op je eigen apparaat">
         <p>
           Je bewaarde reis, je instellingen en je cookiekeuze staan in de lokale opslag van je browser. De service worker bewaart
-          pagina&apos;s en plekgegevens op je apparaat, zodat de site ook zonder bereik werkt. Wij kunnen hier niet bij. Wat we
-          precies opslaan, lees je in het <Link href="/cookies">cookiebeleid</Link>.
+          pagina&apos;s en gegevens van plekken op je apparaat, zodat de site ook zonder bereik werkt. Wij kunnen daar niet bij.
+          Wat we precies opslaan, lees je in het <Link href="/cookies">cookiebeleid</Link>.
         </p>
       </Section>
 
       <Section title="Beveiliging en datalekken">
         <p>
-          Alle verbindingen zijn versleuteld. De database is afgeschermd met beveiliging per rij: bezoekers kunnen alleen
-          gepubliceerde informatie lezen. Alleen beheerders met een eigen account kunnen berichten, reviews en meldingen inzien.
+          Alle verbindingen zijn versleuteld. De database is per rij afgeschermd. Bezoekers kunnen alleen lezen wat gepubliceerd
+          is. Berichten, reviews en meldingen zijn alleen te zien voor beheerders met een eigen account.
         </p>
         <p>
-          We hebben een procedure voor datalekken. Gaat er iets mis met persoonsgegevens, dan melden we dat binnen 72 uur bij de
-          Autoriteit Persoonsgegevens als dat verplicht is, en lichten we jou in als het lek een hoog risico voor je heeft.
+          We hebben een vaste aanpak voor datalekken. Gaat er iets mis met persoonsgegevens, dan melden we dat binnen 72 uur bij
+          de Autoriteit Persoonsgegevens als dat verplicht is. Heeft het lek een hoog risico voor jou, dan laten we het jou ook
+          weten.
         </p>
       </Section>
 
@@ -277,24 +280,25 @@ export default function PrivacyPage() {
         </ul>
         <p>
           Stuur je verzoek naar {mail} of via <Link href="/contact?onderwerp=privacy">het contactformulier</Link>. We reageren
-          binnen een maand. Soms vragen we je om aan te tonen wie je bent, zodat we gegevens niet aan de verkeerde geven.
+          binnen een maand. Soms vragen we je om te laten zien wie je bent, zodat we gegevens niet aan de verkeerde persoon
+          geven.
         </p>
         <p>
-          Ben je het niet eens met hoe we met je gegevens omgaan? Dan kun je een klacht indienen bij de{" "}
+          Ben je het niet eens met hoe we met je gegevens omgaan, dan kun je een klacht indienen bij de{" "}
           <a href="https://autoriteitpersoonsgegevens.nl">Autoriteit Persoonsgegevens</a>. We horen het graag eerst van jou.
         </p>
       </Section>
 
       <Section title="Contactpunt">
         <p>
-          Voor gebruikers en autoriteiten is ons contactpunt (ook voor de Digital Services Act): {mail}. Je kunt ons schrijven in
+          Ons contactpunt voor gebruikers en autoriteiten, ook voor de Digital Services Act, is {mail}. Je kunt ons schrijven in
           het Nederlands of het Engels.
         </p>
       </Section>
 
       <Section title="Wijzigingen">
         <p>
-          Als we deze verklaring aanpassen, zie je dat aan de datum bovenaan. Bij grote wijzigingen vragen we je cookiekeuze
+          Passen we deze verklaring aan, dan zie je dat aan de datum bovenaan. Bij grote wijzigingen vragen we je cookiekeuze
           opnieuw als dat nodig is.
         </p>
       </Section>

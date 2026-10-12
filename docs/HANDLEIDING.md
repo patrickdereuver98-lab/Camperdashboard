@@ -115,7 +115,8 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
    Een plek krijgt *Geen vaste vertrektijd* alleen als de website dat letterlijk zegt; de zin zelf wordt bewaard en op de
    site getoond met de datum. Tijden voor chalets, verhuur, arrangementen of de receptie tellen niet mee.
    De site verdeelt de plekken over drie pagina's: **Zonder vertrektijd** (`/zonder-vertrektijd`), **Uitslapers**
-   (vaste vertrektijd 12:00 of later, `/uitslapers`) en **Overige** (eerder of onbekend, `/overige-plekken`).
+   (vaste vertrektijd 12:00 of later, `/uitslapers`) en **Overige** (`/overige-plekken`: 11:00 tot 12:00, vóór 11:00 of
+   onbekend). De zin van de website zie je in **Beheer → Plekken**; op de site staat alleen de datum van de laatste update.
 5. **Prijzen**: de laagste nachtprijs voor een kampeerplek ("vanaf"), de hoogste genoemde prijs, en losse toeslagen
    (toeristenbelasting, stroom, per persoon, kind, hond, douche, water, lozen, extra auto) precies zoals de website ze noemt.
 6. **Publiceren**: een plek gaat automatisch online als:

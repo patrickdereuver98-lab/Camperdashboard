@@ -13,18 +13,26 @@ const PLACE_COLUMNS =
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
   "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras";
 
-async function rest<T>(path: string): Promise<T[]> {
+/** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten, beschrijvingen of tijdregels */
+const SUMMARY_COLUMNS =
+  "id,slug,name,kind,lat,lng,town,province,price_eur,price_note,tourist_tax_included,power,water,dump_station,toilet," +
+  "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
+  "completeness,departure,checkout_until,price_extras";
+
+async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
   const out: T[] = [];
   for (let offset = 0; ; offset += 1000) {
     const sep = path.includes("?") ? "&" : "?";
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${sep}limit=1000&offset=${offset}`, {
+    // Een eigen limit in het pad: één verzoek, geen paginering
+    const own = /[?&]limit=/.test(path);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${own ? "" : `${sep}limit=1000&offset=${offset}`}`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
     const rows = (await res.json()) as T[];
     out.push(...rows);
-    if (rows.length < 1000) return out;
+    if (own || !all || rows.length < 1000) return out;
   }
 }
 
@@ -59,19 +67,6 @@ async function withFallback<T>(live: () => Promise<T>, offline: () => T): Promis
 
 // ── Plekken ─────────────────────────────────────────────────────────────────
 
-export async function getPlaces(): Promise<Place[]> {
-  "use cache";
-  cacheLife("minutes");
-  cacheTag("places");
-  const { website_photos } = await getSettings();
-  return withFallback(
-    async () =>
-      (await rest<Record<string, unknown>>(`places?select=${PLACE_COLUMNS}&status=eq.published&order=slug`)).map(
-        (r) => normalize(toCamel<Place>(r), website_photos),
-      ),
-    () => SNAP.places.map((p) => normalize(p, website_photos)),
-  );
-}
 
 /**
  * Foto's die we mogen tonen: Wikimedia Commons (met naamsvermelding), uploads in onze eigen opslag (bezoekers en
@@ -117,7 +112,7 @@ function normalize(p: Place, websitePhotos = false): Place {
 const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
   "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
-  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "priceExtras",
+  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "priceExtras", "imageCredit",
 ];
 
 export function toSummary(p: Place): PlaceSummary {
@@ -126,23 +121,99 @@ export function toSummary(p: Place): PlaceSummary {
   return out as PlaceSummary;
 }
 
+/**
+ * Alle plekken als lichte samenvatting. Haalt alleen de kolommen voor kaarten op, zodat pagina's die dit
+ * gebruiken (start, zoeken, provincies) geen megabytes aan foto-lijsten en teksten in hun cache meenemen.
+ */
 export async function getSummaries(): Promise<PlaceSummary[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag("places");
-  return (await getPlaces()).map(toSummary);
+  const { website_photos } = await getSettings();
+  return withFallback(
+    async () =>
+      (await rest<Record<string, unknown>>(`places?select=${SUMMARY_COLUMNS}&status=eq.published&order=slug`)).map((r) =>
+        toSummary(normalize(toCamel<Place>(r), website_photos)),
+      ),
+    () => SNAP.places.map((p) => toSummary(normalize(p, website_photos))),
+  );
 }
 
+/**
+ * Eén plek. Bewust een eigen query en geen filter op de hele lijst: elke plekpagina bewaart de cache die hij
+ * leest, en met 1.300 pagina's maal de hele dataset liep de build vast ("Invalid string length").
+ */
 export async function getPlace(slug: string): Promise<Place | undefined> {
-  return (await getPlaces()).find((p) => p.slug === slug);
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places", `plek-${slug}`);
+  const { website_photos } = await getSettings();
+  return withFallback(
+    async () => {
+      const [row] = await rest<Record<string, unknown>>(
+        `places?select=${PLACE_COLUMNS}&status=eq.published&slug=eq.${encodeURIComponent(slug)}`,
+        { all: false },
+      );
+      return row ? normalize(toCamel<Place>(row), website_photos) : undefined;
+    },
+    () => {
+      const p = SNAP.places.find((x) => x.slug === slug);
+      return p ? normalize(p, website_photos) : undefined;
+    },
+  );
 }
 
+/** Plekken in de buurt: alleen een vak rond de plek ophalen (±55 km), niet de hele lijst */
 export async function getNearby(place: Pick<Place, "id" | "lat" | "lng">, limit = 6) {
-  return (await getSummaries())
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places");
+  const { website_photos } = await getSettings();
+  const box =
+    `lat=gte.${(place.lat - 0.5).toFixed(3)}&lat=lte.${(place.lat + 0.5).toFixed(3)}` +
+    `&lng=gte.${(place.lng - 0.8).toFixed(3)}&lng=lte.${(place.lng + 0.8).toFixed(3)}`;
+  const candidates = await withFallback(
+    async () =>
+      (await rest<Record<string, unknown>>(`places?select=${SUMMARY_COLUMNS}&status=eq.published&${box}`, { all: false })).map(
+        (r) => toSummary(normalize(toCamel<Place>(r), website_photos)),
+      ),
+    () => SNAP.places.map((p) => toSummary(normalize(p, website_photos))),
+  );
+  return candidates
     .filter((p) => p.id !== place.id)
     .map((p) => ({ place: p, km: distanceKm(place, p) }))
     .sort((a, b) => a.km - b.km)
     .slice(0, limit);
+}
+
+/** Voor de sitemap: alleen adres en datum */
+export async function getSlugs(): Promise<{ slug: string; verifiedAt?: string }[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("places");
+  return withFallback(
+    async () =>
+      (await rest<Record<string, unknown>>("places?select=slug,verified_at&status=eq.published&order=slug")).map((r) =>
+        toCamel<{ slug: string; verifiedAt?: string }>(r),
+      ),
+    () => SNAP.places.map((p) => ({ slug: p.slug, verifiedAt: p.verifiedAt })),
+  );
+}
+
+/** Datum van de laatst gecontroleerde plek, voor "Laatste update" bovenaan lijstpagina's */
+export async function getLastUpdate(): Promise<string | undefined> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places");
+  return withFallback(
+    async () =>
+      (
+        await rest<{ verified_at?: string }>("places?select=verified_at&status=eq.published&verified_at=not.is.null&order=verified_at.desc&limit=1", {
+          all: false,
+        })
+      )[0]?.verified_at,
+    () => SNAP.places.reduce<string | undefined>((m, p) => (p.verifiedAt && (!m || p.verifiedAt > m) ? p.verifiedAt : m), undefined),
+  );
 }
 
 export async function getReviews(placeId: string): Promise<Review[]> {
@@ -181,7 +252,7 @@ export async function getFaq(): Promise<FaqItem[]> {
 export async function getStats() {
   "use cache";
   cacheLife("minutes");
-  const places = await getPlaces();
+  const [places, updatedAt] = await Promise.all([getSummaries(), getLastUpdate()]);
   const byProvince: Record<string, number> = {};
   for (const p of places) byProvince[p.province] = (byProvince[p.province] ?? 0) + 1;
   return {
@@ -193,8 +264,10 @@ export async function getStats() {
     dogs: places.filter((p) => p.dogs).length,
     freeDeparture: places.filter((p) => departureKind(p) === "vrij").length,
     lateCheckout: places.filter((p) => departureKind(p) === "uitslapers").length,
-    otherDeparture: places.filter((p) => ["vroeg", "onbekend"].includes(departureKind(p))).length,
+    roomyCheckout: places.filter((p) => departureKind(p) === "ruim").length,
+    otherDeparture: places.filter((p) => ["ruim", "vroeg", "onbekend"].includes(departureKind(p))).length,
     withPhoto: places.filter((p) => p.imageUrl).length,
+    updatedAt,
     byProvince,
   };
 }

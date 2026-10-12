@@ -8,6 +8,7 @@ import {
   applyFilters,
   DEPARTURE_PAGES,
   filtersToQuery,
+  pageOf,
   parseFilters,
   refinementCount,
   relaxations,
@@ -21,6 +22,7 @@ import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
 import { DestinationSearch } from "@/components/destination-search";
 import { FilterSheet } from "@/components/filter-sheet";
+import { Legend } from "@/components/legend";
 import { CardSkeleton, PlaceCard } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
@@ -54,11 +56,11 @@ function activeChips(f: Filters): { label: string; without: Filters }[] {
 /** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
 function withPage(f: Filters, page?: DeparturePage): Filters {
   if (!page) return f;
-  if (page === "overig") return { ...f, departure: f.departure === "vroeg" || f.departure === "onbekend" ? f.departure : "overig" };
+  if (page === "overig") return { ...f, departure: f.departure && pageOf(f.departure) === "overig" ? f.departure : "overig" };
   return { ...f, departure: page };
 }
 
-export function SearchApp({ page }: { page?: DeparturePage }) {
+export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const filters = useMemo(() => withPage(parseFilters(params), page), [params, page]);
@@ -179,6 +181,10 @@ export function SearchApp({ page }: { page?: DeparturePage }) {
               {filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}
             </span>
           </h1>
+          <div className="flex flex-wrap items-center justify-between gap-x-4">
+            {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
+            <Legend className="-my-1" />
+          </div>
 
           {error && (
             <p className="mt-4 rounded-2xl bg-alert-tint p-5 text-alert">
@@ -220,9 +226,9 @@ export function SearchApp({ page }: { page?: DeparturePage }) {
 }
 
 const INTRO: Record<DeparturePage, string> = {
-  vrij: "De website van de plek zegt letterlijk dat er geen vaste vertrektijd is, of dat je per 24 uur betaalt. Vertrekken wanneer je wilt.",
-  uitslapers: "Wel een vaste vertrektijd, maar pas om 12:00 of later. Rustig ontbijten, geen haast.",
-  overig: "Een vertrektijd vóór 12:00, of de website noemt geen tijd. Bel bij twijfel even.",
+  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst.",
+  uitslapers: "Je hoeft pas om 12:00 of later weg. Genoeg tijd voor een rustig ontbijt.",
+  overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet weten.",
 };
 
 /** De drie pagina's als tabbladen, met het aantal plekken bij de huidige zoekopdracht */
@@ -284,7 +290,8 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
               {(
                 [
                   ["overig", "Alle"],
-                  ["vroeg", "Vóór 12:00"],
+                  ["ruim", "11:00 tot 12:00"],
+                  ["vroeg", "Vóór 11:00"],
                   ["onbekend", "Onbekend"],
                 ] as const
               ).map(([g, label]) => (
@@ -348,7 +355,7 @@ function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceS
   // Concrete alternatieven met het aantal plekken dat ze opleveren
   const options = relaxations(places, filters).slice(0, 4);
   return (
-    <div className="mt-6 rounded-2xl bg-surface p-6 outline-1 outline-line outline">
+    <div className="mt-6 rounded-2xl bg-surface p-6 shadow-low">
       <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
       <p className="mt-2 text-ink-2">{options.length ? "Met één aanpassing vind je wel iets:" : "Probeer een andere plaats of streek."}</p>
       <div className="mt-4 flex flex-wrap gap-2">

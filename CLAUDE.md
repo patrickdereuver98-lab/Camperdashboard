@@ -17,4 +17,5 @@ Werkwijze:
 - Vaste regels: nooit data verzinnen (onbekend blijft leeg), vertrektijd is het kernfeit, prijzen met alle toeslagen,
   mobiel eerst, Nederlands eerst, geen tracking van derden.
 - Next.js 16 wijkt af van oudere kennis: lees `web/AGENTS.md`.
+- Zichtbare tekst of uiterlijk aanpassen? Gebruik de skills `vrijstaan-stijl` en `frontend-design` in `.claude/skills/`.
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.

@@ -232,7 +232,7 @@ export function DestinationSearch({
           </label>
           <div
             className={`flex min-w-0 items-center gap-2 rounded-xl text-ink ring-2 ring-line transition-shadow focus-within:ring-forest ${
-              hero ? "h-14 bg-paper px-4" : "h-12 bg-surface px-3"
+              hero ? "h-14 bg-paper px-4 shadow-[inset_0_1px_3px_rgb(0_0_0/0.06)]" : "h-12 bg-surface px-3"
             }`}
           >
             <Icon name="search" size={hero ? 22 : 20} className="shrink-0 text-muted" />
@@ -289,7 +289,7 @@ export function DestinationSearch({
           type="submit"
           className={`font-semibold transition-colors ${
             hero
-              ? "flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-ember px-8 text-lg text-on-ember hover:brightness-95 lg:w-auto"
+              ? "flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-ember px-8 text-lg text-on-ember shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_8px_20px_-8px_var(--ember)] transition-[filter,transform] hover:brightness-105 active:scale-[0.98] lg:w-auto"
               : "h-12 shrink-0 rounded-xl bg-forest px-5 text-on-forest hover:bg-forest-deep"
           }`}
         >

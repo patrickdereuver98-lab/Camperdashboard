@@ -6,24 +6,24 @@ export const metadata: Metadata = { title: "Toegankelijkheid", description: "Hoe
 
 export default function AccessibilityPage() {
   return (
-    <ProsePage title="Toegankelijkheid" intro="VrijStaan moet voor iedereen goed te gebruiken zijn, ook onderweg en met kleinere letters op een telefoon." updated="11 oktober 2026">
+    <ProsePage title="Toegankelijkheid" intro="VrijStaan moet voor iedereen goed werken, ook onderweg op een telefoon." updated="11 oktober 2026">
       <Section title="Wat we doen">
         <ul>
           <li>We volgen de richtlijnen van WCAG 2.2 op niveau AA.</li>
-          <li>Goed leesbare tekst in Inter op minimaal 17 pixels, met voldoende contrast in licht en donker.</li>
-          <li>Grote knoppen (minimaal 44 bij 44 pixels) en hoog contrast, ook in donkere modus.</li>
-          <li>Alles is met het toetsenbord te bedienen; de focus is altijd zichtbaar.</li>
-          <li>Animaties staan uit als je apparaat is ingesteld op &quot;minder beweging&quot;.</li>
-          <li>Voorzieningen hebben altijd een tekstlabel naast het pictogram.</li>
+          <li>De tekst staat in Inter, minstens 17 pixels groot, met genoeg contrast in licht en donker.</li>
+          <li>Knoppen zijn groot, minstens 44 bij 44 pixels, en hebben ook in de donkere modus genoeg contrast.</li>
+          <li>Je kunt alles met het toetsenbord bedienen. Je ziet altijd waar je bent.</li>
+          <li>Staat je apparaat op &quot;minder beweging&quot;, dan staan de animaties uit.</li>
+          <li>Bij elk icoontje van een voorziening staat ook tekst.</li>
         </ul>
       </Section>
       <Section title="Bekende beperkingen">
         <p>
-          De kaart is lastig te gebruiken met een schermlezer. Alle informatie op de kaart staat daarom ook in de lijst met
+          De kaart is lastig te gebruiken met een schermlezer. Alles wat op de kaart staat, vind je daarom ook in de lijst met
           resultaten.
         </p>
       </Section>
-      <Section title="Iets niet goed bruikbaar?">
+      <Section title="Werkt iets niet goed voor je">
         <p>
           Laat het ons weten via <Link href="/contact">het contactformulier</Link>. We reageren binnen twee werkdagen.
         </p>

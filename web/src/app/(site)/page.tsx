@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { getPlaces, getStats, toSummary } from "@/lib/places";
+import { getStats, getSummaries } from "@/lib/places";
 import { searchHref } from "@/lib/search";
-import { PROVINCES, type Place } from "@/lib/types";
+import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { HomeSearch } from "@/components/home-search";
 import { Icon } from "@/components/icons";
 import { Landscape } from "@/components/landscape";
@@ -13,11 +13,11 @@ const nf = new Intl.NumberFormat("nl-NL");
 const SCRIM = "from-[#14281d]/90 via-[#14281d]/40 to-transparent";
 
 export default async function Home() {
-  const [stats, places] = await Promise.all([getStats(), getPlaces()]);
+  const [stats, places] = await Promise.all([getStats(), getSummaries()]);
   const withDeparture = places.filter((p) => p.departure).length;
 
   // Uitgelicht: eerst plekken zonder vaste vertrektijd, dan foto, score en de meeste informatie
-  const free = (p: Place) => (p.departure === "vrij" || p.departure === "per24" ? 1 : 0);
+  const free = (p: PlaceSummary) => (p.departure === "vrij" || p.departure === "per24" ? 1 : 0);
   const featured = [...places]
     .sort(
       (a, b) =>
@@ -26,8 +26,7 @@ export default async function Home() {
         (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0) ||
         b.completeness - a.completeness,
     )
-    .slice(0, 6)
-    .map(toSummary);
+    .slice(0, 6);
 
   // Populaire bestemmingen: provincies met de meeste plekken, met een echte foto van een plek daar
   const coverOf = (prov: string) =>
@@ -41,7 +40,7 @@ export default async function Home() {
     {
       href: searchHref({ departure: "vrij" }),
       title: "Zonder vertrektijd",
-      text: "De website zegt letterlijk dat je vertrekt wanneer je wilt, of per 24 uur betaalt.",
+      text: "Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf aankomst.",
       count: stats.freeDeparture,
       variant: 0,
       tone: "bg-forest text-on-forest",
@@ -49,7 +48,7 @@ export default async function Home() {
     {
       href: searchHref({ departure: "uitslapers" }),
       title: "Voor uitslapers",
-      text: "Wel een vaste vertrektijd, maar pas om 12:00 of later. Rustig ontbijten.",
+      text: "Je hoeft pas om 12:00 of later weg.",
       count: stats.lateCheckout,
       variant: 1,
       tone: "bg-lake text-on-forest",
@@ -57,7 +56,7 @@ export default async function Home() {
     {
       href: "/zoeken",
       title: "Alle camperplaatsen",
-      text: "Elke plek in de gids, met wat we zeker weten en wat nog onbekend is.",
+      text: "Alle plekken in de gids, ook die waarvan we de vertrektijd nog niet weten.",
       count: stats.total,
       variant: 3,
       tone: "bg-ink text-paper",
@@ -79,12 +78,11 @@ export default async function Home() {
           <Landscape seed="vrijstaan-avond" variant={2} water wide className="absolute inset-0 h-full w-full" />
           <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
           <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-end px-4 pb-20 sm:px-6 sm:pb-24 lg:pb-28">
-            <p className="animate-rise text-sm font-semibold tracking-wide text-[#f6e2d3] uppercase">Camperplaatsen in Nederland</p>
-            <h1 className="animate-rise mt-1 max-w-3xl font-display text-[2.2rem] leading-[1.05] font-semibold text-[#fffcf6] sm:text-5xl lg:text-6xl">
-              Waar sta je <span className="italic">vannacht?</span>
+            <h1 className="animate-rise max-w-3xl font-display text-[2.4rem] leading-[1.02] font-semibold text-[#fffcf6] [text-shadow:0_2px_24px_rgb(10_24_16/0.45)] sm:text-5xl lg:text-[4rem]">
+              Waar sta je vannacht?
             </h1>
-            <p className="animate-rise mt-2 max-w-xl text-[#efe9dc] sm:text-lg">
-              {nf.format(stats.total)} plekken. Met vertrektijd en alle kosten, rechtstreeks van de bron.
+            <p className="animate-rise mt-2 max-w-xl text-[#efe9dc] [animation-delay:80ms] sm:text-lg">
+              {nf.format(stats.total)} camperplaatsen in Nederland, met vertrektijd en prijs.
             </p>
           </div>
         </div>
@@ -97,9 +95,9 @@ export default async function Home() {
       <section aria-label="Waarom VrijStaan" className="mx-auto max-w-6xl px-3 pt-5 sm:px-6">
         <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
           {[
-            `${nf.format(withDeparture)} plekken met bekende vertrektijd, met de bronzin als bewijs`,
-            "Alle extra kosten zichtbaar: toeristenbelasting, stroom, per persoon",
-            "Gratis, zonder account en zonder advertenties",
+            `Van ${nf.format(withDeparture)} plekken weten we hoe laat je weg moet`,
+            "Prijzen met toeristenbelasting, stroom en andere bijkomende kosten",
+            "Gratis te gebruiken, je hebt geen account nodig",
           ].map((t) => (
             <li key={t} className="flex items-start gap-2.5">
               <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest-tint text-forest">
@@ -120,7 +118,7 @@ export default async function Home() {
             <li key={w.title} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
               <Link
                 href={w.href}
-                className="group flex h-full flex-col overflow-hidden rounded-2xl bg-surface outline-1 outline-line outline transition-shadow hover:shadow-lift"
+                className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] bg-surface shadow-low transition-shadow duration-200 hover:shadow-raised"
               >
                 <div className="relative h-32 overflow-hidden">
                   <Landscape seed={`soort-${w.title}`} variant={w.variant} water={w.variant === 1} className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-105" />
@@ -144,13 +142,13 @@ export default async function Home() {
       {/* Populaire bestemmingen met echte foto's */}
       <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
         <h2 className="font-display text-2xl font-semibold sm:text-3xl">Populaire bestemmingen</h2>
-        <p className="mt-1 text-ink-2">De provincies met de meeste camperplaatsen in de gids.</p>
+        <p className="mt-1 text-ink-2">Hier staan de meeste plekken.</p>
         <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-12">
           {destinations.map((d, i) => (
             <li key={d.prov} className={i < 2 ? "col-span-2 sm:col-span-1 lg:col-span-6" : "lg:col-span-3"}>
               <Link
                 href={`/camperplaatsen/${d.prov.toLowerCase()}`}
-                className={`group relative block overflow-hidden rounded-2xl bg-sunken ${i < 2 ? "h-48 sm:h-56 lg:h-64" : "h-36 sm:h-44"}`}
+                className={`group relative block overflow-hidden bg-sunken shadow-raised ${i < 2 ? "h-48 rounded-[1.5rem] sm:h-56 lg:h-64" : "h-36 rounded-[1.25rem] sm:h-44"}`}
               >
                 <CreditedPhoto
                   src={d.cover?.imageUrl}
@@ -172,7 +170,7 @@ export default async function Home() {
             <li key={prov}>
               <Link
                 href={`/camperplaatsen/${prov.toLowerCase()}`}
-                className="flex h-11 items-center gap-2 rounded-full bg-surface px-4 font-semibold outline-1 outline-line outline hover:outline-forest"
+                className="flex h-11 items-center gap-2 rounded-full bg-surface px-4 font-semibold shadow-low transition-shadow hover:shadow-raised"
               >
                 {prov} <span className="font-normal text-muted">{nf.format(stats.byProvince[prov] ?? 0)}</span>
               </Link>
@@ -212,7 +210,7 @@ export default async function Home() {
               <li key={f.label}>
                 <Link
                   href={f.href}
-                  className="flex h-full min-h-20 items-center gap-3 rounded-2xl bg-surface p-3 outline-1 outline-line outline transition-colors hover:outline-forest sm:p-4"
+                  className="flex h-full min-h-20 items-center gap-3 rounded-2xl bg-surface p-3 shadow-low transition-shadow hover:shadow-raised sm:p-4"
                 >
                   <Sign name={f.sign} size={40} />
                   <span className="min-w-0">
@@ -228,25 +226,25 @@ export default async function Home() {
       {/* Zo werkt het */}
       <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
         <h2 className="font-display text-2xl font-semibold sm:text-3xl">Zo werkt VrijStaan</h2>
-        <ol className="mt-4 grid gap-3 md:grid-cols-3">
+        <ol className="mt-5 grid gap-6 md:grid-cols-3 md:gap-8">
           {[
             {
               sign: "pin" as SignName,
-              title: "Zoek je bestemming",
-              text: "Typ een plaats, streek of eiland, of kijk wat er dichtbij is. Kies of je zonder vertrektijd wilt staan.",
+              title: "Zoek een plek",
+              text: "Typ een plaats, streek of eiland. Of kijk wat er bij jou in de buurt is.",
             },
             {
               sign: "clock" as SignName,
-              title: "Vergelijk wat telt",
-              text: "Per plek: vertrektijd met de zin van de website als bewijs, de prijs met alle extra kosten en de voorzieningen. Onbekend zetten we er eerlijk bij.",
+              title: "Kijk wanneer je weg moet",
+              text: "Bij elke plek zie je de vertrektijd, wat een nacht kost met alle bijkomende kosten, en wat er aan voorzieningen is.",
             },
             {
               sign: "camper" as SignName,
               title: "Rij erheen",
-              text: "Echte rijtijden over de weg, en met één tik de route in je eigen navigatie. Je bewaarde reis werkt ook zonder bereik.",
+              text: "Je ziet hoe lang je nog moet rijden. Met één tik open je de route in je eigen navigatie.",
             },
           ].map((s, i) => (
-            <li key={s.title} className="flex gap-4 rounded-2xl bg-surface p-5 outline-1 outline-line outline md:flex-col">
+            <li key={s.title} className="flex gap-4 border-t-2 border-line pt-5 md:flex-col">
               <div className="relative shrink-0">
                 <Sign name={s.sign} size={48} />
                 <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-ember text-sm font-bold text-on-ember">{i + 1}</span>
@@ -267,8 +265,7 @@ export default async function Home() {
             <div>
               <h2 className="font-display text-2xl font-semibold text-forest">Heb je een camperplaats?</h2>
               <p className="mt-1 max-w-xl text-ink-2">
-                Meld je plek aan of vul de gegevens aan, zoals je vertrektijd en tarieven. Een vermelding is gratis, en complete plekken
-                worden vaker gevonden.
+                Meld je plek aan of vul de gegevens aan, zoals je vertrektijd en tarieven. Aanmelden is gratis.
               </p>
             </div>
             <Link

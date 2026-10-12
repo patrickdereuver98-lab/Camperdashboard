@@ -41,6 +41,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
 | ✅ Professionele startpagina (zoekkaart met vertrekkeuze, bestemmingen met foto's, drie stappen) | Agent | Verzoek Patrick, Booking/Campspace | `web/src/app/(site)/page.tsx`, `home-search.tsx` | Zoeken vanaf de start komt op de juiste vertrekpagina | M3 |
+| ✅ Vertrekgroep "ruim" (11:00 tot 12:00), bronzinnen van de site, "Laatste update" per pagina, legenda, schaduwlagen, teksten herschreven | Agent | Verzoek Patrick | `search.ts`, plekpagina, `legend.tsx`, `globals.css`, alle pagina's en FAQ | Geen "volgens de website" meer op de site; legenda opent op zoek- en plekpagina | M3 |
 | ✅ Mijn reis (offline, delen, kosten) | Agent | App Flow | `/mijn-reis` | Werkt zonder verbinding met bewaarde gegevens | M3 |
 | ✅ Reviews, aanmelden, fout melden, contact, support | Agent | App Flow | Formulieren + RPC's | Inzending verschijnt in beheer | M2 |
 | ✅ Beheer, inclusief statistieken | Agent | PRD | `/admin/*` | Patrick kan alles beheren zonder code | M2 |

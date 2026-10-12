@@ -29,7 +29,10 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 
 - **Data mag nooit verzonnen worden.** Alleen wat letterlijk in een bron staat; anders blijft het veld leeg en toont de
   site "Onbekend".
-- **Vertrektijd is het belangrijkste feit**, met de bronzin als bewijs. Prijs is belangrijk, maar geen faalpunt.
+- **Vertrektijd is het belangrijkste feit.** De bronzin bewaren we in beheer; op de site staat per pagina alleen
+  "Laatste update: datum". Prijs is belangrijk, maar geen faalpunt.
+- **Teksten klinken menselijk**: zie `.claude/skills/vrijstaan-stijl/SKILL.md` (geen gedachtestreepjes, geen
+  hoofdletterlabels, geen verkooppraat).
 - **Prijzen zo transparant mogelijk**: basisprijs plus alle losse toeslagen zoals de website ze noemt.
 - **Mobiel eerst** (iPhone-formaat), 50-plussers, tikdoelen van minstens 44 px.
 - **Thema "natuur & vrijheid"** blijft: zandpapier, bosgroen, avondzon, meerblauw, Fraunces en Inter, bosachtige

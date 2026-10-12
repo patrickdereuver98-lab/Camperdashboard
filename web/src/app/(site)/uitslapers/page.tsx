@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CardSkeleton } from "@/components/place-ui";
+import { formatDate } from "@/lib/format";
+import { getStats } from "@/lib/places";
 import { SearchApp } from "../zoeken/search-app";
 
 export const metadata: Metadata = {
   title: "Camperplaatsen voor uitslapers",
-  description: "Camperplaatsen waar je volgens de eigen website tot 12:00 of later mag blijven staan. Met de bronzin als bewijs.",
+  description: "Camperplaatsen waar je pas om 12:00 of later weg hoeft.",
   alternates: { canonical: "/uitslapers" },
 };
 
-export default function Page() {
+export default async function Page() {
+  const { updatedAt } = await getStats();
   return (
     <Suspense
       fallback={
@@ -20,7 +23,7 @@ export default function Page() {
         </div>
       }
     >
-      <SearchApp page="uitslapers" />
+      <SearchApp page="uitslapers" updated={updatedAt ? formatDate(updatedAt) : undefined} />
     </Suspense>
   );
 }

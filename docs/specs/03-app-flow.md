@@ -22,7 +22,7 @@
 | Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`) |
 | Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, alleen vertrekregel vrij of per 24 uur | Idem |
 | Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
-| Overige plekken | `/overige-plekken` | Zelfde zoekscherm, vertrek vóór 12:00 of onbekend, met keuze tussen die twee | Idem |
+| Overige plekken | `/overige-plekken` | Zelfde zoekscherm, vertrek vóór 12:00 of onbekend, met keuze: 11:00 tot 12:00 / vóór 11:00 / onbekend | Idem |
 | Filterscherm | sheet op `/zoeken` | Vertrekken, voorzieningen, prijs, soort, lengte, overig, met live teller | Samenvattingen |
 | Plek | `/plek/<slug>` | Beslissen: vertrek, open, prijs en extra kosten, voorzieningen, contact, route, reviews | Volledige plek, reviews, plekken in de buurt |
 | Dichtbij | `/dichtbij` | Plekken rond je locatie op rijtijd | Locatie (toestemming), samenvattingen, `/api/distances` |
@@ -80,7 +80,7 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 - **Header**: logo naar Start, **+** naar Plek aanmelden, **?** naar Veelgestelde vragen. Op `/plek/*` een terugknop.
 - **Footer**: over VrijStaan, juridisch, Cookie-instellingen, Meld inhoud.
 - **Deep links `/zoeken`**: `waar`, `lat`, `lng`, `straal`, `provincie`, `v` (voorzieningen: stroom, water, lozen,
-  toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),
+  toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`ruim`, `vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),
   `open`, `score`, `sort`, `kaart=1`.
 - Paginaovergangen met `<ViewTransition>`: de foto of tekening schuift mee van de lijst naar de plekpagina.
 

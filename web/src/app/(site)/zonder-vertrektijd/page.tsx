@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CardSkeleton } from "@/components/place-ui";
+import { formatDate } from "@/lib/format";
+import { getStats } from "@/lib/places";
 import { SearchApp } from "../zoeken/search-app";
 
 export const metadata: Metadata = {
   title: "Camperplaatsen zonder vertrektijd",
-  description: "Camperplaatsen waar je volgens de eigen website vertrekt wanneer je wilt, of 24 uur mag blijven vanaf aankomst. Met de bronzin als bewijs.",
+  description: "Camperplaatsen zonder vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf aankomst.",
   alternates: { canonical: "/zonder-vertrektijd" },
 };
 
-export default function Page() {
+export default async function Page() {
+  const { updatedAt } = await getStats();
   return (
     <Suspense
       fallback={
@@ -20,7 +23,7 @@ export default function Page() {
         </div>
       }
     >
-      <SearchApp page="vrij" />
+      <SearchApp page="vrij" updated={updatedAt ? formatDate(updatedAt) : undefined} />
     </Suspense>
   );
 }

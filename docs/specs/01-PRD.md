@@ -6,7 +6,7 @@
 ## Productnaam en idee in één zin
 
 **VrijStaan**: de camperplaatsengids voor Nederland waarin je per plek ziet of je **zonder vaste vertrektijd** kunt
-staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zijn, met de bron erbij.
+staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zijn. Bovenaan elke pagina staat wanneer de gegevens voor het laatst zijn bijgewerkt.
 
 ## Doelgroep
 
@@ -41,8 +41,8 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 
 | Functie | Voordeel voor de gebruiker | Prioriteit |
 |---|---|---|
-| Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend) met de letterlijke bron | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
-| Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (eerder of onbekend), met tabbladen boven de resultaten en chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
+| Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend); de letterlijke bronzin staat in beheer, op de site alleen "Laatste update: datum" | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
+| Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (11:00 tot 12:00 "ruim", vóór 11:00 "vroeg", of onbekend, met keuze daartussen), met tabbladen boven de resultaten en chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
 | Prijs met "vanaf", hoogste tarief en losse toeslagen | Geen verrassingen bij aankomst | Must |
 | Zoeken op plaats, streek of eiland, vergeeft typfouten | Snel vinden | Must |
 | Lijst en kaart, filters in de URL | Overzicht en deelbare zoekopdrachten | Must |
@@ -85,7 +85,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 ## Acceptatiecriteria
 
 - Gegeven een plek waarvan de website letterlijk "geen aankomst- en vertrektijden" noemt, wanneer de scraper de site
-  leest, dan krijgt de plek vertrekregel **vrij** en staat de zin met de leesdatum op de plekpagina.
+  leest, dan krijgt de plek vertrekregel **vrij**, wordt de zin in beheer bewaard en staat "Laatste update: <datum>" bovenaan de plekpagina.
 - Gegeven een site die alleen "het hele seizoen komen en gaan" voor een **seizoensplaats** noemt, wanneer de scraper
   leest, dan blijft de vertrekregel **leeg**.
 - Gegeven de pagina "Zonder vertrektijd", wanneer ik zoek, dan zie ik alleen plekken met vertrekregel vrij of per
@@ -104,7 +104,8 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 ## Open vragen
 
 1. ~~Hoe streng met vertrektijden?~~ **Besloten (11 oktober 2026):** aparte pagina's "Zonder vertrektijd",
-   "Uitslapers" (vertrek 12:00 of later) en "Overige". Meer onderscheid mag als dat nodig blijkt.
+   "Uitslapers" (vertrek 12:00 of later) en "Overige". Aangevuld 11 oktober: binnen Overige onderscheid tussen
+   "ruim" (11:00 tot 12:00, de norm) en "vroeg" (vóór 11:00, ongebruikelijk). Bronzinnen niet meer op de site.
 2. **Definitieve publicatiedrempel** na de herscrape (nu tijdelijk 55%).
 3. ~~Websitefoto's~~ **Besloten (11 oktober 2026):** overal aan, met bronvermelding en verwijdering op verzoek via
    Meld inhoud. Uit te zetten in beheer (`website_photos`).

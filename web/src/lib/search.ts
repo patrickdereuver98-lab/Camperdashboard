@@ -21,21 +21,31 @@ export type SortKey = "aanbevolen" | "afstand" | "prijs" | "score";
 
 /** Vanaf deze vertrektijd noemen we een plek "voor uitslapers" */
 export const LATE_CHECKOUT = "12:00";
+/** Vanaf deze vertrektijd (tot 12:00) is het "ruim"; daarvoor "vroeg". 10:00 is ongebruikelijk vroeg, 11:00 de norm. */
+export const ROOMY_CHECKOUT = "11:00";
 
-/** Groep per plek: zonder vertrektijd, uitslapers (vertrek 12:00 of later), vroeg (vóór 12:00) of onbekend */
-export type DepartureKind = "vrij" | "uitslapers" | "vroeg" | "onbekend";
-/** Filter: een groep, of "overig" (vroeg + onbekend) */
+/**
+ * Groep per plek: zonder vertrektijd, uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
+ * Verdeling okt. 2026 (gepubliceerd, vaste tijd): ±350 uitslapers, ±310 ruim, ±60 vroeg.
+ */
+export type DepartureKind = "vrij" | "uitslapers" | "ruim" | "vroeg" | "onbekend";
+/** Filter: een groep, of "overig" (ruim + vroeg + onbekend) */
 export type DepartureGroup = DepartureKind | "overig";
 
 export function departureKind(p: Pick<PlaceSummary, "departure" | "checkoutUntil">): DepartureKind {
   if (p.departure === "vrij" || p.departure === "per24") return "vrij";
-  if (p.departure === "vast") return p.checkoutUntil && p.checkoutUntil >= LATE_CHECKOUT ? "uitslapers" : "vroeg";
+  if (p.departure === "vast" && p.checkoutUntil) {
+    if (p.checkoutUntil >= LATE_CHECKOUT) return "uitslapers";
+    return p.checkoutUntil >= ROOMY_CHECKOUT ? "ruim" : "vroeg";
+  }
   return "onbekend";
 }
 
+const OTHER: DepartureKind[] = ["ruim", "vroeg", "onbekend"];
+
 export function inDepartureGroup(p: Pick<PlaceSummary, "departure" | "checkoutUntil">, g: DepartureGroup): boolean {
   const k = departureKind(p);
-  return g === "overig" ? k === "vroeg" || k === "onbekend" : k === g;
+  return g === "overig" ? OTHER.includes(k) : k === g;
 }
 
 /** De drie pagina's: elke vertrekgroep heeft een eigen adres */
@@ -48,7 +58,7 @@ export type DeparturePage = keyof typeof DEPARTURE_PAGES;
 
 export function pageOf(g?: DepartureGroup): DeparturePage | undefined {
   if (!g) return undefined;
-  return g === "vroeg" || g === "onbekend" ? "overig" : g;
+  return OTHER.includes(g as DepartureKind) ? "overig" : (g as DeparturePage);
 }
 
 export interface Filters {
@@ -111,12 +121,12 @@ export function parseFilters(p: Params): Filters {
   };
 }
 
-const DEPARTURE_VALUES: DepartureGroup[] = ["vrij", "uitslapers", "vroeg", "onbekend", "overig"];
+const DEPARTURE_VALUES: DepartureGroup[] = ["vrij", "uitslapers", "ruim", "vroeg", "onbekend", "overig"];
 function parseDeparture(v: string | null): DepartureGroup | undefined {
   return DEPARTURE_VALUES.includes(v as DepartureGroup) ? (v as DepartureGroup) : undefined;
 }
 
-/** Query zonder de vertrekgroep zelf: die zit in het pad (alleen "vroeg" en "onbekend" als verfijning op Overige) */
+/** Query zonder de vertrekgroep zelf: die zit in het pad (alleen ruim, vroeg en onbekend als verfijning op Overige) */
 export function filtersToQuery(f: Filters): string {
   const p = new URLSearchParams();
   if (f.where) p.set("waar", f.where);
@@ -133,7 +143,7 @@ export function filtersToQuery(f: Filters): string {
   if (f.maxPrice) p.set("maxprijs", String(f.maxPrice));
   if (f.priceUnknown && (f.free || f.maxPrice)) p.set("onbekend", "1");
   if (f.minLength) p.set("lengte", String(f.minLength));
-  if (f.departure === "vroeg" || f.departure === "onbekend") p.set("vertrek", f.departure);
+  if (f.departure && OTHER.includes(f.departure as DepartureKind)) p.set("vertrek", f.departure);
   if (f.openNow) p.set("open", "1");
   if (f.minScore) p.set("score", String(f.minScore));
   if (f.sort !== "aanbevolen") p.set("sort", f.sort);

@@ -191,7 +191,7 @@ export function NearbyApp() {
         </ul>
 
         {!wide && list.length > 0 && (
-          <PlaceMap places={list.map((r) => r.place)} user={pos} fitKey={`${pos.lat}-${list.length}`} className="mt-4 h-56 rounded-2xl outline-1 outline-line outline" />
+          <PlaceMap places={list.map((r) => r.place)} user={pos} fitKey={`${pos.lat}-${list.length}`} className="mt-4 h-56 rounded-2xl shadow-low" />
         )}
 
         <p className="mt-5 text-ink-2" aria-live="polite">
