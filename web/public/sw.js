@@ -109,3 +109,33 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Pushmeldingen (bijvoorbeeld "Camperplaats X is nu rustig"). Alleen voor wie een plek volgt.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "VrijStaan", body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "VrijStaan", {
+      body: data.body || "",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => w.url === url);
+      if (open) return open.focus();
+      return self.clients.openWindow(url);
+    }),
+  );
+});

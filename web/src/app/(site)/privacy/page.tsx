@@ -16,6 +16,18 @@ const ROWS: string[][] = [
     "Tot je je account verwijdert",
   ],
   [
+    "Drukte die je doorgeeft",
+    "Of het rustig, druk of vol is, de plek, je account-id en het tijdstip. Anderen zien alleen het totaal van de laatste 3 uur, nooit wie iets meldde",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je geeft de drukte zelf door",
+    "30 dagen",
+  ],
+  [
+    "Meldingen als het rustig wordt",
+    "Welke plek je volgt (24 uur), en het adres waarop de pushdienst van je browser jouw toestel bereikt, met de sleutels om de melding te versleutelen",
+    "Toestemming (art. 6 lid 1 sub a): je zet de melding zelf aan en kunt hem altijd uitzetten",
+    "Tot je de melding uitzet, de toestemming in je browser intrekt of je account verwijdert",
+  ],
+  [
     "Foto's die je toevoegt",
     "De foto (verkleind in je browser, zonder locatie- of cameragegevens), het bijschrift, de naam die je bij de foto zet, je account-id en het tijdstip",
     "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je plaatst de foto zelf",
@@ -264,6 +276,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Supabase</strong> levert onze database en backend, in de regio Frankfurt (EU). Met Supabase hebben we een
             verwerkersovereenkomst. Voor hun subverwerkers gelden de standaardcontractbepalingen van de Europese Commissie.
+          </li>
+          <li>
+            <strong>De pushdienst van je browser</strong> (bij Chrome Google, bij Safari Apple, bij Firefox Mozilla) als je een
+            melding aanzet. Die dienst bezorgt alleen de versleutelde melding op je toestel.
           </li>
           <li>
             <strong>Google</strong>, <strong>Apple</strong> of <strong>Meta (Facebook)</strong> als je via hen inlogt. Daarvoor

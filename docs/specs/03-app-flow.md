@@ -37,7 +37,7 @@
 | Inloggen | `/inloggen?next=<pad>` | Google, Apple, Facebook of inloglink per mail; daarna terug naar `next` | Supabase Auth |
 | Inlog-terugkomst | `/auth/callback` | Code inwisselen, door naar `next`; bij een fout een begrijpelijke melding | Supabase Auth |
 | Mijn account | `/account` | Naam, inlogmanier, aantal plekken in Mijn reis, uitloggen, account verwijderen | Sessie, `user_trips` |
-| Drukte | kaart onder prijs op `/plek/<slug>` | Meldingen van de laatste 3 uur ("Druk, volgens 3 camperaars, laatste melding 20 minuten geleden") of "Nog niemand gemeld". Ingelogd: Rustig / Druk / Vol doorgeven; anders inloggen | `crowd_status`, `report_crowd` |
+| Drukte | kaart onder prijs op `/plek/<slug>` | Meldingen van de laatste 3 uur ("Druk, volgens 3 camperaars, laatste melding 20 minuten geleden") of "Nog niemand gemeld". Ingelogd: Rustig / Druk / Vol doorgeven; anders inloggen. Bij druk of vol: "Laat het me weten als het hier rustig is" → toestemming voor meldingen → één pushmelding binnen 24 uur (iPhone: alleen vanaf het beginscherm) | `crowd_status`, `report_crowd` |
 | Foto toevoegen | knop onder de foto's op `/plek/<slug>` | Niet ingelogd → `/inloggen`; ingelogd → foto kiezen, verkleinen (zonder EXIF), bijschrift, licentie aanvinken, versturen → "we bekijken je foto" of (vertrouwd) "staat zo online" | Storage `place-photos`, `place_photos` |
 | Beheer | `/admin/*` | Overzicht, Statistieken, Plekken, Dubbelen, Support, Inzendingen, Reviews, Foto's, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
 

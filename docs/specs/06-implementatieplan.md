@@ -37,7 +37,7 @@
 | ⬜ `delete_my_account` toepassen | Patrick | Bevestiging | `migrations/20261012_user_accounts.sql` (onderaan) | Knop verwijdert account direct | — |
 | ✅ Foto-upload door bezoekers met moderatie en trust-score | Agent | Opdracht Patrick | Storage, `place_photos`, `/admin/fotos` | Foto verschijnt na goedkeuring; geen EXIF | Accounts |
 | ✅ Live drukte (crowdsourced: rustig, druk, vol) | Agent | Opdracht Patrick (Fase 5) | `crowd_reports`, kaart op de plekpagina | Alleen echte meldingen van de laatste 3 uur, met aantal en tijd | Accounts |
-| ⬜ Pushmelding bij drukte-wijziging | Agent | Fase 5 | Web Push (VAPID), service worker | Melding als een gevolgde plek weer rustig is | Drukte |
+| ✅ Pushmelding als een gevolgde plek rustig wordt | Agent | Fase 5 | Edge function `push`, `crowd_watches`, `push_subscriptions`, service worker | Versleutelde melding (getest met web-push tegen een nep-pushdienst); één melding per volger | Drukte |
 | ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
 | ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 

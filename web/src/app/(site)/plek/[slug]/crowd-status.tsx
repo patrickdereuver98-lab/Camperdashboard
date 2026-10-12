@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
 import { CROWD_LABEL, crowdSummary, type CrowdLevel, type CrowdStatus } from "@/lib/crowd";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { currentPushSupport, enablePush } from "@/lib/push";
 
 const LEVELS: CrowdLevel[] = ["rustig", "druk", "vol"];
 const DOT: Record<CrowdLevel, string> = { rustig: "bg-forest", druk: "bg-ember", vol: "bg-alert" };
@@ -89,7 +90,68 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
           Log in om de drukte door te geven
         </Link>
       )}
+      {session && summary?.level && summary.level !== "rustig" && <WatchToggle placeId={placeId} userId={session.user.id} />}
       {err && <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
     </section>
+  );
+}
+
+/** Pushmelding als het weer rustig wordt (24 uur geldig) */
+function WatchToggle({ placeId, userId }: { placeId: string; userId: string }) {
+  const [on, setOn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void supabase()
+      .from("crowd_watches")
+      .select("expires_at, notified_at")
+      .eq("place_id", placeId)
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => alive && setOn(!!data && !data.notified_at && new Date(data.expires_at) > new Date()));
+    return () => {
+      alive = false;
+    };
+  }, [placeId, userId]);
+
+  async function toggle() {
+    setBusy(true);
+    setNote(null);
+    try {
+      if (!on) {
+        const support = currentPushSupport();
+        if (support === "ios-install") throw new Error("Op een iPhone werkt dit als je VrijStaan op je beginscherm zet: tik op Delen en dan Zet op beginscherm.");
+        if (support === "denied") throw new Error("Meldingen staan uit voor deze site. Zet ze aan in de instellingen van je browser.");
+        if (support === "unsupported") throw new Error("Deze browser kan geen meldingen tonen.");
+        await enablePush();
+      }
+      const { error } = await supabase().rpc("watch_place", { p_place_id: placeId, p_on: !on });
+      if (error) throw error;
+      setOn(!on);
+      if (!on) setNote("We sturen je één melding zodra iemand meldt dat het hier rustig is. Dit geldt 24 uur.");
+    } catch (e) {
+      setNote(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (on === null) return null;
+  return (
+    <div className="mt-3 border-t border-line pt-3">
+      {on && !note && <p className="mb-2 text-sm text-ink-2">Je krijgt een melding zodra iemand meldt dat het hier rustig is.</p>}
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={busy}
+        aria-pressed={on}
+        className="flex min-h-11 w-full items-center justify-center rounded-xl border-2 border-line px-4 font-semibold hover:border-forest disabled:opacity-60 aria-pressed:border-forest aria-pressed:text-forest"
+      >
+        {busy ? "Even geduld…" : on ? "Melding uitzetten" : "Laat het me weten als het hier rustig is"}
+      </button>
+      {note && <p role="status" className="mt-2 text-sm text-ink-2">{note}</p>}
+    </div>
   );
 }
