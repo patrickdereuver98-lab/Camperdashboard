@@ -1,3 +1,4 @@
+-- Status: live toegepast op 2026-10-12.
 -- Kaart laadt alleen plekken binnen de zichtbare bounding box (PostGIS + GIST-index).
 -- Additief: een gegenereerde kolom, een index en een leesfunctie. RLS op public.places blijft gelden
 -- (security invoker), dus anon ziet alleen gepubliceerde plekken.
