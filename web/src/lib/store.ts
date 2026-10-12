@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { bboxKey, snapBbox, type Bbox } from "./bbox";
 import type { PlaceSummary, Town } from "./types";
+import { cleanVehicle, type Vehicle } from "./vehicle";
 
 // ── Kleine localStorage-store met abonnement ───────────────────────────────
 
@@ -86,6 +87,13 @@ export function useTrip() {
     clear: () => set([]),
   };
 }
+
+// ── Mijn camper (voertuigkluis) ───────────────────────────────────────────
+
+const EMPTY_VEHICLE: Vehicle = {};
+const vehicleStore = createStore<Vehicle>("vrijstaan:camper", EMPTY_VEHICLE, (v): v is Vehicle => typeof v === "object" && v !== null && !Array.isArray(v));
+export const useVehicle = () => [vehicleStore.use(), (v: Vehicle) => vehicleStore.write(cleanVehicle(v))] as const;
+export const readVehicle = () => vehicleStore.read();
 
 // ── Reisinstellingen (verbruik, brandstofprijs) ────────────────────────────
 

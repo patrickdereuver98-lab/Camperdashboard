@@ -36,6 +36,7 @@
 | Niet gevonden | elke onbekende route | "Verkeerd afgeslagen" met terugweg | — |
 | Inloggen | `/inloggen?next=<pad>` | Google, Apple, Facebook of inloglink per mail; daarna terug naar `next` | Supabase Auth |
 | Inlog-terugkomst | `/auth/callback` | Code inwisselen, door naar `next`; bij een fout een begrijpelijke melding | Supabase Auth |
+| Mijn camper | `/mijn-camper` | Maten, brandstof en verbruik invullen (werkt zonder account). Lengte zet bij zoeken het lengtefilter vanzelf aan (chip "Mijn camper"; wegtikken → `lengte=0`, blijft uit). Verbruik vult Mijn reis. Ingelogd: papieren uploaden, openen, weghalen | localStorage, `user_vehicles`, Storage `vehicle-docs` |
 | Mijn account | `/account` | Naam, inlogmanier, aantal plekken in Mijn reis, uitloggen, account verwijderen | Sessie, `user_trips` |
 | Drukte | kaart onder prijs op `/plek/<slug>` | Meldingen van de laatste 3 uur ("Druk, volgens 3 camperaars, laatste melding 20 minuten geleden") of "Nog niemand gemeld". Ingelogd: Rustig / Druk / Vol doorgeven; anders inloggen. Bij druk of vol: "Laat het me weten als het hier rustig is" → toestemming voor meldingen → één pushmelding binnen 24 uur (iPhone: alleen vanaf het beginscherm) | `crowd_status`, `report_crowd` |
 | Foto toevoegen | knop onder de foto's op `/plek/<slug>` | Niet ingelogd → `/inloggen`; ingelogd → foto kiezen, verkleinen (zonder EXIF), bijschrift, licentie aanvinken, versturen → "we bekijken je foto" of (vertrouwd) "staat zo online" | Storage `place-photos`, `place_photos` |

@@ -77,6 +77,13 @@ export function AccountView() {
         </span>
       </Link>
 
+      <Link href="/mijn-camper" className="mt-3 flex items-center justify-between rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+        <span className="flex items-center gap-3 font-semibold">
+          <Icon name="settings" size={22} /> Mijn camper
+        </span>
+        <span className="text-ink-2">Maten en papieren</span>
+      </Link>
+
       <button
         onClick={async () => {
           await signOut();

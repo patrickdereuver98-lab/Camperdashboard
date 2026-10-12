@@ -17,7 +17,8 @@ import {
   type Filters,
   type SortKey,
 } from "@/lib/search";
-import { usePlaces, useViewportPlaces } from "@/lib/store";
+import { usePlaces, useVehicle, useViewportPlaces } from "@/lib/store";
+import { applyVehicle } from "@/lib/vehicle";
 import type { Bbox } from "@/lib/bbox";
 import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
@@ -40,14 +41,16 @@ const SORTS: { key: SortKey; label: string; needsCenter?: boolean }[] = [
 ];
 
 /** Verwijderbare chips voor elke actieve verfijning (Baymard: gekozen filters zichtbaar houden) */
-function activeChips(f: Filters): { label: string; without: Filters }[] {
+function activeChips(f: Filters & { lengthFromVehicle?: boolean }): { label: string; without: Filters }[] {
   const chips: { label: string; without: Filters }[] = [];
   for (const fac of FACILITIES)
     if (f.facilities.includes(fac.key)) chips.push({ label: fac.label, without: { ...f, facilities: f.facilities.filter((x) => x !== fac.key) } });
   for (const k of f.kinds) chips.push({ label: KIND_LABEL[k], without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   if (f.free) chips.push({ label: "Gratis", without: { ...f, free: false } });
   if (f.maxPrice) chips.push({ label: `Tot € ${f.maxPrice}`, without: { ...f, maxPrice: undefined } });
-  if (f.minLength) chips.push({ label: `Camper ${f.minLength} m`, without: { ...f, minLength: undefined } });
+  // Uitzetten blijft uit, ook als het camperprofiel een lengte heeft (lengte=0 in het adres)
+  const len = String(f.minLength).replace(".", ",");
+  if (f.minLength) chips.push({ label: f.lengthFromVehicle ? `Mijn camper (${len} m)` : `Camper ${len} m`, without: { ...f, minLength: undefined, lengthOff: true } });
   if (f.openNow) chips.push({ label: "Zonder gesloten plekken", without: { ...f, openNow: false } });
   if (f.priceUnknown && (f.free || f.maxPrice)) chips.push({ label: "Ook onbekende prijs", without: { ...f, priceUnknown: false } });
   if (f.minScore) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
@@ -64,7 +67,8 @@ function withPage(f: Filters, page?: DeparturePage): Filters {
 export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: string }) {
   const router = useRouter();
   const params = useSearchParams();
-  const filters = useMemo(() => withPage(parseFilters(params), page), [params, page]);
+  const [vehicle] = useVehicle();
+  const filters = useMemo(() => applyVehicle(withPage(parseFilters(params), page), vehicle), [params, page, vehicle]);
   const key = filtersToQuery(filters);
   const { data: places, error } = usePlaces();
   const results = useMemo(() => (places ? applyFilters(places, filters) : null), [places, filters]);

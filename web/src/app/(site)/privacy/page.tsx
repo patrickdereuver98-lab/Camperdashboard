@@ -16,6 +16,18 @@ const ROWS: string[][] = [
     "Tot je je account verwijdert",
   ],
   [
+    "Mijn camper",
+    "Naam, maten, brandstof en verbruik die je zelf invult. Zonder account alleen op je toestel; met account ook in je account",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",
+    "Tot je de gegevens wist of je account verwijdert",
+  ],
+  [
+    "Papieren van je camper",
+    "Bestanden die je zelf uploadt (bijvoorbeeld kentekenbewijs of verzekering). Ze staan in een afgeschermde map die alleen jij kunt openen; wij kijken er niet in",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",
+    "Tot je ze weghaalt of je account verwijdert",
+  ],
+  [
     "Drukte die je doorgeeft",
     "Of het rustig, druk of vol is, de plek, je account-id en het tijdstip. Anderen zien alleen het totaal van de laatste 3 uur, nooit wie iets meldde",
     "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je geeft de drukte zelf door",
