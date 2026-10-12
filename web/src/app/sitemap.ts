@@ -11,6 +11,7 @@ const STATIC = [
   "/overige-plekken",
   "/dichtbij",
   "/plek-aanmelden",
+  "/doe-mee",
   "/veelgestelde-vragen",
   "/contact",
   "/over-ons",

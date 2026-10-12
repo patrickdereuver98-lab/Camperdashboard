@@ -5,10 +5,12 @@
 //   { "action": "osm", "region": "NL-GE" }  → Overpass rechtstreeks (handmatig; edge-IP's worden soms geweigerd)
 //   { "action": "scrape", "n": 6 }          → volgende batch websites
 //   { "action": "enqueue" }                 → plekken met website in de scrape-wachtrij
+//   { "action": "discover", "n": 6 }        → websites zoeken voor plekken zonder website (zie discover.ts)
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { type Candidate, domains, matches } from "./discover.ts";
 import { extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 
@@ -122,13 +124,13 @@ async function allowed(url: URL): Promise<boolean> {
   return !robotsCache.get(url.host)!.some((p) => url.pathname.startsWith(p));
 }
 
-async function fetchPage(url: URL): Promise<string | null> {
+async function fetchPage(url: URL, timeout = 9000): Promise<string | null> {
   if (!/^https?:$/.test(url.protocol)) return null;
   if (!(await allowed(url))) return null;
   const res = await fetch(url, {
     headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "nl,en;q=0.5" },
     redirect: "follow",
-    signal: AbortSignal.timeout(9000),
+    signal: AbortSignal.timeout(timeout),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
@@ -225,6 +227,42 @@ async function runScrape(n: number) {
   return { processed: results.length, results };
 }
 
+// ── Websites zoeken ────────────────────────────────────────────────────────
+
+async function discoverOne(c: Candidate): Promise<string | null> {
+  for (const d of domains(c.name, c.town)) {
+    // www en zonder www tegelijk; de eerste die past wint
+    const tries = await Promise.all(
+      [`https://www.${d}/`, `https://${d}/`].map(async (u) => {
+        try {
+          const html = await fetchPage(new URL(u), 6000);
+          return html && matches(c, html) ? u : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const hit = tries.find(Boolean);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+async function runDiscover(n: number) {
+  const { data: batch, error } = await db.rpc("next_discover_batch", { p_limit: n });
+  if (error) throw error;
+  const results = await Promise.all(
+    (batch ?? []).map(async (c: Candidate) => {
+      const url = await discoverOne(c).catch(() => null);
+      await db.rpc("apply_discovery", { p_id: c.id, p_url: url });
+      return { id: c.id, name: c.name, url };
+    }),
+  );
+  const found = results.filter((r) => r.url);
+  if (found.length) await log("info", `Websites gevonden: ${found.map((r) => `${r.name} → ${r.url}`).join("; ")}`.slice(0, 2000));
+  return { processed: results.length, found: found.length, results };
+}
+
 Deno.serve(async (req) => {
   const key = req.headers.get("x-pipeline-key");
   const { data: secret } = await db.from("internal_secrets").select("value").eq("name", "pipeline_key").single();
@@ -236,6 +274,7 @@ Deno.serve(async (req) => {
     if (body.action === "osm") result = await runOsm(String(body.region));
     else if (body.action === "parse") result = await runParse(String(body.region), Number(body.places_req), Number(body.points_req));
     else if (body.action === "scrape") result = await runScrape(Math.min(8, Number(body.n) || 4));
+    else if (body.action === "discover") result = await runDiscover(Math.min(8, Number(body.n) || 4));
     else if (body.action === "probe")
       result = await overpass('[out:json][timeout:25];node["tourism"="caravan_site"](52.0,5.0,52.2,5.3);out 3;').then(
         (e) => ({ ok: true, count: e.length }),

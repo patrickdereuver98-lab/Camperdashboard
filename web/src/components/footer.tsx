@@ -22,6 +22,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/veelgestelde-vragen", label: "Veelgestelde vragen" },
       { href: "/contact", label: "Contact en support" },
+      { href: "/doe-mee", label: "Doe mee" },
       { href: "/plek-aanmelden", label: "Plek aanmelden" },
       { href: "/plek-aanmelden?soort=eigenaar", label: "Voor eigenaren" },
     ],
