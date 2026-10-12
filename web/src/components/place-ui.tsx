@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
 import { departureKind, FACILITIES, openStatus } from "@/lib/search";
+import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { formatKm } from "@/lib/geo";
 import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
@@ -32,21 +33,48 @@ export function PlacePhoto({
   sizes?: "small" | "large";
   onFail?: () => void;
 }) {
+  // Eerst de grote versie bij de beeldbank; mislukt die, dan het origineel zoals de site het gaf
+  const upgraded = src ? upgradePhotoUrl(src) : undefined;
+  const [useOriginal, setUseOriginal] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Logo, tekening of een foto met een heel andere verhouding: passend tonen in plaats van half bijsnijden
+  const [fit, setFit] = useState<"cover" | "photo" | "graphic">(src && looksLikeGraphic(src) ? "graphic" : "cover");
   const ref = useRef<HTMLImageElement>(null);
+  const current = useOriginal ? src : upgraded;
+  const pos = /\babsolute\b/.test(className) ? "" : "relative";
   const fail = useCallback(() => {
+    if (!useOriginal && upgraded !== src) {
+      setUseOriginal(true);
+      return;
+    }
     setFailed(true);
     onFail?.();
-  }, [onFail]);
-  // Een foto die al vóór de hydratatie faalde, mist het onError-event
+  }, [onFail, upgraded, src, useOriginal]);
+  const loaded = useCallback(() => {
+    const img = ref.current;
+    if (!img?.naturalWidth) return;
+    // Te klein voor dit vak wordt onscherp: dan liever de tekening (kaart) of de volgende foto (galerij)
+    if (img.naturalWidth < (sizes === "large" ? 640 : 320)) {
+      setFailed(true);
+      onFail?.();
+      return;
+    }
+    const ratio = img.naturalWidth / img.naturalHeight;
+    const box = img.parentElement ? img.parentElement.clientWidth / Math.max(1, img.parentElement.clientHeight) : 1.6;
+    // Alleen in de grote galerij; een smalle kaartfoto mag gewoon bijgesneden worden
+    if (sizes === "large" && fit === "cover" && (ratio / box > 1.8 || box / ratio > 1.45)) setFit("photo");
+  }, [sizes, onFail, fit]);
+  // Een foto die al vóór de hydratatie laadde of faalde, mist het load- of error-event
   useEffect(() => {
     const img = ref.current;
-    if (img?.complete && img.naturalWidth === 0) fail();
-  }, [fail]);
-  if (!src || failed) {
+    if (!img?.complete) return;
+    if (img.naturalWidth === 0) fail();
+    else loaded();
+  }, [fail, loaded]);
+  if (!current || failed) {
     // Geen foto: een getekend landschap (duidelijk een illustratie, geen nepfoto)
     return (
-      <div className={`relative overflow-hidden ${className}`} role="img" aria-label={`${alt} (nog geen foto)`}>
+      <div className={`${pos} overflow-hidden ${className}`} role="img" aria-label={`${alt} (nog geen foto)`}>
         <Landscape seed={alt} water={kind === "jachthaven"} van={sizes === "large"} className="absolute inset-0 h-full w-full" />
         {sizes === "large" && (
           <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-3 py-1 text-sm font-semibold text-ink-2">
@@ -57,18 +85,27 @@ export function PlacePhoto({
     );
   }
   return (
-    // Externe foto's van de plek zelf; geen optimalisatieproxy zodat de bron zichtbaar blijft
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      ref={ref}
-      src={src}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      referrerPolicy="no-referrer"
-      onError={fail}
-      className={`object-cover ${className}`}
-    />
+    <div className={`${pos} overflow-hidden ${fit === "graphic" ? "bg-surface" : "bg-sunken"} ${className}`}>
+      {/* Bij een passend getoonde foto vult een vervaagde kopie de randen, zodat er geen lege balken staan */}
+      {fit === "photo" && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={current} alt="" aria-hidden="true" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
+      )}
+      {/* Externe foto's van de plek zelf; geen optimalisatieproxy zodat de bron zichtbaar blijft */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={ref}
+        key={current}
+        src={current}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={fail}
+        onLoad={loaded}
+        className={`relative h-full w-full ${fit === "cover" ? "object-cover" : fit === "graphic" ? "object-contain p-[8%]" : "object-contain"}`}
+      />
+    </div>
   );
 }
 

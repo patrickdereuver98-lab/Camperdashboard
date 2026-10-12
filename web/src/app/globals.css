@@ -101,9 +101,16 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: var(--text-base);
+  /* Telefoon 16 px (rustiger, meer op één scherm), vanaf tablet 17 px */
+  font-size: 1rem;
   line-height: 1.55;
   text-rendering: optimizeLegibility;
+}
+
+@media (min-width: 40rem) {
+  body {
+    font-size: var(--text-base);
+  }
 }
 
 ::selection {

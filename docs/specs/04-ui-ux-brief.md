@@ -2,7 +2,7 @@
 
 > Doel: één consistente, bruikbare visuele richting. Het thema **"natuur & vrijheid"** staat vast (keuze van de
 > eigenaar) en wordt niet vervangen. Details en tokens: `docs/design.md` en `web/src/app/globals.css`.
-> Bijgewerkt: 11 oktober 2026.
+> Bijgewerkt: 12 oktober 2026.
 
 ## Doelgroep en toon
 
@@ -40,7 +40,8 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 
 - **Fraunces** (variabel, `SOFT` 60, optische grootte) voor koppen en prijzen, gewicht 600.
 - **Inter** voor lopende tekst, knoppen en formulieren.
-- Basis 17 px; kleine tekst minimaal 14 px (`text-sm`); koppen 24–36 px op mobiel.
+- Basis 16 px op de telefoon en 17 px vanaf tablet (`sm`); kleine tekst minimaal 14 px (`text-sm`); koppen 20–28 px op
+  mobiel, tot 36 px op groot scherm. Besluit eigenaar 12 oktober 2026: op de telefoon rustiger en meer op één scherm.
 - Lettertypes zelf gehost via `next/font` (geen verzoeken naar Google).
 
 ## Componenten
@@ -56,6 +57,8 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
 | Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis); vaste actiebalk op de plekpagina |
 | Meldingen | Korte toast na bewaren; inline statusregels (`role="status"`/`role="alert"`) |
+| Foto's van een plek | Beste foto vooraan: een foto van de plek zelf, het eigen logo pas als er niets anders is. Nooit keurmerken of logo's van anderen (SVR, ANWB, Zoover), vlaggen, stockfoto's of miniaturen. We vragen bij bekende beeldbanken (WordPress, Wix, Jimdo, Duda, `?width=`) de grote versie op en vallen terug op het origineel. Te klein voor het vak (galerij < 640 px, kaart < 320 px breed) = niet tonen. Logo's en foto's met een heel andere verhouding staan passend in het vak (niet half bijgesneden), met een vervaagde rand. Regels in `web/src/lib/photos.ts` |
+| Over deze plek | Tekst van de website van de plek, alleen hele Nederlandse zinnen: zonder "Lees meer", "…", links, prijzen, telefoonnummers of SEO-titels. Lukt dat niet, dan geen tekst. Onder de tekst: "Zo beschrijft de plek zichzelf op de eigen website." Regels in `web/src/lib/description.ts` |
 | Laatste update | Eén kleine grijze regel bovenaan elke plek- en lijstpagina: "Laatste update: 11 oktober 2026". Geen bronzinnen of "volgens de website" bij losse gegevens (besluit eigenaar). Alleen foto's houden "Foto: domein.nl" in de hoek, zolang de foto laadt |
 | Legenda | Link "Wat betekenen de icoontjes?" bij de resultaten en bij Voorzieningen; opent een sheet met voorzieningen, kleuren (groen, zand, doorgestreept), vertrekbadges en open/dicht |
 | Diepte | Drie schaduwlagen in `globals.css`: `shadow-low` (kaarten), `shadow-raised` (hover, tegels), `shadow-float` (zoekkaart, sheets). Warm getint; in het donker met een licht randje bovenaan. Geen losse grijze randen om kaarten |
@@ -74,7 +77,7 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 |---|---|
 | Start | Getekend landschap over de volle breedte met "Waar sta je vannacht?" → zoekkaart eroverheen (bestemming, keuze Vertrekken: Alle / Zonder vertrektijd / Uitslapers, knop Zoeken; avondzon-rand zoals de zoekbalk van Booking) → drie vertrouwenspunten → "Hoe wil je staan?" (drie kaarten naar de vertrekpagina's) → Populaire bestemmingen (provincietegels met een echte foto van een plek daar, met bron) → "Vertrekken wanneer je wilt" → zoeken op voorziening → "Zo werkt VrijStaan" in drie stappen → eigenaren |
 | Zoeken en vertrekpagina's | Zoekveld → vertrektabbladen → korte uitleg van de pagina → Filters + sortering → actieve filterchips → "n plekken in …" → kaarten → zwevende kaart/lijst-knop |
-| Plek | Foto/tekening → soort, naam, adres, open/dicht → kerngegevens (prijs, vertrekken, open, max. lengte) → **Aankomen en vertrekken** (met bron) → **Prijs en extra kosten** → contact → voorzieningen → route en kaart → praktisch → reviews → in de buurt → bronnen |
+| Plek | Foto (16:9) → soort, naam, adres met link naar de kaart, open/dicht, score, laatste update → **beslisblok** (één kaart: vertrekken bovenaan en als enige opvallend, daaronder prijs met duurste tarief, toeristenbelasting en uitklapbare extra kosten, open, max. lengte) → voorzieningen als labels (aanwezig en niet aanwezig, onbekend in één regel) → over deze plek → ligging en route (kaart + rijtijd) → gegevens bekend / meld een fout → ervaringen → praktisch en contact (alleen bekende gegevens, onbekend in één regel) → in de buurt. Vaste actiebalk: prijs, hartje, bellen, website, **Route**. Niets staat dubbel |
 | Dichtbij | Locatievraag → chips (zonder vertrektijd, uitslapers, nu open, voorzieningen) in één scrollrij → kaart → lijst op rijtijd |
 | Mijn reis | Stops met nachten → startpunt → route en kosten → delen en navigatie |
 

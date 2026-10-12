@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 import { CreditedPhoto, PlaceCard } from "@/components/place-ui";
+import { looksLikeGraphic } from "@/lib/photos";
 
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
@@ -31,7 +32,7 @@ export default async function Home() {
   // Populaire bestemmingen: provincies met de meeste plekken, met een echte foto van een plek daar
   const coverOf = (prov: string) =>
     places
-      .filter((p) => p.province === prov && p.imageUrl)
+      .filter((p) => p.province === prov && p.imageUrl && !looksLikeGraphic(p.imageUrl))
       .sort((a, b) => b.completeness - a.completeness || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0))[0];
   const provinces = [...PROVINCES].sort((a, b) => (stats.byProvince[b] ?? 0) - (stats.byProvince[a] ?? 0));
   const destinations = provinces.slice(0, 6).map((prov) => ({ prov, count: stats.byProvince[prov] ?? 0, cover: coverOf(prov) }));

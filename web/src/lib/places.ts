@@ -3,7 +3,9 @@ import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
 import { departureKind, isOpenOn } from "./search";
-import type { Place, PlaceSummary, Review, Town } from "./types";
+import { cleanDescription } from "./description";
+import { rankPhotos } from "./photos";
+import type { Photo, Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
 
@@ -93,17 +95,20 @@ const decodeEntities = (s: string) =>
   s.replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCharCode(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d: string) => String.fromCharCode(Number(d))).replace(/&amp;/g, "&");
 
 function normalize(p: Place, websitePhotos = false): Place {
-  const photos = (p.photos ?? [])
-    .map((ph) => ({ ...ph, url: decodeEntities(ph.url) }))
-    .filter((ph) => /^https:\/\//.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos))
-    .map((ph) => ({ ...ph, credit: ph.credit?.replace(/^www\./, "") ?? sourceCredit(ph.url) }));
   const image = p.imageUrl ? decodeEntities(p.imageUrl) : undefined;
-  const imageUrl = image && /^https:\/\//.test(image) && photoAllowed(image, p.photos?.find((ph) => ph.url === p.imageUrl)?.permission, websitePhotos) ? image : photos[0]?.url;
+  const allowed = (ph: Photo) => /^https:\/\//.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos);
+  // Hoofdfoto en galerij samen sorteren: een echte foto van de plek vooraan, keurmerken en miniaturen eruit
+  const candidates: Photo[] = (p.photos ?? []).map((ph) => ({ ...ph, url: decodeEntities(ph.url) }));
+  if (image && !candidates.some((ph) => ph.url === image)) candidates.unshift({ url: image, credit: p.imageCredit });
+  const photos = rankPhotos(candidates.filter(allowed)).map((ph) => ({ ...ph, credit: ph.credit?.replace(/^www\./, "") ?? sourceCredit(ph.url) }));
+  // Kaarten en zoeken halen geen fotolijst op: dan alleen de hoofdfoto, als die de toets doorstaat
+  const cover = photos[0];
   return {
     ...p,
+    description: cleanDescription(p.description),
     photos,
-    imageUrl,
-    imageCredit: imageUrl ? (imageUrl === image ? (p.imageCredit?.replace(/^www\./, "") ?? sourceCredit(image)) : photos[0]?.credit) : undefined,
+    imageUrl: cover?.url,
+    imageCredit: cover?.credit,
     // "vanaf € x": de laagste genoemde prijs, er zijn duurdere tarieven
     priceFrom: p.priceEur !== undefined && p.priceEur > 0 && /^vanaf/i.test(p.priceNote ?? "") ? true : undefined,
   };

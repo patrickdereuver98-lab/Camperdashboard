@@ -107,7 +107,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
       <div className="min-w-0">
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
         <DepartureTabs page={page} filters={filters} places={places} />
-        <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
+        <div className="sticky top-14 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:top-16 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} />
           <div className="mt-3 flex min-w-0 items-center gap-2">
             <button

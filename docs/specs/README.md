@@ -54,4 +54,7 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 8 | Reviews: formulier belooft nog geen foto's en vertrektijdvraag ("binnenkort") | App Flow, PRD | Fase B (Implementatieplan M4) |
 | 9 | `/zoeken?waar=<onbekend>` toont het hele land met die plaatsnaam | App Flow | Fix in M5 |
 | 10 | Testtabellen `private.probe` en `private.probe2` staan nog in de database | Backend Schema | Verwijderen |
+| 12 | Brief zei basis 17 px; eigenaar vond de telefoonweergave te druk | UI/UX Brief | **Opgelost (12 okt):** 16 px op de telefoon, 17 px vanaf tablet, kleinere koppen, beslisblok |
+| 13 | "Over deze plek" is de meta-omschrijving van de website: vaak afgekapt ("Lees meer"), soms Duits of een prijslijst | Backend Schema, scraper | Site toont nu alleen hele Nederlandse zinnen (in de snapshot valt 13% weg, de rest wordt opgeschoond). Beter: volledige introtekst scrapen (pipeline v16) en eigenaren hun eigen tekst laten schrijven (claim, M4) |
+| 14 | Foto's: 448 plekken met WordPress-miniaturen, keurmerken (SVR, Zoover) als eerste foto | Scraper, UI/UX Brief | Site vraagt nu de grote versie op en filtert; scraper aanpassen in v16 |
 | 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |

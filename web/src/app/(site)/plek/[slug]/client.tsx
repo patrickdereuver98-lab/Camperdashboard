@@ -27,9 +27,9 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
   if (!visible.length)
     return (
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
-        <div className="relative h-32 overflow-hidden sm:h-44 sm:rounded-2xl" role="img" aria-label={`Nog geen foto van ${name}`}>
+        <div className="relative h-28 overflow-hidden sm:h-44 sm:rounded-2xl" role="img" aria-label={`Nog geen foto van ${name}`}>
           <Landscape seed={`Foto van ${name}`} water={kind === "jachthaven"} van wide className="absolute inset-0 h-full w-full" />
-          <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-3 py-1 text-sm font-semibold text-ink-2">
+          <span className="absolute bottom-2 left-3 rounded-full bg-surface/90 px-3 py-0.5 text-sm font-semibold text-ink-2">
             Nog geen foto van deze plek
           </span>
         </div>
@@ -40,7 +40,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <div
         ref={track_}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="no-scrollbar flex aspect-[16/10] snap-x snap-mandatory overflow-x-auto sm:aspect-[21/9] sm:rounded-2xl"
+        className="no-scrollbar flex aspect-[16/9] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-2xl"
         aria-roledescription="carrousel"
         aria-label={`Foto's van ${name}`}
       >
@@ -66,7 +66,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
                 photo
               )}
               {p.credit && (
-                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">
+                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-xs text-white">
                   Foto: {p.credit}
                 </figcaption>
               )}
@@ -76,7 +76,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       </div>
       {visible.length > 1 && (
         <>
-          <span className="animate-fade-in-late absolute right-3 bottom-3 rounded-full bg-black/60 px-3 py-1 font-display text-sm font-semibold text-white">
+          <span className="animate-fade-in-late absolute right-2 bottom-2 rounded-full bg-black/50 px-2.5 py-0.5 text-sm font-semibold text-white tabular-nums">
             {Math.min(index, visible.length - 1) + 1} / {visible.length}
           </span>
           <div className="absolute inset-y-0 left-2 hidden items-center sm:flex">
@@ -135,27 +135,26 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
   }
 
   return (
-    <div className="rounded-2xl bg-surface p-5 shadow-low">
-      <h2 className="font-display text-xl font-semibold">Hoe ver is het?</h2>
+    <div className="rounded-2xl bg-surface p-4 shadow-low">
       {state.s === "ok" ? (
-        <p className="mt-2 text-lg">
-          <span className="font-display text-3xl font-semibold">{formatDuration(state.seconds)}</span>
+        <p>
+          <span className="font-display text-2xl font-semibold">{formatDuration(state.seconds)}</span>
           <span className="ml-2 text-ink-2">rijden, {formatKm(state.km)} over de weg</span>
         </p>
       ) : (
-        <p className="mt-1 text-ink-2">Bereken de echte rijtijd vanaf waar je nu bent.</p>
+        <p className="text-ink-2">Bereken de rijtijd vanaf waar je nu bent.</p>
       )}
       {state.s === "error" && <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-alert">{state.msg}</p>}
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {state.s !== "ok" && (
           <button
             type="button"
             onClick={calculate}
             disabled={state.s === "locating"}
-            className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest disabled:opacity-60"
+            className="flex h-11 items-center gap-2 rounded-xl bg-forest px-4 font-semibold text-on-forest disabled:opacity-60"
           >
-            <Icon name="locate" size={19} />
-            {state.s === "locating" ? "Bezig…" : "Bereken vanaf mijn locatie"}
+            <Icon name="locate" size={18} />
+            {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}
           </button>
         )}
         <a
@@ -163,9 +162,9 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => track("outbound", { soort: "route", naar: name })}
-          className="flex h-12 items-center gap-2 rounded-xl border-2 border-line px-5 font-semibold hover:border-forest"
+          className="flex h-11 items-center gap-2 rounded-xl border border-line px-4 font-semibold hover:border-forest"
         >
-          <Icon name="route" size={19} /> Open in navigatie
+          <Icon name="route" size={18} /> Open in navigatie
         </a>
       </div>
     </div>

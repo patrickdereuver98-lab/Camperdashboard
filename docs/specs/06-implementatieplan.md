@@ -1,7 +1,7 @@
 # 6. Implementatieplan
 
 > Doel: een geordende bouwvolgorde met controlepunten, voor mensen en AI-agents.
-> Bijgewerkt: 11 oktober 2026. Status: ✅ klaar, 🔄 bezig, ⬜ open.
+> Bijgewerkt: 12 oktober 2026. Status: ✅ klaar, 🔄 bezig, ⬜ open.
 > Eigenaar: "Patrick" = de eigenaar van VrijStaan; "Agent" = een AI-codeeragent (Claude Code) in deze repository.
 
 ## Mijlpaal 1: projectopzet ✅
@@ -57,6 +57,10 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
+| ✅ Plekpagina rustiger op mobiel: beslisblok, voorzieningen als labels, niets dubbel, kleinere koppen en header, basis 16 px op de telefoon | Agent | Verzoek Patrick, UX-onderzoek | `plek/[slug]/page.tsx`, `chrome.tsx`, `globals.css` | Vertrekken, prijs, open en lengte in één scherm op iPhone-formaat | — |
+| ✅ Scherpe foto's: grote versie bij bekende beeldbanken, geen keurmerken/stockfoto's/miniaturen, beste foto vooraan, logo passend | Agent | Verzoek Patrick | `web/src/lib/photos.ts`, `PlacePhoto` | Geen onscherpe of half bijgesneden eerste foto | — |
+| ✅ "Over deze plek" opgeschoond: alleen hele Nederlandse zinnen | Agent | Verzoek Patrick | `web/src/lib/description.ts` | Geen "Lees meer", "…" of halve zinnen op de site | — |
+| ⬜ Zelfde foto- en tekstregels in de scraper (grootste `srcset`, volledige introtekst van de pagina in plaats van de meta-omschrijving) | Agent | `photos.ts`, `description.ts` | Pipeline v16 | Na de herscrape hoeft de site minder weg te filteren | Herscrape v15 |
 | ⬜ Kaartmarkers ≥ 44 px, pop-up met vertrekregel en hartje | Agent | UX-audit | `place-map.tsx` | Marker raakbaar met duim op iPhone | — |
 | ⬜ Onbekende plaats in URL toont "niet gevonden" | Agent | UX-audit | `search-app.tsx` | `/zoeken?waar=xyzqqq` toont geen hele land | — |
 | ⬜ Layoutverspringing Mijn reis (CLS 0,41) en plekpagina (0,13) | Agent | UX-audit | Skelet en vaste foto-verhouding | CLS < 0,1 | — |
