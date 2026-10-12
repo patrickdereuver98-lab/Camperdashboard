@@ -81,7 +81,7 @@ export default function SettingsPage() {
               Een plek gaat automatisch online als de harde eisen kloppen (website of telefoon, en minstens twee van vertrekregel, openingsperiode, stroom en prijs) en de gewogen score minstens deze drempel haalt. Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs, stroom en contact 2, foto 1,5, water, lozen, toilet en honden 1, beschrijving en echte naam 0,5, douche en aantal plekken 0,25. Plekken die je handmatig hebt vastgezet blijven zoals ze zijn.
             </p>
             <label className="flex items-center gap-3">
-              <input type="range" min={0.5} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--forest)]" />
+              <input type="range" min={0.3} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--forest)]" />
               <span className="w-14 text-right font-display text-xl font-semibold tabular-nums">{Math.round(s.publish_threshold * 100)}%</span>
             </label>
             <p className="text-sm text-muted">Na opslaan: klik op &quot;Drempel toepassen&quot; hieronder om bestaande plekken bij te werken.</p>

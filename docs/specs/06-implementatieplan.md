@@ -20,9 +20,9 @@
 |---|---|---|---|---|---|
 | ✅ Schema, RLS en RPC's | Agent | Backend Schema | Tabellen, policies, functies | Anon leest alleen gepubliceerde data; beheer via `is_admin()` | M1 |
 | ✅ OSM-import per provincie | Agent | OSM-tags | `osm_regions`, cron, edge function | Alle 12 provincies binnen 7 dagen ververst | Schema |
-| ✅ Website-scraper (prijs, toeslagen, seizoen, voorzieningen, vertrektijden) | Agent | Echte voorbeeldzinnen | Edge function `pipeline` v15 | Testscripts geven verwacht resultaat; steekproef van 10 plekken klopt | Schema |
-| 🔄 Herscrape alle websites met v15 | Agent | — | Bijgewerkte plekken | `private.scrape_queue` leeg; steekproef "vrij" en toeslagen correct | Scraper |
-| ⬜ Publicatiedrempel definitief instellen | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | ±1.000 plekken van goede kwaliteit online | Herscrape |
+| ✅ Website-scraper (prijs, toeslagen, seizoen, voorzieningen, vertrektijden) | Agent | Echte voorbeeldzinnen | Edge function `pipeline` v16 | Testscripts geven verwacht resultaat; steekproef van 10 plekken klopt | Schema |
+| ✅ Herscrape alle websites met v15 | Agent | — | Bijgewerkte plekken | `private.scrape_queue` leeg; steekproef "vrij" en toeslagen correct | Scraper |
+| ✅ Publicatiedrempel definitief instellen (0,45) | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | 1.509 plekken online, allemaal met contact en 2 van 4 kernfeiten | Herscrape |
 | ✅ Beheeraccounts via uitnodiging | Agent | E-mail Patrick | `private.admin_invites`, trigger | Patrick kan inloggen | Schema |
 | ⬜ Rollen `admin` en `support` echt scheiden | Agent | Besluit Patrick | Policies per rol | Support kan geen instellingen of plekken verwijderen | Besluit |
 | ⬜ Bewaartermijnen activeren | Patrick | `web/supabase/retention.sql` | Cron `retention` | `cron.job` bevat `retention` | — |

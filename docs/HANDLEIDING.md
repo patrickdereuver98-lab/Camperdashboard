@@ -122,7 +122,7 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 6. **Publiceren**: een plek gaat automatisch online als:
    - er een website of telefoonnummer is, én
    - minstens twee van de vier beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom en prijs, én
-   - de gewogen score de drempel haalt (nu 55%). Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs 2,
+   - de gewogen score de drempel haalt (nu 45%). Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs 2,
      stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1, honden 1, beschrijving 0,5, echte naam 0,5,
      douche 0,25, aantal plekken 0,25.
    Drempel aanpassen kan in **Instellingen**.
