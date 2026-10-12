@@ -101,6 +101,8 @@ Een websitewaarde die bij een volgende lezing niet meer op de site staat, wordt 
   3 maanden, tickets 12 maanden na sluiten (laatste nog niet geautomatiseerd).
 - Websitefoto's standaard tonen (besluit eigenaar), altijd met bronvermelding ("website domein.nl"), niet zelf
   opgeslagen, verwijdering op verzoek via Meld inhoud; uit te zetten met `website_photos`.
+- Externe foto's lopen via wsrv.nl (gratis, open source, Cloudflare): verkleind naar 320/640/1280 px WebP. Lukt dat
+  niet, dan het origineel, daarna een tekening (`PlacePhoto` in `place-ui.tsx`). Genoemd in privacy en cookies.
 
 ## Prestatie- en betrouwbaarheidsdoelen
 

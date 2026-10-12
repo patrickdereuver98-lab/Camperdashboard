@@ -164,3 +164,16 @@ openbare OSRM-server van de OpenStreetMap-gemeenschap.
 | Rijtijden "niet beschikbaar" | De routeserver is tijdelijk onbereikbaar; de site valt terug op hemelsbrede afstand en zegt dat er eerlijk bij. Met `ORS_API_KEY` heb je een tweede bron |
 | Pipeline lijkt stil te staan | **Admin → Logs → Systeem en fouten** en **Data-imports**. Knop **Nieuwe websites lezen** in Instellingen plant ze opnieuw in |
 | Database opnieuw opzetten in een ander project | Voer `web/supabase/schema.sql` en daarna `web/supabase/seed.sql` uit, deploy `web/supabase/functions/pipeline` (zonder JWT-controle), zet een geheime sleutel in `public.internal_secrets` (`name = 'pipeline_key'`) en pas de projectnaam in `private.call_pipeline` aan |
+
+
+## Scraper uitrollen (edge function `pipeline`)
+
+De functie in Supabase bestaat uit één regel die de code uit GitHub haalt, vastgezet op een commit:
+
+```ts
+import "https://raw.githubusercontent.com/patrickdereuver98-lab/Camperdashboard/<commit>/web/supabase/functions/pipeline/index.ts";
+```
+
+Supabase bundelt die code bij het uitrollen; daarna hangt de functie niet meer van GitHub af. Nieuwe versie: commit en
+push de wijziging in `web/supabase/functions/pipeline/`, zet de nieuwe commit in die regel en rol uit met
+`verify_jwt` uit (de functie controleert zelf de `x-pipeline-key`).

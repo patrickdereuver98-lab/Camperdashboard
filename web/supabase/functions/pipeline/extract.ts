@@ -115,6 +115,15 @@ function contentImages(html: string, base: URL): string[] {
     if (url && !out.includes(url)) out.push(url);
     if (out.length >= 8) break;
   }
+  // Achtergrondfoto's van headers en sliders (style="background-image:url(…)", data-bg, data-background)
+  if (out.length < 8) {
+    const bg = /background(?:-image)?\s*:\s*url\(\s*(?:&quot;|["'])?([^"')&]+?)(?:&quot;|["'])?\s*\)|\sdata-(?:bg|background|background-image)=["']([^"']+)["']/gi;
+    for (const m of html.matchAll(bg)) {
+      const url = absolute(m[1] ?? m[2], base);
+      if (url && !out.includes(url) && !NOT_A_PHOTO.test(url)) out.push(url);
+      if (out.length >= 8) break;
+    }
+  }
   return out;
 }
 
