@@ -73,7 +73,7 @@ export default function FaqAdmin() {
       {categories.map((c) => (
         <section key={c} className="space-y-2">
           <h2 className="font-display text-lg font-semibold">{c}</h2>
-          <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface outline-1 outline-line outline">
+          <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface outline-1 outline-line outline">
             {rows.filter((r) => r.category === c).map((r) => (
               <li key={r.id} className="flex items-start gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">

@@ -71,7 +71,7 @@ function Table({ head, rows }: { head: string[]; rows: string[][] }) {
       {/* Mobiel: kaartjes; vanaf sm een tabel */}
       <ul className="space-y-2 sm:hidden">
         {rows.map((r) => (
-          <li key={r[0]} className="rounded-xl bg-surface p-3 outline-1 outline-line outline !ml-0 !list-none">
+          <li key={r[0]} className="rounded-lg bg-surface p-3 outline-1 outline-line outline !ml-0 !list-none">
             <p className="font-semibold text-ink">{r[0]}</p>
             <dl className="mt-1 space-y-1 text-sm">
               {r.slice(1).map((c, i) => (
@@ -84,7 +84,7 @@ function Table({ head, rows }: { head: string[]; rows: string[][] }) {
           </li>
         ))}
       </ul>
-      <div className="hidden overflow-hidden rounded-xl outline-1 outline-line outline sm:block">
+      <div className="hidden overflow-hidden rounded-lg outline-1 outline-line outline sm:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-sunken">
             <tr>

@@ -18,13 +18,13 @@ export function HomeSearch() {
   const id = useId();
   const [departure, setDeparture] = useState<DepartureGroup | undefined>(undefined);
   return (
-    <div className="rounded-3xl bg-surface p-3.5 shadow-float ring-[3px] ring-ember sm:rounded-[1.75rem] sm:p-5">
+    <div className="rounded-2xl bg-surface p-3.5 shadow-float ring-1 ring-ember/50 sm:p-5">
       <DestinationSearch variant="hero" base={{ ...DEFAULT_FILTERS, departure }}>
         <fieldset className="min-w-0 lg:w-[23rem]">
           <legend id={`${id}-v`} className="mb-1.5 block text-sm font-semibold text-ink-2">
             Vertrekken
           </legend>
-          <div className="grid h-12 grid-cols-[auto_1fr_auto] gap-1 rounded-xl bg-paper p-1 sm:h-14 shadow-[inset_0_1px_3px_rgb(0_0_0/0.06)] ring-2 ring-line">
+          <div className="grid h-12 grid-cols-[auto_1fr_auto] gap-1 rounded-lg bg-paper p-1 sm:h-14 ring-1 ring-line">
             {CHOICES.map((c) => {
               const on = departure === c.value;
               return (

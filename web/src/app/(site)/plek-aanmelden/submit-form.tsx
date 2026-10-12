@@ -8,7 +8,7 @@ import { PROVINCES } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 
-const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
 export function SubmitForm() {
   const params = useSearchParams();
@@ -60,7 +60,7 @@ export function SubmitForm() {
 
   if (done)
     return (
-      <div className="mt-8 rounded-2xl bg-forest-tint p-6">
+      <div className="mt-8 rounded-xl bg-forest-tint p-6">
         <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
@@ -81,7 +81,7 @@ export function SubmitForm() {
             role="radio"
             aria-checked={owner === v}
             onClick={() => setOwner(v as boolean)}
-            className="h-12 rounded-xl border-2 border-line font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+            className="h-12 rounded-lg border border-line font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
           >
             {l as string}
           </button>
@@ -147,7 +147,7 @@ export function SubmitForm() {
                 role="radio"
                 aria-checked={departure === v}
                 onClick={() => setDeparture(v)}
-                className="min-h-12 rounded-xl border-2 border-line px-3 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+                className="min-h-12 rounded-lg border border-line px-3 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
               >
                 {l}
               </button>
@@ -185,7 +185,7 @@ export function SubmitForm() {
             return (
               <label
                 key={fac.key}
-                className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border-2 border-line px-3 font-semibold has-[:checked]:border-forest has-[:checked]:bg-forest-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+                className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-lg border border-line px-3 font-semibold has-[:checked]:border-forest has-[:checked]:bg-forest-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
               >
                 <input
                   type="checkbox"
@@ -224,7 +224,7 @@ export function SubmitForm() {
 
       <input name="website_hp" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Plek aanmelden"}
       </button>
     </form>

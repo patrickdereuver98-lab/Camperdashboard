@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Geist } from "next/font/google";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import { Header, Runtime, SaveToast, TabBar } from "@/components/chrome";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SITE_URL } from "@/lib/env";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["SOFT", "opsz"] });
+// Eén lettertype voor koppen, tekst en cijfers (zie docs/stijlgids.md §4)
+const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="nl" className={`${inter.variable} ${fraunces.variable} h-full antialiased`}>
+    <html lang="nl" className={`${geist.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <Header />
         <div id="inhoud" className="flex flex-1 flex-col">

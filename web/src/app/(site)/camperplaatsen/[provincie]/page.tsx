@@ -48,15 +48,15 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
           : `Er staan nog geen plekken in ${prov} in de gids.`}
       </p>
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link href={`${searchHref({ province: prov, where: prov })}&kaart=1`} className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
+        <Link href={`${searchHref({ province: prov, where: prov })}&kaart=1`} className="flex h-12 items-center gap-2 rounded-lg bg-forest px-5 font-semibold text-on-forest">
           <Icon name="map" size={19} /> Bekijk op de kaart
         </Link>
         {free > 0 ? (
-          <Link href={searchHref({ province: prov, where: prov, free: true })} className="flex h-12 items-center rounded-xl border-2 border-line bg-surface px-5 font-semibold hover:border-forest">
+          <Link href={searchHref({ province: prov, where: prov, free: true })} className="flex h-12 items-center rounded-lg border border-line bg-surface px-5 font-semibold hover:border-forest">
             Gratis plekken ({free})
           </Link>
         ) : (
-          <Link href={searchHref({ province: prov, where: prov, sort: "prijs" })} className="flex h-12 items-center rounded-xl border-2 border-line bg-surface px-5 font-semibold hover:border-forest">
+          <Link href={searchHref({ province: prov, where: prov, sort: "prijs" })} className="flex h-12 items-center rounded-lg border border-line bg-surface px-5 font-semibold hover:border-forest">
             Goedkoopste eerst
           </Link>
         )}

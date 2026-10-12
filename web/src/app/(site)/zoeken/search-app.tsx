@@ -115,7 +115,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
             <button
               type="button"
               onClick={() => setFiltersOpen(true)}
-              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold sm:flex-none sm:rounded-xl sm:border-2 sm:border-line sm:bg-surface sm:px-4 sm:text-base sm:hover:border-forest"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base sm:hover:border-forest"
             >
               <Icon name="sliders" size={18} />
               Filters
@@ -123,7 +123,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
                 <span className="grid h-5 min-w-5 place-items-center rounded-full bg-forest px-1 text-xs text-on-forest">{count}</span>
               )}
             </button>
-            <label className="relative flex h-11 min-w-0 flex-1 items-center justify-center text-[0.9375rem] font-semibold has-[select:focus-visible]:rounded-lg has-[select:focus-visible]:outline-[3px] has-[select:focus-visible]:outline-forest sm:flex-none sm:rounded-xl sm:border-2 sm:border-line sm:bg-surface sm:pr-9 sm:pl-3 sm:text-base sm:hover:border-forest">
+            <label className="relative flex h-11 min-w-0 flex-1 items-center justify-center text-[0.9375rem] font-semibold has-[select:focus-visible]:rounded-lg has-[select:focus-visible]:outline-[3px] has-[select:focus-visible]:outline-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:pr-9 sm:pl-3 sm:text-base sm:hover:border-forest">
               <Icon name="sort" size={17} className="mr-1.5 shrink-0 text-muted" />
               {/* Mobiel staat er alleen "Sorteren" (de keuze past niet); een stip als het niet de standaard is */}
               <span className="sm:hidden">Sorteren</span>
@@ -150,7 +150,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
                   window.scrollTo({ top: 0 });
                 }}
                 aria-pressed={mapOpen}
-                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold aria-pressed:text-forest sm:flex-none sm:rounded-xl sm:border-2 sm:border-line sm:bg-surface sm:px-4 sm:text-base"
+                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold aria-pressed:text-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base"
               >
                 <Icon name={mapOpen ? "list" : "map"} size={18} />
                 {mapOpen ? "Lijst" : "Kaart"}
@@ -208,7 +208,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
           </div>
 
           {error && (
-            <p className="mt-4 rounded-2xl bg-alert-tint p-5 text-alert">
+            <p className="mt-4 rounded-xl bg-alert-tint p-5 text-alert">
               De plekken konden niet worden geladen. Controleer je verbinding en ververs de pagina.
             </p>
           )}
@@ -294,7 +294,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
               replace
               scroll={false}
               aria-current={active === t.key ? "page" : undefined}
-              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-xl border-b-[3px] px-2.5 text-[0.9375rem] font-semibold sm:px-3 sm:text-base ${
+              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-lg border-b-[3px] px-2.5 text-[0.9375rem] font-semibold sm:px-3 sm:text-base ${
                 active === t.key ? "border-forest text-forest" : "border-transparent text-ink-2 hover:text-forest"
               }`}
             >
@@ -324,7 +324,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
                   replace
                   scroll={false}
                   aria-current={filters.departure === g ? "true" : undefined}
-                  className="flex h-11 shrink-0 items-center rounded-full border-2 border-line px-4 text-sm font-semibold whitespace-nowrap aria-[current=true]:border-forest aria-[current=true]:bg-forest-tint aria-[current=true]:text-forest"
+                  className="flex h-11 shrink-0 items-center rounded-full border border-line px-4 text-sm font-semibold whitespace-nowrap aria-[current=true]:border-forest aria-[current=true]:bg-forest-tint aria-[current=true]:text-forest"
                 >
                   {label}
                 </Link>
@@ -350,8 +350,8 @@ function Results({
   return (
     <>
       <ul className="mt-2 space-y-2.5 sm:mt-4 sm:space-y-3">
-        {results.slice(0, limit).map((r) => (
-          <li key={r.place.id}>
+        {results.slice(0, limit).map((r, i) => (
+          <li key={r.place.id} className="enter cv-auto" style={{ ["--i" as string]: i % 24 }}>
             <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} />
           </li>
         ))}
@@ -361,7 +361,7 @@ function Results({
           <button
             type="button"
             onClick={() => setLimit((l) => l + PAGE)}
-            className="h-12 rounded-xl border-2 border-line bg-surface px-6 font-semibold hover:border-forest"
+            className="h-12 rounded-lg border border-line bg-surface px-6 font-semibold hover:border-forest"
           >
             Toon meer plekken
           </button>
@@ -378,7 +378,7 @@ function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceS
   // Concrete alternatieven met het aantal plekken dat ze opleveren
   const options = relaxations(places, filters).slice(0, 4);
   return (
-    <div className="mt-6 rounded-2xl bg-surface p-6 shadow-low">
+    <div className="mt-6 rounded-xl bg-surface p-6 shadow-low">
       <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
       <p className="mt-2 text-ink-2">{options.length ? "Met één aanpassing vind je wel iets:" : "Probeer een andere plaats of streek."}</p>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -387,7 +387,7 @@ function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceS
             key={o.label}
             type="button"
             onClick={() => onChange(o.next)}
-            className="min-h-11 rounded-xl border-2 border-line px-4 font-semibold hover:border-forest hover:text-forest"
+            className="min-h-11 rounded-lg border border-line px-4 font-semibold hover:border-forest hover:text-forest"
           >
             {o.label} <span className="font-normal text-muted">({o.count})</span>
           </button>

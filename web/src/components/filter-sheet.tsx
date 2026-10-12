@@ -25,7 +25,7 @@ function Toggle({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className="flex min-h-12 items-center gap-2.5 rounded-xl border-2 border-line bg-surface px-3 text-left font-semibold transition-colors aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+      className="flex min-h-12 items-center gap-2.5 rounded-lg border border-line bg-surface px-3 text-left font-semibold transition-colors aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
     >
       {children}
     </button>
@@ -109,7 +109,7 @@ export function FilterSheet({
             onClick={() =>
               setDraft({ ...DEFAULT_FILTERS, where: draft.where, center: draft.center, province: draft.province, radiusKm: draft.radiusKm, departure: draft.departure })
             }
-            className="h-12 rounded-xl px-4 font-semibold text-forest underline"
+            className="h-12 rounded-lg px-4 font-semibold text-forest underline"
           >
             Wis filters
           </button>
@@ -120,7 +120,7 @@ export function FilterSheet({
               onClose();
             }}
             disabled={count === 0}
-            className="h-12 flex-1 rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-50"
+            className="h-12 flex-1 rounded-lg bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-50"
           >
             {count === null ? "Toon plekken" : count === 0 ? "Geen plekken" : `Toon ${count} ${count === 1 ? "plek" : "plekken"}`}
           </button>

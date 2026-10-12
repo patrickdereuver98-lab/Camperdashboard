@@ -54,7 +54,7 @@ export function CookieBanner() {
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-titel"
-      className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-2xl border border-line bg-surface p-5 shadow-lift md:bottom-6"
+      className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-xl border border-line bg-surface p-5 shadow-lift md:bottom-6"
     >
       <h2 id="cookie-titel" className="font-display text-lg font-semibold">
         Cookies en statistieken
@@ -64,7 +64,7 @@ export function CookieBanner() {
         gebruikt. Dat doen we zonder IP-adres en zonder cookies van derden. <Link href="/cookies" className="font-semibold text-forest underline">Meer weten</Link>
       </p>
       {details && (
-        <div className="mt-4 space-y-3 rounded-xl bg-sunken p-4">
+        <div className="mt-4 space-y-3 rounded-lg bg-sunken p-4">
           <label className="flex items-start gap-3">
             <input type="checkbox" checked disabled className="mt-1 h-5 w-5 accent-[var(--forest)]" />
             <span>
@@ -92,18 +92,18 @@ export function CookieBanner() {
       {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {details ? (
-          <button type="button" onClick={() => close(analytics)} className="min-h-12 rounded-xl bg-forest px-5 font-semibold text-on-forest sm:col-span-2">
+          <button type="button" onClick={() => close(analytics)} className="min-h-12 rounded-lg bg-forest px-5 font-semibold text-on-forest sm:col-span-2">
             Keuze opslaan
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => close(true)} className="min-h-12 rounded-xl border-2 border-forest bg-forest-tint px-5 font-semibold text-forest">
+            <button type="button" onClick={() => close(true)} className="min-h-12 rounded-lg border border-forest bg-forest-tint px-5 font-semibold text-forest">
               Statistieken toestaan
             </button>
-            <button type="button" onClick={() => close(false)} className="min-h-12 rounded-xl border-2 border-forest bg-forest-tint px-5 font-semibold text-forest">
+            <button type="button" onClick={() => close(false)} className="min-h-12 rounded-lg border border-forest bg-forest-tint px-5 font-semibold text-forest">
               Alleen noodzakelijk
             </button>
-            <button type="button" onClick={() => setDetails(true)} className="min-h-11 rounded-xl px-5 font-semibold text-forest underline sm:col-span-2">
+            <button type="button" onClick={() => setDetails(true)} className="min-h-11 rounded-lg px-5 font-semibold text-forest underline sm:col-span-2">
               Zelf instellen
             </button>
           </>

@@ -69,7 +69,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             href={n.href}
             onClick={() => setMenu(false)}
             aria-current={isActive(n.href) ? "page" : undefined}
-            className="flex h-11 items-center gap-3 rounded-xl px-3 font-semibold text-ink-2 hover:bg-sunken aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
+            className="flex h-11 items-center gap-3 rounded-lg px-3 font-semibold text-ink-2 hover:bg-sunken aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
           >
             <Icon name={n.icon} size={20} /> {n.label}
           </Link>
@@ -81,7 +81,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface px-4 lg:hidden">
-        <button onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-label="Menu" className="-ml-2 grid h-11 w-11 place-items-center rounded-xl hover:bg-sunken">
+        <button onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-label="Menu" className="-ml-2 grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken">
           <Icon name={menu ? "x" : "menu"} size={22} />
         </button>
         <Logo size={28} />
@@ -97,10 +97,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <nav aria-label="Beheermenu">{nav}</nav>
         <div className="mt-auto space-y-2 border-t border-line pt-4 text-sm">
           <p className="truncate px-2 text-muted">{session?.user.email}</p>
-          <Link href="/" className="flex h-10 items-center gap-2 rounded-xl px-2 font-semibold hover:bg-sunken">
+          <Link href="/" className="flex h-10 items-center gap-2 rounded-lg px-2 font-semibold hover:bg-sunken">
             <Icon name="external" size={18} /> Naar de site
           </Link>
-          <button onClick={() => supabase().auth.signOut()} className="flex h-10 w-full items-center gap-2 rounded-xl px-2 font-semibold hover:bg-sunken">
+          <button onClick={() => supabase().auth.signOut()} className="flex h-10 w-full items-center gap-2 rounded-lg px-2 font-semibold hover:bg-sunken">
             <Icon name="logout" size={18} /> Uitloggen
           </button>
         </div>
@@ -175,7 +175,7 @@ function Login() {
           </label>
         )}
         <ErrorNote message={err} />
-        {note && <p role="status" className="rounded-xl bg-forest-tint px-4 py-3 font-semibold text-forest">{note}</p>}
+        {note && <p role="status" className="rounded-lg bg-forest-tint px-4 py-3 font-semibold text-forest">{note}</p>}
         <button disabled={busy} className={`${primary} h-12 w-full`}>
           {busy ? "Bezig…" : mode === "inloggen" ? "Inloggen" : mode === "registreren" ? "Account aanmaken" : "Stuur herstellink"}
         </button>

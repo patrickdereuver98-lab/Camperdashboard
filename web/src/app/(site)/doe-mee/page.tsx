@@ -28,14 +28,14 @@ export default async function HelpPage() {
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <a href="#vertrektijden" className="flex items-center gap-4 rounded-[1.25rem] bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
+        <a href="#vertrektijden" className="flex items-center gap-4 rounded-xl bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
           <Sign name="clock" size={44} />
           <span>
             <span className="block font-display text-lg font-semibold">Vertrektijd invullen</span>
             <span className="block text-sm text-muted">Van {nf.format(stats.unknownDeparture)} plekken weten we het nog niet</span>
           </span>
         </a>
-        <Link href="/plek-aanmelden" className="flex items-center gap-4 rounded-[1.25rem] bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
+        <Link href="/plek-aanmelden" className="flex items-center gap-4 rounded-xl bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
           <Sign name="camper" size={44} />
           <span>
             <span className="block font-display text-lg font-semibold">Plek aanmelden</span>

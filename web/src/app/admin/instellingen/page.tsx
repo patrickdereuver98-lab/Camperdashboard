@@ -53,7 +53,7 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <PageTitle title="Instellingen" />
       <ErrorNote message={error ?? err} />
-      {msg && <p role="status" className="rounded-xl bg-forest-tint px-4 py-3 font-semibold text-forest">{msg}</p>}
+      {msg && <p role="status" className="rounded-lg bg-forest-tint px-4 py-3 font-semibold text-forest">{msg}</p>}
       {s && (
         <form onSubmit={save} className="space-y-6">
           <Card className="space-y-3">

@@ -13,8 +13,7 @@ import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
-import { Landscape } from "./landscape";
-import { Sign, type SignName } from "./sign";
+import { KIND_SIGN, Sign, type SignName } from "./sign";
 
 // ── Foto met nette terugval ─────────────────────────────────────────────────
 
@@ -44,7 +43,8 @@ export function PlacePhoto({
   onFail?: () => void;
 }) {
   // Volgorde: verkleinde WebP van de grote versie (wsrv.nl), de grote versie zelf, het origineel van de site.
-  // wsrv.nl vergroot nooit (&we), dus de echte breedte blijft meetbaar voor de scherptecheck hieronder.
+  // wsrv.nl vergroot nooit (&we), dus de echte breedte blijft meetbaar voor de scherptecheck hieronder. Bewust geen
+  // srcset: daarmee rekent de browser naturalWidth om naar schermpixels en lijkt elke foto te klein.
   const w = sizes === "large" ? 1280 : 640;
   const upgraded = src ? upgradePhotoUrl(src) : undefined;
   const ownStorage = !!src?.startsWith(`${SUPABASE_URL}/storage/`);
@@ -55,7 +55,6 @@ export function PlacePhoto({
   const [fit, setFit] = useState<"cover" | "photo" | "graphic">(src && looksLikeGraphic(src) ? "graphic" : "cover");
   const ref = useRef<HTMLImageElement>(null);
   const current = sources[stage];
-  const proxied = !ownStorage && stage === 0 && !!upgraded;
   const pos = /\babsolute\b/.test(className) ? "" : "relative";
   // Volgende bron proberen; als alle bronnen op zijn, valt de foto af (tekening of volgende foto)
   const fail = useCallback(() => setStage((s) => s + 1), []);
@@ -90,15 +89,15 @@ export function PlacePhoto({
     else loaded();
   }, [fail, loaded]);
   if (!current || failed || exhausted) {
-    // Geen foto: een getekend landschap (duidelijk een illustratie, geen nepfoto)
+    // Geen foto: een rustig leeg vlak met het soort plek, geen tekening of nepfoto (docs/stijlgids.md §10)
     return (
-      <div className={`${pos} overflow-hidden ${className}`} role="img" aria-label={`${alt} (nog geen foto)`}>
-        <Landscape seed={alt} water={kind === "jachthaven"} van={sizes === "large"} className="absolute inset-0 h-full w-full" />
-        {sizes === "large" && (
-          <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-3 py-1 text-sm font-semibold text-ink-2">
-            Nog geen foto{town ? ` van deze plek in ${town}` : ""}
-          </span>
-        )}
+      <div
+        className={`${pos} flex flex-col items-center justify-center gap-1.5 overflow-hidden bg-sunken text-muted ${className}`}
+        role="img"
+        aria-label={`${alt} (nog geen foto)`}
+      >
+        <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={sizes === "large" ? 36 : 28} state="unknown" />
+        {sizes === "large" && <span className="text-sm">Nog geen foto{town ? ` van deze plek in ${town}` : ""}</span>}
       </div>
     );
   }
@@ -114,8 +113,6 @@ export function PlacePhoto({
         ref={ref}
         key={current}
         src={current}
-        srcSet={proxied && upgraded ? `${photoProxy(upgraded, w / 2)} ${w / 2}w, ${photoProxy(upgraded, w)} ${w}w` : undefined}
-        sizes={sizes === "large" ? "100vw" : "(min-width: 640px) 360px, 50vw"}
         alt={alt}
         loading={sizes === "large" ? "eager" : "lazy"}
         decoding="async"
@@ -187,7 +184,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
         type="button"
         onClick={toggle}
         aria-pressed={saved}
-        className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+        className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
       >
         <Icon name="heart" size={20} filled={saved} className={saved ? "animate-pop text-alert" : ""} />
         {saved ? "Bewaard" : "Bewaar"}
@@ -288,8 +285,8 @@ export function PlaceCard({
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      className={`group relative flex overflow-hidden rounded-2xl bg-surface transition-[box-shadow,outline-color] duration-200 ${
-        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent hover:shadow-raised"
+      className={`lift group relative flex overflow-hidden rounded-xl bg-surface ${
+        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent"
       } outline ${stack ? "flex-col" : "flex-row"}`}
     >
       <div
@@ -344,7 +341,7 @@ export function PlaceCard({
 
 export function CardSkeleton() {
   return (
-    <div className="flex overflow-hidden rounded-2xl bg-surface shadow-low">
+    <div className="flex overflow-hidden rounded-xl bg-surface shadow-low">
       <div className="h-36 w-[34%] max-w-36 shrink-0 animate-pulse bg-sunken sm:h-48 sm:w-60 sm:max-w-none" />
       <div className="flex-1 space-y-3 p-3 sm:p-4">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />

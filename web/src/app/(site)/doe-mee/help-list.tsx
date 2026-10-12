@@ -9,7 +9,7 @@ import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
 
-const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 const PAGE = 20;
 
 /** Gepubliceerde plekken waarvan de vertrektijd nog onbekend is, per provincie, met een snel invulformulier */
@@ -28,7 +28,7 @@ export function HelpList() {
     [places, province],
   );
 
-  if (error) return <p className="mt-4 rounded-2xl bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
+  if (error) return <p className="mt-4 rounded-xl bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
 
   return (
     <div className="mt-4">
@@ -54,7 +54,7 @@ export function HelpList() {
       ) : (
         <>
           <p className="mt-3 text-sm text-muted">{list.length.toLocaleString("nl-NL")} plekken</p>
-          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[1.25rem] bg-surface shadow-low">
+          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low">
             {list.slice(0, shown).map((p) => (
               <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function HelpList() {
                   <button
                     type="button"
                     onClick={() => setPicked(p)}
-                    className="h-11 shrink-0 rounded-xl border-2 border-line px-4 font-semibold text-forest transition-colors hover:border-forest"
+                    className="h-11 shrink-0 rounded-lg border border-line px-4 font-semibold text-forest transition-colors hover:border-forest"
                   >
                     Ik weet het
                   </button>
@@ -80,7 +80,7 @@ export function HelpList() {
             ))}
           </ul>
           {shown < list.length && (
-            <button type="button" onClick={() => setShown((n) => n + PAGE)} className="mt-3 h-12 w-full rounded-xl border-2 border-line font-semibold hover:border-forest">
+            <button type="button" onClick={() => setShown((n) => n + PAGE)} className="mt-3 h-12 w-full rounded-lg border border-line font-semibold hover:border-forest">
               Meer plekken
             </button>
           )}
@@ -153,7 +153,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
                 role="radio"
                 aria-checked={kind === v}
                 onClick={() => setKind(v)}
-                className="min-h-12 rounded-xl border-2 border-line px-4 py-2 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+                className="min-h-12 rounded-lg border border-line px-4 py-2 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
               >
                 {l}
               </button>
@@ -196,7 +196,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
             {err}
           </p>
         )}
-        <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+        <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
           {busy ? "Versturen…" : "Versturen"}
         </button>
       </form>

@@ -216,16 +216,16 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           </div>
           <SaveButton slug={place.slug} />
           {tel && (
-            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-xl border border-line bg-surface">
+            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="phone" size={19} />
             </a>
           )}
           {place.website && (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className="grid h-11 w-11 place-items-center rounded-xl border border-line bg-surface">
+            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="globe" size={19} />
             </a>
           )}
-          <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center gap-2 rounded-xl bg-forest px-4 font-semibold text-on-forest">
+          <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest">
             <Icon name="route" size={18} /> Route
           </a>
         </div>
@@ -237,24 +237,24 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: string; nearby: PlaceSummary[]; reserveLabel: string }) {
   return (
     <>
-      <div className="hidden rounded-2xl bg-surface p-5 shadow-low md:block">
+      <div className="hidden rounded-xl bg-surface p-5 shadow-low md:block">
         <p className="font-display text-3xl font-semibold">
           {cardPrice(place)?.value ?? "Prijs onbekend"}
           {place.priceEur ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
         </p>
         <div className="mt-4 grid gap-2">
           {place.website && (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep">
+            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
               <Icon name="globe" size={19} /> {reserveLabel}
             </a>
           )}
           {tel && (
-            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-forest">
+            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
               <Icon name="phone" size={19} /> {tel}
             </a>
           )}
           {place.email && (
-            <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-forest">
+            <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
               <Icon name="mail" size={19} /> E-mail sturen
             </a>
           )}
@@ -269,12 +269,12 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
           highlight={place.slug}
           fitKey={place.slug}
           cluster={false}
-          className="h-52 rounded-2xl shadow-low lg:h-72"
+          className="h-52 rounded-xl shadow-low lg:h-72"
         />
         <RouteCard to={{ lat: place.lat, lng: place.lng }} name={place.name} />
       </section>
 
-      <div className="rounded-2xl bg-sunken/60 p-4 text-sm text-ink-2">
+      <div className="rounded-xl bg-sunken/60 p-4 text-sm text-ink-2">
         <p className="flex items-center gap-2 font-semibold text-ink">
           <Icon name="shield" size={17} className="text-forest" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
         </p>
@@ -332,11 +332,11 @@ function Decision({ place }: { place: Place }) {
     },
   ];
   return (
-    <section aria-labelledby="kort" className="overflow-hidden rounded-2xl bg-surface shadow-low">
+    <section aria-labelledby="kort" className="overflow-hidden rounded-xl bg-surface shadow-low">
       <h2 id="kort" className="sr-only">In het kort</h2>
       <dl className="divide-y divide-line">
         {/* Vertrekken: het kernfeit */}
-        <div className={`px-4 py-3 ${free ? "bg-forest-tint" : late ? "bg-lake-tint" : ""}`}>
+        <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             <Sign name="clock" size={28} state={place.departure ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
             <dt className="text-ink-2">Vertrekken</dt>
@@ -470,7 +470,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   return (
     <section aria-labelledby="praktisch">
       <h2 id="praktisch" className="font-display text-xl font-semibold sm:text-2xl">Praktisch en contact</h2>
-      <dl className="mt-3 divide-y divide-line rounded-2xl bg-surface shadow-low">
+      <dl className="mt-3 divide-y divide-line rounded-xl bg-surface shadow-low">
         {rows.map((r) => (
           <div key={r.label} className="flex justify-between gap-4 px-4 py-2.5">
             <dt className="shrink-0 text-ink-2">{r.label}</dt>

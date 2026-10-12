@@ -74,7 +74,7 @@ export default function SupportAdmin() {
           {tickets.length === 0 ? (
             <Empty>Geen berichten in deze lijst.</Empty>
           ) : (
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface outline-1 outline-line outline">
+            <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface outline-1 outline-line outline">
               {tickets.map((t) => (
                 <li key={t.id}>
                   <button
@@ -166,7 +166,7 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
       <button onClick={onBack} className="flex items-center gap-1 font-semibold text-forest lg:hidden">
         <Icon name="chevronLeft" size={18} /> Alle berichten
       </button>
-      <div className="rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+      <div className="rounded-xl bg-surface p-4 outline-1 outline-line outline">
         <p className="text-sm text-muted">#{ticket.number}, {CATEGORY[ticket.category]}, {when(ticket.created_at)}</p>
         <h2 className="mt-1 font-display text-xl font-semibold">{ticket.subject}</h2>
         <p className="mt-1 text-sm">
@@ -193,7 +193,7 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
         {(messages ?? []).map((m) => (
           <li
             key={m.id}
-            className={`rounded-2xl p-4 ${m.internal ? "border-2 border-dashed border-ember bg-surface" : m.author === "support" ? "bg-forest-tint" : "bg-surface outline-1 outline-line outline"}`}
+            className={`rounded-xl p-4 ${m.internal ? "border border-dashed border-ember bg-surface" : m.author === "support" ? "bg-forest-tint" : "bg-surface outline-1 outline-line outline"}`}
           >
             <p className="text-sm font-semibold">
               {m.internal ? "Interne notitie" : m.author === "support" ? "Support" : ticket.name}
@@ -204,7 +204,7 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
         ))}
       </ol>
 
-      <form onSubmit={send} className="space-y-3 rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+      <form onSubmit={send} className="space-y-3 rounded-xl bg-surface p-4 outline-1 outline-line outline">
         <div className="flex flex-wrap gap-2">
           {TEMPLATES.map(([label, text]) => (
             <button type="button" key={label} onClick={() => setBody(text)} className="h-9 rounded-full bg-sunken px-3 text-sm font-semibold hover:bg-forest-tint">

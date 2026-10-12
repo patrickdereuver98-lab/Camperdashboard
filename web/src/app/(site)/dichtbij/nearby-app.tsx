@@ -101,7 +101,7 @@ export function NearbyApp() {
   if (status !== "ready" || !pos) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 text-center sm:pt-14">
-        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-[1.75rem] shadow-lift">
+        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-2xl shadow-lift">
           <Landscape seed="dichtbij" variant={0} van wide className="absolute inset-0 h-full w-full" />
         </div>
         <h1 className="mt-6 font-display text-2xl font-semibold sm:text-4xl">Waar kun je vannacht staan?</h1>
@@ -112,18 +112,18 @@ export function NearbyApp() {
           type="button"
           onClick={locate}
           disabled={status === "locating"}
-          className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-forest px-7 font-display text-lg font-semibold text-on-forest disabled:opacity-70"
+          className="mt-8 inline-flex h-14 items-center gap-2 rounded-lg bg-forest px-7 font-display text-lg font-semibold text-on-forest disabled:opacity-70"
         >
           <Icon name="locate" size={22} />
           {status === "locating" ? "Locatie bepalen…" : "Gebruik mijn locatie"}
         </button>
         {status === "denied" && (
-          <p role="alert" className="mt-5 rounded-xl bg-alert-tint p-4 text-alert">
+          <p role="alert" className="mt-5 rounded-lg bg-alert-tint p-4 text-alert">
             Je hebt geen toegang tot je locatie gegeven. Sta het toe in de instellingen van je browser, of zoek op plaatsnaam via Zoeken.
           </p>
         )}
         {status === "unavailable" && (
-          <p role="alert" className="mt-5 rounded-xl bg-alert-tint p-4 text-alert">
+          <p role="alert" className="mt-5 rounded-lg bg-alert-tint p-4 text-alert">
             Je locatie kon niet worden bepaald. Probeer het opnieuw of zoek op plaatsnaam.
           </p>
         )}
@@ -191,7 +191,7 @@ export function NearbyApp() {
         </ul>
 
         {!wide && list.length > 0 && (
-          <PlaceMap places={list.map((r) => r.place)} user={pos} fitKey={`${pos.lat}-${list.length}`} className="mt-3 h-44 rounded-2xl shadow-low sm:h-56" />
+          <PlaceMap places={list.map((r) => r.place)} user={pos} fitKey={`${pos.lat}-${list.length}`} className="mt-3 h-44 rounded-xl shadow-low sm:h-56" />
         )}
 
         <p className="mt-3 text-sm text-ink-2" aria-live="polite">
