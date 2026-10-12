@@ -34,7 +34,11 @@
 | Veelgestelde vragen | `/veelgestelde-vragen` | Antwoorden zoeken | `faq` |
 | Over ons, Reviews en ranking, Privacy, Cookies, Voorwaarden, Disclaimer, Toegankelijkheid | eigen routes | Uitleg en juridische informatie | `src/lib/company.ts`, statistieken |
 | Niet gevonden | elke onbekende route | "Verkeerd afgeslagen" met terugweg | — |
-| Beheer | `/admin/*` | Overzicht, Statistieken, Plekken, Support, Inzendingen, Reviews, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
+| Inloggen | `/inloggen?next=<pad>` | Google, Apple, Facebook of inloglink per mail; daarna terug naar `next` | Supabase Auth |
+| Inlog-terugkomst | `/auth/callback` | Code inwisselen, door naar `next`; bij een fout een begrijpelijke melding | Supabase Auth |
+| Mijn account | `/account` | Naam, inlogmanier, aantal plekken in Mijn reis, uitloggen, account verwijderen | Sessie, `user_trips` |
+| Foto toevoegen | knop onder de foto's op `/plek/<slug>` | Niet ingelogd → `/inloggen`; ingelogd → foto kiezen, verkleinen (zonder EXIF), bijschrift, licentie aanvinken, versturen → "we bekijken je foto" of (vertrouwd) "staat zo online" | Storage `place-photos`, `place_photos` |
+| Beheer | `/admin/*` | Overzicht, Statistieken, Plekken, Dubbelen, Support, Inzendingen, Reviews, Foto's, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
 
 ## Hoofdroute: vannacht een plek vinden
 

@@ -54,4 +54,8 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 8 | Reviews: formulier belooft nog geen foto's en vertrektijdvraag ("binnenkort") | App Flow, PRD | Fase B (Implementatieplan M4) |
 | 9 | `/zoeken?waar=<onbekend>` toont het hele land met die plaatsnaam | App Flow | Fix in M5 |
 | 10 | Testtabellen `private.probe` en `private.probe2` staan nog in de database | Backend Schema | Verwijderen |
+| 12 | Strikte OSM-toelating (alleen `caravan_site` of `motorhome=yes`) zou ~900 gepubliceerde campings zonder die tag niet meer verversen | PRD (aantal plekken), opdracht 12 okt | Besluit Patrick vóór het live zetten van de query en de edge function |
+| 13 | ~~PRD: geen accounts voor bezoekers~~ | PRD, TRD | **Gewijzigd 12 okt:** accounts optioneel (opdracht Patrick); zonder account werkt alles |
+| 14 | Opdracht Fase 6 (advertenties) botst met PRD "geen advertenties en tracking van derden" en het Vercel Hobby-plan | PRD, TRD | Besluit Patrick vóór Fase 6; alleen advertenties zonder tracking/cookies passen bij de spelregels |
+| 15 | Implementatieplan noemde foto-upload via het reviewformulier (max. 5); gebouwd is een losse knop "Foto toevoegen" per plek | Implementatieplan M4 | Reviewformulier later koppelen aan dezelfde `place_photos` |
 | 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |

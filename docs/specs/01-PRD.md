@@ -64,7 +64,8 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 - Wildkamperen of plekken zonder toestemming om te overnachten
 - Advertenties, betaalde vermeldingen en tracking van derden
 - Native app in de App Store en Play Store (de webapp is installeerbaar als PWA)
-- Accounts voor bezoekers (bewaren gebeurt op het apparaat)
+- ~~Accounts voor bezoekers~~ **Gewijzigd (12 oktober 2026):** een account is optioneel (Google, Apple, Facebook of
+  inloglink) om Mijn reis te synchroniseren en foto's toe te voegen. Zonder account werkt alles zoals voorheen.
 
 ## User stories
 

@@ -28,6 +28,15 @@
 | ⬜ Bewaartermijnen activeren | Patrick | `web/supabase/retention.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
 | ⬜ Tickets na 12 maanden opruimen | Agent | Privacyverklaring | Uitbreiding van `apply_retention` | Gesloten tickets ouder dan 12 maanden verdwijnen | Bewaartermijnen |
 | ⬜ `web/supabase/schema.sql` opnieuw genereren | Agent | Live database | Actueel schemabestand | Nieuw project op te zetten met schema + seed | — |
+| ✅ Test-infrastructuur: Playwright E2E (mobiel + desktop), unit tests, CI-workflow | Agent | Opdracht Patrick | `web/e2e`, `web/tests`, `.github/workflows/ci.yml` | `npm run test:unit` en `npm run test:e2e` groen | — |
+| ✅ Kaart laadt per bounding box (PostGIS) met clustering | Agent | Opdracht Patrick | `places_in_bbox`, `/api/places?bbox=` | Geen limiet van 600 markers; gedeelde CDN-cache | Schema |
+| ✅ Strikte OSM-toelating, naam-fallback, booleans | Agent | Opdracht Patrick | `osm.ts` + tests | Alleen `caravan_site` of `motorhome=yes|designated` | — |
+| ⬜ Strikte OSM-query live zetten + edge function deployen | Patrick | Besluit (zie README #12) | `migrations/20261012_strict_osm_query.sql` | Volgende import gebruikt de nieuwe regels | Besluit |
+| ✅ Optionele bezoekersaccounts + synchronisatie Mijn reis | Agent | Opdracht Patrick | `/inloggen`, `/account`, `user_trips` | E2E groen | — |
+| ⬜ OAuth-sleutels Google, Apple, Facebook + SMTP | Patrick | Handleiding stap 4 | Supabase-instellingen | Inloggen met elke dienst werkt | Vercel-adres |
+| ⬜ `delete_my_account` toepassen | Patrick | Bevestiging | `migrations/20261012_user_accounts.sql` (onderaan) | Knop verwijdert account direct | — |
+| ✅ Foto-upload door bezoekers met moderatie en trust-score | Agent | Opdracht Patrick | Storage, `place_photos`, `/admin/fotos` | Foto verschijnt na goedkeuring; geen EXIF | Accounts |
+| ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
 | ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 
 ## Mijlpaal 3: hoofdroute ✅

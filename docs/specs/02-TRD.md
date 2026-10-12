@@ -33,7 +33,11 @@
 
 ## Authenticatie en rollen
 
-- **Bezoekers:** geen account. Bewaren, reis en keuzes staan in `localStorage` op het apparaat.
+- **Bezoekers:** account optioneel. Zonder account staan bewaren, reis en keuzes in `localStorage`. Met account
+  (Supabase Auth: Google, Apple, Facebook of magic link, PKCE via `/auth/callback`) wordt Mijn reis gesynchroniseerd
+  met `user_trips` en kunnen ze foto's toevoegen (`place_photos`). Elke gebruiker ziet alleen zijn eigen rijen (RLS).
+- **Beheerrechten** alleen voor een **bevestigd** e-mailadres uit `private.admin_invites` (trigger bij aanmaken én
+  bij bevestigen), zodat een publiek account nooit vanzelf beheerder wordt.
 - **Beheerders:** Supabase Auth (e-mail en wachtwoord, minstens 10 tekens). Toegang alleen als het e-mailadres in
   `private.admin_invites` staat; bij aanmelden komt de gebruiker in `public.admins` met rol `admin` of `support`.
 - **Rechten:** `public.is_admin()` geeft `true` voor elke rij in `admins`. Er is nog **geen verschil** tussen `admin`
@@ -135,6 +139,6 @@ met Node (`node test.mjs ./extract.ts`) op echte zinnen.
 | Scrapen met reguliere expressies, geen AI | Voorspelbaar, gratis, en elke waarde is herleidbaar tot een letterlijke zin | LLM-extractie (duurder, kan verzinnen) |
 | Overpass via `pg_net` in de database | Edge-IP's werden door Overpass geweigerd | Rechtstreeks vanuit de edge function |
 | Filteren in de browser | ~1.000 samenvattingen zijn klein genoeg; direct resultaat zonder server | Zoek-API met paginering |
-| Geen accounts voor bezoekers | Lage drempel, minder persoonsgegevens | Accounts met synchronisatie |
+| Accounts optioneel (sinds 12 oktober 2026) | Synchroniseren en foto's uploaden zonder drempel voor wie geen account wil | Geen accounts |
 | Websitefoto's aan, met bron | Besluit eigenaar: foto's helpen kiezen. Risico: auteursrechtclaims; beperkt door bronvermelding, geen kopie en snelle verwijdering | Websitefoto's uit tot er toestemming is |
 | Vercel Hobby | Gratis, beste ondersteuning voor Next.js 16 | Cloudflare/Netlify (gratis, commercieel toegestaan, minder zeker voor Next 16) |
