@@ -92,13 +92,26 @@ function sourceCredit(url: string): string | undefined {
 const decodeEntities = (s: string) =>
   s.replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCharCode(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d: string) => String.fromCharCode(Number(d))).replace(/&amp;/g, "&");
 
+/**
+ * Foto-adres opschonen: HTML-entiteiten en dubbel geplakte adressen ("https://site.nl/https://cdn…/foto.jpg",
+ * ontstaan doordat de site zelf een volledig adres als relatief pad gebruikt).
+ */
+function cleanUrl(u: string): string {
+  const s = decodeEntities(u);
+  const last = s.lastIndexOf("http");
+  return last > 0 && /^https?:\/\//.test(s.slice(last)) ? s.slice(last) : s;
+}
+
+/** Bestandsnamen die geen foto van de plek zijn: logo's, knoppen, iconen, keurmerken */
+const NOT_A_PHOTO = /(logo|icon|favicon|\/fav\.|button|knop|reserv|placeholder|sprite|badge|keurmerk|payment|ideal|zoover|acsi|anwb-|flag)[^/]*$/i;
+
 function normalize(p: Place, websitePhotos = false): Place {
   const photos = (p.photos ?? [])
-    .map((ph) => ({ ...ph, url: decodeEntities(ph.url) }))
-    .filter((ph) => /^https:\/\//.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos))
+    .map((ph) => ({ ...ph, url: cleanUrl(ph.url) }))
+    .filter((ph) => /^https:\/\//.test(ph.url) && !NOT_A_PHOTO.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos))
     .map((ph) => ({ ...ph, credit: ph.credit?.replace(/^www\./, "") ?? sourceCredit(ph.url) }));
-  const image = p.imageUrl ? decodeEntities(p.imageUrl) : undefined;
-  const imageUrl = image && /^https:\/\//.test(image) && photoAllowed(image, p.photos?.find((ph) => ph.url === p.imageUrl)?.permission, websitePhotos) ? image : photos[0]?.url;
+  const image = p.imageUrl ? cleanUrl(p.imageUrl) : undefined;
+  const imageUrl = image && /^https:\/\//.test(image) && !NOT_A_PHOTO.test(image) && photoAllowed(image, p.photos?.find((ph) => ph.url === p.imageUrl)?.permission, websitePhotos) ? image : photos[0]?.url;
   return {
     ...p,
     photos,

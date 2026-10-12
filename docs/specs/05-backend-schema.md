@@ -151,7 +151,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 - **Publicatie** (trigger `places_before_write`): een plek wordt `published` als
   1. er een website of telefoonnummer is, én
   2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs, én
-  3. `completeness` ≥ `site_settings.publish_threshold` (nu 0,55).
+  3. `completeness` ≥ `site_settings.publish_threshold` (nu 0,45).
   Gewichten (20 punten): vertrekregel 4, seizoen 3, prijs 2, stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1,
   honden 1, beschrijving 0,5, echte naam 0,5, douche 0,25, aantal plekken 0,25. `status_locked` slaat dit over.
 - **Gezag:** velden in `sources.beheer` worden nooit door de pipeline overschreven; websitewaarden gaan voor OSM bij
