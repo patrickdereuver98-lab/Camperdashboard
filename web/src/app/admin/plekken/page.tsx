@@ -163,11 +163,17 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
     if (!Object.keys(draft).length) return onClose();
     setBusy(true);
     setErr(null);
-    // Handmatig ingevulde velden markeren: de pipeline overschrijft ze dan nooit
-    const sources = { ...((place?.sources as Record<string, unknown>) ?? {}) };
-    const data = Object.keys(draft).filter((k) => !["status", "status_locked"].includes(k));
-    sources.beheer = [...new Set([...((sources.beheer as string[] | undefined) ?? []), ...data])];
-    const { error } = await db().from("places").update({ ...draft, sources }).eq("id", id);
+    // Handmatig ingevulde velden markeren: de pipeline overschrijft ze dan nooit. De server voegt ze samen met wat er
+    // al staat, zodat een scrape die intussen draaide zijn eigen gegevens in `sources` houdt.
+    const fields = Object.keys(draft).filter((k) => !["status", "status_locked"].includes(k));
+    if (fields.length) {
+      const { error } = await db().rpc("admin_mark_beheer", { p_place_id: id, p_fields: fields });
+      if (error) {
+        setBusy(false);
+        return setErr(errorMessage(error));
+      }
+    }
+    const { error } = await db().from("places").update(draft).eq("id", id);
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     onSaved();

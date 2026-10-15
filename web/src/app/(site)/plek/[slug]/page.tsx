@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getNearby, getPlace, getReviews, getSummaries } from "@/lib/places";
-import { searchHref } from "@/lib/search";
+import { departureKind, searchHref } from "@/lib/search";
 import { cardPrice, departureShort, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { SITE_URL } from "@/lib/env";
@@ -64,6 +64,24 @@ function keyFacts(p: Place): Fact[] {
       value: p.maxLengthM ? `${String(p.maxLengthM).replace(".", ",")} m` : "Onbekend",
       known: !!p.maxLengthM,
     },
+  ];
+}
+
+/** Wat een camperaar wil weten, en of wij het weten. De publicatiescore (completeness) is gewogen en zegt dat niet. */
+function knownFacts(p: Place): { label: string; known: boolean }[] {
+  return [
+    { label: "vertrektijd", known: !!p.departure },
+    { label: "prijs", known: p.priceEur !== undefined || !!cardPrice(p) },
+    { label: "openingsperiode", known: p.openAllYear === true || !!p.season },
+    { label: "maximale lengte", known: !!p.maxLengthM },
+    { label: "stroom", known: p.power !== undefined },
+    { label: "water", known: p.water !== undefined },
+    { label: "lozen", known: p.dumpStation !== undefined },
+    { label: "toilet", known: p.toilet !== undefined },
+    { label: "honden", known: p.dogs !== undefined },
+    { label: "reserveren", known: p.reservation !== undefined },
+    { label: "toeristenbelasting", known: p.touristTaxIncluded !== undefined || !!p.priceExtras?.length },
+    { label: "ondergrond", known: !!p.surface },
   ];
 }
 
@@ -330,6 +348,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 }
 
 function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby: PlaceSummary[] }) {
+  const facts = knownFacts(place);
+  const missing = facts.filter((f) => !f.known).map((f) => f.label);
   return (
     <>
       <div className="hidden rounded-2xl bg-surface p-5 shadow-low md:block">
@@ -371,9 +391,14 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
 
       <div className="rounded-2xl bg-surface p-5 text-sm text-ink-2 shadow-low">
         <p className="flex items-center gap-2 font-semibold text-ink">
-          <Icon name="shield" size={18} className="text-forest" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
+          <Icon name="shield" size={18} className="text-forest" /> {facts.filter((f) => f.known).length} van {facts.length} gegevens bekend
         </p>
-        <p className="mt-1">Zie je iets dat niet klopt, of weet je meer? Laat het ons weten, dan passen we het aan.</p>
+        {missing.length > 0 && (
+          <p className="mt-1">
+            Nog onbekend: {missing.join(", ")}. Weet jij dit? Laat het ons weten, dan vullen we het aan.
+          </p>
+        )}
+        {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het ons weten, dan passen we het aan.</p>}
         <div className="mt-2">
           <ReportProblem placeId={place.id} placeName={place.name} />
         </div>
@@ -384,7 +409,7 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
 
 /** De kernvraag: kun je vertrekken wanneer je wilt? (De bronzin staat in beheer, niet op de site.) */
 function Departure({ place }: { place: Place }) {
-  const free = place.departure === "vrij" || place.departure === "per24";
+  const free = departureKind(place) === "vrij";
   const title =
     place.departure === "vrij"
       ? "Geen vaste vertrektijd"

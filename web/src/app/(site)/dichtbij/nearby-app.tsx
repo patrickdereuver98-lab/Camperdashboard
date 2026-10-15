@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { formatDuration } from "@/lib/format";
@@ -117,15 +118,17 @@ export function NearbyApp() {
           <Icon name="locate" size={22} />
           {status === "locating" ? "Locatie bepalen…" : "Gebruik mijn locatie"}
         </button>
-        {status === "denied" && (
-          <p role="alert" className="mt-5 rounded-xl bg-alert-tint p-4 text-alert">
-            Je hebt geen toegang tot je locatie gegeven. Sta het toe in de instellingen van je browser, of zoek op plaatsnaam via Zoeken.
-          </p>
-        )}
-        {status === "unavailable" && (
-          <p role="alert" className="mt-5 rounded-xl bg-alert-tint p-4 text-alert">
-            Je locatie kon niet worden bepaald. Probeer het opnieuw of zoek op plaatsnaam.
-          </p>
+        {(status === "denied" || status === "unavailable") && (
+          <div role="alert" className="mt-5 rounded-xl bg-alert-tint p-4 text-alert">
+            <p>
+              {status === "denied"
+                ? "Je hebt geen toegang tot je locatie gegeven. Sta het toe in de instellingen van je browser, of zoek op plaatsnaam."
+                : "Je locatie kon niet worden bepaald. Probeer het opnieuw of zoek op plaatsnaam."}
+            </p>
+            <Link href="/zoeken" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-surface px-4 font-semibold text-ink shadow-low">
+              <Icon name="search" size={18} /> Zoek op plaats
+            </Link>
+          </div>
         )}
         <p className="mt-6 text-sm text-muted">Je locatie wordt alleen gebruikt om afstanden te berekenen en niet opgeslagen.</p>
       </div>
@@ -148,7 +151,7 @@ export function NearbyApp() {
               type="button"
               aria-pressed={openNow}
               onClick={() => setOpenNow((o) => !o)}
-              className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+              className="flex h-11 items-center gap-2 rounded-full border-2 border-line bg-surface pr-4 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
             >
               <Sign name="calendar" size={28} state={openNow ? "on" : "unknown"} />
               Nu open
@@ -165,7 +168,7 @@ export function NearbyApp() {
                 type="button"
                 aria-pressed={departure === g}
                 onClick={() => setDeparture((d) => (d === g ? undefined : g))}
-                className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                className="flex h-11 items-center gap-2 rounded-full border-2 border-line bg-surface pr-4 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
               >
                 <Sign name="clock" size={28} state={departure === g ? "on" : "unknown"} />
                 {label}
@@ -180,7 +183,7 @@ export function NearbyApp() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => setFacilities((x) => (on ? x.filter((k) => k !== f.key) : [...x, f.key]))}
-                  className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface pr-3 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                  className="flex h-11 items-center gap-2 rounded-full border-2 border-line bg-surface pr-4 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
                 >
                   <Sign name={f.icon as SignName} size={28} state={on ? "on" : "unknown"} />
                   {f.label}

@@ -10,6 +10,7 @@ import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
 import { Landscape } from "@/components/landscape";
 import { Sheet } from "@/components/sheet";
+import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 
 // ── Fotogalerij met vegen ───────────────────────────────────────────────────
 
@@ -253,7 +254,7 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
             type="button"
             aria-pressed={value === n}
             onClick={() => onChange(n)}
-            className="h-11 rounded-lg border-2 border-line font-display font-semibold aria-pressed:border-forest aria-pressed:bg-forest aria-pressed:text-on-forest"
+            className="h-11 rounded-full border-2 border-line font-display font-semibold aria-pressed:border-forest aria-pressed:bg-forest aria-pressed:text-on-forest"
           >
             {n}
           </button>
@@ -271,6 +272,7 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [departure, setDeparture] = useState<DepartureAnswer>("");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -297,6 +299,22 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
       p_vehicle: String(form.get("vehicle") || "") || null,
       p_visited_month: month ? `${month}-01` : null,
     });
+    if (!error && departure) {
+      // De vertrektijd gaat als inzending naar beheer, net als bij Doe mee. Een fout hier houdt de review niet tegen.
+      await supabase().rpc("submit_place", {
+        p_kind: "correctie",
+        p_place_id: placeId,
+        p_payload: {
+          onderwerp: "vertrektijd",
+          plek: placeName,
+          vertrek: departure,
+          vertrek_uiterlijk: departure === "vast" ? form.get("checkout") : null,
+          hoe_weet_je_het: "zelf gestaan (review)",
+        },
+        p_contact_name: String(form.get("name") || ""),
+        p_contact_email: String(form.get("email") || ""),
+      });
+    }
     setBusy(false);
     if (error) setErr(errorMessage(error));
     else setDone(true);
@@ -337,6 +355,13 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
               </span>
               <textarea name="body" required minLength={20} maxLength={3000} rows={5} className={`${input} h-auto py-2`} placeholder="Wat moeten andere camperaars weten?" />
             </label>
+            <DepartureRadios
+              id="review-vertrek"
+              label="Hoe laat moest je weg? (optioneel)"
+              value={departure}
+              onChange={setDeparture}
+              fieldClass={input}
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block font-semibold">Wanneer was je er?</span>

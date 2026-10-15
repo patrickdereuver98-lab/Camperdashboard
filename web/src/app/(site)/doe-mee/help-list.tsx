@@ -8,6 +8,7 @@ import { errorMessage, supabase } from "@/lib/supabase-browser";
 import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
+import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 
 const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
 const PAGE = 20;
@@ -100,7 +101,7 @@ export function HelpList() {
 }
 
 function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null; onClose: () => void; onSent: (id: string) => void }) {
-  const [kind, setKind] = useState<"vrij" | "per24" | "vast" | "">("");
+  const [kind, setKind] = useState<DepartureAnswer>("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -135,37 +136,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
   return (
     <Sheet open={!!place} onClose={onClose} title={place ? place.name : ""}>
       <form onSubmit={submit} className="space-y-5 pb-4">
-        <div role="radiogroup" aria-labelledby="dm-vertrek">
-          <span id="dm-vertrek" className="mb-1.5 block font-semibold">
-            Hoe laat moet je hier weg?
-          </span>
-          <div className="grid gap-2">
-            {(
-              [
-                ["vrij", "Geen vaste tijd, je vertrekt wanneer je wilt"],
-                ["per24", "24 uur na aankomst"],
-                ["vast", "Op een vaste tijd"],
-              ] as const
-            ).map(([v, l]) => (
-              <button
-                key={v}
-                type="button"
-                role="radio"
-                aria-checked={kind === v}
-                onClick={() => setKind(v)}
-                className="min-h-12 rounded-xl border-2 border-line px-4 py-2 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-          {kind === "vast" && (
-            <label className="mt-3 block">
-              <span className="mb-1.5 block font-semibold">Uiterlijk weg om</span>
-              <input name="checkout" type="time" step={900} defaultValue="11:00" required className={`${field} max-w-40`} />
-            </label>
-          )}
-        </div>
+        <DepartureRadios id="dm-vertrek" label="Hoe laat moet je hier weg?" value={kind} onChange={setKind} fieldClass={field} />
         <label className="block">
           <span className="mb-1.5 block font-semibold">Hoe weet je dit?</span>
           <select name="how" className={field} defaultValue="zelf gestaan">

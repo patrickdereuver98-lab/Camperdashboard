@@ -12,7 +12,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
 
   return (
     <main className="mx-auto w-full max-w-md px-4 pt-10 pb-16">
-      <div className="rounded-2xl border-2 border-ember bg-surface p-6">
+      <div className="rounded-2xl bg-alert-tint p-6">
         <Icon name="alert" size={28} className="text-alert" />
         <h1 className="mt-3 font-display text-2xl font-semibold">Er ging iets mis</h1>
         <p className="mt-2 text-ink-2">
