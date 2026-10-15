@@ -14,7 +14,7 @@ code niet bij de documenten, dan is dat een open punt (zie onder).
 | 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
 
 Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `docs/design.md` (ontwerpdetails),
-`docs/onderzoek.md` (vooronderzoek).
+`docs/onderzoek.md` (vooronderzoek), `docs/review-2026-10.md` (review en wijzigingsplan, oktober 2026).
 
 ## Zo gebruik je ze
 
@@ -55,3 +55,7 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 9 | `/zoeken?waar=<onbekend>` toont het hele land met die plaatsnaam | App Flow | Fix in M5 |
 | 10 | Testtabellen `private.probe` en `private.probe2` staan nog in de database | Backend Schema | Verwijderen |
 | 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |
+| 12 | Implementatieplan noemt beheeraccounts klaar, maar live bestaan 0 gebruikers en 0 beheerders (15 oktober 2026) | Implementatieplan M2, live database | Account aanmaken zodra Vercel gekoppeld is ([review](../review-2026-10.md) 0.7) |
+| 13 | Backend Schema noemt `schema.sql` de basis voor een nieuw project, maar het bestand mist alle `REVOKE`s, de controle op `email_confirmed_at` en ongeveer tien live tabellen | Backend Schema, TRD | Overstappen op migraties ([review](../review-2026-10.md) 2.1); tot dan geen nieuw project uit `schema.sql` opzetten |
+| 14 | Header op mobiel heeft geen "+" naar Plek aanmelden; desktop heeft geen link naar de veelgestelde vragen | App Flow, `chrome.tsx` | Besluit Patrick ([review](../review-2026-10.md) 3.6) |
+| 15 | Bij een fout van Supabase toont de site stil de snapshot (680 plekken van 11 oktober), ook plekken die verborgen hadden moeten zijn | TRD, `lib/places.ts` | Alleen terugvallen bij netwerkfouten en dat zichtbaar maken ([review](../review-2026-10.md) 0.5) |

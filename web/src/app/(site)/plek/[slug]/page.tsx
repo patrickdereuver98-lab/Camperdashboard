@@ -6,6 +6,7 @@ import { searchHref } from "@/lib/search";
 import { cardPrice, departureShort, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { SITE_URL } from "@/lib/env";
+import { OPEN_GRAPH } from "@/lib/meta";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
     title: `${place.name}, ${place.town}`,
     description: `${place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in ${place.town} (${place.province}). ${price}Bekijk voorzieningen, foto's, reviews en de route.`,
     alternates: { canonical: `/plek/${place.slug}` },
-    openGraph: { images: place.imageUrl ? [{ url: place.imageUrl }] : undefined },
+    openGraph: { ...OPEN_GRAPH, images: place.imageUrl ? [{ url: place.imageUrl }] : OPEN_GRAPH.images },
   };
 }
 

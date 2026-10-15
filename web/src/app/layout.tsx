@@ -5,6 +5,7 @@ import "./globals.css";
 import { Header, Runtime, SaveToast, TabBar } from "@/components/chrome";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SITE_URL } from "@/lib/env";
+import { OPEN_GRAPH } from "@/lib/meta";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["SOFT", "opsz"] });
@@ -17,7 +18,8 @@ export const metadata: Metadata = {
   applicationName: "VrijStaan",
   appleWebApp: { capable: true, title: "VrijStaan", statusBarStyle: "default" },
   formatDetection: { telephone: false },
-  openGraph: { type: "website", locale: "nl_NL", siteName: "VrijStaan" },
+  openGraph: OPEN_GRAPH,
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

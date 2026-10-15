@@ -1,7 +1,7 @@
 # 6. Implementatieplan
 
 > Doel: een geordende bouwvolgorde met controlepunten, voor mensen en AI-agents.
-> Bijgewerkt: 11 oktober 2026. Status: ✅ klaar, 🔄 bezig, ⬜ open.
+> Bijgewerkt: 15 oktober 2026. Status: ✅ klaar, 🔄 bezig, ⬜ open.
 > Eigenaar: "Patrick" = de eigenaar van VrijStaan; "Agent" = een AI-codeeragent (Claude Code) in deze repository.
 
 ## Mijlpaal 1: projectopzet ✅
@@ -69,6 +69,9 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Automatische tests voor extractor en filters | Agent | Testscripts in sessie | `web/tests/` + script in `package.json` | Draait in CI | — |
 | ⬜ CI op GitHub (lint, typecheck, offline build) | Agent | TRD | `.github/workflows/ci.yml` | Groen op elke PR | Tests |
 | ⬜ Beveiligingsadviezen van Supabase nalopen | Agent | Supabase advisors | Opgeloste waarschuwingen | Geen kritieke meldingen | — |
+| ✅ Standaard-deelafbeelding voor links in WhatsApp en sociale media | Agent | Huisstijl | `web/public/og.png`, `web/src/lib/meta.ts` | Elke pagina zonder eigen foto toont `og.png` | — |
+| ⬜ Fase 0 van de review uitvoeren (limieten op rpc's, token uit statistieken, bewaartermijnen, terugval op snapshot) | Agent + Patrick | [Review oktober 2026](../review-2026-10.md) | Migraties en code | Alle punten 0.1 tot 0.8 afgevinkt | — |
+| ⬜ Fase 1 van de review uitvoeren (snelle winst voor de gebruiker) | Agent | [Review oktober 2026](../review-2026-10.md) | Code | Punten 1.1 tot 1.14 afgevinkt; Lighthouse opnieuw gemeten | — |
 
 ## Mijlpaal 6: release ⬜
 
