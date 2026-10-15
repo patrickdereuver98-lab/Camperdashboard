@@ -25,8 +25,8 @@
 | ✅ Publicatiedrempel definitief instellen (0,45) | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | 1.509 plekken online, allemaal met contact en 2 van 4 kernfeiten | Herscrape |
 | ✅ Beheeraccounts via uitnodiging | Agent | E-mail Patrick | `private.admin_invites`, trigger | Patrick kan inloggen | Schema |
 | ⬜ Rollen `admin` en `support` echt scheiden | Agent | Besluit Patrick | Policies per rol | Support kan geen instellingen of plekken verwijderen | Besluit |
-| ⬜ Bewaartermijnen activeren | Patrick | `web/supabase/retention.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
-| ⬜ Tickets na 12 maanden opruimen | Agent | Privacyverklaring | Uitbreiding van `apply_retention` | Gesloten tickets ouder dan 12 maanden verdwijnen | Bewaartermijnen |
+| ⬜ Bewaartermijnen activeren | Patrick | Deel "Bewaartermijnen" van `web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
+| ✅ Tickets na 12 maanden opruimen | Agent | Privacyverklaring | Uitbreiding van `apply_retention` | Gesloten tickets ouder dan 12 maanden verdwijnen | Bewaartermijnen |
 | ⬜ `web/supabase/schema.sql` opnieuw genereren | Agent | Live database | Actueel schemabestand | Nieuw project op te zetten met schema + seed | — |
 | ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 
@@ -46,7 +46,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Reviews, aanmelden, fout melden, contact, support | Agent | App Flow | Formulieren + RPC's | Inzending verschijnt in beheer | M2 |
 | ✅ Beheer, inclusief statistieken | Agent | PRD | `/admin/*` | Patrick kan alles beheren zonder code | M2 |
 | ✅ Juridische pagina's, Reviews en ranking, Meld inhoud | Agent | Juridisch onderzoek | Pagina's | Teksten kloppen met wat de code doet | — |
-| ⬜ Reviewformulier: vertrektijdvraag, bezoekdatum, foto-upload (max. 5, verkleind, zonder EXIF) | Agent | Fase B | Supabase Storage-bucket, RPC, formulier, moderatie | Foto verschijnt na goedkeuring; geen locatie in het bestand | M2 |
+| 🔄 Reviewformulier: ✅ vertrektijdvraag (als inzending), ✅ bezoekdatum, ⬜ foto-upload (max. 5, verkleind, zonder EXIF) | Agent | Fase B | Supabase Storage-bucket, RPC, formulier, moderatie | Foto verschijnt na goedkeuring; geen locatie in het bestand | M2 |
 | ⬜ "Volgens n bezoekers" bij de vertrekregel | Agent | Reviewantwoorden | Weergave op de plekpagina | Bron (website of bezoekers) is altijd duidelijk | Reviewformulier |
 | ⬜ Eigenaar claimen en zelf bewerken (incl. toestemming foto's) | Agent | Fase B | Claimflow + beheer | Eigenaar past gegevens aan na controle | M2 |
 | ✅ Websites zoeken voor plekken zonder website (edge function `discover`, cron `discover`) | Agent | Verzoek Patrick | `discover.ts`, `next_discover_batch`, `apply_discovery` | Gevonden site staat in `sources->'discovery'` en gaat de scrape-wachtrij in | Scraper |
@@ -66,12 +66,12 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Layoutverspringing Mijn reis (CLS 0,41) en plekpagina (0,13) | Agent | UX-audit | Skelet en vaste foto-verhouding | CLS < 0,1 | — |
 | ⬜ Totaal in Mijn reis eerlijk ("€ x + 2 onbekend") | Agent | UX-audit | `trip-app.tsx` | Geen totaal dat volledig lijkt bij onbekende prijzen | — |
 | ⬜ Plaatsnaam per postcode (dorp in plaats van gemeente) | Agent | UX-audit | Pipeline | Steekproef van 20 plekken klopt | — |
-| ⬜ Automatische tests voor extractor en filters | Agent | Testscripts in sessie | `web/tests/` + script in `package.json` | Draait in CI | — |
-| ⬜ CI op GitHub (lint, typecheck, offline build) | Agent | TRD | `.github/workflows/ci.yml` | Groen op elke PR | Tests |
+| ✅ Automatische tests voor extractor en filters | Agent | Testscripts in sessie | `web/tests/` + `npm test` (node --test) | Draait in CI | — |
+| ✅ CI op GitHub (lint, typecheck, tests, offline build) | Agent | TRD | `.github/workflows/ci.yml` | Groen op elke PR | Tests |
 | ⬜ Beveiligingsadviezen van Supabase nalopen | Agent | Supabase advisors | Opgeloste waarschuwingen | Geen kritieke meldingen | — |
 | ✅ Standaard-deelafbeelding voor links in WhatsApp en sociale media | Agent | Huisstijl | `web/public/og.png`, `web/src/lib/meta.ts` | Elke pagina zonder eigen foto toont `og.png` | — |
-| ⬜ Fase 0 van de review uitvoeren (limieten op rpc's, token uit statistieken, bewaartermijnen, terugval op snapshot) | Agent + Patrick | [Review oktober 2026](../review-2026-10.md) | Migraties en code | Alle punten 0.1 tot 0.8 afgevinkt | — |
-| ⬜ Fase 1 van de review uitvoeren (snelle winst voor de gebruiker) | Agent | [Review oktober 2026](../review-2026-10.md) | Code | Punten 1.1 tot 1.14 afgevinkt; Lighthouse opnieuw gemeten | — |
+| 🔄 Fase 0 van de review uitvoeren (limieten op rpc's, token uit statistieken, bewaartermijnen, terugval op snapshot): alles klaar behalve 0.4 (uitvoeren), 0.7 en 0.8 | Agent + Patrick | [Review oktober 2026](../review-2026-10.md) | Migraties en code | Alle punten 0.1 tot 0.8 afgevinkt | — |
+| ✅ Fase 1 van de review uitvoeren (snelle winst voor de gebruiker) | Agent | [Review oktober 2026](../review-2026-10.md) | Code | Punten 1.1 tot 1.14 afgevinkt; Lighthouse opnieuw gemeten | — |
 
 ## Mijlpaal 6: release ⬜
 

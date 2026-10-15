@@ -121,6 +121,7 @@ export function PlaceMap({
       const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const css = getComputedStyle(document.documentElement);
       // Bosgroen voor plekken, avondzon voor gratis plekken en de geselecteerde plek, meerblauw voor de route
+      // In donker bewust donkerder dan de tokens --ember en --forest: witte tekst in clusters blijft dan leesbaar
       const ember = dark ? "#d9783f" : "#b9592a";
       const forest = dark ? "#3f7a5a" : "#2d5a43";
       const lake = dark ? "#82bcc8" : "#2f6f7e";
@@ -314,7 +315,7 @@ export function PlaceMap({
       if (!alive || !mapRef.current) return;
       const dot = document.createElement("div");
       dot.style.cssText =
-        "width:20px;height:20px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 8px rgb(26 115 232 / .22)";
+        "width:20px;height:20px;border-radius:50%;background:#2f6f7e;border:3px solid #fff;box-shadow:0 0 0 8px rgb(47 111 126 / .25)";
       dot.setAttribute("aria-label", "Jouw locatie");
       userMarker.current = new maplibregl.Marker({ element: dot }).setLngLat([user.lng, user.lat]).addTo(mapRef.current);
     });

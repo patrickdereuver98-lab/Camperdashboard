@@ -162,20 +162,47 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 
 | Data | Termijn | Geautomatiseerd? |
 |---|---|---|
-| `events` | 13 maanden | Nee, `web/supabase/retention.sql` nog uitvoeren |
+| `events` | 13 maanden | Ja, zodra de migratie hieronder is uitgevoerd: `private.apply_retention()`, cron `retention` (03:17) |
 | `consent_log` | 24 maanden | Idem |
-| `app_logs` (geen errors) | 90 dagen | Idem |
+| `app_logs` | 90 dagen; level `error` 12 maanden | Idem |
 | Afgewezen `reviews` | 3 maanden | Idem |
-| `tickets` | 12 maanden na sluiten | Nee, nog te bouwen |
+| `tickets` (met berichten) | 12 maanden na `opgelost` of `gesloten` | Idem |
+| Naam en e-mail bij inzendingen | 12 maanden na verwerking, daarna leeggemaakt | Idem |
+| `private.rate_counter` | 2 dagen | Idem |
+| `cron.job_run_details` | 7 dagen | Idem |
 | `places` | Zolang relevant; verwijderen op verzoek van de eigenaar | Handmatig |
-| Inzendingen | Zolang nodig voor verwerking | Handmatig |
+
+**Nog uit te voeren door de eigenaar:** het deel "Bewaartermijnen" van
+`web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` in de SQL-editor (de MCP-tool vraagt bij
+`delete` een bevestiging die vanuit een agent-sessie niet doorkomt). De rest van die migratie staat live.
+
+## Misbruik beperken
+
+Publieke functies tellen per tijdvak in `private.rate_counter` via `private.rate_take(emmer, limiet, tijdvak)`, zonder
+IP-adres of sessie. Bij de eerste overschrijding komt één waarschuwing in `app_logs` (bron `limiet`).
+
+| Functie | Limiet | Bij overschrijding |
+|---|---|---|
+| `track` | 300 per minuut, 20.000 per dag; `p_props` maximaal 600 bytes | Stil overslaan |
+| `log_consent` | 60 per minuut, 3.000 per dag | Stil overslaan |
+| `report_client_error` | 30 per minuut, 1.000 per dag | Stil overslaan |
+| `submit_place` | 60 per uur, 300 per dag (plus 10 per uur per e-mailadres) | Melding "even erg druk" |
+| `create_ticket` | 30 per uur, 150 per dag (plus 5 per uur per e-mailadres); bericht maximaal 5.000 tekens | Idem |
+| `submit_review` | 5 per uur per plek, 400 per dag (plus 5 per uur per e-mailadres) | Idem |
+
+Paden onder `/support/` gaan via `private.safe_path()` als `/support/[token]` de database in, in `track` en
+`report_client_error`. De API-routes `/api/route` en `/api/distances` hebben een limiet van 30 per minuut per
+bezoeker, in het werkgeheugen van de server.
+
+Beheer markeert handmatig gewijzigde velden met `admin_mark_beheer(plek, velden[])`, dat ze server-side toevoegt aan
+`sources.beheer` zonder de rest van `sources` te overschrijven.
 
 Exporteren: `export_snapshot()` geeft alle gepubliceerde plekken, woonplaatsen, FAQ en reviews als JSON.
 
 ## Migraties en startdata
 
-- Wijzigingen via Supabase-migraties (MCP `apply_migration` of de SQL-editor). Na elke wijziging
-  `web/supabase/schema.sql` opnieuw genereren.
+- Wijzigingen via Supabase-migraties (MCP `apply_migration` of de SQL-editor), en dezelfde SQL als bestand in
+  `web/supabase/migrations/` (vanaf 15 oktober 2026). Na elke wijziging `web/supabase/schema.sql` opnieuw genereren.
 - Startdata: `web/supabase/seed.sql` (instellingen, FAQ, woonplaatsen, OSM-queries en provincies).
 - Nieuw project opzetten: `schema.sql` → `seed.sql` → edge function `pipeline` deployen (zonder JWT) → sleutel in
   `internal_secrets` (`pipeline_key`) → projectnaam aanpassen in `private.call_pipeline`.

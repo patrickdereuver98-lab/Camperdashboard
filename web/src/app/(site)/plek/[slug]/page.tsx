@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getNearby, getPlace, getReviews, getSummaries } from "@/lib/places";
+import { notFound, permanentRedirect } from "next/navigation";
+import { getNearby, getPlace, getRedirect, getReviews, getSummaries } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
 import { cardPrice, departureShort, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
@@ -98,7 +98,12 @@ const FACILITY_ROWS: { key: keyof Place; sign: SignName; label: string; yes: str
 export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const { slug } = await params;
   const place = await getPlace(slug);
-  if (!place) notFound();
+  if (!place) {
+    // Samengevoegde plek: oude links en zoekmachines naar de plek die is blijven staan
+    const target = await getRedirect(slug);
+    if (target) permanentRedirect(`/plek/${target}`);
+    notFound();
+  }
   const [reviews, nearby] = await Promise.all([getReviews(place.id), getNearby(place, 6)]);
 
   const photos = [...(place.photos ?? [])];

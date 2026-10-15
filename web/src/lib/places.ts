@@ -164,6 +164,27 @@ export async function getSummaries(): Promise<PlaceSummary[]> {
   );
 }
 
+/** Nieuwe slug van een plek die is samengevoegd met een andere; undefined als er niets is samengevoegd */
+export async function getRedirect(slug: string): Promise<string | undefined> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places", `plek-${slug}`);
+  if (OFFLINE_BUILD) return undefined;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/place_redirect`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slug: slug }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return undefined;
+    const target = (await res.json()) as string | null;
+    return target && target !== slug ? target : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Eén plek. Bewust een eigen query en geen filter op de hele lijst: elke plekpagina bewaart de cache die hij
  * leest, en met 1.300 pagina's maal de hele dataset liep de build vast ("Invalid string length").

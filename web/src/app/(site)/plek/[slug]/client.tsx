@@ -392,7 +392,7 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
             </label>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep disabled:opacity-60">
               {busy ? "Versturen…" : "Review versturen"}
             </button>
           </form>
@@ -485,7 +485,7 @@ export function ReportProblem({
             </div>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep disabled:opacity-60">
               {busy ? "Versturen…" : "Melding versturen"}
             </button>
           </form>

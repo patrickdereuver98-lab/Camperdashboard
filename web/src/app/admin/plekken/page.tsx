@@ -133,7 +133,8 @@ export default function PlacesAdmin() {
 
 function Meter({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = value >= 0.8 ? "text-forest" : value >= 0.7 ? "text-forest" : "text-muted";
+  // Groen vanaf de standaard-publicatiedrempel (0,45; instelbaar in Beheer, Instellingen)
+  const color = value >= 0.45 ? "text-forest" : "text-muted";
   return (
     <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full bg-sunken font-display text-sm font-semibold tabular-nums ${color}`} title={`${pct}% compleet`}>
       {pct}
@@ -148,10 +149,16 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // Snel naar een andere plek: het antwoord van de vorige mag de nieuwe niet overschrijven
+    let live = true;
     db().from("places").select("*").eq("id", id).single().then(({ data, error }) => {
+      if (!live) return;
       if (error) setErr(errorMessage(error));
       else setPlace(data as Full);
     });
+    return () => {
+      live = false;
+    };
   }, [id]);
 
   const v = (k: string) => (k in draft ? draft[k] : place?.[k]);

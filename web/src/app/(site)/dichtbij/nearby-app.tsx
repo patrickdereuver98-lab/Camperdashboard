@@ -113,7 +113,7 @@ export function NearbyApp() {
           type="button"
           onClick={locate}
           disabled={status === "locating"}
-          className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-forest px-7 font-display text-lg font-semibold text-on-forest disabled:opacity-70"
+          className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-forest px-7 font-semibold text-on-forest hover:bg-forest-deep disabled:opacity-60"
         >
           <Icon name="locate" size={22} />
           {status === "locating" ? "Locatie bepalen…" : "Gebruik mijn locatie"}

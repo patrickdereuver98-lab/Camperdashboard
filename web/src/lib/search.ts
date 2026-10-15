@@ -201,7 +201,7 @@ export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date =
 const MONTH_SHORT = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 /** Korte status voor kaarten: alleen als het seizoen bekend is */
-export function openStatus(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): { open: boolean; label: string } | undefined {
+export function openStatus(p: Pick<PlaceSummary, "openAllYear" | "season">, date = nowInNL()): { open: boolean; label: string } | undefined {
   if (p.openAllYear) return { open: true, label: "Hele jaar open" };
   const open = isOpenOn(p, date);
   if (open === undefined || !p.season) return undefined;

@@ -167,7 +167,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
             {err}
           </p>
         )}
-        <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+        <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep disabled:opacity-60">
           {busy ? "Versturen…" : "Versturen"}
         </button>
       </form>
