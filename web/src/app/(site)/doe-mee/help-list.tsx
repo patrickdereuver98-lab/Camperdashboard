@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { departureKind } from "@/lib/search";
 import { usePlaces } from "@/lib/store";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
@@ -109,7 +109,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
     e.preventDefault();
     if (!place) return;
     const f = new FormData(e.currentTarget);
-    if (f.get("website")) return;
+    if (formValue(f, "website")) return;
     if (!kind) return setErr("Kies hoe laat je weg moet.");
     setBusy(true);
     setErr(null);
@@ -120,12 +120,12 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
         onderwerp: "vertrektijd",
         plek: place.name,
         vertrek: kind,
-        vertrek_uiterlijk: kind === "vast" ? f.get("checkout") : null,
-        hoe_weet_je_het: f.get("how"),
-        toelichting: f.get("notes") || null,
+        vertrek_uiterlijk: kind === "vast" ? formValue(f, "checkout") : null,
+        hoe_weet_je_het: formValue(f, "how"),
+        toelichting: formValue(f, "notes") || null,
       },
-      p_contact_name: String(f.get("name") || ""),
-      p_contact_email: String(f.get("email") || ""),
+      p_contact_name: String(formValue(f, "name") || ""),
+      p_contact_email: String(formValue(f, "email") || ""),
     });
     setBusy(false);
     if (error) return setErr(errorMessage(error));

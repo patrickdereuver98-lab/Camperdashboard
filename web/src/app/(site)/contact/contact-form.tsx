@@ -41,7 +41,7 @@ export function ContactForm() {
     });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
-    const row = (data as { number: number; access_token: string }[])[0];
+    const row = data[0];
     setDone({ number: row.number, token: row.access_token });
   }
 

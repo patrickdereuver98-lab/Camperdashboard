@@ -202,7 +202,8 @@ Exporteren: `export_snapshot()` geeft alle gepubliceerde plekken, woonplaatsen, 
 ## Migraties en startdata
 
 - Wijzigingen via Supabase-migraties (MCP `apply_migration` of de SQL-editor), en dezelfde SQL als bestand in
-  `web/supabase/migrations/` (vanaf 15 oktober 2026). Na elke wijziging `web/supabase/schema.sql` opnieuw genereren.
+  `web/supabase/migrations/` (vanaf 15 oktober 2026). Na elke wijziging `web/supabase/schema.sql` opnieuw genereren,
+  en de TypeScript-types in `web/src/lib/database.types.ts` (MCP `generate_typescript_types`).
 - Startdata: `web/supabase/seed.sql` (instellingen, FAQ, woonplaatsen, OSM-queries en provincies).
 - Nieuw project opzetten: `schema.sql` → `seed.sql` → edge function `pipeline` deployen (zonder JWT) → sleutel in
   `internal_secrets` (`pipeline_key`) → projectnaam aanpassen in `private.call_pipeline`.

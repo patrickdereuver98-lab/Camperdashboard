@@ -25,7 +25,8 @@ export default function Reviews() {
     () => db().from("reviews").select("*, places(name, slug)").eq("status", status).order("created_at", { ascending: false }).limit(100),
     [status],
   );
-  const rows = (data as Review[] | null) ?? [];
+  // `status` is in de database tekst met een CHECK; hier als vaste keuze
+  const rows = (data ?? []) as Review[];
   const [err, setErr] = useState<string | null>(null);
 
   async function set(id: string, next: Review["status"]) {

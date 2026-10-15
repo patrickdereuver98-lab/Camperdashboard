@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
 import { KIND_LABEL, PROVINCES } from "@/lib/types";
-import { errorMessage } from "@/lib/supabase-browser";
+import { errorMessage, type Database } from "@/lib/supabase-browser";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, primary, secondary, textarea, useQuery, when } from "../ui";
 
 type Row = {
@@ -180,7 +180,8 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
         return setErr(errorMessage(error));
       }
     }
-    const { error } = await db().from("places").update(draft).eq("id", id);
+    // De velden komen uit de editor hieronder, met dezelfde namen als de kolommen
+    const { error } = await db().from("places").update(draft as Database["public"]["Tables"]["places"]["Update"]).eq("id", id);
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     onSaved();

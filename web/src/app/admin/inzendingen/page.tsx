@@ -26,7 +26,8 @@ export default function Submissions() {
     () => db().from("submissions").select("*, places(name, slug)").eq("status", status).order("created_at", { ascending: false }).limit(100),
     [status],
   );
-  const rows = (data as Submission[] | null) ?? [];
+  // `kind` en `status` zijn in de database tekst met een CHECK; hier als vaste keuzes
+  const rows = (data ?? []) as Submission[];
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">

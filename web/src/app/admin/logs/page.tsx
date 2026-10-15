@@ -21,7 +21,7 @@ export default function Logs() {
     return () => clearTimeout(t);
   }, [term]);
 
-  const { data, error, reload } = useQuery(() => {
+  const { data, error, reload } = useQuery<unknown[]>(() => {
     if (tab === "audit") return db().from("audit_log").select("*").order("ts", { ascending: false }).limit(150);
     if (tab === "runs") return db().from("ingest_runs").select("*").order("started_at", { ascending: false }).limit(100);
     if (tab === "consent") return db().from("consent_log").select("*").order("ts", { ascending: false }).limit(150);

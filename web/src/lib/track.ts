@@ -1,6 +1,7 @@
 "use client";
 
 import { readConsent } from "./store";
+import type { Json } from "./database.types";
 import { supabase } from "./supabase-browser";
 
 type EventName = "page_view" | "search" | "place_view" | "outbound" | "route" | "save";
@@ -11,7 +12,7 @@ let session: string | null = null;
 const safePath = (path: string) => path.replace(/^\/support\/[^/?#]+/, "/support/[token]");
 
 /** Anonieme statistiek, alleen met toestemming. Geen cookies, geen IP-adres, geen externe partij. */
-export function track(name: EventName, props: Record<string, unknown> = {}) {
+export function track(name: EventName, props: { [key: string]: Json } = {}) {
   if (typeof window === "undefined" || !readConsent()?.analytics) return;
   try {
     session ??= sessionStorage.getItem("vrijstaan:sessie") ?? crypto.randomUUID();

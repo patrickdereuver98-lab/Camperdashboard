@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, ViewTransition } from "react";
 import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format";
 import { coarse, directionsUrl, formatKm, type LatLng } from "@/lib/geo";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
 import type { Photo, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
@@ -277,26 +277,26 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    if (form.get("website")) return; // honeypot
+    if (formValue(form, "website")) return; // honeypot
     if (!scores.rating) {
       setErr("Geef een totaalcijfer.");
       return;
     }
     setBusy(true);
     setErr(null);
-    const month = String(form.get("month") || "");
+    const month = String(formValue(form, "month") || "");
     const { error } = await supabase().rpc("submit_review", {
       p_place_id: placeId,
-      p_author_name: String(form.get("name")),
-      p_author_email: String(form.get("email") || ""),
+      p_author_name: String(formValue(form, "name")),
+      p_author_email: String(formValue(form, "email") || ""),
       p_rating: scores.rating,
       p_score_location: scores.location ?? null,
       p_score_quiet: scores.quiet ?? null,
       p_score_facilities: scores.facilities ?? null,
       p_score_value: scores.value ?? null,
-      p_title: String(form.get("title") || ""),
-      p_body: String(form.get("body")),
-      p_vehicle: String(form.get("vehicle") || "") || null,
+      p_title: String(formValue(form, "title") || ""),
+      p_body: String(formValue(form, "body")),
+      p_vehicle: String(formValue(form, "vehicle") || "") || null,
       p_visited_month: month ? `${month}-01` : null,
     });
     if (!error && departure) {
@@ -308,11 +308,11 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
           onderwerp: "vertrektijd",
           plek: placeName,
           vertrek: departure,
-          vertrek_uiterlijk: departure === "vast" ? form.get("checkout") : null,
+          vertrek_uiterlijk: departure === "vast" ? formValue(form, "checkout") : null,
           hoe_weet_je_het: "zelf gestaan (review)",
         },
-        p_contact_name: String(form.get("name") || ""),
-        p_contact_email: String(form.get("email") || ""),
+        p_contact_name: String(formValue(form, "name") || ""),
+        p_contact_email: String(formValue(form, "email") || ""),
       });
     }
     setBusy(false);
@@ -423,15 +423,15 @@ export function ReportProblem({
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    if (f.get("website")) return;
+    if (formValue(f, "website")) return;
     setBusy(true);
     setErr(null);
     const { error } = await supabase().rpc("submit_place", {
-      p_kind: f.get("owner") ? "eigenaar" : "correctie",
+      p_kind: formValue(f, "owner") ? "eigenaar" : "correctie",
       p_place_id: placeId,
-      p_payload: { onderwerp: f.get("topic"), toelichting: f.get("details"), plek: placeName },
-      p_contact_name: String(f.get("name") || ""),
-      p_contact_email: String(f.get("email") || ""),
+      p_payload: { onderwerp: formValue(f, "topic"), toelichting: formValue(f, "details"), plek: placeName },
+      p_contact_name: String(formValue(f, "name") || ""),
+      p_contact_email: String(formValue(f, "email") || ""),
     });
     setBusy(false);
     if (error) setErr(errorMessage(error));
