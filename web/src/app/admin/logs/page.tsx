@@ -63,7 +63,7 @@ export default function Logs() {
       {rows.length === 0 ? (
         <Empty>Geen regels.</Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface text-sm outline-1 outline-line outline">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface text-sm outline-1 outline-line outline">
           {tab === "app" &&
             (rows as Log[]).map((l) => (
               <li key={l.id} className="px-4 py-2.5">

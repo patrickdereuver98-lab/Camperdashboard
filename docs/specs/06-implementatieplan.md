@@ -20,8 +20,8 @@
 |---|---|---|---|---|---|
 | ✅ Schema, RLS en RPC's | Agent | Backend Schema | Tabellen, policies, functies | Anon leest alleen gepubliceerde data; beheer via `is_admin()` | M1 |
 | ✅ OSM-import per provincie | Agent | OSM-tags | `osm_regions`, cron, edge function | Alle 12 provincies binnen 7 dagen ververst | Schema |
-| ✅ Website-scraper (prijs, toeslagen, seizoen, voorzieningen, vertrektijden) | Agent | Echte voorbeeldzinnen | Edge function `pipeline` v16 | Testscripts geven verwacht resultaat; steekproef van 10 plekken klopt | Schema |
-| ✅ Herscrape alle websites met v15 | Agent | — | Bijgewerkte plekken | `private.scrape_queue` leeg; steekproef "vrij" en toeslagen correct | Scraper |
+| ✅ Website-scraper (prijs, toeslagen, seizoen, voorzieningen, vertrektijden) | Agent | Echte voorbeeldzinnen | Edge function `pipeline` v17 | Testscripts geven verwacht resultaat; steekproef van 10 plekken klopt | Schema |
+| ✅ Herscrape alle websites met v17 (12 okt 13:38–±15:30, 3.211 sites; 322 fouten aan de kant van de sites: 404, 403, onbereikbaar, time-out) | Agent | — | Bijgewerkte plekken | `private.scrape_queue` leeg; steekproef foto's en teksten correct | Scraper |
 | ✅ Publicatiedrempel definitief instellen (0,45) | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | 1.509 plekken online, allemaal met contact en 2 van 4 kernfeiten | Herscrape |
 | ✅ Beheeraccounts via uitnodiging | Agent | E-mail Patrick | `private.admin_invites`, trigger | Patrick kan inloggen | Schema |
 | ⬜ Rollen `admin` en `support` echt scheiden | Agent | Besluit Patrick | Policies per rol | Support kan geen instellingen of plekken verwijderen | Besluit |
@@ -61,6 +61,13 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
+| ✅ Plekpagina rustiger op mobiel: beslisblok, voorzieningen als labels, niets dubbel, kleinere koppen en header, basis 16 px op de telefoon | Agent | Verzoek Patrick, UX-onderzoek | `plek/[slug]/page.tsx`, `chrome.tsx`, `globals.css` | Vertrekken, prijs, open en lengte in één scherm op iPhone-formaat | — |
+| ✅ Plekkaart opnieuw ingedeeld: waar (plaats, afstand vanaf je locatie), wanneer (vertrek + aankomst), wat en hoeveel (voorzieningen, prijs + toeslagen) | Agent | Verzoek Patrick | `place-ui.tsx`, `lib/my-location.ts`, samenvattingen met aankomsttijden | Afstand, vertrek, aankomst en prijs op elke kaart zonder doortikken | — |
+| ✅ Zoekscherm compacter op mobiel (Booking als voorbeeld): kleinere tabbladen en zoekveld, één rij Filters/Sorteren/Kaart, kleinere kop, compactere kaarten, prijs past altijd | Agent | Verzoek Patrick | `search-app.tsx`, `destination-search.tsx`, `place-ui.tsx` | Eerste plek direct in beeld op iPhone | — |
+| ✅ Scherpe foto's: grote versie bij bekende beeldbanken, geen keurmerken/stockfoto's/miniaturen, beste foto vooraan, logo passend | Agent | Verzoek Patrick | `web/src/lib/photos.ts`, `PlacePhoto` | Geen onscherpe of half bijgesneden eerste foto | — |
+| ✅ "Over deze plek" opgeschoond: alleen hele Nederlandse zinnen | Agent | Verzoek Patrick | `web/src/lib/description.ts` | Geen "Lees meer", "…" of halve zinnen op de site | — |
+| ✅ Zelfde foto- en tekstregels in de scraper: `extract.ts` importeert `web/src/lib/photos.ts` en `description.ts` (één bron), leest de eerste alinea's van de pagina naast de meta-omschrijving, houdt WordPress/Wix-miniaturen (de site vraagt de grote versie op) | Agent | Pipeline v16 (#3) | Pipeline v17, in Supabase uitgerold als functieversie 20 (wrapper vastgezet op commit `3606568`; terug naar v16: wrapper naar `50819c6`) | Steekproef: Breukink (SVR-logo weg, volledige tekst) en Het Oever (geen brokstukken) kloppen | Herscrape |
+| ✅ Startpagina, Dichtbij en Mijn reis compacter op de telefoon (lagere kop en zoekkaart, kleinere provinciefoto's en koppen, ronde filterchips, lagere kaart) | Agent | Verzoek Patrick | `page.tsx`, `home-search.tsx`, `nearby-app.tsx`, `trip-app.tsx` | Meer inhoud in één scherm op iPhone | — |
 | ⬜ Kaartmarkers ≥ 44 px, pop-up met vertrekregel en hartje | Agent | UX-audit | `place-map.tsx` | Marker raakbaar met duim op iPhone | — |
 | ⬜ Onbekende plaats in URL toont "niet gevonden" | Agent | UX-audit | `search-app.tsx` | `/zoeken?waar=xyzqqq` toont geen hele land | — |
 | ⬜ Layoutverspringing Mijn reis (CLS 0,41) en plekpagina (0,13) | Agent | UX-audit | Skelet en vaste foto-verhouding | CLS < 0,1 | — |

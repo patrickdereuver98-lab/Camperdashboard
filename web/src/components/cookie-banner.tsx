@@ -55,7 +55,7 @@ export function CookieBanner() {
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-titel"
-      className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-2xl bg-surface p-4 shadow-float md:bottom-6"
+      className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-xl bg-surface p-4 shadow-float md:bottom-6"
     >
       {details ? (
         <>
@@ -90,7 +90,7 @@ export function CookieBanner() {
               </span>
             </label>
           </div>
-          <button type="button" onClick={() => close(analytics)} className="mt-4 min-h-12 w-full rounded-xl bg-forest px-5 font-semibold text-on-forest">
+          <button type="button" onClick={() => close(analytics)} className="mt-4 min-h-12 w-full rounded-lg bg-forest px-5 font-semibold text-on-forest">
             Keuze opslaan
           </button>
         </>
@@ -104,10 +104,10 @@ export function CookieBanner() {
           </p>
           {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => close(true)} className="min-h-11 rounded-xl border-2 border-forest bg-forest-tint px-3 font-semibold text-forest">
+            <button type="button" onClick={() => close(true)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
               Toestaan
             </button>
-            <button type="button" onClick={() => close(false)} className="min-h-11 rounded-xl border-2 border-forest bg-forest-tint px-3 font-semibold text-forest">
+            <button type="button" onClick={() => close(false)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
               Alleen nodig
             </button>
           </div>

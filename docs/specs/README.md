@@ -9,7 +9,7 @@ code niet bij de documenten, dan is dat een open punt (zie onder).
 | 1 | [Product Requirements Document](01-PRD.md) | Wat het product moet doen en hoe we succes meten |
 | 2 | [Technical Requirements Document](02-TRD.md) | Techniek, diensten, architectuur, beveiliging |
 | 3 | [App Flow](03-app-flow.md) | Elk scherm, elk pad, wat elke tik doet |
-| 4 | [UI en UX Design Brief](04-ui-ux-brief.md) | Thema "natuur & vrijheid", componenten, toegankelijkheid |
+| 4 | [UI en UX Design Brief](04-ui-ux-brief.md) | Wat er op welk scherm staat, componenten, toegankelijkheid; uiterlijk in de [stijlgids](../stijlgids.md) |
 | 5 | [Backend Schema](05-backend-schema.md) | Tabellen, relaties, rechten, bewaartermijnen |
 | 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
 
@@ -35,8 +35,8 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
   hoofdletterlabels, geen verkooppraat).
 - **Prijzen zo transparant mogelijk**: basisprijs plus alle losse toeslagen zoals de website ze noemt.
 - **Mobiel eerst** (iPhone-formaat), 50-plussers, tikdoelen van minstens 44 px.
-- **Thema "natuur & vrijheid"** blijft: zandpapier, bosgroen, avondzon, meerblauw, Fraunces en Inter, bosachtige
-  donkere modus.
+- **Kleuren "natuur & vrijheid"** blijven: zandpapier, bosgroen, avondzon, meerblauw, bosachtige donkere modus.
+  Lettertype Geist, vormen en beweging volgens `docs/stijlgids.md` (besluit eigenaar 12 oktober 2026).
 - **Nederlands eerst**; Engels en Duits later.
 - **Geen cookies of tracking van derden**; statistieken alleen met toestemming.
 
@@ -59,4 +59,8 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 13 | Backend Schema noemt `schema.sql` de basis voor een nieuw project, maar het bestand mist alle `REVOKE`s, de controle op `email_confirmed_at` en ongeveer tien live tabellen | Backend Schema, TRD | Overstappen op migraties ([review](../review-2026-10.md) 2.1); tot dan geen nieuw project uit `schema.sql` opzetten |
 | 14 | ~~Header volgt de app flow niet~~ | App Flow, `chrome.tsx` | **Opgelost (15 oktober 2026):** code aangepast aan de app flow (+ en Hulp op mobiel, Hulp op desktop) |
 | 15 | ~~Stille terugval op de snapshot bij elke Supabase-fout~~ | TRD, `lib/places.ts` | **Deels opgelost (15 oktober 2026):** alleen nog bij netwerk- en serverfouten; een 4xx gaat door. Nog open: zichtbaar maken op de site dat de snapshot wordt getoond |
+| 16 | Brief zei basis 17 px; eigenaar vond de telefoonweergave te druk | UI/UX Brief | **Opgelost (12 okt):** 16 px op de telefoon, 17 px vanaf tablet, kleinere koppen, beslisblok |
+| 17 | "Over deze plek" is de meta-omschrijving van de website: vaak afgekapt ("Lees meer"), soms Duits of een prijslijst | Backend Schema, scraper | Site en scraper (v17) gebruiken dezelfde regels (`description.ts`); de scraper leest ook de eerste alinea's van de pagina. Nog open: eigenaren hun eigen tekst laten schrijven (claim, M4) |
+| 18 | Foto's: 448 plekken met WordPress-miniaturen, keurmerken (SVR, Zoover) als eerste foto | Scraper, UI/UX Brief | **Opgelost (12 okt):** site en scraper (v17) gebruiken `photos.ts`; de site vraagt de grote versie op |
+| 19 | Brief en vaardigheden zeiden "thema staat vast, Fraunces + Inter"; eigenaar vond de site "te AI, te kinderlijk, niet professioneel" | UI/UX Brief, `vrijstaan-stijl` | **Opgelost (12 okt):** kleuren blijven, typografie (Geist), hoeken, schaduw, iconen en beweging volgens de nieuwe `docs/stijlgids.md` |
 | 33 | Websites worden maar één keer gelezen (`enqueue_scrape(true)` plant alleen plekken zonder `last_scraped_at`), terwijl de handleiding een "volgende controle" belooft | HANDLEIDING §6, pipeline | **Opgelost (16 oktober 2026):** cron `scrape-refresh` leest elke website eens per 30 dagen opnieuw (`migrations/20261016200000_opnieuw_lezen.sql`). Nummer 33: 12 tot en met 32 zijn uitgedeeld op het samenwerkingsbord (PR #9, §5) |

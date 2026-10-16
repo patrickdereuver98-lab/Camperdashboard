@@ -56,7 +56,7 @@ export function PageTitle({ title, children }: { title: string; children?: React
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl bg-surface p-4 outline-1 outline-line outline ${className}`}>{children}</div>;
+  return <div className={`rounded-xl bg-surface p-4 outline-1 outline-line outline ${className}`}>{children}</div>;
 }
 
 const TONES = {
@@ -74,23 +74,23 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
 export function ErrorNote({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-xl bg-alert-tint px-4 py-3 font-semibold text-alert">
+    <p role="alert" className="rounded-lg bg-alert-tint px-4 py-3 font-semibold text-alert">
       {message}
     </p>
   );
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-2xl border-2 border-dashed border-line px-4 py-10 text-center text-muted">{children}</p>;
+  return <p className="rounded-xl border border-dashed border-line px-4 py-10 text-center text-muted">{children}</p>;
 }
 
 export const input =
-  "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none disabled:opacity-60";
-export const textarea = "w-full rounded-xl border-2 border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none";
-export const button = "inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 font-semibold transition-colors disabled:opacity-50";
+  "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none disabled:opacity-60";
+export const textarea = "w-full rounded-lg border border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none";
+export const button = "inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 font-semibold transition-colors disabled:opacity-50";
 export const primary = `${button} bg-forest text-on-forest hover:bg-forest-deep`;
-export const secondary = `${button} border-2 border-line bg-surface hover:border-forest`;
-export const danger = `${button} border-2 border-alert/40 bg-surface text-alert hover:bg-alert-tint`;
+export const secondary = `${button} border border-line bg-surface hover:border-forest`;
+export const danger = `${button} border border-alert/40 bg-surface text-alert hover:bg-alert-tint`;
 
 export function Segmented<T extends string>({
   value,
@@ -111,7 +111,7 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 border-line bg-surface px-4 text-sm font-semibold aria-checked:border-forest aria-checked:bg-forest aria-checked:text-on-forest"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm font-semibold aria-checked:border-forest aria-checked:bg-forest aria-checked:text-on-forest"
         >
           {o.label}
           {o.count !== undefined && <span className="opacity-75">{o.count}</span>}

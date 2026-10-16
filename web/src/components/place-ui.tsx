@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
 import { departureKind, FACILITIES, openStatus } from "@/lib/search";
-import { formatKm } from "@/lib/geo";
+import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
+import { distanceKm, formatKm } from "@/lib/geo";
+import { useMyLocation } from "@/lib/my-location";
 import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
 import { useHydrated } from "@/lib/use-media";
@@ -11,8 +13,7 @@ import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
-import { Landscape } from "./landscape";
-import { Sign, type SignName } from "./sign";
+import { KIND_SIGN, Sign, type SignName } from "./sign";
 
 // ── Foto met nette terugval ─────────────────────────────────────────────────
 
@@ -41,48 +42,86 @@ export function PlacePhoto({
   sizes?: "small" | "large";
   onFail?: () => void;
 }) {
-  // 0 = verkleinde versie, 1 = origineel van de site, 2 = mislukt (tekening)
+  // Volgorde: verkleinde WebP van de grote versie (wsrv.nl), de grote versie zelf, het origineel van de site.
+  // wsrv.nl vergroot nooit (&we), dus de echte breedte blijft meetbaar voor de scherptecheck hieronder. Bewust geen
+  // srcset: daarmee rekent de browser naturalWidth om naar schermpixels en lijkt elke foto te klein.
+  const w = sizes === "large" ? 1280 : 640;
+  const upgraded = src ? upgradePhotoUrl(src) : undefined;
+  const ownStorage = !!src?.startsWith(`${SUPABASE_URL}/storage/`);
+  const sources = src && upgraded ? [...new Set([...(ownStorage ? [] : [photoProxy(upgraded, w)]), upgraded, src])] : [];
   const [stage, setStage] = useState(0);
+  const [failed, setFailed] = useState(false);
+  // Logo, tekening of een foto met een heel andere verhouding: passend tonen in plaats van half bijsnijden
+  const [fit, setFit] = useState<"cover" | "photo" | "graphic">(src && looksLikeGraphic(src) ? "graphic" : "cover");
   const ref = useRef<HTMLImageElement>(null);
-  const next = useCallback(() => setStage((s) => s + 1), []);
+  const current = sources[stage];
+  const pos = /\babsolute\b/.test(className) ? "" : "relative";
+  // Volgende bron proberen; als alle bronnen op zijn, valt de foto af (tekening of volgende foto)
+  const fail = useCallback(() => setStage((s) => s + 1), []);
+  const exhausted = sources.length > 0 && stage >= sources.length;
   useEffect(() => {
-    if (stage >= 2) onFail?.();
-  }, [stage, onFail]);
-  // Een foto die al vóór de hydratatie faalde, mist het onError-event
+    if (exhausted) onFail?.();
+  }, [exhausted, onFail]);
+  const loaded = useCallback(() => {
+    const img = ref.current;
+    if (!img?.naturalWidth) return;
+    // Te klein voor dit vak wordt onscherp: dan liever de tekening (kaart) of de volgende foto (galerij)
+    if (img.naturalWidth < (sizes === "large" ? 640 : 320)) {
+      setFailed(true);
+      onFail?.();
+      return;
+    }
+    const ratio = img.naturalWidth / img.naturalHeight;
+    const box = img.parentElement ? img.parentElement.clientWidth / Math.max(1, img.parentElement.clientHeight) : 1.6;
+    // Een PNG die groot is en een fotoverhouding heeft, is een foto (luchtfoto, sfeerbeeld), geen logo
+    if (fit === "graphic" && src && !/logo|embleem/i.test(src) && img.naturalWidth >= 800 && ratio >= 1.2 && ratio <= 2.2) {
+      setFit("cover");
+      return;
+    }
+    // Alleen in de grote galerij; een smalle kaartfoto mag gewoon bijgesneden worden
+    if (sizes === "large" && fit === "cover" && (ratio / box > 1.8 || box / ratio > 1.45)) setFit("photo");
+  }, [sizes, onFail, fit, src]);
+  // Een foto die al vóór de hydratatie laadde of faalde, mist het load- of error-event
   useEffect(() => {
     const img = ref.current;
-    if (img?.complete && img.naturalWidth === 0) next();
-  }, [next, stage]);
-  if (!src || stage >= 2) {
-    // Geen foto: een getekend landschap (duidelijk een illustratie, geen nepfoto)
+    if (!img?.complete) return;
+    if (img.naturalWidth === 0) fail();
+    else loaded();
+  }, [fail, loaded]);
+  if (!current || failed || exhausted) {
+    // Geen foto: een rustig leeg vlak met het soort plek, geen tekening of nepfoto (docs/stijlgids.md §10)
     return (
-      <div className={`relative overflow-hidden ${className}`} role="img" aria-label={`${alt} (nog geen foto)`}>
-        <Landscape seed={alt} water={kind === "jachthaven"} van={sizes === "large"} className="absolute inset-0 h-full w-full" />
-        {sizes === "large" && (
-          <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-3 py-1 text-sm font-semibold text-ink-2">
-            Nog geen foto{town ? ` van deze plek in ${town}` : ""}
-          </span>
-        )}
+      <div
+        className={`${pos} flex flex-col items-center justify-center gap-1.5 overflow-hidden bg-sunken text-muted ${className}`}
+        role="img"
+        aria-label={`${alt} (nog geen foto)`}
+      >
+        <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={sizes === "large" ? 36 : 28} state="unknown" />
+        {sizes === "large" && <span className="text-sm">Nog geen foto{town ? ` van deze plek in ${town}` : ""}</span>}
       </div>
     );
   }
-  const w = sizes === "large" ? 1280 : 640;
-  const proxied = stage === 0 && !src.startsWith(`${SUPABASE_URL}/storage/`);
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      key={stage}
-      ref={ref}
-      src={proxied ? photoProxy(src, w) : src}
-      srcSet={proxied ? `${photoProxy(src, w / 2)} ${w / 2}w, ${photoProxy(src, w)} ${w}w` : undefined}
-      sizes={sizes === "large" ? "100vw" : "(min-width: 640px) 360px, 50vw"}
-      alt={alt}
-      loading={sizes === "large" ? "eager" : "lazy"}
-      decoding="async"
-      referrerPolicy="no-referrer"
-      onError={next}
-      className={`object-cover ${className}`}
-    />
+    <div className={`${pos} overflow-hidden ${fit === "graphic" ? "bg-surface" : "bg-sunken"} ${className}`}>
+      {/* Bij een passend getoonde foto vult een vervaagde kopie de randen, zodat er geen lege balken staan */}
+      {fit === "photo" && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={current} alt="" aria-hidden="true" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={ref}
+        key={current}
+        src={current}
+        alt={alt}
+        loading={sizes === "large" ? "eager" : "lazy"}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={fail}
+        onLoad={loaded}
+        className={`relative h-full w-full ${fit === "cover" ? "object-cover" : fit === "graphic" ? "object-contain p-[8%]" : "object-contain"}`}
+      />
+    </div>
   );
 }
 
@@ -127,7 +166,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
 
 // ── Bewaren ─────────────────────────────────────────────────────────────────
 
-export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?: "icon" | "full" }) {
+export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?: "icon" | "full" | "plain" }) {
   const trip = useTrip();
   const saved = trip.has(slug);
   const toggle = (e: React.MouseEvent) => {
@@ -145,7 +184,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
         type="button"
         onClick={toggle}
         aria-pressed={saved}
-        className="flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+        className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
       >
         <Icon name="heart" size={20} filled={saved} className={saved ? "animate-pop text-alert" : ""} />
         {saved ? "Bewaard" : "Bewaar"}
@@ -157,7 +196,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
       onClick={toggle}
       aria-pressed={saved}
       aria-label={saved ? "Verwijderen uit mijn reis" : "Bewaren in mijn reis"}
-      className="grid h-11 w-11 place-items-center rounded-full bg-surface/95 shadow-lift transition-transform active:scale-90"
+      className={`grid h-11 w-11 place-items-center rounded-full transition-transform active:scale-90 ${variant === "plain" ? "" : "bg-surface/95 shadow-lift"}`}
     >
       <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop text-alert" : "text-ink"} />
     </button>
@@ -185,17 +224,25 @@ function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max
 // ── Resultaatkaart ──────────────────────────────────────────────────────────
 
 /** Seizoensstatus als klein label; alleen als het seizoen bekend is */
-export function OpenChip({ place }: { place: Pick<PlaceSummary, "openAllYear" | "season"> }) {
+export function OpenChip({ place, onlyClosed = false }: { place: Pick<PlaceSummary, "openAllYear" | "season">; onlyClosed?: boolean }) {
   // "Nu open" hangt af van de datum van de bezoeker: pas na hydratatie berekenen
   const hydrated = useHydrated();
   const status = hydrated ? openStatus(place) : undefined;
-  if (!status) return null;
+  if (!status || (onlyClosed && status.open)) return null;
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${status.open ? "text-forest" : "text-alert"}`}>
       <span className={`h-2 w-2 rounded-full ${status.open ? "bg-forest" : "bg-alert"}`} aria-hidden="true" />
       {status.label}
     </span>
   );
+}
+
+/** Aankomst of toegang in een paar woorden, alleen wat de bron noemt */
+function arrivalShort(p: Pick<PlaceSummary, "checkinFrom" | "access24h" | "accessHours">): string | undefined {
+  if (p.checkinFrom) return `Aankomst vanaf ${p.checkinFrom}`;
+  if (p.access24h) return "Dag en nacht open";
+  if (p.accessHours) return `Poort open ${p.accessHours}`;
+  return undefined;
 }
 
 export function PlaceCard({
@@ -216,25 +263,35 @@ export function PlaceCard({
 }) {
   const stack = layout === "stack";
   const hasPhoto = Boolean(place.imageUrl);
+  // Afstand: rijtijd van de pagina, anders vanaf je eigen locatie (blijft op het apparaat), anders vanaf de zoekplek
+  const me = useMyLocation().pos;
+  const fromMe = me ? distanceKm(me, place) : undefined;
   const distance =
     distanceLabel ??
-    (km !== undefined && (
+    (fromMe !== undefined ? (
       <span className="inline-flex items-center gap-1">
-        <Icon name="locate" size={15} className="shrink-0" /> {formatKm(km)} hemelsbreed
+        <Icon name="locate" size={14} className="shrink-0" /> {formatKm(fromMe)} van je locatie
       </span>
+    ) : (
+      km !== undefined && (
+        <span className="inline-flex items-center gap-1">
+          <Icon name="locate" size={14} className="shrink-0" /> {formatKm(km)} hemelsbreed
+        </span>
+      )
     ));
+  const arrival = arrivalShort(place);
   return (
     <article
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      className={`group relative flex overflow-hidden rounded-[1.25rem] bg-surface transition-[box-shadow,outline-color] duration-200 ${
-        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent hover:shadow-raised"
+      className={`lift group relative flex overflow-hidden rounded-xl bg-surface ${
+        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent"
       } has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest outline ${stack ? "flex-col" : "flex-row"}`}
     >
       <div
         className={`relative shrink-0 ${
-          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-28 self-stretch min-[400px]:w-32 sm:w-60"
+          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-[32%] max-w-36 self-stretch sm:w-56 sm:max-w-none"
         }`}
       >
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
@@ -245,32 +302,36 @@ export function PlaceCard({
         )}
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
-      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-2 right-2"}`}>
-        <SaveButton slug={place.slug} />
+      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-0.5 right-0.5 sm:top-2 sm:right-2"}`}>
+        <SaveButton slug={place.slug} variant={stack ? "icon" : "plain"} />
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col gap-2 ${stack ? "p-4" : "p-3 sm:p-4"}`}>
-        <div className={`min-w-0 ${stack ? "pr-12" : "pr-11"}`}>
-          <p className="text-sm text-muted">{place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}</p>
-          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-lg sm:text-xl"}`}>
+      <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-2 py-2.5 pr-3 pl-3 sm:p-4"}`}>
+        {/* Waar: naam, soort en plaats, afstand */}
+        <div className={`min-w-0 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
+          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-[1.0625rem] sm:text-xl"}`}>
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
           </h3>
-          <p className="mt-0.5 flex items-center gap-1 text-sm text-ink-2 sm:text-base">
-            <Icon name="pin" size={15} className="shrink-0 text-muted" />
-            <span className="truncate">
-              {place.town}, {place.province}
-            </span>
+          <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
+            {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
           </p>
-          {distance && <p className="mt-0.5 text-sm font-semibold text-forest">{distance}</p>}
+          {distance && <p className="text-sm font-semibold text-forest">{distance}</p>}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <DepartureChip place={place} />
-          <OpenChip place={place} />
-          <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />
-        </div>
-        <div className="mt-auto flex items-end justify-between gap-2">
-          <FacilitySigns place={place} max={stack ? 5 : 4} size={stack ? 28 : 26} />
+
+        {/* Wanneer: vertrekken en aankomen, en alleen een seizoensmelding als het nu dicht is */}
+        {(departureShort(place) || arrival) && (
+          <div className="min-w-0 space-y-0.5">
+            <DepartureChip place={place} />
+            {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
+          </div>
+        )}
+        <OpenChip place={place} onlyClosed={!stack} />
+        {place.ratingCount > 0 && <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />}
+
+        {/* Wat en hoeveel: voorzieningen links, prijs rechts */}
+        <div className="mt-auto flex items-end justify-between gap-2 pt-0.5">
+          <FacilitySigns place={place} max={stack ? 5 : 3} size={stack ? 26 : 22} />
           <CardPrice place={place} />
         </div>
       </div>
@@ -280,8 +341,8 @@ export function PlaceCard({
 
 export function CardSkeleton() {
   return (
-    <div className="flex overflow-hidden rounded-2xl bg-surface shadow-low">
-      <div className="h-40 w-28 shrink-0 animate-pulse bg-sunken min-[400px]:w-32 sm:h-48 sm:w-60" />
+    <div className="flex overflow-hidden rounded-xl bg-surface shadow-low">
+      <div className="h-36 w-[34%] max-w-36 shrink-0 animate-pulse bg-sunken sm:h-48 sm:w-60 sm:max-w-none" />
       <div className="flex-1 space-y-3 p-3 sm:p-4">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
         <div className="h-6 w-3/4 animate-pulse rounded bg-sunken" />
@@ -304,8 +365,8 @@ export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure"
   const style =
     kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-base font-semibold ${style}`}>
-      <Sign name="clock" size={18} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm leading-tight font-semibold ${style}`}>
+      <Sign name="clock" size={16} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
       {label}
     </span>
   );
@@ -314,11 +375,14 @@ export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure"
 function CardPrice({ place }: { place: PlaceSummary }) {
   const price = cardPrice(place);
   if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
+  // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina
+  const surcharges = price.extras || place.touristTaxIncluded === false;
   return (
-    <div className="ml-auto shrink-0 text-right">
+    <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
-      <p className="font-display text-2xl leading-none font-semibold text-ink">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
-      {(place.priceEur ?? 0) > 0 && <p className="mt-1 text-sm text-muted">per nacht{price.extras ? " + extra's" : ""}</p>}
+      <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
+      {(place.priceEur ?? 0) > 0 && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
+      {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
     </div>
   );
 }

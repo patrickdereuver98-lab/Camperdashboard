@@ -8,7 +8,7 @@ import { track } from "@/lib/track";
 import type { Photo, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
-import { Landscape } from "@/components/landscape";
+import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
 import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 
@@ -28,11 +28,9 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
   if (!visible.length)
     return (
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
-        <div className="relative h-32 overflow-hidden sm:h-44 sm:rounded-2xl" role="img" aria-label={`Nog geen foto van ${name}`}>
-          <Landscape seed={`Foto van ${name}`} water={kind === "jachthaven"} van wide className="absolute inset-0 h-full w-full" />
-          <span className="absolute bottom-3 left-3 rounded-full bg-surface/90 px-3 py-1 text-sm font-semibold text-ink-2">
-            Nog geen foto van deze plek
-          </span>
+        <div className="flex h-20 items-center justify-center gap-2 bg-sunken text-sm text-muted sm:h-28 sm:rounded-xl" role="img" aria-label={`Nog geen foto van ${name}`}>
+          <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={24} state="unknown" />
+          Nog geen foto van deze plek
         </div>
       </ViewTransition>
     );
@@ -41,7 +39,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <div
         ref={track_}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="no-scrollbar flex aspect-[16/10] snap-x snap-mandatory overflow-x-auto sm:aspect-[21/9] sm:rounded-2xl"
+        className="no-scrollbar flex aspect-[16/9] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-xl"
         aria-roledescription="carrousel"
         aria-label={`Foto's van ${name}`}
       >
@@ -67,7 +65,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
                 photo
               )}
               {p.credit && (
-                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">
+                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-xs text-white">
                   Foto: {p.credit}
                 </figcaption>
               )}
@@ -77,7 +75,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       </div>
       {visible.length > 1 && (
         <>
-          <span className="animate-fade-in-late absolute right-3 bottom-3 rounded-full bg-black/60 px-3 py-1 font-display text-sm font-semibold text-white">
+          <span className="animate-fade-in-late absolute right-2 bottom-2 rounded-full bg-black/50 px-2.5 py-0.5 text-sm font-semibold text-white tabular-nums">
             {Math.min(index, visible.length - 1) + 1} / {visible.length}
           </span>
           <div className="absolute inset-y-0 left-2 hidden items-center sm:flex">
@@ -136,27 +134,26 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
   }
 
   return (
-    <div className="rounded-2xl bg-surface p-5 shadow-low">
-      <h2 className="font-display text-xl font-semibold">Hoe ver is het?</h2>
+    <div className="rounded-xl bg-surface p-4 shadow-low">
       {state.s === "ok" ? (
-        <p className="mt-2 text-lg">
-          <span className="font-display text-3xl font-semibold">{formatDuration(state.seconds)}</span>
+        <p>
+          <span className="font-display text-2xl font-semibold">{formatDuration(state.seconds)}</span>
           <span className="ml-2 text-ink-2">rijden, {formatKm(state.km)} over de weg</span>
         </p>
       ) : (
-        <p className="mt-1 text-ink-2">Bereken de echte rijtijd vanaf waar je nu bent.</p>
+        <p className="text-ink-2">Bereken de rijtijd vanaf waar je nu bent.</p>
       )}
       {state.s === "error" && <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-alert">{state.msg}</p>}
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {state.s !== "ok" && (
           <button
             type="button"
             onClick={calculate}
             disabled={state.s === "locating"}
-            className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest disabled:opacity-60"
+            className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest disabled:opacity-60"
           >
-            <Icon name="locate" size={19} />
-            {state.s === "locating" ? "Bezig…" : "Bereken vanaf mijn locatie"}
+            <Icon name="locate" size={18} />
+            {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}
           </button>
         )}
         <a
@@ -164,9 +161,9 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => track("outbound", { soort: "route", naar: name })}
-          className="flex h-12 items-center gap-2 rounded-xl border-2 border-line px-5 font-semibold hover:border-forest"
+          className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest"
         >
-          <Icon name="route" size={19} /> Open in navigatie
+          <Icon name="route" size={18} /> Open in navigatie
         </a>
       </div>
     </div>
@@ -213,7 +210,7 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
     <>
       <ul className="space-y-3">
         {shown.map((r) => (
-          <li key={r.id} className="rounded-2xl bg-surface p-5 shadow-low">
+          <li key={r.id} className="rounded-xl bg-surface p-5 shadow-low">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold">{r.authorName}</p>
@@ -232,7 +229,7 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
         ))}
       </ul>
       {reviews.length > 3 && !all && (
-        <button type="button" onClick={() => setAll(true)} className="mt-3 h-12 rounded-xl border-2 border-line px-5 font-semibold hover:border-forest">
+        <button type="button" onClick={() => setAll(true)} className="mt-3 h-12 rounded-lg border border-line px-5 font-semibold hover:border-forest">
           Toon alle {pluralize(reviews.length, "review", "reviews")}
         </button>
       )}
@@ -254,7 +251,7 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
             type="button"
             aria-pressed={value === n}
             onClick={() => onChange(n)}
-            className="h-11 rounded-full border-2 border-line font-display font-semibold aria-pressed:border-forest aria-pressed:bg-forest aria-pressed:text-on-forest"
+            className="h-11 rounded-lg border border-line font-display font-semibold aria-pressed:border-forest aria-pressed:bg-forest aria-pressed:text-on-forest"
           >
             {n}
           </button>
@@ -264,7 +261,7 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
   );
 }
 
-const input = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const input = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
 export function WriteReview({ placeId, placeName }: { placeId: string; placeName: string }) {
   const [open, setOpen] = useState(false);
@@ -322,21 +319,21 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
+      <button type="button" onClick={() => setOpen(true)} className="flex h-12 items-center gap-2 rounded-lg bg-forest px-5 font-semibold text-on-forest">
         <Icon name="edit" size={19} /> Schrijf een review
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt!" : `Review voor ${placeName}`}>
         {done ? (
           <div className="pb-4">
             <p className="text-lg">Je review is ontvangen. We controleren hem en plaatsen hem meestal binnen twee werkdagen.</p>
-            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-xl bg-forest font-semibold text-on-forest">
+            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-lg bg-forest font-semibold text-on-forest">
               Sluiten
             </button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-5 pb-4">
             <ScorePicker label="Totaalcijfer" required value={scores.rating} onChange={(n) => setScores((s) => ({ ...s, rating: n }))} />
-            <details className="rounded-xl bg-sunken p-4">
+            <details className="rounded-lg bg-sunken p-4">
               <summary className="cursor-pointer font-semibold">Cijfers per onderdeel (optioneel)</summary>
               <div className="mt-4 space-y-4">
                 <ScorePicker label="Ligging" value={scores.location} onChange={(n) => setScores((s) => ({ ...s, location: n }))} />
@@ -392,7 +389,7 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
             </label>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
               {busy ? "Versturen…" : "Review versturen"}
             </button>
           </form>
@@ -447,7 +444,7 @@ export function ReportProblem({
         {done ? (
           <div className="pb-4">
             <p className="text-lg">We controleren je melding en passen de gegevens zo nodig aan.</p>
-            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-xl bg-forest font-semibold text-on-forest">
+            <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-lg bg-forest font-semibold text-on-forest">
               Sluiten
             </button>
           </div>
@@ -485,7 +482,7 @@ export function ReportProblem({
             </div>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
               {busy ? "Versturen…" : "Melding versturen"}
             </button>
           </form>
@@ -519,7 +516,7 @@ export function ShareButton({ title, className = "" }: { title: string; classNam
           setTimeout(() => setCopied(false), 2000);
         }
       }}
-      className={`flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest ${className}`}
+      className={`flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest ${className}`}
     >
       <Icon name={copied ? "check" : "share"} size={19} />
       {copied ? "Link gekopieerd" : "Delen"}

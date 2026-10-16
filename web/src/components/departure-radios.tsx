@@ -36,7 +36,7 @@ export function DepartureRadios({
             aria-checked={value === v}
             // Nog een keer tikken haalt de keuze weg
             onClick={() => onChange(value === v ? "" : v)}
-            className="min-h-12 rounded-xl border-2 border-line px-4 py-2 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+            className="min-h-12 rounded-lg border border-line px-4 py-2 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
           >
             {l}
           </button>
