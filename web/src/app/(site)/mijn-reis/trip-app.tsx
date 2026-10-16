@@ -152,7 +152,7 @@ export function TripApp() {
         <p className="mt-3 text-lg text-ink-2">
           Tik op het hartje bij een plek om hem te bewaren. Hier zet je ze op volgorde en zie je de echte rijtijd en wat de reis ongeveer kost.
         </p>
-        <Link href="/zoeken" className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-forest px-7 font-display text-lg font-semibold text-on-forest">
+        <Link href="/zoeken" className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-forest px-7 font-semibold text-on-forest hover:bg-forest-deep">
           <Icon name="search" size={21} /> Plekken zoeken
         </Link>
       </div>

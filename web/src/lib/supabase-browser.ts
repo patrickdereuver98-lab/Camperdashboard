@@ -1,16 +1,33 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database as Generated } from "./database.types";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 
-let client: SupabaseClient | null = null;
+// De generator maakt functieargumenten nooit nullable, maar de formulieren sturen `null` voor lege velden en
+// Postgres accepteert dat. Daarom mag elk argument hier ook `null` zijn.
+type NullableArgs<F> = {
+  [K in keyof F]: F[K] extends { Args: infer A } ? Omit<F[K], "Args"> & { Args: { [P in keyof A]: A[P] | null } } : F[K];
+};
+type PublicSchema = Generated["public"];
+export type Database = Omit<Generated, "public"> & {
+  public: Omit<PublicSchema, "Functions"> & { Functions: NullableArgs<PublicSchema["Functions"]> };
+};
+
+let client: SupabaseClient<Database> | null = null;
 
 /** Supabase in de browser: publieke formulieren en de beheeromgeving (beveiligd met RLS). */
-export function supabase(): SupabaseClient {
-  client ??= createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export function supabase(): SupabaseClient<Database> {
+  client ??= createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: true, storageKey: "vrijstaan-auth", autoRefreshToken: true },
   });
   return client;
+}
+
+/** Tekst uit een formulierveld; `null` als het veld ontbreekt (of een bestand is) */
+export function formValue(form: FormData, name: string): string | null {
+  const v = form.get(name);
+  return typeof v === "string" ? v : null;
 }
 
 /** Leesbare foutmelding uit een Supabase/Postgres-fout */

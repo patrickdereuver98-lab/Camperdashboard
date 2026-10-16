@@ -21,11 +21,12 @@ type Review = {
 
 export default function Reviews() {
   const [status, setStatus] = useState<Review["status"]>("pending");
-  const { data, error, reload } = useQuery(
+  const { data, error, loading, reload } = useQuery(
     () => db().from("reviews").select("*, places(name, slug)").eq("status", status).order("created_at", { ascending: false }).limit(100),
     [status],
   );
-  const rows = (data as Review[] | null) ?? [];
+  // `status` is in de database tekst met een CHECK; hier als vaste keuze
+  const rows = (data ?? []) as Review[];
   const [err, setErr] = useState<string | null>(null);
 
   async function set(id: string, next: Review["status"]) {
@@ -55,7 +56,9 @@ export default function Reviews() {
         ]}
       />
       <ErrorNote message={error ?? err} />
-      {rows.length === 0 ? (
+      {loading && rows.length === 0 ? (
+        <p className="text-muted">Laden…</p>
+      ) : rows.length === 0 ? (
         <Empty>Geen reviews in deze lijst.</Empty>
       ) : (
         rows.map((r) => (

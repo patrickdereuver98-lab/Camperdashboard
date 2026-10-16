@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { OPEN_GRAPH } from "@/lib/meta";
 import { getStats } from "@/lib/places";
 import { Icon } from "@/components/icons";
 import { Sign } from "@/components/sign";
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
   description: "Weet jij hoe laat je ergens weg moet, of ken je een camperplaats die nog ontbreekt? Vul het in, dan klopt de gids voor iedereen.",
   alternates: { canonical: "/doe-mee" },
   openGraph: {
+    ...OPEN_GRAPH,
     title: "Weet jij hoe laat je hier weg moet?",
     description: "Help andere camperaars: vul de vertrektijd in van plekken waar je bent geweest, of meld een plek die nog ontbreekt.",
   },

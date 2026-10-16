@@ -34,7 +34,7 @@ export default function ReportPage() {
         <ReportForm />
       </Suspense>
       <p className="mt-6 text-sm text-muted">
-        Laatst bijgewerkt: 11 oktober 2026. Meer over hoe we met meldingen omgaan staat in de{" "}
+        Laatste update: 11 oktober 2026. Meer over hoe we met meldingen omgaan staat in de{" "}
         <Link href="/voorwaarden" className="underline">gebruiksvoorwaarden</Link>.
       </p>
     </div>

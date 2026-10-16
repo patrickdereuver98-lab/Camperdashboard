@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, secondary, useQuery, when } from "../ui";
 
 type Log = { id: number; ts: string; level: string; source: string; message: string; context: unknown };
@@ -14,16 +14,22 @@ export default function Logs() {
   const [tab, setTab] = useState<"app" | "audit" | "runs" | "consent">("app");
   const [level, setLevel] = useState("");
   const [term, setTerm] = useState("");
+  // Pas zoeken als je even stopt met typen, niet bij elke toets
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(term.trim()), 300);
+    return () => clearTimeout(t);
+  }, [term]);
 
-  const { data, error, reload } = useQuery(() => {
+  const { data, error, reload } = useQuery<unknown[]>(() => {
     if (tab === "audit") return db().from("audit_log").select("*").order("ts", { ascending: false }).limit(150);
     if (tab === "runs") return db().from("ingest_runs").select("*").order("started_at", { ascending: false }).limit(100);
     if (tab === "consent") return db().from("consent_log").select("*").order("ts", { ascending: false }).limit(150);
     let q = db().from("app_logs").select("*").order("ts", { ascending: false }).limit(200);
     if (level) q = q.eq("level", level);
-    if (term) q = q.ilike("message", `%${term}%`);
+    if (search) q = q.ilike("message", `%${search}%`);
     return q;
-  }, [tab, level, term]);
+  }, [tab, level, search]);
   const rows = (data as unknown[] | null) ?? [];
 
   return (

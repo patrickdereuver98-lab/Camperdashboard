@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { FACILITIES } from "@/lib/search";
 import { PROVINCES } from "@/lib/types";
 import { Icon } from "@/components/icons";
@@ -22,36 +22,36 @@ export function SubmitForm() {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    if (f.get("website_hp")) return;
+    if (formValue(f, "website_hp")) return;
     const facilities: Record<string, boolean> = {};
-    for (const fac of FACILITIES) if (f.get(`v_${fac.key}`)) facilities[fac.key] = true;
+    for (const fac of FACILITIES) if (formValue(f, `v_${fac.key}`)) facilities[fac.key] = true;
     setBusy(true);
     setErr(null);
     const { error } = await supabase().rpc("submit_place", {
       p_kind: owner ? "eigenaar" : "nieuw",
       p_place_id: null,
       p_payload: {
-        naam: f.get("name"),
-        plaats: f.get("town"),
-        provincie: f.get("province"),
-        adres: f.get("address"),
+        naam: formValue(f, "name"),
+        plaats: formValue(f, "town"),
+        provincie: formValue(f, "province"),
+        adres: formValue(f, "address"),
         website: (() => {
           // "www.camping.nl" is ook goed: we zetten er zelf https:// voor
-          const w = String(f.get("website") ?? "").trim();
+          const w = String(formValue(f, "website") ?? "").trim();
           return w && !/^https?:\/\//i.test(w) ? `https://${w}` : w;
         })(),
-        telefoon: f.get("phone"),
-        prijs_per_nacht: f.get("price"),
-        aantal_plekken: f.get("capacity"),
-        seizoen: f.get("season"),
+        telefoon: formValue(f, "phone"),
+        prijs_per_nacht: formValue(f, "price"),
+        aantal_plekken: formValue(f, "capacity"),
+        seizoen: formValue(f, "season"),
         vertrek: departure || null,
-        vertrek_uiterlijk: departure === "vast" ? f.get("checkout") || null : null,
-        max_lengte_m: f.get("max_length") || null,
+        vertrek_uiterlijk: departure === "vast" ? formValue(f, "checkout") || null : null,
+        max_lengte_m: formValue(f, "max_length") || null,
         voorzieningen: facilities,
-        toelichting: f.get("notes"),
+        toelichting: formValue(f, "notes"),
       },
-      p_contact_name: String(f.get("contact_name") || ""),
-      p_contact_email: String(f.get("contact_email") || ""),
+      p_contact_name: String(formValue(f, "contact_name") || ""),
+      p_contact_email: String(formValue(f, "contact_email") || ""),
     });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
@@ -224,7 +224,7 @@ export function SubmitForm() {
 
       <input name="website_hp" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-14 w-full rounded-xl bg-forest font-semibold text-on-forest hover:bg-forest-deep disabled:opacity-60">
         {busy ? "Versturen…" : "Plek aanmelden"}
       </button>
     </form>
