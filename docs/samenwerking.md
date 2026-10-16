@@ -30,7 +30,7 @@ Vercel-preview → PR `acceptatie` → `main`. **Nog door Patrick te bevestigen*
 | Gepubliceerde plekken | 1.536 |
 | Zonder vaste vertrektijd (`vrij` of `per24`) | 21 (doel 150) |
 | Met prijs | 880 |
-| Met losse toeslagen (`price_extras`) | ±965. **Let op:** de snapshot (680 plekken) heeft dit veld niet, de live data wel. `plan.md` P7, open punt 13 van PR #11 ("veld ontbreekt in de data") en review #10 punt 3.1 gaan uit van de snapshot. De sessie van #11 past `plan.md` aan |
+| Met losse toeslagen (`price_extras`) | 984. **Let op:** de snapshot (680 plekken) heeft dit veld niet, de live data wel. `plan.md` P7, open punt 13 van PR #11 ("veld ontbreekt in de data") gingen uit van de snapshot. Review #10 is aangepast; de sessie van #11 past `plan.md` aan |
 | Beheeraccounts | 0 (één uitnodiging klaar) |
 | Bewaartermijnen actief | Nee: geen `apply_retention`, geen cron `retention` |
 | Scrape-wachtrij | Leeg (herscrape met v17 klaar) |
@@ -104,7 +104,7 @@ als laatste samenvoegt (zie §3, stap 5), zet ze in deze volgorde en verwijst na
 | 26 | Camperafmetingen: alleen lengte bekend | #4 (18) |
 | 27 | "Zonder stroom" in plaats van "off-grid" | #4 (19) |
 | 28 | Toegankelijkheidsverklaring belooft meer dan de code | #11 (12) |
-| 29 | Prijs met toeslagen: data is er (965 plekken), maar Mijn reis telt toeslagen niet mee | #11 (13), audit B1 |
+| 29 | Prijs met toeslagen: data is er (984 plekken), maar Mijn reis telt toeslagen niet mee | #11 (13), audit B1 |
 | 30 | Openbare aanmelding staat aan; nodig voor accounts (B1), dus beheer extra beschermen (MFA, controle op uitnodiging) | audit C2, #11 0.4 |
 | 31 | Privacy noemt "een paar dagen" cache voor rijtijden; routes staan weken in de cache | audit C5 |
 | 32 | Maar 21 plekken zonder vaste vertrektijd | audit A1, #11 D1 |
@@ -120,7 +120,7 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 |---|---|---|---|---|
 | Kernbelofte: meer plekken zonder vertrektijd (OSM `motorhome=designated`, "per 24 uur" herkennen, Doe mee gericht) en bevestiging door een mens | audit A1, #11 D1/D2 | Sessie "Feature review en plan" | Bezig | 🔄 PR #12 |
 | Mijn reis telt toeslagen per persoon en per nacht mee | audit B1, #11 P7, #10 3.1 en G2 | Agent van #4, ná stap 4 | #4 bouwde al uitgaven en reiskosten in `trip-app.tsx`; anders twee keer hetzelfde bestand | ⬜ Toegezegd door #4 |
-| Routecache op dagen (privacy) | audit C5 | Agent van #10 | `routing.ts` is in #10 al aangepast; één regel | ⬜ |
+| Routecache op dagen (privacy) | audit C5 | Agent van #10 | `routing.ts` is in #10 al aangepast; één regel | ✅ PR #10 (`a0301b2`) |
 | Eerste resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | audit B4, #10 2.12 (LCP) | Agent van #5, ná stap 3 | `search-app.tsx` is in #5 herschreven | ⬜ |
 | Door `discover` gevonden websites eerst laten bevestigen | audit A4 | Audit-agent (#9) | Raakt alleen `functions/discover` en één RPC; niemand anders zit daar | ⬜ wacht op akkoord (live deploy) |
 | Overpass-ruis in `app_logs` (110 per week) | audit A6 | Audit-agent (#9) | Alleen `functions/pipeline/index.ts`; #4 en #5 raken die niet | ⬜ wacht op akkoord (live deploy) |
