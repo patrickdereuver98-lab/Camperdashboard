@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { errorMessage } from "@/lib/supabase-browser";
+import { errorMessage, type Database } from "@/lib/supabase-browser";
 import { Badge, Card, ErrorNote, PageTitle, db, danger, input, primary, secondary, textarea, useQuery } from "../ui";
 
 type Faq = { id: string; category: string; question: string; answer: string; position: number; published: boolean };
@@ -9,7 +9,7 @@ const EMPTY: Omit<Faq, "id"> = { category: "Algemeen", question: "", answer: "",
 
 export default function FaqAdmin() {
   const { data, error, reload } = useQuery(() => db().from("faq").select("*").order("category").order("position"), []);
-  const rows = (data as Faq[] | null) ?? [];
+  const rows: Faq[] = data ?? [];
   const [editing, setEditing] = useState<Partial<Faq> | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const categories = [...new Set(rows.map((r) => r.category))];
@@ -18,7 +18,10 @@ export default function FaqAdmin() {
     e.preventDefault();
     if (!editing) return;
     const { id, ...fields } = editing;
-    const { error } = id ? await db().from("faq").update(fields).eq("id", id) : await db().from("faq").insert(fields);
+    // Het formulier maakt vraag, antwoord en categorie verplicht
+    const { error } = id
+      ? await db().from("faq").update(fields).eq("id", id)
+      : await db().from("faq").insert(fields as Database["public"]["Tables"]["faq"]["Insert"]);
     if (error) return setErr(errorMessage(error));
     setEditing(null);
     setErr(null);

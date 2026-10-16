@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getNearby, getPlace, getReviews, getSummaries } from "@/lib/places";
+import { notFound, permanentRedirect } from "next/navigation";
+import { getNearby, getPlace, getRedirect, getReviews, getSummaries } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
 import { cardPrice, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
+import { OPEN_GRAPH } from "@/lib/meta";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
     title: `${place.name}, ${place.town}`,
     description: `${place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in ${place.town} (${place.province}). ${price}Bekijk voorzieningen, foto's, reviews en de route.`,
     alternates: { canonical: `/plek/${place.slug}` },
-    openGraph: { images: place.imageUrl ? [{ url: upgradePhotoUrl(place.imageUrl) }] : undefined },
+    openGraph: { ...OPEN_GRAPH, images: place.imageUrl ? [{ url: upgradePhotoUrl(place.imageUrl) }] : OPEN_GRAPH.images },
   };
 }
 
@@ -44,6 +45,24 @@ type Row = { sign: SignName; label: string; value: string; known: boolean; tone?
 
 function facilityText(f: (typeof FACILITY_ROWS)[number], v: boolean) {
   return v ? f.yes : f.no;
+}
+
+/** Wat een camperaar wil weten, en of wij het weten. De publicatiescore (completeness) is gewogen en zegt dat niet. */
+function knownFacts(p: Place): { label: string; known: boolean }[] {
+  return [
+    { label: "vertrektijd", known: !!p.departure },
+    { label: "prijs", known: p.priceEur !== undefined || !!cardPrice(p) },
+    { label: "openingsperiode", known: p.openAllYear === true || !!p.season },
+    { label: "maximale lengte", known: !!p.maxLengthM },
+    { label: "stroom", known: p.power !== undefined },
+    { label: "water", known: p.water !== undefined },
+    { label: "lozen", known: p.dumpStation !== undefined },
+    { label: "toilet", known: p.toilet !== undefined },
+    { label: "honden", known: p.dogs !== undefined },
+    { label: "reserveren", known: p.reservation !== undefined },
+    { label: "toeristenbelasting", known: p.touristTaxIncluded !== undefined || !!p.priceExtras?.length },
+    { label: "ondergrond", known: !!p.surface },
+  ];
 }
 
 const FACILITY_ROWS: { key: keyof Place; sign: SignName; label: string; yes: string; no: string }[] = [
@@ -69,7 +88,12 @@ const listNl = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -
 export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const { slug } = await params;
   const place = await getPlace(slug);
-  if (!place) notFound();
+  if (!place) {
+    // Samengevoegde plek: oude links en zoekmachines naar de plek die is blijven staan
+    const target = await getRedirect(slug);
+    if (target) permanentRedirect(`/plek/${target}`);
+    notFound();
+  }
   const [reviews, nearby] = await Promise.all([getReviews(place.id), getNearby(place, 6)]);
 
   // Al gesorteerd en gefilterd in places.ts: de beste foto van de plek zelf staat vooraan
@@ -235,6 +259,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 }
 
 function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: string; nearby: PlaceSummary[]; reserveLabel: string }) {
+  const facts = knownFacts(place);
+  const missing = facts.filter((f) => !f.known).map((f) => f.label);
   return (
     <>
       <div className="hidden rounded-xl bg-surface p-5 shadow-low md:block">
@@ -276,9 +302,12 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
 
       <div className="rounded-xl bg-sunken/60 p-4 text-sm text-ink-2">
         <p className="flex items-center gap-2 font-semibold text-ink">
-          <Icon name="shield" size={17} className="text-forest" /> {Math.round(place.completeness * 100)}% van de gegevens bekend
+          <Icon name="shield" size={17} className="text-forest" /> {facts.filter((f) => f.known).length} van {facts.length} gegevens bekend
         </p>
-        <p className="mt-1">Zie je iets dat niet klopt, of weet je meer? Laat het weten, dan passen we het aan.</p>
+        {missing.length > 0 && (
+          <p className="mt-1">Nog onbekend: {missing.join(", ")}. Weet jij dit? Laat het weten, dan vullen we het aan.</p>
+        )}
+        {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het weten, dan passen we het aan.</p>}
         <ReportProblem placeId={place.id} placeName={place.name} />
       </div>
     </>

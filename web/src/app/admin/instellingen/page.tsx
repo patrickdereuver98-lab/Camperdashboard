@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const { data, error, reload } = useQuery(() => db().from("site_settings").select("key,value"), []);
   const loaded = useMemo<Settings | null>(() => {
     if (!data) return null;
-    const map = Object.fromEntries((data as { key: string; value: unknown }[]).map((r) => [r.key, r.value]));
+    const map = Object.fromEntries(data.map((r) => [r.key, r.value]));
     return {
       contact: (map.contact as Settings["contact"]) ?? { email: "", response_days: 2 },
       announcement: (map.announcement as Settings["announcement"]) ?? { text: "", enabled: false },

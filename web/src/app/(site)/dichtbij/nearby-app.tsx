@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { formatDuration } from "@/lib/format";
@@ -112,20 +113,22 @@ export function NearbyApp() {
           type="button"
           onClick={locate}
           disabled={status === "locating"}
-          className="mt-8 inline-flex h-14 items-center gap-2 rounded-lg bg-forest px-7 font-display text-lg font-semibold text-on-forest disabled:opacity-70"
+          className="mt-8 inline-flex h-14 items-center gap-2 rounded-lg bg-forest hover:bg-forest-deep px-7 font-display text-lg font-semibold text-on-forest disabled:opacity-60"
         >
           <Icon name="locate" size={22} />
           {status === "locating" ? "Locatie bepalen…" : "Gebruik mijn locatie"}
         </button>
-        {status === "denied" && (
-          <p role="alert" className="mt-5 rounded-lg bg-alert-tint p-4 text-alert">
-            Je hebt geen toegang tot je locatie gegeven. Sta het toe in de instellingen van je browser, of zoek op plaatsnaam via Zoeken.
-          </p>
-        )}
-        {status === "unavailable" && (
-          <p role="alert" className="mt-5 rounded-lg bg-alert-tint p-4 text-alert">
-            Je locatie kon niet worden bepaald. Probeer het opnieuw of zoek op plaatsnaam.
-          </p>
+        {(status === "denied" || status === "unavailable") && (
+          <div role="alert" className="mt-5 rounded-xl bg-alert-tint p-4 text-alert">
+            <p>
+              {status === "denied"
+                ? "Je hebt geen toegang tot je locatie gegeven. Sta het toe in de instellingen van je browser, of zoek op plaatsnaam."
+                : "Je locatie kon niet worden bepaald. Probeer het opnieuw of zoek op plaatsnaam."}
+            </p>
+            <Link href="/zoeken" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-surface px-4 font-semibold text-ink shadow-low">
+              <Icon name="search" size={18} /> Zoek op plaats
+            </Link>
+          </div>
         )}
         <p className="mt-6 text-sm text-muted">Je locatie wordt alleen gebruikt om afstanden te berekenen en niet opgeslagen.</p>
       </div>

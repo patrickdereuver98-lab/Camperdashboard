@@ -156,7 +156,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
       </span>
       <span className="leading-tight">
         <span className={`block font-semibold ${size === "lg" ? "text-base" : "text-sm"}`}>{scoreWord(avg)}</span>
-        <span className="block text-xs text-muted">
+        <span className="block text-sm text-muted">
           {count} {count === 1 ? "review" : "reviews"}
         </span>
       </span>
@@ -287,7 +287,7 @@ export function PlaceCard({
       onMouseLeave={() => onHover?.(null)}
       className={`lift group relative flex overflow-hidden rounded-xl bg-surface ${
         active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent"
-      } outline ${stack ? "flex-col" : "flex-row"}`}
+      } has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest outline ${stack ? "flex-col" : "flex-row"}`}
     >
       <div
         className={`relative shrink-0 ${

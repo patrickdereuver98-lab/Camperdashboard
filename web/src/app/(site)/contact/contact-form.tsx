@@ -16,7 +16,7 @@ const CATEGORIES = [
   ["overig", "Iets anders"],
 ] as const;
 
-export const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
 export function ContactForm() {
   const params = useSearchParams();
@@ -41,7 +41,7 @@ export function ContactForm() {
     });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
-    const row = (data as { number: number; access_token: string }[])[0];
+    const row = data[0];
     setDone({ number: row.number, token: row.access_token });
   }
 
@@ -94,7 +94,7 @@ export function ContactForm() {
         <Link href="/privacy" className="underline">privacyverklaring</Link>.
       </p>
       {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Bericht versturen"}
       </button>
     </form>

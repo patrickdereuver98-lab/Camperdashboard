@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
 import { KIND_LABEL, PROVINCES } from "@/lib/types";
-import { errorMessage } from "@/lib/supabase-browser";
+import { errorMessage, type Database } from "@/lib/supabase-browser";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, primary, secondary, textarea, useQuery, when } from "../ui";
 
 type Row = {
@@ -133,7 +133,8 @@ export default function PlacesAdmin() {
 
 function Meter({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = value >= 0.8 ? "text-forest" : value >= 0.7 ? "text-forest" : "text-muted";
+  // Groen vanaf de standaard-publicatiedrempel (0,45; instelbaar in Beheer, Instellingen)
+  const color = value >= 0.45 ? "text-forest" : "text-muted";
   return (
     <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full bg-sunken font-display text-sm font-semibold tabular-nums ${color}`} title={`${pct}% compleet`}>
       {pct}
@@ -148,10 +149,16 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // Snel naar een andere plek: het antwoord van de vorige mag de nieuwe niet overschrijven
+    let live = true;
     db().from("places").select("*").eq("id", id).single().then(({ data, error }) => {
+      if (!live) return;
       if (error) setErr(errorMessage(error));
       else setPlace(data as Full);
     });
+    return () => {
+      live = false;
+    };
   }, [id]);
 
   const v = (k: string) => (k in draft ? draft[k] : place?.[k]);
@@ -163,11 +170,18 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
     if (!Object.keys(draft).length) return onClose();
     setBusy(true);
     setErr(null);
-    // Handmatig ingevulde velden markeren: de pipeline overschrijft ze dan nooit
-    const sources = { ...((place?.sources as Record<string, unknown>) ?? {}) };
-    const data = Object.keys(draft).filter((k) => !["status", "status_locked"].includes(k));
-    sources.beheer = [...new Set([...((sources.beheer as string[] | undefined) ?? []), ...data])];
-    const { error } = await db().from("places").update({ ...draft, sources }).eq("id", id);
+    // Handmatig ingevulde velden markeren: de pipeline overschrijft ze dan nooit. De server voegt ze samen met wat er
+    // al staat, zodat een scrape die intussen draaide zijn eigen gegevens in `sources` houdt.
+    const fields = Object.keys(draft).filter((k) => !["status", "status_locked"].includes(k));
+    if (fields.length) {
+      const { error } = await db().rpc("admin_mark_beheer", { p_place_id: id, p_fields: fields });
+      if (error) {
+        setBusy(false);
+        return setErr(errorMessage(error));
+      }
+    }
+    // De velden komen uit de editor hieronder, met dezelfde namen als de kolommen
+    const { error } = await db().from("places").update(draft as Database["public"]["Tables"]["places"]["Update"]).eq("id", id);
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     onSaved();

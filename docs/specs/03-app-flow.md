@@ -52,11 +52,11 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 | Bewaren | Hartje op kaart of plekpagina → melding "Bewaard in Mijn reis – Bekijk" → teller op tabblad Mijn reis |
 | Reis plannen | `Mijn reis` → volgorde slepen of "Slimste volgorde" → nachten per stop → startpunt → totale route en kosten → **Delen** (link met `?r=`) of **Open in navigatie** |
 | Gedeelde reis openen | Link `?r=` → voorbeeld van de stops → **Toevoegen aan mijn reis**, **Mijn reis vervangen** (met aantal stops dat weggaat), **Bewaar deze reis** of **Niet bewaren** |
-| Review schrijven | `Plek` → **Schrijf een review** → sheet met cijfer, deelscores, tekst, voertuig, maand van bezoek → **Review versturen** → "We controleren je review" |
+| Review schrijven | `Plek` → **Schrijf een review** → sheet met cijfer, deelscores, tekst, "Hoe laat moest je weg?" (optioneel), voertuig, maand van bezoek → **Review versturen** (een vertrektijd gaat apart als inzending naar beheer) → "We controleren je review" |
 | Fout melden | `Plek` → **Klopt er iets niet? Meld het** (of **Weet jij de vertrektijd?**) → sheet met onderwerp, toelichting, optioneel eigenaar + contact → bevestiging |
 | Plek aanmelden | Header **+** of footer → `Plek aanmelden` → formulier → bevestiging |
 | Contact en support | `Contact` → formulier → persoonlijke link `/support/<token>` → beheerder antwoordt → klant leest en reageert via de link |
-| Terug | Terugknop op `Plek` gaat naar de vorige pagina, of naar `/zoeken` als er geen geschiedenis is |
+| Terug | Terugknop op `Plek` gaat naar de vorige pagina binnen VrijStaan, of naar `/zoeken` als je van buiten kwam (Google, een gedeelde link) |
 | Annuleren | Elke sheet sluit met ×, swipe omlaag of tik buiten de sheet; niets wordt opgeslagen |
 
 ## Per actie: trigger, controle, laden, succes, fout, volgende scherm
@@ -79,7 +79,8 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 
 - **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
   vaste actiebalk met prijs, hartje, bellen, website en **Route**.
-- **Header**: logo naar Start, **+** naar Plek aanmelden, **?** naar Veelgestelde vragen. Op `/plek/*` een terugknop.
+- **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden). Op `/plek/*` een terugknop.
+- **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en de provinciepagina's.
 - **Footer**: over VrijStaan, juridisch, Cookie-instellingen, Meld inhoud.
 - **Deep links `/zoeken`**: `waar`, `lat`, `lng`, `straal`, `provincie`, `v` (voorzieningen: stroom, water, lozen,
   toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`ruim`, `vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),

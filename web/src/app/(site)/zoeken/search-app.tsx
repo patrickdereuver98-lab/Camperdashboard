@@ -174,7 +174,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
                   <button
                     type="button"
                     onClick={() => update(c.without)}
-                    className="flex h-9 items-center gap-1.5 rounded-full bg-forest-tint pr-2.5 pl-3.5 text-sm font-semibold text-forest"
+                    className="flex h-11 items-center gap-1.5 rounded-full bg-forest-tint pr-3 pl-4 text-sm font-semibold text-forest"
                     aria-label={`Filter ${c.label} verwijderen`}
                   >
                     {c.label}
@@ -196,9 +196,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
             <span key={results?.length} className="animate-fade-in inline-block">
               {results ? pluralize(results.length, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
-            <span className="font-semibold text-muted">
-              {filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}
-            </span>
+            <span>{filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}</span>
           </h1>
           {/* Eén regel: datum, uitleg en afstand; loopt door op een smal scherm */}
           <div className="-mb-1 flex flex-wrap items-center gap-x-4">
@@ -208,9 +206,12 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
           </div>
 
           {error && (
-            <p className="mt-4 rounded-xl bg-alert-tint p-5 text-alert">
-              De plekken konden niet worden geladen. Controleer je verbinding en ververs de pagina.
-            </p>
+            <div className="mt-4 rounded-xl bg-alert-tint p-5 text-alert">
+              <p>De plekken konden niet worden geladen. Controleer je verbinding en probeer het opnieuw.</p>
+              <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg bg-surface px-4 font-semibold text-ink shadow-low">
+                Opnieuw proberen
+              </button>
+            </div>
           )}
           {!results && !error && (
             <div className="mt-4 space-y-3">
@@ -309,7 +310,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
           <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
           <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">{INTRO[page]}</p>
           {page === "overig" && (
-            <div className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
+            <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
               {(
                 [
                   ["overig", "Alle"],

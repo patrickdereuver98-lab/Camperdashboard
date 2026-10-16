@@ -1,0 +1,51 @@
+// Extractor van de pipeline: alleen wat letterlijk op de website staat, niets afleiden.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { arrivalDeparture, extract } from "../supabase/functions/pipeline/extract";
+
+const base = new URL("https://camper.example.nl/");
+const page = (html: string) => extract([html], base) as Record<string, unknown>;
+
+test("geen vaste vertrektijd wordt 'vrij'", () => {
+  const r = page("<p>Er is geen vaste vertrektijd, je vertrekt wanneer je wilt.</p>");
+  assert.equal(r.departure, "vrij");
+  assert.equal(r.checkout_until, undefined);
+});
+
+test("betalen per 24 uur wordt 'per24'", () => {
+  assert.equal(page("<p>Je betaalt per 24 uur vanaf aankomst.</p>").departure, "per24");
+});
+
+test("vaste vertrektijd met punt als scheiding", () => {
+  const r = page("<p>Uitchecken voor 12.00 uur.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "12:00");
+});
+
+test("aankomst en vertrek in één tekst", () => {
+  const r = arrivalDeparture("aankomst vanaf 14.00 uur. vertrek voor 11.00 uur.", "Aankomst vanaf 14.00 uur. Vertrek voor 11.00 uur.");
+  assert.equal(r.checkin_from, "14:00");
+  assert.equal(r.checkout_until, "11:00");
+});
+
+test("bij 'tussen 9.00 en 11.00' telt het eind als vertrektijd", () => {
+  assert.equal(arrivalDeparture("vertrek tussen 9.00 en 11.00 uur", "vertrek tussen 9.00 en 11.00 uur").checkout_until, "11:00");
+});
+
+test("zonder vermelding blijft de vertrektijd leeg", () => {
+  const r = page("<p>Mooie plek aan het water met stroom.</p>");
+  assert.equal(r.departure, undefined);
+  assert.equal(r.checkout_until, undefined);
+});
+
+test("ontkenning gaat voor: 'honden niet toegestaan'", () => {
+  const r = page("<p>Honden zijn niet toegestaan.</p><p>Stroom aanwezig.</p>");
+  assert.equal(r.dogs, false);
+  assert.equal(r.power, true);
+});
+
+test("seizoen uit 'van 1 april tot 31 oktober'", () => {
+  const r = page("<p>Geopend van 1 april tot 31 oktober.</p>");
+  assert.equal(r.open_all_year, false);
+  assert.equal(r.season, "1 april – 31 oktober");
+});

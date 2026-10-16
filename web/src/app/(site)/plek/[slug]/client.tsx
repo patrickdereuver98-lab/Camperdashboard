@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState, ViewTransition } from "react";
 import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format";
 import { coarse, directionsUrl, formatKm, type LatLng } from "@/lib/geo";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
 import type { Photo, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
 import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
+import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 
 // ── Fotogalerij met vegen ───────────────────────────────────────────────────
 
@@ -268,32 +269,49 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [departure, setDeparture] = useState<DepartureAnswer>("");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    if (form.get("website")) return; // honeypot
+    if (formValue(form, "website")) return; // honeypot
     if (!scores.rating) {
       setErr("Geef een totaalcijfer.");
       return;
     }
     setBusy(true);
     setErr(null);
-    const month = String(form.get("month") || "");
+    const month = String(formValue(form, "month") || "");
     const { error } = await supabase().rpc("submit_review", {
       p_place_id: placeId,
-      p_author_name: String(form.get("name")),
-      p_author_email: String(form.get("email") || ""),
+      p_author_name: String(formValue(form, "name")),
+      p_author_email: String(formValue(form, "email") || ""),
       p_rating: scores.rating,
       p_score_location: scores.location ?? null,
       p_score_quiet: scores.quiet ?? null,
       p_score_facilities: scores.facilities ?? null,
       p_score_value: scores.value ?? null,
-      p_title: String(form.get("title") || ""),
-      p_body: String(form.get("body")),
-      p_vehicle: String(form.get("vehicle") || "") || null,
+      p_title: String(formValue(form, "title") || ""),
+      p_body: String(formValue(form, "body")),
+      p_vehicle: String(formValue(form, "vehicle") || "") || null,
       p_visited_month: month ? `${month}-01` : null,
     });
+    if (!error && departure) {
+      // De vertrektijd gaat als inzending naar beheer, net als bij Doe mee. Een fout hier houdt de review niet tegen.
+      await supabase().rpc("submit_place", {
+        p_kind: "correctie",
+        p_place_id: placeId,
+        p_payload: {
+          onderwerp: "vertrektijd",
+          plek: placeName,
+          vertrek: departure,
+          vertrek_uiterlijk: departure === "vast" ? formValue(form, "checkout") : null,
+          hoe_weet_je_het: "zelf gestaan (review)",
+        },
+        p_contact_name: String(formValue(form, "name") || ""),
+        p_contact_email: String(formValue(form, "email") || ""),
+      });
+    }
     setBusy(false);
     if (error) setErr(errorMessage(error));
     else setDone(true);
@@ -334,6 +352,13 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
               </span>
               <textarea name="body" required minLength={20} maxLength={3000} rows={5} className={`${input} h-auto py-2`} placeholder="Wat moeten andere camperaars weten?" />
             </label>
+            <DepartureRadios
+              id="review-vertrek"
+              label="Hoe laat moest je weg? (optioneel)"
+              value={departure}
+              onChange={setDeparture}
+              fieldClass={input}
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block font-semibold">Wanneer was je er?</span>
@@ -364,7 +389,7 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
             </label>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
               {busy ? "Versturen…" : "Review versturen"}
             </button>
           </form>
@@ -395,15 +420,15 @@ export function ReportProblem({
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    if (f.get("website")) return;
+    if (formValue(f, "website")) return;
     setBusy(true);
     setErr(null);
     const { error } = await supabase().rpc("submit_place", {
-      p_kind: f.get("owner") ? "eigenaar" : "correctie",
+      p_kind: formValue(f, "owner") ? "eigenaar" : "correctie",
       p_place_id: placeId,
-      p_payload: { onderwerp: f.get("topic"), toelichting: f.get("details"), plek: placeName },
-      p_contact_name: String(f.get("name") || ""),
-      p_contact_email: String(f.get("email") || ""),
+      p_payload: { onderwerp: formValue(f, "topic"), toelichting: formValue(f, "details"), plek: placeName },
+      p_contact_name: String(formValue(f, "name") || ""),
+      p_contact_email: String(formValue(f, "email") || ""),
     });
     setBusy(false);
     if (error) setErr(errorMessage(error));
@@ -457,7 +482,7 @@ export function ReportProblem({
             </div>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+            <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
               {busy ? "Versturen…" : "Melding versturen"}
             </button>
           </form>

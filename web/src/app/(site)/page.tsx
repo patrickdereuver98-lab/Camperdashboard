@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getStats, getSummaries } from "@/lib/places";
-import { searchHref } from "@/lib/search";
+import { departureKind, searchHref } from "@/lib/search";
 import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { HomeSearch } from "@/components/home-search";
 import { Icon } from "@/components/icons";
@@ -17,7 +17,7 @@ export default async function Home() {
   const withDeparture = places.filter((p) => p.departure).length;
 
   // Uitgelicht: eerst plekken zonder vaste vertrektijd, dan foto, score en de meeste informatie
-  const free = (p: PlaceSummary) => (p.departure === "vrij" || p.departure === "per24" ? 1 : 0);
+  const free = (p: PlaceSummary) => (departureKind(p) === "vrij" ? 1 : 0);
   const featured = [...places]
     .sort(
       (a, b) =>

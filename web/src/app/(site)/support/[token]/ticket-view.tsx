@@ -90,7 +90,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
         {ticket.messages.map((m, i) => (
           <li key={i} className={`rounded-xl p-4 ${m.author === "support" ? "bg-forest-tint" : "bg-surface outline-1 outline-line outline"}`}>
             <p className="text-sm font-semibold">{m.author === "support" ? "VrijStaan support" : ticket.name}</p>
-            <p className="text-xs text-muted">{formatDate(m.created_at)}</p>
+            <p className="text-sm text-muted">{formatDate(m.created_at)}</p>
             <p className="mt-2 whitespace-pre-line">{m.body}</p>
           </li>
         ))}

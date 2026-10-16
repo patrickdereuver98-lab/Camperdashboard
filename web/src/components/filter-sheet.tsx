@@ -120,7 +120,7 @@ export function FilterSheet({
               onClose();
             }}
             disabled={count === 0}
-            className="h-12 flex-1 rounded-lg bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-50"
+            className="h-12 flex-1 rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60"
           >
             {count === null ? "Toon plekken" : count === 0 ? "Geen plekken" : `Toon ${count} ${count === 1 ? "plek" : "plekken"}`}
           </button>

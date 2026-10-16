@@ -2,7 +2,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
-import { departureKind, isOpenOn } from "./search";
+import { departureKind, inDepartureGroup, isOpenOn } from "./search";
 import { cleanDescription } from "./description";
 import { rankPhotos } from "./photos";
 import type { Photo, Place, PlaceSummary, Review, Town } from "./types";
@@ -21,6 +21,12 @@ const SUMMARY_COLUMNS =
   "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
   "completeness,departure,checkout_until,price_extras,checkin_from,access_24h,access_hours";
 
+class SupabaseError extends Error {
+  constructor(readonly status: number, body: string) {
+    super(`Supabase ${status}: ${body.slice(0, 300)}`);
+  }
+}
+
 async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
   const out: T[] = [];
   for (let offset = 0; ; offset += 1000) {
@@ -31,7 +37,7 @@ async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+    if (!res.ok) throw new SupabaseError(res.status, await res.text());
     const rows = (await res.json()) as T[];
     out.push(...rows);
     if (own || !all || rows.length < 1000) return out;
@@ -62,7 +68,13 @@ async function withFallback<T>(live: () => Promise<T>, offline: () => T): Promis
   try {
     return await live();
   } catch (err) {
-    console.warn("[vrijstaan] Supabase niet bereikbaar, snapshot gebruikt:", (err as Error).message);
+    // Een 4xx is een fout in onze query of het schema, geen storing. Dan niet stil de snapshot tonen (oude prijzen,
+    // verborgen plekken die terugkomen): de fout gaat door, en Next.js blijft de laatst goede versie serveren.
+    if (err instanceof SupabaseError && err.status < 500) {
+      console.error("[vrijstaan] Supabase weigert de query:", err.message);
+      throw err;
+    }
+    console.error("[vrijstaan] Supabase niet bereikbaar, snapshot gebruikt:", (err as Error).message);
     return offline();
   }
 }
@@ -156,6 +168,27 @@ export async function getSummaries(): Promise<PlaceSummary[]> {
       ),
     () => SNAP.places.map((p) => toSummary(normalize(p, website_photos))),
   );
+}
+
+/** Nieuwe slug van een plek die is samengevoegd met een andere; undefined als er niets is samengevoegd */
+export async function getRedirect(slug: string): Promise<string | undefined> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places", `plek-${slug}`);
+  if (OFFLINE_BUILD) return undefined;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/place_redirect`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slug: slug }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return undefined;
+    const target = (await res.json()) as string | null;
+    return target && target !== slug ? target : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -285,7 +318,7 @@ export async function getStats() {
     lateCheckout: places.filter((p) => departureKind(p) === "uitslapers").length,
     roomyCheckout: places.filter((p) => departureKind(p) === "ruim").length,
     unknownDeparture: places.filter((p) => departureKind(p) === "onbekend").length,
-    otherDeparture: places.filter((p) => ["ruim", "vroeg", "onbekend"].includes(departureKind(p))).length,
+    otherDeparture: places.filter((p) => inDepartureGroup(p, "overig")).length,
     withPhoto: places.filter((p) => p.imageUrl).length,
     updatedAt,
     byProvince,

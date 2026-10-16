@@ -369,7 +369,7 @@ details[open]::details-content {
     filter: invert(1);
   }
   .maplibregl-ctrl-attrib {
-    background: rgb(21 34 56 / 0.8) !important;
+    background: rgb(24 32 27 / 0.85) !important;
     color: var(--muted);
   }
   .maplibregl-ctrl-attrib a {

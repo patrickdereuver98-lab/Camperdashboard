@@ -55,7 +55,7 @@ export default function Dashboard() {
       </PageTitle>
       <ErrorNote message={error} />
       {!o ? (
-        <p className="text-muted">Cijfers laden…</p>
+        !error && <p className="text-muted">Cijfers laden…</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
