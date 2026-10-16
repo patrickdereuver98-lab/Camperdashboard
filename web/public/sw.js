@@ -1,7 +1,7 @@
 // VrijStaan service worker: app-shell offline, eerder bekeken pagina's en kaarttegels uit de cache.
 // Ophogen leegt alle caches van de vorige versie. Gebouwde bestanden staan in een eigen, begrensde cache
 // (STATIC), zodat de chunks van oude deploys er vanzelf uit vallen.
-const VERSION = "vs-3";
+const VERSION = "vs-4";
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
@@ -102,6 +102,9 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
+
+  // Supportpagina's nooit bewaren: het token in het adres geeft toegang tot het ticket
+  if (url.pathname.startsWith("/support/")) return;
 
   // Pagina's: netwerk eerst, bij geen verbinding de laatst bekeken versie
   if (req.mode === "navigate") {

@@ -116,7 +116,7 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 | E2 | Database-job in CI: migraties op een lege database, advisors, RLS-tests per rol | M | ⬜ |
 | E4 | Zes kernflows als e2e op iPhone-formaat, licht en donker: zoeken → filter → plek; bewaren → reis → offline; Dichtbij met nep-locatie; contact → ticket; cookie weigeren = geen event; geen beheer zonder rechten. Met axe en een Lighthouse-budget (LCP < 2,5 s, CLS < 0,1) | M | ⬜ |
 | E5 | Branch protection op `main` en `acceptatie` | S | ⬜ 👤 na stap 2 |
-| E7 | Serverfouten naar `app_logs` via `instrumentation.ts` (`onRequestError`); wekelijkse samenvatting van `app_logs` in Beheer → Overzicht | S | ⬜ |
+| E7 | Serverfouten naar `app_logs` via `instrumentation.ts` (`onRequestError`); wekelijkse samenvatting van `app_logs` in Beheer → Overzicht | S | 🔄 serverfouten gebouwd (polishronde); samenvatting open |
 | E8 | `schema.sql` vervangen door een nulmeting in `web/supabase/migrations/` (`supabase db dump`), zodat een nieuw project op te bouwen is | M | 🔄 map bestaat in #4 en #10 |
 | E9 | Back-up en uptime-check (deze PR) eerste keer handmatig draaien en groen zien | S | ⬜ na B10 |
 
@@ -128,7 +128,7 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 | 0.5 | CSP, HSTS en COOP | S | 🟢 deze PR (getest: geen meldingen op 8 pagina's, kaart werkt) |
 | 0.7 | Edge functions: pipelinesleutel als edge-secret, vergelijken in constante tijd, scraper weigert interne adressen; één robots.txt-lezer | M | ⬜ |
 | 0.8 | `maplibre-gl` naar 6.14 | S | 🟢 deze PR |
-| 0.10 | Service worker cachet geen `/support/*`; tokens laten verlopen; `place.website` alleen `http(s)` | S | ⬜ |
+| 0.10 | Service worker cachet geen `/support/*`; tokens laten verlopen; `place.website` alleen `http(s)` | S | 🔄 service worker en websites gebouwd (polishronde); verlopen van tokens open |
 | A4 | Websites die `discover` vindt eerst door een mens laten bevestigen (een verkeerde match is verzonnen data) | S | ⬜ |
 | — | Advisors: 13 openbare SECURITY DEFINER-functies nalopen. Voor de formulieren is dat de bedoeling; `is_admin`, `is_trip_member`, `push_public_key` en `crowd_status` bewust houden of dichtzetten | S | ⬜ |
 
@@ -150,20 +150,20 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 
 | # | Taak | Omvang | Status |
 |---|---|---|---|
-| P1 | Zoeken repareren: "Giethorn" vindt Giethoorn; onbekende plaats geeft "niet gevonden" (open punt 9) | S | ⬜ |
+| P1 | Zoeken repareren: "Giethorn" vindt Giethoorn; onbekende plaats geeft "niet gevonden" (open punt 9) | S | 🟢 polishronde |
 | P2 / P3 | Vertrektijd op de kaart (kleur per vertrekgroep), pins ≥ 44 px, gekozen plek als mini-kaart onderaan | M | ⬜ |
 | P4 | Zoekkop die bij scrollen inklapt | M | ⬜ na #5 |
 | P5 | Zoekstaat behouden bij terug (kaart, "toon meer", scrollpositie) | S | ⬜ |
-| P6 | `loading.tsx` voor plekpagina, provinciepagina's en start; skelet voor Mijn reis (CLS 0,41) | S | ⬜ na #5 |
+| P6 | `loading.tsx` voor plekpagina, provinciepagina's en start; skelet voor Mijn reis (CLS 0,41) | S | 🟢 plekpagina met skelet, foto-vak verspringt niet meer (CLS 0,167 → 0); Mijn reis al 0 |
 | P7 | Totaalprijs zoals camperaars rekenen (B13), filter rekent ermee | M | 🔄 Mijn reis in #4 |
 | P8 | Bron en datum per kernfeit in plaats van één datum | S | ⬜ |
 | P9 | Lengtefilter eerlijk ("bij 8% bekend") | S | ⬜ |
 | P10 | Laat aankomen: aankomst- en slagboomtijden, "24 uur toegankelijk" | M | ⬜ |
-| P11 | Navigatiekeuze: Apple Maps, Google Maps, Waze, coördinaten | S | ⬜ |
+| P11 | Navigatiekeuze: Apple Maps, Google Maps, Waze, coördinaten | S | 🟢 polishronde |
 | P12 | Offline-basis: `/offline`-pagina, bewaarde plekken automatisch in de cache, melding "nieuwe versie" | M | ⬜ |
-| P13 | WCAG 2.1 AA afronden en de toegankelijkheidsverklaring laten kloppen (open punt 28) | M | 🔄 deels in #10 |
+| P13 | WCAG 2.1 AA afronden en de toegankelijkheidsverklaring laten kloppen (open punt 28) | M | 🔄 verklaring klopt nu met de site (polishronde); rest open |
 | B4 | Eerste 20 resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | M | ⬜ na #5 |
-| 1.x | Kleine dingen uit fase 1 van PR #11 die #10 niet deed: kaartfout met knoppen "Toon lijst" en "Opnieuw", `theme_color` gelijk aan de viewport, verborgen lege rijen ("Maximaal verblijf") | S | ⬜ |
+| 1.x | Kleine dingen uit fase 1 van PR #11 die #10 niet deed: kaartfout met knoppen "Toon lijst" en "Opnieuw", `theme_color` gelijk aan de viewport, verborgen lege rijen ("Maximaal verblijf") | S | 🔄 kaartfout met knoppen en theme_color klaar (polishronde) |
 
 ### 4e. Code-opschoning
 

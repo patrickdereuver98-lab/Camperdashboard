@@ -85,8 +85,8 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Zelfde foto- en tekstregels in de scraper: `extract.ts` importeert `web/src/lib/photos.ts` en `description.ts` (één bron), leest de eerste alinea's van de pagina naast de meta-omschrijving, houdt WordPress/Wix-miniaturen (de site vraagt de grote versie op) | Agent | Pipeline v16 (#3) | Pipeline v17, in Supabase uitgerold als functieversie 20 (wrapper vastgezet op commit `3606568`; terug naar v16: wrapper naar `50819c6`) | Steekproef: Breukink (SVR-logo weg, volledige tekst) en Het Oever (geen brokstukken) kloppen | Herscrape |
 | ✅ Startpagina, Dichtbij en Mijn reis compacter op de telefoon (lagere kop en zoekkaart, kleinere provinciefoto's en koppen, ronde filterchips, lagere kaart) | Agent | Verzoek Patrick | `page.tsx`, `home-search.tsx`, `nearby-app.tsx`, `trip-app.tsx` | Meer inhoud in één scherm op iPhone | — |
 | ⬜ Kaartmarkers ≥ 44 px, pop-up met vertrekregel en hartje | Agent | UX-audit | `place-map.tsx` | Marker raakbaar met duim op iPhone | — |
-| ⬜ Onbekende plaats in URL toont "niet gevonden" | Agent | UX-audit | `search-app.tsx` | `/zoeken?waar=xyzqqq` toont geen hele land | — |
-| ⬜ Layoutverspringing Mijn reis (CLS 0,41) en plekpagina (0,13) | Agent | UX-audit | Skelet en vaste foto-verhouding | CLS < 0,1 | — |
+| ✅ Onbekende plaats in URL toont "niet gevonden" | Agent | UX-audit | `search-app.tsx` | `/zoeken?waar=xyzqqq` zegt dat de plaats onbekend is | — |
+| ✅ Layoutverspringing Mijn reis (CLS 0,41) en plekpagina (0,13) | Agent | UX-audit | Skelet en vaste foto-verhouding | CLS < 0,1 (16 oktober: Mijn reis 0, plekpagina 0) | — |
 | ⬜ Totaal in Mijn reis eerlijk ("€ x + 2 onbekend") | Agent | UX-audit | `trip-app.tsx` | Geen totaal dat volledig lijkt bij onbekende prijzen | — |
 | ⬜ Plaatsnaam per postcode (dorp in plaats van gemeente) | Agent | UX-audit | Pipeline | Steekproef van 20 plekken klopt | — |
 | ✅ Automatische tests voor extractor en filters | Agent | Testscripts in sessie | `web/tests/` + `npm test` (node --test) | Draait in CI | — |

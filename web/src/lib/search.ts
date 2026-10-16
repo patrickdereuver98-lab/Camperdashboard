@@ -340,8 +340,9 @@ export function searchForm(q: string): string {
 }
 
 /** Levenshtein-afstand, afgekapt: alleen interessant of het ≤ max is */
-export function closeEnough(a: string, b: string, max = 2): boolean {
-  if (Math.abs(a.length - b.length) > max) return false;
+/** Aantal tikfouten tussen twee woorden (Levenshtein); Infinity zodra het meer dan `max` wordt */
+export function editDistance(a: string, b: string, max = 2): number {
+  if (Math.abs(a.length - b.length) > max) return Infinity;
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
     const cur = [i];
@@ -350,8 +351,12 @@ export function closeEnough(a: string, b: string, max = 2): boolean {
       cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
       rowMin = Math.min(rowMin, cur[j]);
     }
-    if (rowMin > max) return false;
+    if (rowMin > max) return Infinity;
     prev = cur;
   }
-  return prev[b.length] <= max;
+  return prev[b.length] <= max ? prev[b.length] : Infinity;
+}
+
+export function closeEnough(a: string, b: string, max = 2): boolean {
+  return editDistance(a, b, max) <= max;
 }

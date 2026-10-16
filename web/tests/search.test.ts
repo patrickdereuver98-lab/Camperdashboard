@@ -1,7 +1,7 @@
 // Indeling op vertrektijd: de kern van de site (pagina's Zonder vertrektijd, Uitslapers en Overige).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { departureKind, inDepartureGroup, isOpenOn } from "../src/lib/search";
+import { departureKind, inDepartureGroup, isOpenOn, editDistance } from "../src/lib/search";
 import { departureShort } from "../src/lib/format";
 
 test("vrij en per 24 uur vallen alleen onder 'vrij' na bevestiging door een mens (kernbelofte)", () => {
@@ -52,4 +52,10 @@ test("seizoen over de jaarwisseling", () => {
   const p = { season: "1 november – 31 maart" };
   assert.equal(isOpenOn(p, new Date(2026, 0, 10)), true);
   assert.equal(isOpenOn(p, new Date(2026, 6, 10)), false);
+});
+
+test("spellingsafstand: Giethorn ligt dichter bij Giethoorn dan bij Giethmen", () => {
+  assert.equal(editDistance("giethorn", "giethoorn"), 1);
+  assert.equal(editDistance("giethorn", "giethmen"), 2);
+  assert.equal(editDistance("giethorn", "amsterdam"), Infinity);
 });
