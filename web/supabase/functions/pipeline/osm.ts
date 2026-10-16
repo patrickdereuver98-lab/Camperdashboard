@@ -7,7 +7,7 @@ area["ISO3166-2"="${region}"]->.r;
 (
   nwr["tourism"="caravan_site"](area.r);
   nwr["tourism"="camp_site"]["motorhome"!="no"]["tents"!="only"](area.r);
-  nwr["amenity"="parking"]["motorhome"~"^(yes|designated)$"](area.r);
+  nwr["motorhome"~"^(yes|designated)$",i](area.r);
 );
 out center tags;`;
 }
@@ -35,10 +35,86 @@ const MONTHS: Record<string, string> = {
   jul: "juli", aug: "augustus", sep: "september", oct: "oktober", nov: "november", dec: "december",
 };
 
-export function yesNo(v?: string): boolean | undefined {
+// ── Strikte OSM-booleans ────────────────────────────────────────────────────
+//
+// OSM-waarden zijn vrije tekst. We kennen alleen een vaste lijst waarden toe aan true/false; al het andere
+// ("unknown", "?", tikfouten) wordt `undefined` (onbekend), zodat de site nooit iets beweert dat niet in de bron staat.
+// Meervoudige waarden ("yes;fee") gebruiken de eerste waarde.
+
+type BoolKind = "generic" | "shower" | "internet" | "dog" | "power" | "reservation" | "fee";
+
+const TRUE_GENERIC = ["yes", "true", "1", "designated", "customers", "permissive", "limited", "seasonal", "only", "public"];
+const FALSE_GENERIC = ["no", "false", "0", "none", "private"];
+
+const EXTRA_TRUE: Record<BoolKind, string[]> = {
+  generic: [],
+  shower: ["hot", "cold", "outdoor", "indoor", "fee"],
+  internet: ["wlan", "wifi", "wired", "terminal", "service"],
+  dog: ["leashed", "unleashed", "outside", "inside"],
+  power: ["cee", "cee_blue", "cee_16a", "schuko", "230v", "16a", "6a", "10a", "fee"],
+  reservation: ["required", "recommended"],
+  fee: [],
+};
+const EXTRA_FALSE: Record<BoolKind, string[]> = {
+  generic: [],
+  shower: [],
+  internet: [],
+  dog: [],
+  power: [],
+  // "members_only" / "willing_to_accept" zeggen niets over gewoon reserveren: onbekend
+  reservation: [],
+  // "fee=free" betekent: geen kosten
+  fee: ["free", "gratis"],
+};
+
+export function osmBool(raw: string | undefined, kind: BoolKind = "generic"): boolean | undefined {
+  if (raw == null) return undefined;
+  const v = raw.split(";")[0].trim().toLowerCase().replace(/\s+/g, "_");
   if (!v) return undefined;
-  if (/^(yes|designated|customers|true|1|hot|wlan|wifi|leashed|free|included|only)$/i.test(v.trim())) return true;
-  if (/^(no|false|0|none)$/i.test(v.trim())) return false;
+  if (FALSE_GENERIC.includes(v) || EXTRA_FALSE[kind].includes(v)) return false;
+  if (TRUE_GENERIC.includes(v) || EXTRA_TRUE[kind].includes(v)) return true;
+  return undefined;
+}
+
+/** Eerste bekende waarde uit meerdere tags (bv. power_supply of electricity) */
+function firstBool(t: Tags, keys: string[], kind: BoolKind = "generic") {
+  for (const k of keys) {
+    const b = osmBool(t[k], kind);
+    if (b !== undefined) return b;
+  }
+  return undefined;
+}
+
+// ── Toelating en naam ──────────────────────────────────────────────────────
+
+/**
+ * Plekken waar een camper terecht kan: tourism=caravan_site, expliciet motorhome=yes/designated, of een camping die
+ * campers niet uitsluit (geen motorhome=no, niet alleen tenten). Besluit B2 (16 oktober 2026): geen strikte toelating,
+ * want zoveel mogelijk plekken gaat voor; de ±900 campings zonder motorhome-tag blijven ververst.
+ */
+export function isMotorhomePlace(t: Tags): boolean {
+  if (t.tourism === "caravan_site") return true;
+  const motorhome = (t.motorhome ?? "").split(";")[0].trim();
+  if (/^(yes|designated)$/i.test(motorhome)) return true;
+  return t.tourism === "camp_site" && !/^no$/i.test(motorhome) && t.tents !== "only";
+}
+
+// Namen die niets zeggen: die behandelen we als ontbrekend (de database maakt er "Camperplaats <plaats>" van)
+const GENERIC_NAME =
+  /^(p\d*|parking|parkeerplaats|parkeren|camper(plaats|plaatsen|parking|park|s)?|campers|motorhome(s| parking)?|stellplatz|wohnmobil(stellplatz)?|caravan(site)?|camping|aire|yes|no|naam|onbekend|unknown|\W*)$/i;
+
+function cleanName(v?: string): string | undefined {
+  const s = (v ?? "").replace(/\s+/g, " ").trim();
+  if (s.length < 2 || s.length > 120 || GENERIC_NAME.test(s)) return undefined;
+  return s;
+}
+
+/** Beste naam uit OSM, of undefined (dan genereert ingest_osm een naam met de dichtstbijzijnde plaats) */
+export function placeName(t: Tags): string | undefined {
+  for (const k of ["name:nl", "name", "official_name", "alt_name", "short_name", "brand"]) {
+    const n = cleanName(t[k]);
+    if (n) return n;
+  }
   return undefined;
 }
 
@@ -90,7 +166,7 @@ function times(t: Tags): Record<string, unknown> {
 }
 
 function kind(t: Tags): string {
-  const name = t.name ?? "";
+  const name = placeName(t) ?? "";
   if (/boerderij|boerencamping|\bboer\b|hoeve|farm/i.test(name)) return "boerderij";
   if (/jachthaven|marina|passantenhaven/i.test(name)) return "jachthaven";
   if (t.tourism === "camp_site") return "camping";
@@ -132,9 +208,10 @@ export function mapOsm(e: Record<string, unknown>) {
   const lat = (e.lat ?? (e.center as { lat?: number })?.lat) as number | undefined;
   const lng = (e.lon ?? (e.center as { lon?: number })?.lon) as number | undefined;
   if (lat == null || lng == null || lat < 50.7 || lat > 53.7 || lng < 3.2 || lng > 7.3) return null;
-  if (t.access === "private" || t.disused === "yes") return null;
+  if (!isMotorhomePlace(t)) return null;
+  if (/^(private|no)$/i.test(t.access ?? "") || osmBool(t.disused) === true || t["disused:tourism"] || t["abandoned:tourism"]) return null;
 
-  const fee = yesNo(t.fee);
+  const fee = osmBool(t.fee, "fee");
   const price = parsePrice(t.charge) ?? (fee === false ? 0 : undefined);
   const capacity = Number(t["capacity:motorhome"] ?? t["capacity:caravans"] ?? t.capacity);
   const maxlength = Number((t.maxlength ?? "").replace(",", "."));
@@ -143,7 +220,7 @@ export function mapOsm(e: Record<string, unknown>) {
   const row: Record<string, unknown> = {
     osm_type: e.type,
     osm_id: e.id,
-    name: t.name ?? t["name:nl"],
+    name: placeName(t),
     kind: kind(t),
     lat,
     lng,
@@ -152,17 +229,17 @@ export function mapOsm(e: Record<string, unknown>) {
     town: t["addr:city"],
     description: description && description.length >= 25 ? description : undefined,
     price_eur: price,
-    power: yesNo(t.power_supply ?? t.electricity),
-    water: yesNo(t.drinking_water ?? t.water_point),
-    dump_station: yesNo(t.sanitary_dump_station),
-    toilet: yesNo(t.toilets),
-    shower: yesNo(t.shower),
-    wifi: t.internet_access ? !/^no$/i.test(t.internet_access) : undefined,
-    dogs: yesNo(t.dog),
+    power: firstBool(t, ["power_supply", "electricity"], "power"),
+    water: firstBool(t, ["drinking_water", "water_point"]),
+    dump_station: firstBool(t, ["sanitary_dump_station", "waste_disposal"]),
+    toilet: firstBool(t, ["toilets", "toilets:access"]),
+    shower: osmBool(t.shower, "shower"),
+    wifi: osmBool(t.internet_access, "internet"),
+    dogs: osmBool(t.dog, "dog"),
     capacity: Number.isFinite(capacity) && capacity > 0 && capacity < 2000 ? Math.round(capacity) : undefined,
     max_length_m: Number.isFinite(maxlength) && maxlength > 3 && maxlength < 25 ? maxlength : undefined,
     surface: surface(t.surface),
-    reservation: t.reservation ? /^(yes|required|recommended)$/.test(t.reservation) : undefined,
+    reservation: osmBool(t.reservation, "reservation"),
     website: url(t.website ?? t["contact:website"] ?? t.url),
     phone: t.phone ?? t["contact:phone"],
     email: t.email ?? t["contact:email"],

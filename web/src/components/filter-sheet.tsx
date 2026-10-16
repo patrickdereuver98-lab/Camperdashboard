@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { applyFilters, DEFAULT_FILTERS, FACILITIES, pageOf, relaxations, type DepartureGroup, type Filters } from "@/lib/search";
 import { KIND_LABEL, type PlaceKind, type PlaceSummary } from "@/lib/types";
+import Link from "next/link";
+import { useVehicle } from "@/lib/store";
 import { Sheet } from "./sheet";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
 
@@ -25,7 +27,7 @@ function Toggle({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className="flex min-h-12 items-center gap-2.5 rounded-xl border-2 border-line bg-surface px-3 text-left font-semibold transition-colors aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+      className="flex min-h-12 items-center gap-2.5 rounded-lg border border-line bg-surface px-3 text-left font-semibold transition-colors aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
     >
       {children}
     </button>
@@ -65,6 +67,7 @@ export function FilterSheet({
   showScore?: boolean;
 }) {
   const [draft, setDraft] = useState(filters);
+  const [vehicle] = useVehicle();
   const [lastOpen, setLastOpen] = useState(open);
   if (open !== lastOpen) {
     setLastOpen(open);
@@ -109,7 +112,7 @@ export function FilterSheet({
             onClick={() =>
               setDraft({ ...DEFAULT_FILTERS, where: draft.where, center: draft.center, province: draft.province, radiusKm: draft.radiusKm, departure: draft.departure })
             }
-            className="h-12 rounded-xl px-4 font-semibold text-forest underline"
+            className="h-12 rounded-lg px-4 font-semibold text-forest underline"
           >
             Wis filters
           </button>
@@ -120,7 +123,7 @@ export function FilterSheet({
               onClose();
             }}
             disabled={count === 0}
-            className="h-12 flex-1 rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-50"
+            className="h-12 flex-1 rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60"
           >
             {count === null ? "Toon plekken" : count === 0 ? "Geen plekken" : `Toon ${count} ${count === 1 ? "plek" : "plekken"}`}
           </button>
@@ -209,11 +212,18 @@ export function FilterSheet({
         </p>
         <div className="grid grid-cols-4 gap-2">
           {LENGTHS.map((l) => (
-            <Toggle key={l} pressed={draft.minLength === l} onClick={() => set({ minLength: draft.minLength === l ? undefined : l })}>
+            <Toggle key={l} pressed={draft.minLength === l} onClick={() => set(draft.minLength === l ? { minLength: undefined, lengthOff: true } : { minLength: l, lengthOff: undefined })}>
               <span className="w-full text-center">{l} m</span>
             </Toggle>
           ))}
         </div>
+        <p className="mt-3 text-sm text-ink-2">
+          {vehicle.lengthM ? (
+            <>Je camper is {String(vehicle.lengthM).replace(".", ",")} m. Aanpassen kan op <Link href="/mijn-camper" className="font-semibold text-forest underline">Mijn camper</Link>.</>
+          ) : (
+            <>Vul je camper één keer in op <Link href="/mijn-camper" className="font-semibold text-forest underline">Mijn camper</Link>, dan filteren we voortaan vanzelf op lengte.</>
+          )}
+        </p>
       </Section>
 
       <Section title="Overig">

@@ -1,0 +1,22 @@
+# Wekelijks een PR als een pakket of GitHub Action een update heeft. Beveiligingsupdates komen direct.
+# PR's gaan naar acceptatie (zie docs/specs/06-implementatieplan.md, werkwijze) en draaien daar door de CI.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /web
+    target-branch: acceptatie
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Amsterdam
+    open-pull-requests-limit: 5
+    groups:
+      kleine-updates:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: acceptatie
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Amsterdam

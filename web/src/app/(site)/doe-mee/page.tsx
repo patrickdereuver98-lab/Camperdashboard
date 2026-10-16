@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { OPEN_GRAPH } from "@/lib/meta";
 import { getStats } from "@/lib/places";
 import { Icon } from "@/components/icons";
 import { Sign } from "@/components/sign";
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
   description: "Weet jij hoe laat je ergens weg moet, of ken je een camperplaats die nog ontbreekt? Vul het in, dan klopt de gids voor iedereen.",
   alternates: { canonical: "/doe-mee" },
   openGraph: {
+    ...OPEN_GRAPH,
     title: "Weet jij hoe laat je hier weg moet?",
     description: "Help andere camperaars: vul de vertrektijd in van plekken waar je bent geweest, of meld een plek die nog ontbreekt.",
   },
@@ -28,14 +30,14 @@ export default async function HelpPage() {
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <a href="#vertrektijden" className="flex items-center gap-4 rounded-[1.25rem] bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
+        <a href="#vertrektijden" className="flex items-center gap-4 rounded-xl bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
           <Sign name="clock" size={44} />
           <span>
             <span className="block font-display text-lg font-semibold">Vertrektijd invullen</span>
             <span className="block text-sm text-muted">Van {nf.format(stats.unknownDeparture)} plekken weten we het nog niet</span>
           </span>
         </a>
-        <Link href="/plek-aanmelden" className="flex items-center gap-4 rounded-[1.25rem] bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
+        <Link href="/plek-aanmelden" className="flex items-center gap-4 rounded-xl bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
           <Sign name="camper" size={44} />
           <span>
             <span className="block font-display text-lg font-semibold">Plek aanmelden</span>

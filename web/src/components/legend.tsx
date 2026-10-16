@@ -8,7 +8,7 @@ import { Sheet } from "./sheet";
 import { Sign } from "./sign";
 
 /** Knop met uitleg van de icoontjes op kaarten en plekpagina's */
-export function Legend({ className = "" }: { className?: string }) {
+export function Legend({ className = "", label = "Wat betekenen de icoontjes?" }: { className?: string; label?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -17,7 +17,7 @@ export function Legend({ className = "" }: { className?: string }) {
         onClick={() => setOpen(true)}
         className={`inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-forest hover:underline ${className}`}
       >
-        <Icon name="info" size={17} /> Wat betekenen de icoontjes?
+        <Icon name="info" size={17} /> {label}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title="Wat betekenen de icoontjes?">
         <div className="space-y-7 pb-2">

@@ -114,6 +114,9 @@ export type PlaceSummary = Pick<
   | "ratingCount"
   | "completeness"
   | "imageCredit"
+  | "checkinFrom"
+  | "access24h"
+  | "accessHours"
 >;
 
 export interface Review {

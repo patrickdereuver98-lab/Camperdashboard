@@ -1265,3 +1265,715 @@ select cron.schedule('scrape-enqueue', '*/30 * * * *', 'select public.enqueue_sc
 select cron.schedule('osm-collect', '* * * * *', 'select private.collect_osm()');
 
 select cron.schedule('scrape', '15 seconds', 'select private.call_pipeline(''{"action":"scrape","n":8}''::jsonb) where exists (select 1 from private.scrape_queue where done_at is null and next_attempt_at <= now() and attempts < 3)');
+
+-- ── Migratie 20261012_places_bbox (zie supabase/migrations/) ─────────────────────
+
+create extension if not exists postgis with schema extensions;
+
+alter table public.places
+  add column if not exists geom extensions.geometry(Point, 4326)
+  generated always as (extensions.st_setsrid(extensions.st_makepoint(lng, lat), 4326)) stored;
+
+create index if not exists places_geom_gist on public.places using gist (geom) where status = 'published';
+
+create or replace function public.places_in_bbox(min_lng double precision, min_lat double precision,
+                                                 max_lng double precision, max_lat double precision)
+returns setof public.places
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select p.*
+  from public.places p
+  where p.status = 'published'
+    and p.geom operator(extensions.&&) extensions.st_makeenvelope(min_lng, min_lat, max_lng, max_lat, 4326)
+  order by p.slug
+  limit 5000;
+$$;
+
+revoke all on function public.places_in_bbox(double precision, double precision, double precision, double precision) from public;
+grant execute on function public.places_in_bbox(double precision, double precision, double precision, double precision) to anon, authenticated;
+
+-- ── Migratie 20261012_user_accounts (zie supabase/migrations/) ─────────────────────
+-- Accounts voor bezoekers (Google, Apple, Facebook, magic link): profiel en "Mijn reis" in de cloud.
+-- Additief. Elke gebruiker ziet en wijzigt alleen zijn eigen rijen (RLS).
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  display_name text check (char_length(display_name) <= 80),
+  avatar_url text check (avatar_url ~ '^https://'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.profiles enable row level security;
+create policy "eigen profiel lezen" on public.profiles for select to authenticated using ((select auth.uid()) = id);
+create policy "eigen profiel wijzigen" on public.profiles for update to authenticated
+  using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
+revoke all on public.profiles from anon;
+grant select, update (display_name, avatar_url, updated_at) on public.profiles to authenticated;
+
+create table if not exists public.user_trips (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  stops jsonb not null default '[]'::jsonb check (jsonb_typeof(stops) = 'array' and jsonb_array_length(stops) <= 200),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_trips enable row level security;
+create policy "eigen reis" on public.user_trips for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+revoke all on public.user_trips from anon;
+grant select, insert, update, delete on public.user_trips to authenticated;
+
+-- Profiel aanmaken met naam en foto van de provider (Google/Apple/Facebook geven full_name/name en avatar_url/picture)
+create or replace function private.create_profile()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare m jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb); avatar text;
+begin
+  avatar := coalesce(m->>'avatar_url', m->>'picture');
+  insert into public.profiles (id, display_name, avatar_url)
+  values (new.id,
+          left(nullif(trim(coalesce(m->>'full_name', m->>'name', split_part(new.email, '@', 1))), ''), 80),
+          case when avatar ~ '^https://' then avatar end)
+  on conflict (id) do nothing;
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_profile on auth.users;
+create trigger on_auth_user_profile after insert on auth.users for each row execute function private.create_profile();
+
+-- Beheerrechten alleen voor een BEVESTIGD uitgenodigd e-mailadres. Voorheen gebeurde dit al bij het aanmaken van
+-- het account; met publieke aanmelding (OAuth, magic link) moet het adres eerst bewezen zijn.
+create or replace function private.on_auth_user_created()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare invite private.admin_invites;
+begin
+  if new.email_confirmed_at is null then return new; end if;
+  select * into invite from private.admin_invites where lower(email) = lower(new.email);
+  if found then
+    insert into public.admins (user_id, email, role) values (new.id, new.email, invite.role)
+    on conflict (user_id) do nothing;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_confirmed on auth.users;
+create trigger on_auth_user_confirmed after update of email_confirmed_at on auth.users
+  for each row when (old.email_confirmed_at is null and new.email_confirmed_at is not null)
+  execute function private.on_auth_user_created();
+
+-- Bestaande accounts een profiel geven
+insert into public.profiles (id, display_name)
+select id, left(split_part(email, '@', 1), 80) from auth.users on conflict (id) do nothing;
+
+-- Zelf je account verwijderen (AVG art. 17). Profiel en reis verdwijnen via ON DELETE CASCADE.
+create or replace function public.delete_my_account()
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null then raise exception 'Niet ingelogd'; end if;
+  delete from auth.users where id = auth.uid();
+end $$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
+
+-- ── Migratie 20261012_place_photos (zie supabase/migrations/) ─────────────────────
+-- Foto's van bezoekers: opslag in Supabase Storage, moderatie via public.place_photos.
+-- Een foto komt pas in places.photos (en dus op de site) als hij is goedgekeurd.
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('place-photos', 'place-photos', true, 3145728, array['image/webp', 'image/jpeg'])
+on conflict (id) do nothing;
+
+-- Uploaden alleen ingelogd, en alleen in je eigen map: place-photos/<user_id>/<bestand>
+create policy "foto uploaden in eigen map" on storage.objects for insert to authenticated
+  with check (bucket_id = 'place-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create table if not exists public.place_photos (
+  id uuid primary key default gen_random_uuid(),
+  place_id uuid not null references public.places (id) on delete cascade,
+  user_id uuid references auth.users (id) on delete set null,
+  storage_path text not null unique check (storage_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.(webp|jpg)$'),
+  width int check (width between 200 and 4000),
+  height int check (height between 200 and 4000),
+  caption text check (char_length(caption) <= 140),
+  credit text check (char_length(credit) <= 80),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  reviewed_by uuid references auth.users (id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists place_photos_status_idx on public.place_photos (status, created_at);
+create index if not exists place_photos_place_idx on public.place_photos (place_id);
+create index if not exists place_photos_user_idx on public.place_photos (user_id);
+alter table public.place_photos enable row level security;
+
+-- De site toont goedgekeurde foto's via places.photos; deze tabel ziet alleen de inzender zelf en beheer
+create policy "eigen foto's en beheer lezen" on public.place_photos for select to authenticated
+  using (user_id = (select auth.uid()) or (select public.is_admin()));
+create policy "foto insturen" on public.place_photos for insert to authenticated
+  with check (user_id = (select auth.uid()) and status = 'pending' and reviewed_by is null
+              and split_part(storage_path, '/', 1) = (select auth.uid())::text);
+create policy "beheer foto's" on public.place_photos for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+revoke all on public.place_photos from anon;
+grant select, insert, update on public.place_photos to authenticated;
+
+-- Maximaal 20 foto's per gebruiker per dag (tegen misbruik)
+create or replace function private.photo_rate_limit()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if (select count(*) from public.place_photos where user_id = new.user_id and created_at > now() - interval '1 day') >= 20 then
+    raise exception 'Je hebt vandaag al veel foto''s gestuurd. Probeer het morgen weer.';
+  end if;
+  return new;
+end $$;
+create trigger place_photos_rate_limit before insert on public.place_photos
+  for each row execute function private.photo_rate_limit();
+
+-- Goedgekeurd → in places.photos; afgekeurd of teruggedraaid → eruit
+create or replace function private.sync_place_photo()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare url text := 'https://qkrmthrhwmmmwswmfgwc.supabase.co/storage/v1/object/public/place-photos/' || new.storage_path;
+begin
+  if new.status = 'approved' and old.status is distinct from 'approved' then
+    update public.places
+    set photos = coalesce(photos, '[]'::jsonb) || jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
+          'url', url, 'credit', coalesce(new.credit, 'Bezoeker van VrijStaan'), 'caption', new.caption, 'user', true)))
+    where id = new.place_id and not coalesce(photos, '[]'::jsonb) @> jsonb_build_array(jsonb_build_object('url', url));
+  elsif new.status <> 'approved' and old.status = 'approved' then
+    update public.places
+    set photos = (select coalesce(jsonb_agg(p), '[]'::jsonb) from jsonb_array_elements(photos) p where p->>'url' <> url)
+    where id = new.place_id;
+  end if;
+  if new.status <> old.status then
+    new.reviewed_at := now();
+    new.reviewed_by := auth.uid();
+  end if;
+  return new;
+end $$;
+create trigger place_photos_sync before update of status on public.place_photos
+  for each row execute function private.sync_place_photo();
+
+-- ── Migratie 20261012_moderation (zie supabase/migrations/) ─────────────────────
+-- Fase 4: community-moderatie.
+--   1. Trust-score: foto's van gebruikers met een bewezen geschiedenis gaan automatisch online.
+--   2. Dubbele plekken (OSM en inzendingen op dezelfde plek) vinden en samenvoegen vanuit beheer.
+
+-- ── 1. Trust-score ─────────────────────────────────────────────────────────
+
+insert into public.site_settings (key, value)
+values ('trust', '{"auto_approve_min_approved": 3, "min_account_age_days": 1}'::jsonb)
+on conflict (key) do nothing;
+
+-- Goedgekeurd telt +1, afgewezen telt -3. Vertrouwd = genoeg goedgekeurd, nooit iets afgewezen, account oud genoeg.
+create or replace function private.user_trust(p_user uuid)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  with cfg as (
+    select coalesce((value->>'auto_approve_min_approved')::int, 3) as min_ok,
+           coalesce((value->>'min_account_age_days')::int, 1) as min_age
+    from (select (select value from public.site_settings where key = 'trust') as value) s
+  ), stats as (
+    select count(*) filter (where status = 'approved')::int as approved,
+           count(*) filter (where status = 'rejected')::int as rejected,
+           count(*) filter (where status = 'pending')::int as pending
+    from public.place_photos where user_id = p_user
+  ), acct as (select created_at from auth.users where id = p_user)
+  select jsonb_build_object(
+    'approved', s.approved, 'rejected', s.rejected, 'pending', s.pending,
+    'score', s.approved - 3 * s.rejected,
+    'trusted', p_user is not null and s.approved >= c.min_ok and s.rejected = 0
+               and coalesce((select created_at from acct) < now() - make_interval(days => c.min_age), false))
+  from stats s, cfg c;
+$$;
+
+-- Eigen trust-score of (beheer) die van een ander
+create or replace function public.user_trust(p_user uuid default null)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare u uuid := coalesce(p_user, auth.uid());
+begin
+  if u is null then raise exception 'Niet ingelogd'; end if;
+  if u <> auth.uid() and not public.is_admin() then raise exception 'Geen toegang'; end if;
+  return private.user_trust(u);
+end $$;
+revoke all on function public.user_trust(uuid) from public, anon;
+grant execute on function public.user_trust(uuid) to authenticated;
+
+-- Na het insturen: vertrouwde gebruiker → meteen goedkeuren (de status-trigger zet de foto dan op de plek)
+create or replace function private.auto_approve_photo()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if (private.user_trust(new.user_id)->>'trusted')::boolean then
+    update public.place_photos set status = 'approved' where id = new.id;
+  end if;
+  return null;
+end $$;
+create trigger place_photos_auto_approve after insert on public.place_photos
+  for each row execute function private.auto_approve_photo();
+
+-- reviewed_by alleen invullen bij een beheerder (niet bij automatische goedkeuring)
+create or replace function private.sync_place_photo()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare url text := 'https://qkrmthrhwmmmwswmfgwc.supabase.co/storage/v1/object/public/place-photos/' || new.storage_path;
+begin
+  if new.status = 'approved' and old.status is distinct from 'approved' then
+    update public.places
+    set photos = coalesce(photos, '[]'::jsonb) || jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
+          'url', url, 'credit', coalesce(new.credit, 'Bezoeker van VrijStaan'), 'caption', new.caption, 'user', true)))
+    where id = new.place_id and not coalesce(photos, '[]'::jsonb) @> jsonb_build_array(jsonb_build_object('url', url));
+  elsif new.status <> 'approved' and old.status = 'approved' then
+    update public.places
+    set photos = (select coalesce(jsonb_agg(p), '[]'::jsonb) from jsonb_array_elements(photos) p where p->>'url' <> url)
+    where id = new.place_id;
+  end if;
+  if new.status <> old.status then
+    new.reviewed_at := now();
+    new.reviewed_by := case when public.is_admin() then auth.uid() end;
+  end if;
+  return new;
+end $$;
+
+-- ── 2. Dubbele plekken ─────────────────────────────────────────────────────
+
+alter table public.places add column if not exists merged_into uuid references public.places (id) on delete set null;
+create index if not exists places_merged_into_idx on public.places (merged_into) where merged_into is not null;
+
+-- "Geen dubbel": paren die beheer al heeft bekeken
+create table if not exists public.duplicate_dismissals (
+  a uuid not null references public.places (id) on delete cascade,
+  b uuid not null references public.places (id) on delete cascade,
+  dismissed_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (a, b),
+  check (a < b)
+);
+alter table public.duplicate_dismissals enable row level security;
+create policy "beheer dubbelen" on public.duplicate_dismissals for all to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+revoke all on public.duplicate_dismissals from anon;
+grant select, insert on public.duplicate_dismissals to authenticated;
+
+-- Kandidaten: twee niet-samengevoegde plekken binnen p_meters van elkaar (afstand over de aarde)
+create or replace function public.admin_duplicate_candidates(p_meters int default 150, p_limit int default 300)
+returns table (
+  a_id uuid, a_slug text, a_name text, a_status text, a_lat float8, a_lng float8, a_osm boolean, a_completeness numeric,
+  b_id uuid, b_slug text, b_name text, b_status text, b_lat float8, b_lng float8, b_osm boolean, b_completeness numeric,
+  distance_m int, name_similarity real
+) language plpgsql stable security definer set search_path = '' as $$
+declare deg float8 := greatest(10, least(p_meters, 2000)) / 60000.0; -- ruime voorselectie in graden
+begin
+  if not public.is_admin() then raise exception 'Geen toegang'; end if;
+  return query
+  select a.id, a.slug, a.name, a.status, a.lat, a.lng, a.osm_id is not null, a.completeness::numeric,
+         b.id, b.slug, b.name, b.status, b.lat, b.lng, b.osm_id is not null, b.completeness::numeric,
+         round(extensions.st_distance(a.geom::extensions.geography, b.geom::extensions.geography))::int,
+         extensions.similarity(a.name, b.name)
+  from public.places a
+  join public.places b
+    on a.id < b.id
+   and b.geom operator(extensions.&&) extensions.st_expand(a.geom, deg)
+  where a.merged_into is null and b.merged_into is null
+    and a.status <> 'hidden' and b.status <> 'hidden'
+    and extensions.st_dwithin(a.geom::extensions.geography, b.geom::extensions.geography, p_meters)
+    and not exists (select 1 from public.duplicate_dismissals d where d.a = a.id and d.b = b.id)
+  order by 17 asc, 18 desc
+  limit greatest(1, least(p_limit, 1000));
+end $$;
+revoke all on function public.admin_duplicate_candidates(int, int) from public, anon;
+grant execute on function public.admin_duplicate_candidates(int, int) to authenticated;
+
+-- Samenvoegen: p_remove gaat op in p_keep. Lege velden van p_keep worden aangevuld, foto's, reviews, foto-inzendingen,
+-- tickets en inzendingen verhuizen, p_remove gaat offline (hidden + vergrendeld) en verwijst door naar p_keep.
+create or replace function public.admin_merge_places(p_keep uuid, p_remove uuid)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare k public.places; r public.places;
+begin
+  if not public.is_admin() then raise exception 'Geen toegang'; end if;
+  if p_keep = p_remove then raise exception 'Kies twee verschillende plekken'; end if;
+  select * into k from public.places where id = p_keep for update;
+  select * into r from public.places where id = p_remove for update;
+  if k.id is null or r.id is null then raise exception 'Plek niet gevonden'; end if;
+  if k.merged_into is not null then raise exception 'De plek die je bewaart is zelf al samengevoegd'; end if;
+  if r.merged_into is not null then raise exception 'Deze plek is al samengevoegd'; end if;
+
+  update public.places p set
+    street = coalesce(k.street, r.street), postcode = coalesce(k.postcode, r.postcode),
+    description = coalesce(k.description, r.description), description_source = coalesce(k.description_source, r.description_source),
+    price_eur = coalesce(k.price_eur, r.price_eur), price_note = coalesce(k.price_note, r.price_note),
+    tourist_tax_included = coalesce(k.tourist_tax_included, r.tourist_tax_included),
+    power = coalesce(k.power, r.power), water = coalesce(k.water, r.water), dump_station = coalesce(k.dump_station, r.dump_station),
+    toilet = coalesce(k.toilet, r.toilet), shower = coalesce(k.shower, r.shower), wifi = coalesce(k.wifi, r.wifi),
+    dogs = coalesce(k.dogs, r.dogs), capacity = coalesce(k.capacity, r.capacity), max_length_m = coalesce(k.max_length_m, r.max_length_m),
+    surface = coalesce(k.surface, r.surface), open_all_year = coalesce(k.open_all_year, r.open_all_year),
+    season = coalesce(k.season, r.season), reservation = coalesce(k.reservation, r.reservation),
+    max_stay_nights = coalesce(k.max_stay_nights, r.max_stay_nights),
+    website = coalesce(k.website, r.website), phone = coalesce(k.phone, r.phone), email = coalesce(k.email, r.email),
+    image_url = coalesce(k.image_url, r.image_url), image_credit = case when k.image_url is null then r.image_credit else k.image_credit end,
+    photos = coalesce(k.photos, '[]'::jsonb) || coalesce((
+      select jsonb_agg(ph) from jsonb_array_elements(coalesce(r.photos, '[]'::jsonb)) ph
+      where not coalesce(k.photos, '[]'::jsonb) @> jsonb_build_array(jsonb_build_object('url', ph->>'url'))), '[]'::jsonb),
+    departure = coalesce(k.departure, r.departure), checkout_until = coalesce(k.checkout_until, r.checkout_until),
+    checkin_from = coalesce(k.checkin_from, r.checkin_from), access_hours = coalesce(k.access_hours, r.access_hours),
+    access_24h = coalesce(k.access_24h, r.access_24h), times_note = coalesce(k.times_note, r.times_note),
+    price_extras = coalesce(k.price_extras, r.price_extras),
+    sources = coalesce(k.sources, '{}'::jsonb) || jsonb_build_object('merged', coalesce(k.sources->'merged', '[]'::jsonb) || to_jsonb(r.slug))
+  where p.id = k.id;
+
+  update public.reviews set place_id = k.id where place_id = r.id;
+  update public.place_photos set place_id = k.id where place_id = r.id;
+  update public.tickets set place_id = k.id where place_id = r.id;
+  update public.submissions set place_id = k.id where place_id = r.id;
+  -- Eerdere samenvoegingen naar r wijzen voortaan naar k (geen doorverwijzing via een verborgen plek)
+  update public.places set merged_into = k.id where merged_into = r.id;
+  update public.places set status = 'hidden', status_locked = true, merged_into = k.id where id = r.id;
+
+  return jsonb_build_object('keep', k.slug, 'removed', r.slug);
+end $$;
+revoke all on function public.admin_merge_places(uuid, uuid) from public, anon;
+grant execute on function public.admin_merge_places(uuid, uuid) to authenticated;
+
+-- Oude link van een samengevoegde plek → slug van de plek die bleef (alleen als die online staat)
+create or replace function public.place_redirect(p_slug text)
+returns text language sql stable security definer set search_path = '' as $$
+  select k.slug from public.places r join public.places k on k.id = r.merged_into
+  where r.slug = p_slug and k.status = 'published';
+$$;
+grant execute on function public.place_redirect(text) to anon, authenticated;
+
+-- Volledige ruimtelijke index (ook concepten), zodat de dubbelen-zoektocht < 0,1 s duurt
+create index if not exists places_geom_all_gist on public.places using gist (geom);
+
+-- ── Migratie 20261012_crowd_status (zie supabase/migrations/) ─────────────────────
+-- Fase 5a: live drukte. Ingelogde camperaars melden hoe druk het nu is (rustig, druk, vol). De site toont alleen
+-- meldingen van de laatste 3 uur, met aantal en tijdstip; nooit een eigen inschatting.
+
+create table if not exists public.crowd_reports (
+  id bigint generated always as identity primary key,
+  place_id uuid not null references public.places (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  level text not null check (level in ('rustig', 'druk', 'vol')),
+  created_at timestamptz not null default now()
+);
+create index if not exists crowd_reports_place_time_idx on public.crowd_reports (place_id, created_at desc);
+create index if not exists crowd_reports_user_time_idx on public.crowd_reports (user_id, created_at desc);
+alter table public.crowd_reports enable row level security;
+create policy "beheer leest drukte" on public.crowd_reports for select to authenticated using ((select public.is_admin()));
+revoke all on public.crowd_reports from anon, authenticated;
+grant select on public.crowd_reports to authenticated;
+
+-- Melden: ingelogd, gepubliceerde plek, per persoon per plek één melding per 30 minuten (een nieuwe vervangt de
+-- vorige), en hoogstens 30 meldingen per persoon per dag.
+create or replace function public.report_crowd(p_place_id uuid, p_level text)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare uid uuid := auth.uid(); recent bigint;
+begin
+  if uid is null then raise exception 'Log in om de drukte door te geven'; end if;
+  if p_level not in ('rustig', 'druk', 'vol') then raise exception 'Kies rustig, druk of vol'; end if;
+  if not exists (select 1 from public.places where id = p_place_id and status = 'published') then raise exception 'Onbekende plek'; end if;
+  if (select count(*) from public.crowd_reports where user_id = uid and created_at > now() - interval '1 day') >= 30 then
+    raise exception 'Je hebt vandaag al veel meldingen gedaan. Probeer het morgen weer.';
+  end if;
+  select id into recent from public.crowd_reports
+  where user_id = uid and place_id = p_place_id and created_at > now() - interval '30 minutes'
+  order by created_at desc limit 1;
+  if recent is not null then
+    update public.crowd_reports set level = p_level, created_at = now() where id = recent;
+  else
+    insert into public.crowd_reports (place_id, user_id, level) values (p_place_id, uid, p_level);
+  end if;
+  return public.crowd_status(p_place_id);
+end $$;
+revoke all on function public.report_crowd(uuid, text) from public, anon;
+grant execute on function public.report_crowd(uuid, text) to authenticated;
+
+-- Stand van de laatste 3 uur: aantal per niveau, het laatste tijdstip en het niveau van de meest recente meldingen
+-- (gewogen: een melding van nu telt zwaarder dan een van 2 uur geleden). Geen persoonsgegevens.
+create or replace function public.crowd_status(p_place_id uuid)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  with recent as (
+    select level, created_at, greatest(0.1, 1 - extract(epoch from now() - created_at) / 10800.0) as w
+    from public.crowd_reports
+    where place_id = p_place_id and created_at > now() - interval '3 hours'
+  ), score as (
+    select level, sum(w) as s from recent group by level
+  )
+  select jsonb_build_object(
+    'reports', (select count(*) from recent),
+    'last_at', (select max(created_at) from recent),
+    'counts', coalesce((select jsonb_object_agg(level, n) from (select level, count(*) as n from recent group by level) c), '{}'::jsonb),
+    'level', (select level from score order by s desc, case level when 'vol' then 0 when 'druk' then 1 else 2 end limit 1)
+  );
+$$;
+grant execute on function public.crowd_status(uuid) to anon, authenticated;
+
+-- Meldingen ouder dan 30 dagen zijn niet meer nodig (ook niet voor statistiek)
+select cron.schedule('crowd-retention', '17 3 * * *', $$delete from public.crowd_reports where created_at < now() - interval '30 days'$$);
+
+-- ── Migratie 20261012_push (zie supabase/migrations/) ─────────────────────
+-- Fase 5a-2: pushmelding "nu rustig" voor wie een plek volgt.
+-- VAPID-sleutels: de edge function `push` maakt ze bij het eerste gebruik aan; ze staan in private.secrets en de private
+-- sleutel is alleen voor service_role leesbaar. Abonnementen en volgers: alleen eigen rijen, via RPC's.
+
+create or replace function public.push_vapid_keys()
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object(
+    'publicKey', (select value from private.secrets where name = 'vapid_public'),
+    'privateKey', (select value from private.secrets where name = 'vapid_private'));
+$$;
+revoke all on function public.push_vapid_keys() from public, anon, authenticated;
+grant execute on function public.push_vapid_keys() to service_role;
+
+create or replace function public.push_set_vapid_keys(p_public text, p_private text)
+returns void language sql security definer set search_path = '' as $$
+  insert into private.secrets (name, value) values ('vapid_public', p_public), ('vapid_private', p_private)
+  on conflict (name) do nothing;
+$$;
+revoke all on function public.push_set_vapid_keys(text, text) from public, anon, authenticated;
+grant execute on function public.push_set_vapid_keys(text, text) to service_role;
+
+create or replace function public.push_public_key()
+returns text language sql stable security definer set search_path = '' as $$
+  select value from private.secrets where name = 'vapid_public';
+$$;
+grant execute on function public.push_public_key() to anon, authenticated;
+
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  endpoint text not null unique check (endpoint ~ '^https://'),
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now(),
+  disabled_at timestamptz
+);
+create index if not exists push_subscriptions_user_idx on public.push_subscriptions (user_id) where disabled_at is null;
+alter table public.push_subscriptions enable row level security;
+create policy "eigen abonnementen lezen" on public.push_subscriptions for select to authenticated using (user_id = (select auth.uid()));
+revoke all on public.push_subscriptions from anon, authenticated;
+grant select on public.push_subscriptions to authenticated;
+
+create table if not exists public.crowd_watches (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  place_id uuid not null references public.places (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '24 hours',
+  notified_at timestamptz,
+  primary key (user_id, place_id)
+);
+create index if not exists crowd_watches_place_idx on public.crowd_watches (place_id) where notified_at is null;
+alter table public.crowd_watches enable row level security;
+create policy "eigen volgers lezen" on public.crowd_watches for select to authenticated using (user_id = (select auth.uid()));
+revoke all on public.crowd_watches from anon, authenticated;
+grant select on public.crowd_watches to authenticated;
+
+-- Abonnement van deze browser opslaan (een browser hoort bij hoogstens één account tegelijk)
+create or replace function public.push_subscribe(p_endpoint text, p_p256dh text, p_auth text)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null then raise exception 'Niet ingelogd'; end if;
+  if p_endpoint !~ '^https://' or length(p_endpoint) > 1000 or length(p_p256dh) > 200 or length(p_auth) > 100 then
+    raise exception 'Ongeldig abonnement';
+  end if;
+  insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
+  values (auth.uid(), p_endpoint, p_p256dh, p_auth)
+  on conflict (endpoint) do update set user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth, disabled_at = null;
+end $$;
+revoke all on function public.push_subscribe(text, text, text) from public, anon;
+grant execute on function public.push_subscribe(text, text, text) to authenticated;
+
+-- Een plek 24 uur volgen; opnieuw volgen verlengt. Stoppen zet de vervaltijd op nu.
+create or replace function public.watch_place(p_place_id uuid, p_on boolean default true)
+returns boolean language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null then raise exception 'Niet ingelogd'; end if;
+  if p_on then
+    if (select count(*) from public.crowd_watches where user_id = auth.uid() and expires_at > now()) >= 10 then
+      raise exception 'Je volgt al 10 plekken. Stop eerst met een andere.';
+    end if;
+    insert into public.crowd_watches (user_id, place_id) values (auth.uid(), p_place_id)
+    on conflict (user_id, place_id) do update set created_at = now(), expires_at = now() + interval '24 hours', notified_at = null;
+  else
+    update public.crowd_watches set expires_at = now() where user_id = auth.uid() and place_id = p_place_id;
+  end if;
+  return p_on;
+end $$;
+revoke all on function public.watch_place(uuid, boolean) from public, anon;
+grant execute on function public.watch_place(uuid, boolean) to authenticated;
+
+-- Voor de edge function: doelen ophalen en de volgers meteen als gemeld markeren (elke volger krijgt één melding)
+create or replace function public.push_take_targets(p_place_id uuid)
+returns table (subscription_id uuid, endpoint text, p256dh text, auth text, place_name text, place_slug text)
+language plpgsql security definer set search_path = '' as $$
+begin
+  return query
+  with w as (
+    update public.crowd_watches cw set notified_at = now()
+    where cw.place_id = p_place_id and cw.notified_at is null and cw.expires_at > now()
+    returning cw.user_id
+  )
+  select s.id, s.endpoint, s.p256dh, s.auth, p.name, p.slug
+  from w join public.push_subscriptions s on s.user_id = w.user_id and s.disabled_at is null
+  join public.places p on p.id = p_place_id;
+end $$;
+revoke all on function public.push_take_targets(uuid) from public, anon, authenticated;
+grant execute on function public.push_take_targets(uuid) to service_role;
+
+create or replace function public.push_disable_subscriptions(p_ids uuid[])
+returns void language sql security definer set search_path = '' as $$
+  update public.push_subscriptions set disabled_at = now() where id = any(p_ids);
+$$;
+revoke all on function public.push_disable_subscriptions(uuid[]) from public, anon, authenticated;
+grant execute on function public.push_disable_subscriptions(uuid[]) to service_role;
+
+-- Melding "rustig" en de stand is nu rustig → edge function aanroepen (alleen als iemand de plek volgt)
+create or replace function private.crowd_notify()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare k text;
+begin
+  if new.level <> 'rustig' then return null; end if;
+  if not exists (select 1 from public.crowd_watches where place_id = new.place_id and notified_at is null and expires_at > now()) then return null; end if;
+  if public.crowd_status(new.place_id)->>'level' is distinct from 'rustig' then return null; end if;
+  select value into k from public.internal_secrets where name = 'pipeline_key';
+  perform net.http_post(
+    url := 'https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/push',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-pipeline-key', k),
+    body := jsonb_build_object('action', 'notify', 'place_id', new.place_id),
+    timeout_milliseconds := 20000);
+  return null;
+end $$;
+create trigger crowd_reports_notify after insert or update of level on public.crowd_reports
+  for each row execute function private.crowd_notify();
+
+-- ── Migratie 20261012_vehicle (zie supabase/migrations/) ─────────────────────
+-- Fase 5b: voertuigkluis. Camperprofiel (afmetingen, brandstof, verbruik) per account, en een privé-map voor
+-- documenten (bijvoorbeeld kentekenbewijs of verzekering, als PDF of foto). Alleen de eigenaar kan erbij.
+
+create table if not exists public.user_vehicles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  data jsonb not null default '{}'::jsonb check (jsonb_typeof(data) = 'object' and pg_column_size(data) < 2000),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_vehicles enable row level security;
+create policy "eigen camper" on public.user_vehicles for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+revoke all on public.user_vehicles from anon;
+grant select, insert, update on public.user_vehicles to authenticated;
+
+-- Privé (niet openbaar), max. 5 MB, PDF of foto
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('vehicle-docs', 'vehicle-docs', false, 5242880, array['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do nothing;
+
+create policy "eigen documenten lezen" on storage.objects for select to authenticated
+  using (bucket_id = 'vehicle-docs' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "eigen documenten uploaden" on storage.objects for insert to authenticated
+  with check (bucket_id = 'vehicle-docs' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "eigen documenten weghalen" on storage.objects for delete to authenticated
+  using (bucket_id = 'vehicle-docs' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+-- ── Migratie 20261012_expenses (zie supabase/migrations/) ─────────────────────
+-- Fase 5c: uitgaven onderweg (kosten- en brandstoftracker) per account. Zonder account alleen op het toestel.
+create table if not exists public.user_expenses (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  entries jsonb not null default '[]'::jsonb check (jsonb_typeof(entries) = 'array' and jsonb_array_length(entries) <= 1000),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_expenses enable row level security;
+create policy "eigen uitgaven" on public.user_expenses for all to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+revoke all on public.user_expenses from anon;
+grant select, insert, update on public.user_expenses to authenticated;
+
+-- ── Migratie 20261012_shared_trips (zie supabase/migrations/) ─────────────────────
+-- Fase 5e: samen een reis plannen (bijvoorbeeld met je partner). Eén gedeelde reis, realtime bijgewerkt.
+-- Lezen en wijzigen alleen voor leden; meedoen via een geheime uitnodigingscode; laatste wijziging wint.
+
+create table if not exists public.shared_trips (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  name text not null default 'Onze reis' check (char_length(name) between 1 and 60),
+  stops jsonb not null default '[]'::jsonb check (jsonb_typeof(stops) = 'array' and jsonb_array_length(stops) <= 200),
+  invite_code text not null unique default encode(extensions.gen_random_bytes(9), 'hex'),
+  updated_by uuid references auth.users (id) on delete set null,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.shared_trip_members (
+  trip_id uuid not null references public.shared_trips (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  display_name text check (char_length(display_name) <= 80),
+  joined_at timestamptz not null default now(),
+  left_at timestamptz,
+  primary key (trip_id, user_id)
+);
+create index if not exists shared_trip_members_user_idx on public.shared_trip_members (user_id) where left_at is null;
+
+create or replace function public.is_trip_member(p_trip uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.shared_trip_members where trip_id = p_trip and user_id = auth.uid() and left_at is null);
+$$;
+grant execute on function public.is_trip_member(uuid) to authenticated;
+
+alter table public.shared_trips enable row level security;
+alter table public.shared_trip_members enable row level security;
+create policy "leden lezen de reis" on public.shared_trips for select to authenticated using ((select public.is_trip_member(id)));
+create policy "leden wijzigen de reis" on public.shared_trips for update to authenticated
+  using ((select public.is_trip_member(id))) with check ((select public.is_trip_member(id)));
+create policy "leden zien elkaar" on public.shared_trip_members for select to authenticated using ((select public.is_trip_member(trip_id)));
+revoke all on public.shared_trips, public.shared_trip_members from anon, authenticated;
+grant select on public.shared_trips, public.shared_trip_members to authenticated;
+grant update (name, stops, updated_by, updated_at) on public.shared_trips to authenticated;
+
+create or replace function private.shared_trip_touch()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end $$;
+create trigger shared_trips_touch before update on public.shared_trips for each row execute function private.shared_trip_touch();
+
+-- Nieuwe gedeelde reis maken vanuit je eigen reis
+create or replace function public.create_shared_trip(p_stops jsonb, p_name text default 'Onze reis')
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare t public.shared_trips;
+begin
+  if auth.uid() is null then raise exception 'Log in om samen te plannen'; end if;
+  if (select count(*) from public.shared_trips where owner_id = auth.uid()) >= 20 then raise exception 'Je hebt al veel gedeelde reizen.'; end if;
+  insert into public.shared_trips (owner_id, name, stops, updated_by)
+  values (auth.uid(), coalesce(nullif(trim(p_name), ''), 'Onze reis'), coalesce(p_stops, '[]'::jsonb), auth.uid())
+  returning * into t;
+  insert into public.shared_trip_members (trip_id, user_id, display_name)
+  values (t.id, auth.uid(), (select display_name from public.profiles where id = auth.uid()));
+  return jsonb_build_object('id', t.id, 'code', t.invite_code, 'name', t.name);
+end $$;
+revoke all on function public.create_shared_trip(jsonb, text) from public, anon;
+grant execute on function public.create_shared_trip(jsonb, text) to authenticated;
+
+-- Meedoen met de code uit de uitnodiging (opnieuw meedoen na verlaten mag)
+create or replace function public.join_shared_trip(p_code text)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare t public.shared_trips;
+begin
+  if auth.uid() is null then raise exception 'Log in om mee te doen'; end if;
+  select * into t from public.shared_trips where invite_code = p_code;
+  if not found then raise exception 'Deze uitnodiging bestaat niet (meer)'; end if;
+  if (select count(*) from public.shared_trip_members where trip_id = t.id and left_at is null and user_id <> auth.uid()) >= 6 then
+    raise exception 'Deze reis heeft al 6 deelnemers.';
+  end if;
+  insert into public.shared_trip_members (trip_id, user_id, display_name)
+  values (t.id, auth.uid(), (select display_name from public.profiles where id = auth.uid()))
+  on conflict (trip_id, user_id) do update set left_at = null, joined_at = now();
+  return jsonb_build_object('id', t.id, 'name', t.name, 'stops', t.stops);
+end $$;
+revoke all on function public.join_shared_trip(text) from public, anon;
+grant execute on function public.join_shared_trip(text) to authenticated;
+
+create or replace function public.leave_shared_trip(p_trip uuid)
+returns void language sql security definer set search_path = '' as $$
+  update public.shared_trip_members set left_at = now() where trip_id = p_trip and user_id = auth.uid();
+$$;
+revoke all on function public.leave_shared_trip(uuid) from public, anon;
+grant execute on function public.leave_shared_trip(uuid) to authenticated;
+
+-- Realtime: wijzigingen direct naar de andere deelnemers (Realtime past RLS toe)
+alter publication supabase_realtime add table public.shared_trips;

@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const { data, error, reload } = useQuery(() => db().from("site_settings").select("key,value"), []);
   const loaded = useMemo<Settings | null>(() => {
     if (!data) return null;
-    const map = Object.fromEntries((data as { key: string; value: unknown }[]).map((r) => [r.key, r.value]));
+    const map = Object.fromEntries(data.map((r) => [r.key, r.value]));
     return {
       contact: (map.contact as Settings["contact"]) ?? { email: "", response_days: 2 },
       announcement: (map.announcement as Settings["announcement"]) ?? { text: "", enabled: false },
@@ -53,7 +53,7 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <PageTitle title="Instellingen" />
       <ErrorNote message={error ?? err} />
-      {msg && <p role="status" className="rounded-xl bg-forest-tint px-4 py-3 font-semibold text-forest">{msg}</p>}
+      {msg && <p role="status" className="rounded-lg bg-forest-tint px-4 py-3 font-semibold text-forest">{msg}</p>}
       {s && (
         <form onSubmit={save} className="space-y-6">
           <Card className="space-y-3">

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { bboxKey, snapBbox, type Bbox } from "./bbox";
 import type { PlaceSummary, Town } from "./types";
+import { cleanVehicle, type Vehicle } from "./vehicle";
+import { cleanExpenses, type Expense } from "./expenses";
 
 // ── Kleine localStorage-store met abonnement ───────────────────────────────
 
@@ -86,6 +89,36 @@ export function useTrip() {
   };
 }
 
+// ── Mijn camper (voertuigkluis) ───────────────────────────────────────────
+
+const EMPTY_VEHICLE: Vehicle = {};
+const vehicleStore = createStore<Vehicle>("vrijstaan:camper", EMPTY_VEHICLE, (v): v is Vehicle => typeof v === "object" && v !== null && !Array.isArray(v));
+export const useVehicle = () => [vehicleStore.use(), (v: Vehicle) => vehicleStore.write(cleanVehicle(v))] as const;
+export const readVehicle = () => vehicleStore.read();
+
+// ── Samen plannen (gedeelde reis) ─────────────────────────────────────────
+
+export type SharedLink = { id: string; name: string; code: string };
+const sharedStore = createStore<SharedLink | null>("vrijstaan:samen", null, (v): v is SharedLink | null =>
+  v === null || (typeof v === "object" && typeof (v as SharedLink).id === "string" && typeof (v as SharedLink).code === "string"),
+);
+export const useSharedLink = () => [sharedStore.use(), sharedStore.write] as const;
+
+// ── Uitgaven onderweg ──────────────────────────────────────────────────────
+
+const EMPTY_EXPENSES: Expense[] = [];
+const expenseStore = createStore<Expense[]>("vrijstaan:uitgaven", EMPTY_EXPENSES, (v): v is Expense[] => Array.isArray(v));
+export function useExpenses() {
+  const list = expenseStore.use();
+  const set = (next: Expense[]) => expenseStore.write(cleanExpenses(next));
+  return {
+    list,
+    replace: set,
+    add: (e: Expense) => set([e, ...list.filter((x) => x.id !== e.id)].sort((a, b) => b.date.localeCompare(a.date))),
+    remove: (id: string) => set(list.filter((x) => x.id !== id)),
+  };
+}
+
 // ── Reisinstellingen (verbruik, brandstofprijs) ────────────────────────────
 
 export interface TripSettings {
@@ -155,6 +188,39 @@ const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 
 export const usePlaces = () => useLoader(getPlaces);
 export const useTowns = () => useLoader(getTowns);
+
+// ── Plekken binnen de zichtbare kaart (PostGIS-bbox, per afgerond gebied gecachet) ──
+
+const bboxCache = new Map<string, Promise<PlaceSummary[]>>();
+
+function getBbox(key: string) {
+  let p = bboxCache.get(key);
+  if (!p) {
+    p = fetch(`/api/places?bbox=${key}`).then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<PlaceSummary[]>;
+    });
+    p.catch(() => bboxCache.delete(key));
+    bboxCache.set(key, p);
+  }
+  return p;
+}
+
+/** Plekken in het zichtbare kaartgebied; `null` zolang de kaart nog geen gebied heeft doorgegeven */
+export function useViewportPlaces(bbox: Bbox | null) {
+  const key = bbox ? bboxKey(snapBbox(bbox)) : null;
+  const [state, setState] = useState<{ key: string | null; data: PlaceSummary[] | null }>({ key: null, data: null });
+  useEffect(() => {
+    if (!key) return;
+    let alive = true;
+    // Bij een fout blijft het vorige gebied staan (de kaart valt terug op de volledige zoekresultaten)
+    getBbox(key).then((data) => alive && setState({ key, data }), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [key]);
+  return state.data;
+}
 
 // ── Reisplekken lokaal bewaren, zodat Mijn reis ook zonder bereik werkt ──────
 
