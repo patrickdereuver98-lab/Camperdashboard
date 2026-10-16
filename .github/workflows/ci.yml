@@ -28,6 +28,8 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
+      - name: Geen bekende lekken in pakketten van de site
+        run: npm audit --omit=dev --audit-level=high
       - name: Build met de snapshot
         run: npm run build
         env:

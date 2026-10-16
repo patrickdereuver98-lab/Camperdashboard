@@ -139,6 +139,7 @@ Automatische taken (pg_cron in Supabase):
 | `osm-regions` / `osm-collect` / `osm-staging` | Elke paar minuten; elke provincie wordt eens per 7 dagen ververst |
 | `scrape` | Elke 15 seconden een batch van 8 websites, zolang er werk in de wachtrij staat |
 | `scrape-enqueue` | Elk half uur: nieuwe plekken met een website worden ingepland |
+| `scrape-refresh` | Elk half uur de 10 plekken die het langst (minstens 30 dagen) niet gelezen zijn; zo is elke website eens per maand opnieuw aan de beurt |
 
 Rijtijden en afstanden zijn echt berekend over de weg, via OpenRouteService (met `ORS_API_KEY`) of de
 openbare OSRM-server van de OpenStreetMap-gemeenschap.
