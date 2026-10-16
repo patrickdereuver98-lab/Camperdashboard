@@ -22,6 +22,49 @@ export const SUBPAGES: { re: RegExp; max: number }[] = [
 
 export const MAX_SUBPAGES = 10;
 
+/** www.camping.nl en camping.nl zijn dezelfde site */
+export const sameSite = (a: string, b: string) => a.replace(/^www\./, "") === b.replace(/^www\./, "");
+
+/** Vaste adressen die we proberen als een site geen bruikbare links of sitemap heeft (menu in JavaScript) */
+export const PROBE_PATHS = [
+  "/huisregels", "/reglement", "/faq", "/veelgestelde-vragen", "/praktische-informatie", "/informatie",
+  "/tarieven", "/camperplaats", "/camperplaatsen", "/aankomst-en-vertrek",
+];
+
+/** Vertrek-PDF's (reglement, huisregels, tarieven): die staan vaak alleen als bestand online */
+export const PDF_RE = /reglement|huisregel|huishoudelijk|voorwaarden|tarie|prijs|platzordnung|informatie/i;
+
+/** Links naar PDF's op dezelfde site die over regels of tarieven gaan, hoogstens `max` */
+export function pdfLinks(html: string, home: URL, max = 2): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(/<a\s[^>]*href=["']([^"'#]+\.pdf)(?:\?[^"']*)?["'][^>]*>([\s\S]{0,300}?)<\/a>/gi)) {
+    let u: URL;
+    try {
+      u = new URL(m[1], home);
+    } catch {
+      continue;
+    }
+    if (!sameSite(u.host, home.host) || !(PDF_RE.test(u.pathname) || PDF_RE.test(decode(m[2])))) continue;
+    if (!out.includes(u.href)) out.push(u.href);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** Tweede laag: vanaf al gelezen pagina's (FAQ, huisregels) de links die sterk naar vertrektijden wijzen */
+export function deeperLinks(htmls: string[], home: URL, visited: string[], max = 3): string[] {
+  const strong = SUBPAGES[0].re;
+  const out: string[] = [];
+  for (const html of htmls)
+    for (const l of extractLinks(html, home)) {
+      const path = decodeURIComponent(new URL(l.url).pathname);
+      if (visited.includes(l.url) || out.includes(l.url) || !(strong.test(path) || strong.test(l.text))) continue;
+      out.push(l.url);
+      if (out.length >= max) return out;
+    }
+  return out;
+}
+
 const SKIP = /\.(pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|mp3)$/i;
 const NOT_CONTENT = /\/(wp-content|wp-json|feed|tag|author|category|cart|winkelwagen|checkout-cart|login|account)\b/i;
 
@@ -44,7 +87,7 @@ export function extractLinks(html: string, home: URL): Link[] {
     } catch {
       continue;
     }
-    if (!/^https?:$/.test(u.protocol) || u.host !== home.host || u.pathname === home.pathname) continue;
+    if (!/^https?:$/.test(u.protocol) || !sameSite(u.host, home.host) || u.pathname === home.pathname) continue;
     if (SKIP.test(u.pathname) || NOT_CONTENT.test(u.pathname)) continue;
     const key = u.origin + u.pathname;
     const text = decode(m[2]).slice(0, 80);
@@ -74,7 +117,7 @@ export function rankLinks(links: Link[], home: URL, max = MAX_SUBPAGES): string[
     .filter((l) => {
       try {
         const u = new URL(l.url);
-        return u.host === home.host && u.pathname !== home.pathname && !SKIP.test(u.pathname) && !NOT_CONTENT.test(u.pathname);
+        return sameSite(u.host, home.host) && u.pathname !== home.pathname && !SKIP.test(u.pathname) && !NOT_CONTENT.test(u.pathname);
       } catch {
         return false;
       }

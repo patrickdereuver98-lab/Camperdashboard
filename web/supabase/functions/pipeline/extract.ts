@@ -395,6 +395,20 @@ export function extract(pages: string[], base: URL) {
   // ── Aankomst- en vertrektijden ───────────────────────────────────────────
   const raw = pages.map(toRawText).join(" . ");
   Object.assign(out, arrivalDeparture(text, raw.length === text.length ? raw : text));
+  // Niets in de tekst? Boekingssystemen zetten de tijden soms alleen in gestructureerde gegevens (schema.org
+  // checkoutTime). Alleen als dat over de camping of camperplaats zelf gaat, niet over een chalet of hotelkamer.
+  if (out.departure === undefined) {
+    const ld = pages.flatMap((p) => jsonLd(p)).find((i) => /Campground|RVPark/i.test(String(i["@type"] ?? "")) && i.checkoutTime);
+    const clock = (v: unknown) => /(?:^|T)(\d{1,2}):(\d{2})/.exec(String(v ?? ""));
+    const outTime = clock(ld?.checkoutTime);
+    if (ld && outTime && Number(outTime[1]) >= 7 && Number(outTime[1]) <= 14) {
+      out.departure = "vast";
+      out.checkout_until = `${outTime[1].padStart(2, "0")}:${outTime[2]}`;
+      const inTime = clock(ld.checkinTime);
+      if (inTime && out.checkin_from === undefined) out.checkin_from = `${inTime[1].padStart(2, "0")}:${inTime[2]}`;
+      out.times_note = `Volgens de gegevens op de website: vertrek uiterlijk ${out.checkout_until}`;
+    }
+  }
 
   // ── Reserveren ───────────────────────────────────────────────────────────
   const res = flag(

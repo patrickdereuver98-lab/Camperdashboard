@@ -1,7 +1,7 @@
 // Welke pagina's de scraper leest: vertrekpagina's eerst, op adres én linktekst, met de sitemap als terugval.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { extractLinks, needsSitemap, parseSitemap, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
+import { deeperLinks, extractLinks, needsSitemap, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
 
 const home = new URL("https://camping-dewei.nl/");
 
@@ -46,4 +46,20 @@ test("sitemap: pagina's en sitemap-index", () => {
 test("sitemap alleen als de homepage weinig bruikbare links heeft (menu in JavaScript)", () => {
   assert.equal(needsSitemap([]), true);
   assert.equal(needsSitemap(["a", "b", "c"]), false);
+});
+
+test("www en zonder www zijn dezelfde site", () => {
+  const www = new URL("https://www.camping-dewei.nl/");
+  const links = extractLinks(`<a href="https://camping-dewei.nl/huisregels">Huisregels</a>`, www);
+  assert.deepEqual(rankLinks(links, www), ["https://camping-dewei.nl/huisregels"]);
+});
+
+test("PDF's met het reglement of de tarieven, niet elke PDF", () => {
+  const html = `<a href="/docs/Reglement-2026.pdf">Download</a><a href="/menukaart.pdf">Menukaart</a><a href="/files/x.pdf">Onze tarieven</a><a href="https://elders.nl/reglement.pdf">x</a>`;
+  assert.deepEqual(pdfLinks(html, home), ["https://camping-dewei.nl/docs/Reglement-2026.pdf", "https://camping-dewei.nl/files/x.pdf"]);
+});
+
+test("tweede laag: vanaf de FAQ alleen links over aankomst en vertrek, niet al bezochte", () => {
+  const faq = `<a href="/faq/aankomst-en-vertrek">Hoe laat kan ik aankomen?</a><a href="/faq/honden">Honden</a><a href="/huisregels">Huisregels</a>`;
+  assert.deepEqual(deeperLinks([faq], home, ["https://camping-dewei.nl/huisregels"]), ["https://camping-dewei.nl/faq/aankomst-en-vertrek"]);
 });

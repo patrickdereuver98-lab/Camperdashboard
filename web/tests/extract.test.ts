@@ -87,3 +87,12 @@ test("een punt na een tijd sluit de zin af: 'later vertrekken' in de volgende zi
   assert.equal(r.departure, "vast");
   assert.equal(r.checkout_until, "12:00");
 });
+
+test("JSON-LD checkoutTime van een camping telt als vaste vertrektijd, van een hotel niet", () => {
+  const ld = (type: string) => `<script type="application/ld+json">{"@type":"${type}","checkoutTime":"11:00:00","checkinTime":"T13:00"}</script><p>Welkom</p>`;
+  const r = page(ld("Campground"));
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "11:00");
+  assert.equal(r.checkin_from, "13:00");
+  assert.equal(page(ld("Hotel")).departure, undefined);
+});
