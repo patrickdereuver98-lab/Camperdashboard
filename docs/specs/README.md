@@ -14,7 +14,7 @@ code niet bij de documenten, dan is dat een open punt (zie onder).
 | 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
 
 Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `docs/design.md` (ontwerpdetails),
-`docs/onderzoek.md` (vooronderzoek), `docs/samenwerking.md` (open PR's, volgorde van samenvoegen en wie wat oppakt).
+`docs/onderzoek.md` (vooronderzoek).
 
 ## Zo gebruik je ze
 
