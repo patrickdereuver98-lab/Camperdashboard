@@ -1,7 +1,7 @@
 # 6. Implementatieplan
 
 > Doel: een geordende bouwvolgorde met controlepunten, voor mensen en AI-agents.
-> Bijgewerkt: 11 oktober 2026. Status: ✅ klaar, 🔄 bezig, ⬜ open.
+> Bijgewerkt: 16 oktober 2026. Het samengevoegde plan voor de afronding staat in [`plan.md`](../../plan.md). Status: ✅ klaar, 🔄 bezig, ⬜ open.
 > Eigenaar: "Patrick" = de eigenaar van VrijStaan; "Agent" = een AI-codeeragent (Claude Code) in deze repository.
 
 ## Mijlpaal 1: projectopzet ✅
@@ -68,7 +68,9 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Plaatsnaam per postcode (dorp in plaats van gemeente) | Agent | UX-audit | Pipeline | Steekproef van 20 plekken klopt | — |
 | ⬜ Automatische tests voor extractor en filters | Agent | Testscripts in sessie | `web/tests/` + script in `package.json` | Draait in CI | — |
 | ⬜ CI op GitHub (lint, typecheck, offline build) | Agent | TRD | `.github/workflows/ci.yml` | Groen op elke PR | Tests |
-| ⬜ Beveiligingsadviezen van Supabase nalopen | Agent | Supabase advisors | Opgeloste waarschuwingen | Geen kritieke meldingen | — |
+| 🔄 Beveiligingsadviezen van Supabase nalopen | Agent | Supabase advisors | Opgeloste waarschuwingen | Geen kritieke meldingen (16 oktober: geen kritieke; 13 openbare SECURITY DEFINER-functies nog nalopen, zie `plan.md` §4b) | — |
+| ✅ Kaartbibliotheek 6.14 (kritiek XSS-lek in 5.x), CSP, HSTS en COOP | Agent | `npm audit` | `package.json`, `place-map.tsx`, `next.config.ts`, `scripts/copy-maplibre-worker.mjs` | `npm audit --omit=dev` geeft 0; kaart en 8 pagina's zonder CSP-meldingen | — |
+| ✅ Dependabot | Agent | — | `.github/dependabot.yml` | Wekelijkse PR's naar `acceptatie` | — |
 
 ## Mijlpaal 6: release ⬜
 
@@ -79,8 +81,9 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Supabase Auth: Site URL, redirect-URL's, eigen SMTP | Patrick | Vercel-adres | Instellingen | Inloggen en wachtwoord-reset werken | Vercel |
 | ⬜ Domein koppelen en `NEXT_PUBLIC_SITE_URL` zetten | Patrick | Domein | DNS + Vercel | Site bereikbaar op eigen domein met HTTPS | Vercel |
 | ⬜ Testplan uitvoeren | Patrick + Agent | Acceptatiecriteria PRD | Testverslag | Alle criteria geslaagd op iPhone en Android | M3–M5 |
-| ⬜ Monitoring | Agent | — | Controle op `app_logs`, Vercel-logs, wekelijkse controle pipeline | Fouten worden binnen een dag gezien | Vercel |
-| ⬜ Terugdraaien | — | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/HANDLEIDING.md` | Vercel |
+| 🔄 Monitoring | Agent | — | `.github/workflows/monitor.yml` (site, database, aantal plekken, elk uur); nog open: serverfouten naar `app_logs` | Fouten worden binnen een dag gezien | Vercel, variabele `SITE_URL` |
+| 🔄 Back-up met hersteltest | Agent + Patrick | — | `.github/workflows/backup.yml`, wekelijks, versleuteld | Eerste run groen | Geheimen `SUPABASE_DB_URL`, `BACKUP_PASSPHRASE` |
+| ✅ Terugdraaien | Agent | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/draaiboek.md` | Vercel |
 
 ## Voor je verdergaat (bij elke mijlpaal)
 

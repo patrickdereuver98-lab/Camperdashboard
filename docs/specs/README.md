@@ -55,3 +55,4 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 9 | `/zoeken?waar=<onbekend>` toont het hele land met die plaatsnaam | App Flow | Fix in M5 |
 | 10 | Testtabellen `private.probe` en `private.probe2` staan nog in de database | Backend Schema | Verwijderen |
 | 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |
+| 33 | Websites worden maar één keer gelezen (`enqueue_scrape(true)` plant alleen plekken zonder `last_scraped_at`), terwijl de handleiding een "volgende controle" belooft | HANDLEIDING §6, pipeline | Besluit B12 in `plan.md`: elke plek eens per 30 dagen opnieuw. Nummer 33: 12 tot en met 32 zijn uitgedeeld op het samenwerkingsbord (PR #9, §5) |

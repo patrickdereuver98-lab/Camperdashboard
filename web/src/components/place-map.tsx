@@ -116,8 +116,10 @@ export function PlaceMap({
     let cancelled = false;
     let map: MlMap | null = null;
     (async () => {
-      const maplibregl = (await import("maplibre-gl")).default;
+      const maplibregl = await import("maplibre-gl");
       if (cancelled || !el.current) return;
+      // Worker staat in public/ (scripts/copy-maplibre-worker.mjs); de versie in de URL voorkomt een oude cache
+      maplibregl.setWorkerUrl(`/maplibre-gl-worker.mjs?v=${maplibregl.getVersion()}`);
       const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const css = getComputedStyle(document.documentElement);
       // Bosgroen voor plekken, avondzon voor gratis plekken en de geselecteerde plek, meerblauw voor de route
@@ -310,7 +312,7 @@ export function PlaceMap({
     userMarker.current = null;
     if (!user) return;
     let alive = true;
-    import("maplibre-gl").then(({ default: maplibregl }) => {
+    import("maplibre-gl").then((maplibregl) => {
       if (!alive || !mapRef.current) return;
       const dot = document.createElement("div");
       dot.style.cssText =
