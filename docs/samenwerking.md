@@ -43,7 +43,7 @@ Gemeten met `git merge-tree` op 16 oktober 2026. Elke combinatie van PR #4, #5, 
 | #10 + #4 | 7: `ci.yml` (beide maken hem aan), `package.json`, `places.ts`, `supabase-browser.ts`, `chrome.tsx`, plekpagina, README |
 | #4 + #5 | 4: plekpagina, zoekpagina, `places.ts`, README |
 | #11 + iedereen | Alleen `docs/specs/README.md` |
-| #9 + iedereen | Niets meer: dit bord raakt maar één regel in de README |
+| #9 + iedereen | Niets: alleen nieuwe bestanden in `docs/` (de verwijzing in de README komt bij stap 5) |
 | #6 + iedereen | Niets |
 
 ## 3. Voorgestelde volgorde van samenvoegen
