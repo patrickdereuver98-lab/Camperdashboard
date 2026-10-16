@@ -4,9 +4,12 @@ import assert from "node:assert/strict";
 import { departureKind, inDepartureGroup, isOpenOn } from "../src/lib/search";
 import { departureShort } from "../src/lib/format";
 
-test("vrij en per 24 uur vallen allebei onder 'vrij'", () => {
-  assert.equal(departureKind({ departure: "vrij" }), "vrij");
-  assert.equal(departureKind({ departure: "per24" }), "vrij");
+test("vrij en per 24 uur vallen alleen onder 'vrij' na bevestiging door een mens (kernbelofte)", () => {
+  assert.equal(departureKind({ departure: "vrij", departureCheck: "bevestigd" }), "vrij");
+  assert.equal(departureKind({ departure: "per24", departureCheck: "bevestigd" }), "vrij");
+  assert.equal(departureKind({ departure: "vrij" }), "onbekend");
+  assert.equal(departureKind({ departure: "per24", departureCheck: "voorwaardelijk" }), "onbekend");
+  assert.equal(departureKind({ departure: "vrij", departureCheck: "afgewezen" }), "onbekend");
 });
 
 test("vaste tijden: uitslapers vanaf 12:00, ruim vanaf 11:00, anders vroeg", () => {
@@ -25,7 +28,10 @@ test("vast zonder tijd en geen gegevens zijn onbekend", () => {
 test("'overig' bevat ruim, vroeg en onbekend, maar geen vrij of uitslapers", () => {
   assert.ok(inDepartureGroup({ departure: "vast", checkoutUntil: "10:00" }, "overig"));
   assert.ok(inDepartureGroup({}, "overig"));
-  assert.ok(!inDepartureGroup({ departure: "vrij" }, "overig"));
+  assert.ok(!inDepartureGroup({ departure: "vrij", departureCheck: "bevestigd" }, "overig"));
+  // Een niet-bevestigde kandidaat staat bij Overige, niet op Zonder vertrektijd
+  assert.ok(inDepartureGroup({ departure: "vrij" }, "overig"));
+  assert.ok(!inDepartureGroup({ departure: "vrij" }, "vrij"));
   assert.ok(!inDepartureGroup({ departure: "vast", checkoutUntil: "12:00" }, "overig"));
 });
 

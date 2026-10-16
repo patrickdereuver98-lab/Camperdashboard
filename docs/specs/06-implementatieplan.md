@@ -98,6 +98,8 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Kaartbibliotheek 6.14 (kritiek XSS-lek in 5.x), CSP, HSTS en COOP | Agent | `npm audit` | `package.json`, `place-map.tsx`, `next.config.ts`, `scripts/copy-maplibre-worker.mjs` | `npm audit --omit=dev` geeft 0; kaart en 8 pagina's zonder CSP-meldingen | — |
 | ✅ Dependabot | Agent | — | `.github/dependabot.yml` | Wekelijkse PR's naar `acceptatie` | — |
 | ✅ Websites eens per 30 dagen opnieuw lezen | Agent | Besluit B12 | Cron `scrape-refresh`, `private.enqueue_stale_scrape` | Geen website ouder dan ±31 dagen | Scraper |
+| 🔄 Acceptatieomgeving: branch `acceptatie`, PR's eerst daarheen, Vercel-preview | Agent + Patrick | `plan.md` E5 | Branch + CI; Vercel en branch protection door Patrick | Niets gaat meer direct naar `main` | CI |
+| 🔄 Kernbelofte 100% zeker: bevestiging door mens vóór Zonder vertrektijd | Agent | `plan.md` K1–K3 | Migratie `20261015120000_vertrektijd_bevestiging.sql` (live sinds 16 oktober), Beheer → Vertrektijden | Eerste ronde gecontroleerd | Beheeraccount |
 
 ## Mijlpaal 6: release ⬜
 

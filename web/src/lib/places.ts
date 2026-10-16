@@ -15,13 +15,14 @@ const PLACE_COLUMNS =
   "id,slug,name,kind,lat,lng,street,postcode,town,province,description,description_source,price_eur,price_note," +
   "tourist_tax_included,power,water,dump_station,toilet,shower,wifi,dogs,capacity,max_length_m,surface,open_all_year," +
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
-  "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras";
+  "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras," +
+  "departure_check,departure_checked_at,departure_checked_by";
 
 /** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten of beschrijvingen */
 const SUMMARY_COLUMNS =
   "id,slug,name,kind,lat,lng,town,province,price_eur,price_note,tourist_tax_included,power,water,dump_station,toilet," +
   "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
-  "completeness,departure,checkout_until,price_extras,checkin_from,access_24h,access_hours";
+  "completeness,departure,checkout_until,price_extras,departure_check,checkin_from,access_24h,access_hours";
 
 class SupabaseError extends Error {
   constructor(readonly status: number, body: string) {
@@ -152,7 +153,7 @@ function normalize(p: Place, websitePhotos = false): Place {
 const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
   "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
-  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "priceExtras", "imageCredit",
+  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "departureCheck", "priceExtras", "imageCredit",
   "checkinFrom", "access24h", "accessHours",
 ];
 
