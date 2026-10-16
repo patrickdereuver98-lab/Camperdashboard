@@ -39,6 +39,7 @@
 | ✅ Live drukte (crowdsourced: rustig, druk, vol) | Agent | Opdracht Patrick (Fase 5) | `crowd_reports`, kaart op de plekpagina | Alleen echte meldingen van de laatste 3 uur, met aantal en tijd | Accounts |
 | ✅ Pushmelding als een gevolgde plek rustig wordt | Agent | Fase 5 | Edge function `push`, `crowd_watches`, `push_subscriptions`, service worker | Versleutelde melding (getest met web-push tegen een nep-pushdienst); één melding per volger | Drukte |
 | ✅ Voertuigkluis: camperprofiel met automatisch lengtefilter, papieren in een privé-map | Agent | Opdracht Patrick (Fase 5) | `/mijn-camper`, `user_vehicles`, Storage `vehicle-docs` | Lengtefilter vanzelf aan; uitzetten blijft uit; papieren alleen voor de eigenaar | Accounts |
+| ✅ Losse toeslagen (`price_extras`) in de reiskosten | Agent | Voorstel audit-sessie, akkoord Patrick (16 okt) | `trip-extras.ts` | Alleen eenduidige toeslagen tellen mee; de rest wordt per plek genoemd | Mijn reis |
 | ✅ Kosten- en brandstoftracker in Mijn reis | Agent | Opdracht Patrick (Fase 5) | `ExpensesPanel`, `user_expenses` | Uitgaven naast de begroting; werkt zonder account | Mijn reis |
 | ✅ Reisstatistieken (dashboard) | Agent | Opdracht Patrick (Fase 5) | `/mijn-reis/statistieken`, `trip-stats.ts` | Alleen berekend uit bekende gegevens; tabel bij elke grafiek | Mijn reis, uitgaven |
 | ✅ Samen een reis plannen (realtime) | Agent | Opdracht Patrick (Fase 5) | `shared_trips`, `/samen/<code>`, `SharedCard` | Leden zien wijzigingen direct; buitenstaanders niet | Accounts |
