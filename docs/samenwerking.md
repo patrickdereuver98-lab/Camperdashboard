@@ -70,7 +70,7 @@ worden. Pas daarna de volgende merge. Als B9 bevestigd is, geldt alles hieronder
 
 | # | Besluit | Waarom nu | Komt uit |
 |---|---|---|---|
-| B1 | ✅ **Besloten door Patrick (16 oktober):** accounts, drukte, push, camperprofiel en uitgaven blijven (PR #4). Nog te doen op #4: de privacyverklaring noemt accounts, de bucket `vehicle-docs` en de pushdiensten | Staat al live in de database | #4, audit C1 |
+| B1 | ✅ **Besloten door Patrick (16 oktober):** accounts, drukte, push, camperprofiel en uitgaven blijven (PR #4). De privacyverklaring op #4 noemt al account, camperpapieren, drukte, push, uitgaven, samen plannen en foto's (nagekeken) | Staat al live in de database | #4, audit C1 |
 | B2 | Strikte OSM-toelating: zo'n 900 campings zonder tag `caravan_site` of `motorhome=yes` worden dan niet meer ververst | Raakt het aantal plekken, de prioriteit van de eigenaar | #4 open punt 12 |
 | B3 | Advertenties: geen, sponsoring zonder tracking, of AdSense | AdSense botst met "geen tracking van derden" en met Vercel Hobby | #4 open punt 14 |
 | B4 | ✅ **Volgorde goedgekeurd door Patrick (16 oktober).** PR's gaan één voor één uit draft, in de volgorde van §3 | Elke dag langer wordt het samenvoegen zwaarder | dit bord |
