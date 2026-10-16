@@ -442,6 +442,10 @@ const ACCESS24 =
 // "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
 const PER24 =
   /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival/g;
+// Camperplaatsen met een automaat: "€ 12,50 per 24 uur". Alleen als er geen vaste vertrektijd op de site staat en het
+// over campers gaat; de kernpagina toont zo'n plek pas na bevestiging door een mens (kernbelofte).
+const PER24_PRICE =
+  /(?:€|eur|euro)\s?\d+(?:[.,]\d{1,2})?(?:,-)?\s*(?:per|p\.?|\/)\s?24\s?(?:uur|u\b|h\b)|(?:tarief|prijs|kosten|staanplaats|overnachting|parkeren)[^.]{0,40}?\bper 24 uur|pro 24 stunden|je 24 stunden/g;
 // Toegangstijden van slagboom of poort: "de slagboom is geopend van 07:30 tot 23:00 uur"
 const GATE = new RegExp(
   String.raw`\b(?:slagboom|schuifpoort|toegangspoort|poort|hek|barri[eè]re|schranke|tor|gate)\b[^.?!]{0,40}?(?:open|geopend|ge[öo]ffnet)[^.0-9]{0,20}?${CLOCK}\s*(?:tot|en|-|–|bis|to)\s*${CLOCK}|(?:tussen|zwischen|between)\s*${CLOCK}\s*(?:en|und|and)\s*${CLOCK}[^.]{0,30}?(?:aankomen en vertrekken|aankomen|an- und abreise|arrive)`,
@@ -547,6 +551,13 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     per24 = p.index!;
     break;
   }
+  if (per24 === undefined)
+    for (const p of text.matchAll(PER24_PRICE)) {
+      const near = text.slice(Math.max(0, p.index! - 150), p.index! + 120);
+      if (!CAMPER.test(near) || RENTAL.test(near)) continue;
+      per24 = p.index!;
+      break;
+    }
   if (per24 !== undefined && !free && !out) {
     res.departure = "per24";
     notes.push(quote(raw, text, per24));

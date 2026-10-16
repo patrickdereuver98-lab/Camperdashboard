@@ -49,3 +49,15 @@ test("seizoen uit 'van 1 april tot 31 oktober'", () => {
   assert.equal(r.open_all_year, false);
   assert.equal(r.season, "1 april – 31 oktober");
 });
+
+test("camperplaats met automaat: prijs per 24 uur wordt 'per24'", () => {
+  assert.equal(page("<p>Camperplaats aan de haven. Tarief: € 12,50 per 24 uur, te betalen bij de automaat.</p>").departure, "per24");
+  assert.equal(page("<p>Stellplatz am Hafen: 10 Euro pro 24 Stunden für Wohnmobile.</p>").departure, "per24");
+});
+
+test("per 24 uur zonder campers, of met een vaste vertrektijd, telt niet", () => {
+  assert.equal(page("<p>Parkeergarage centrum: € 15 per 24 uur.</p>").departure, undefined);
+  const r = page("<p>Camperplaats: € 12 per 24 uur. Vertrek voor 11.00 uur.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "11:00");
+});

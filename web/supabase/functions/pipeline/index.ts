@@ -11,6 +11,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
+import { extractLinks, needsSitemap, parseSitemap, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -95,6 +96,7 @@ async function runOsm(region: string) {
 // ── Scraper ────────────────────────────────────────────────────────────────
 
 const robotsCache = new Map<string, string[]>();
+const sitemapCache = new Map<string, string[]>();
 
 async function allowed(url: URL): Promise<boolean> {
   if (!robotsCache.has(url.host)) {
@@ -106,7 +108,9 @@ async function allowed(url: URL): Promise<boolean> {
       });
       if (res.ok) {
         let applies = false;
-        for (const raw of (await res.text()).split(/\r?\n/)) {
+        const robots = await res.text();
+        sitemapCache.set(url.host, sitemapsFromRobots(robots));
+        for (const raw of robots.split(/\r?\n/)) {
           const line = raw.split("#")[0].trim();
           const [k, ...rest] = line.split(":");
           const v = rest.join(":").trim();
@@ -122,7 +126,7 @@ async function allowed(url: URL): Promise<boolean> {
   return !robotsCache.get(url.host)!.some((p) => url.pathname.startsWith(p));
 }
 
-async function fetchPage(url: URL): Promise<string | null> {
+async function fetchPage(url: URL, accept: "html" | "xml" = "html"): Promise<string | null> {
   if (!/^https?:$/.test(url.protocol)) return null;
   if (!(await allowed(url))) return null;
   const res = await fetch(url, {
@@ -132,7 +136,7 @@ async function fetchPage(url: URL): Promise<string | null> {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
-  if (!type.includes("html")) return null;
+  if (accept === "html" ? !type.includes("html") : !/xml|text\/plain/.test(type)) return null;
   const charset = /charset=([\w-]+)/i.exec(type)?.[1] ?? "utf-8";
   const reader = res.body!.getReader();
   const chunks: Uint8Array[] = [];
@@ -161,48 +165,31 @@ function concat(chunks: Uint8Array[]) {
   return out;
 }
 
-// Subpagina's met de meeste kans op prijzen, voorzieningen en seizoen (hoogste prioriteit eerst)
-const SUBPAGES: RegExp[] = [
-  /tarie|prijs|prijzen|kosten|preise|tarife|prices|rates/i,
-  /camper|stellplatz|motorhome|wohnmobil/i,
-  /aankomst|vertrek|check-?in|check-?out|inchecken|huisregel|reglement|regels|praktisch|faq|veelgestelde|vragen|anreise|platzordnung/i,
-  /faciliteit|voorzien|ausstattung|facilities|sanitair/i,
-  /info|openingstijden|seizoen/i,
-  /over-ons|contact|ueber-uns|about/i,
-];
+/** Pagina-adressen uit de sitemap (robots.txt of /sitemap.xml), hoogstens twee niveaus diep */
+async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]> {
+  const queue = [...(sitemapCache.get(home.host) ?? []), `${home.origin}/sitemap.xml`];
+  const pages: string[] = [];
+  for (let i = 0; i < queue.length && i < 4 && pages.length < 500; i++) {
+    const xml = await fetchPage(new URL(queue[i]), "xml").catch(() => null);
+    if (!xml) continue;
+    const sm = parseSitemap(xml);
+    pages.push(...sm.pages);
+    // Bij een index eerst de sitemaps met pagina's (niet die met berichten of producten)
+    queue.push(...sm.sitemaps.sort((a, b) => Number(/page|pagina/i.test(b)) - Number(/page|pagina/i.test(a))));
+  }
+  return pages.map((url) => ({ url, text: "" }));
+}
 
 async function scrapeOne(place: { id: string; website: string }) {
   const home = new URL(place.website);
   const html = await fetchPage(home);
   if (!html) throw new Error("Geen HTML of geblokkeerd door robots.txt");
   const pages = [html];
-  const links = [
-    ...new Set(
-      [...html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["']/gi)]
-        .map((m) => {
-          try {
-            return new URL(m[1], home);
-          } catch {
-            return null;
-          }
-        })
-        .filter((u): u is URL => !!u && u.host === home.host && u.pathname !== home.pathname && !/\.(pdf|jpe?g|png|zip)$/i.test(u.pathname))
-        .map((u) => u.origin + u.pathname),
-    ),
-  ];
-  // Hoogstens twee pagina's per soort, zodat ook de huisregels (aankomst- en vertrektijden) aan bod komen
-  const perRank = new Map<number, number>();
-  const ranked = links
-    .map((href) => ({ href, rank: SUBPAGES.findIndex((re) => re.test(new URL(href).pathname)) }))
-    .filter((l) => l.rank >= 0)
-    .sort((a, b) => a.rank - b.rank || a.href.length - b.href.length)
-    .filter((l) => {
-      const n = perRank.get(l.rank) ?? 0;
-      perRank.set(l.rank, n + 1);
-      return n < 2;
-    })
-    .slice(0, 6);
-  const subs = await Promise.all(ranked.map((l) => fetchPage(new URL(l.href)).catch(() => null)));
+  const links = extractLinks(html, home);
+  let picked = rankLinks(links, home);
+  // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij
+  if (needsSitemap(picked)) picked = rankLinks([...links, ...(await sitemapPages(home))], home);
+  const subs = await Promise.all(picked.map((href) => fetchPage(new URL(href)).catch(() => null)));
   for (const sub of subs) if (sub) pages.push(sub);
   return extract(pages, home);
 }

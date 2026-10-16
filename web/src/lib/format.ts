@@ -61,7 +61,7 @@ export function departureShort(p: Departure): string | undefined {
   if (p.departure === "vrij" || p.departure === "per24") {
     if (p.departureCheck === "afgewezen") return undefined;
     if (p.departureCheck === "voorwaardelijk") return "Meestal geen vaste vertrektijd";
-    if (p.departureCheck !== "bevestigd") return "Vertrektijd nog niet bevestigd";
+    if (p.departureCheck !== "bevestigd") return "Geen vaste tijd, nog niet bevestigd";
   }
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";

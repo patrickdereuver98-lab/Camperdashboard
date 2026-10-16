@@ -274,7 +274,7 @@ function DistanceToggle() {
 }
 
 const INTRO: Record<DeparturePage, string> = {
-  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst. Elke plek op deze lijst hebben we gecontroleerd bij de plek zelf.",
+  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst. Bovenaan staan de plekken die we bij de plek zelf hebben gecontroleerd. Daaronder plekken waar het volgens hun website zo is; die controleren we nog.",
   uitslapers: "Je hoeft pas om 12:00 of later weg. Genoeg tijd voor een rustig ontbijt.",
   overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet zeker weten.",
 };

@@ -320,7 +320,8 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
  */
 function Decision({ place }: { place: Place }) {
   const kind = departureKind(place);
-  const free = kind === "vrij";
+  // Groen alleen na bevestiging; een kandidaat staat wel op Zonder vertrektijd maar met uitleg
+  const free = kind === "vrij" && place.departureCheck === "bevestigd";
   const late = kind === "uitslapers";
   // Groen alleen als een mens het heeft bevestigd (kernbelofte); anders zeggen we eerlijk wat we wel en niet weten
   const claimed = place.departure === "vrij" || place.departure === "per24";
