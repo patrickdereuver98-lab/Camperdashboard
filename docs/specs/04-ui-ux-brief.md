@@ -1,8 +1,9 @@
 # 4. UI en UX Design Brief
 
-> Doel: één consistente, bruikbare visuele richting. Het thema **"natuur & vrijheid"** staat vast (keuze van de
-> eigenaar) en wordt niet vervangen. Details en tokens: `docs/design.md` en `web/src/app/globals.css`.
-> Bijgewerkt: 11 oktober 2026.
+> Doel: één consistente, bruikbare visuele richting. De kleuren van **"natuur & vrijheid"** staan vast (keuze van de
+> eigenaar). Hoe alles eruitziet en beweegt (typografie, hoeken, schaduw, iconen, beweging) staat in de
+> **stijlgids `docs/stijlgids.md`**, die bij twijfel voorgaat. Tokens: `web/src/app/globals.css`.
+> Bijgewerkt: 12 oktober 2026.
 
 ## Doelgroep en toon
 
@@ -38,9 +39,10 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 
 ## Typografie
 
-- **Fraunces** (variabel, `SOFT` 60, optische grootte) voor koppen en prijzen, gewicht 600.
-- **Inter** voor lopende tekst, knoppen en formulieren.
-- Basis 17 px; kleine tekst minimaal 14 px (`text-sm`); koppen 24–36 px op mobiel.
+- **Geist** voor alles: koppen (600, strak gespatieerd), tekst (400), knoppen (500/600) en cijfers (`tabular-nums`).
+  Vervangt Fraunces + Inter (besluit eigenaar 12 oktober 2026: "te AI, te kinderlijk"; zie `docs/stijlgids.md` §4).
+- Basis 16 px op de telefoon en 17 px vanaf tablet (`sm`); kleine tekst minimaal 14 px (`text-sm`); koppen 20–28 px op
+  mobiel, tot 36 px op groot scherm. Besluit eigenaar 12 oktober 2026: op de telefoon rustiger en meer op één scherm.
 - Lettertypes zelf gehost via `next/font` (geen verzoeken naar Google).
 
 ## Componenten
@@ -49,32 +51,34 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 |---|---|
 | Knoppen | Minstens 44 px hoog (meestal 48–56 px); primair bosgroen, hoofdactie startpagina avondzon; secundair met rand |
 | Formulieren | Velden 48 px, label boven het veld, verplichte velden met `*`, foutmelding onder het veld, numeriek toetsenbord bij getallen |
-| Plekkaart | Foto of tekening links (rij) of boven (stapel), soort, naam, plaats, vertrekbadge, open/dicht, score, voorzieningen, prijs rechtsonder ("per nacht + extra's") |
+| Plekkaart | Volgorde van wat een camperaar wil weten: **waar** (naam 17 px op de telefoon, "Soort in plaats", afstand: rijtijd op Dichtbij, anders "x km van je locatie" als locatie aan staat, anders "x km hemelsbreed" vanaf de zoekplek) → **wanneer** (vertrekbadge, daaronder aankomst vanaf / dag en nacht open / poorttijden; "Gesloten tot …" alleen als de plek nu dicht is) → **wat en hoeveel** (max. 3 voorzieningen + aantal links, prijs per nacht rechts, met "+ toeslagen" eronder als toeslagen of toeristenbelasting apart bekend zijn). Foto ±⅓ breed links (rij) of boven (stapel); hartje zonder bol op rijkaarten |
 | Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; meerblauw bij uitslapers (12:00 of later): "Vertrek uiterlijk 12:00"; neutraal bij 11:00 tot 12:00 en eerder: "Vertrek uiterlijk 11:00"; niets bij onbekend |
 | Vertrektabbladen | Boven de resultaten: Alle / Zonder vertrektijd / Uitslapers / Overige, met aantal; horizontaal scrollbaar op mobiel |
-| Voorzieningenpictogrammen | Afgeronde bosgroene vierkanten (aanwezig), zandkleur (onbekend), doorgestreept (niet aanwezig) |
+| Voorzieningenpictogrammen | Lijnicoon op een lichte ondergrond: bosgroen op lichtgroen (aanwezig), lichtgrijs op zand (onbekend), grijs met rode streep (niet aanwezig) |
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
 | Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis); vaste actiebalk op de plekpagina |
 | Meldingen | Korte toast na bewaren; inline statusregels (`role="status"`/`role="alert"`) |
+| Foto's van een plek | Beste foto vooraan: een foto van de plek zelf, het eigen logo pas als er niets anders is. Nooit keurmerken of logo's van anderen (SVR, ANWB, Zoover), vlaggen, stockfoto's of miniaturen. We vragen bij bekende beeldbanken (WordPress, Wix, Jimdo, Duda, `?width=`) de grote versie op en vallen terug op het origineel. Te klein voor het vak (galerij < 640 px, kaart < 320 px breed) = niet tonen. Logo's en foto's met een heel andere verhouding staan passend in het vak (niet half bijgesneden), met een vervaagde rand. Regels in `web/src/lib/photos.ts` |
+| Over deze plek | Tekst van de website van de plek, alleen hele Nederlandse zinnen: zonder "Lees meer", "…", links, prijzen, telefoonnummers of SEO-titels. Lukt dat niet, dan geen tekst. Onder de tekst: "Zo beschrijft de plek zichzelf op de eigen website." Regels in `web/src/lib/description.ts` |
 | Laatste update | Eén kleine grijze regel bovenaan elke plek- en lijstpagina: "Laatste update: 11 oktober 2026". Geen bronzinnen of "volgens de website" bij losse gegevens (besluit eigenaar). Alleen foto's houden "Foto: domein.nl" in de hoek, zolang de foto laadt |
 | Legenda | Link "Wat betekenen de icoontjes?" bij de resultaten en bij Voorzieningen; opent een sheet met voorzieningen, kleuren (groen, zand, doorgestreept), vertrekbadges en open/dicht |
-| Diepte | Drie schaduwlagen in `globals.css`: `shadow-low` (kaarten), `shadow-raised` (hover, tegels), `shadow-float` (zoekkaart, sheets). Warm getint; in het donker met een licht randje bovenaan. Geen losse grijze randen om kaarten |
-| Zoekkaart (start) | Oppervlak met 3 px avondzon-rand en schaduw, half over het landschap; op mobiel gestapeld, vanaf `lg` op één rij |
+| Diepte | Drie schaduwlagen in `globals.css`: `shadow-low` (kaarten: haarlijn + heel zachte schaduw), `shadow-raised` (hover), `shadow-float` (zoekkaart, sheets). Warm getint. Kaarten tillen 1 px op bij hover (`.lift`) |
+| Zoekkaart (start) | Wit vlak met `shadow-float` en een dunne avondzon-rand (1 px, 50%), direct onder de kop; op mobiel gestapeld, vanaf `lg` op één rij |
 
 ## Layoutregels
 
 - Mobiel eerst, één kolom; zijmarge 12–16 px; geen horizontale scroll.
 - Breekpunten (Tailwind): `sm` 640, `md` 768, `lg` 1024 px. Vanaf `lg`: lijst en kaart naast elkaar, plekpagina met
   zijkolom.
-- Ruimte in stappen van 4 px; kaarten met afgeronde hoeken (16–28 px) en dunne rand.
+- Ruimte in stappen van 4 px; hoeken volgens de stijlgids: knoppen en velden 8 px, kaarten 12 px, sheets 16 px.
 
 ## Schermnotities
 
 | Scherm | Belangrijkste inhoud, in volgorde |
 |---|---|
-| Start | Getekend landschap over de volle breedte met "Waar sta je vannacht?" → zoekkaart eroverheen (bestemming, keuze Vertrekken: Alle / Zonder vertrektijd / Uitslapers, knop Zoeken; avondzon-rand zoals de zoekbalk van Booking) → drie vertrouwenspunten → "Hoe wil je staan?" (drie kaarten naar de vertrekpagina's) → Populaire bestemmingen (provincietegels met een echte foto van een plek daar, met bron) → "Vertrekken wanneer je wilt" → zoeken op voorziening → "Zo werkt VrijStaan" in drie stappen → eigenaren |
-| Zoeken en vertrekpagina's | Zoekveld → vertrektabbladen → korte uitleg van de pagina → Filters + sortering → actieve filterchips → "n plekken in …" → kaarten → zwevende kaart/lijst-knop |
-| Plek | Foto/tekening → soort, naam, adres, open/dicht → kerngegevens (prijs, vertrekken, open, max. lengte) → **Aankomen en vertrekken** (met bron) → **Prijs en extra kosten** → contact → voorzieningen → route en kaart → praktisch → reviews → in de buurt → bronnen |
+| Start | "Waar sta je vannacht?" links uitgelijnd op zandpapier (geen tekening) → zoekkaart direct eronder (bestemming, keuze Vertrekken: Alle / Zonder vertrektijd / Uitslapers, knop Zoeken) → drie vertrouwenspunten → "Hoe wil je staan?" (één lijst met drie regels naar de vertrekpagina's) → Populaire bestemmingen (provincietegels met een echte foto van een plek daar, met bron) → "Vertrekken wanneer je wilt" → zoeken op voorziening → "Zo werkt VrijStaan" in drie stappen → eigenaren |
+| Zoeken en vertrekpagina's | Vertrektabbladen → zoekveld (44 px) → één rij Filters / Sorteren / Kaart zonder randen (op de telefoon; plakt onder de header) → actieve filterchips → "n plekken in …" (18 px) met laatste update, "Uitleg icoontjes" en "Afstand tonen" (vraagt één keer je locatie; de afstand wordt op het apparaat berekend) → compacte kaarten. Doel: de eerste plek staat op een iPhone direct in beeld, niet pas na een half scherm bediening |
+| Plek | Foto (16:9) → soort, naam, adres met link naar de kaart, open/dicht, score, laatste update → **beslisblok** (één kaart: vertrekken bovenaan en als enige opvallend, daaronder prijs met duurste tarief, toeristenbelasting en uitklapbare extra kosten, open, max. lengte) → voorzieningen als labels (aanwezig en niet aanwezig, onbekend in één regel) → over deze plek → ligging en route (kaart + rijtijd) → gegevens bekend / meld een fout → ervaringen → praktisch en contact (alleen bekende gegevens, onbekend in één regel) → in de buurt. Vaste actiebalk: prijs, hartje, bellen, website, **Route**. Niets staat dubbel |
 | Dichtbij | Locatievraag → chips (zonder vertrektijd, uitslapers, nu open, voorzieningen) in één scrollrij → kaart → lijst op rijtijd |
 | Mijn reis | Stops met nachten → startpunt → route en kosten → delen en navigatie |
 
@@ -111,6 +115,6 @@ lijst naar detailpagina.
 |---|---|
 | Logo en app-icoon | Aanwezig (`web/src/app/icon.svg`, manifest) |
 | Pictogrammen (voorzieningen, klok, soorten plek) | Aanwezig (`web/src/components/sign.tsx`, `icons.tsx`) |
-| Getekende landschappen | Aanwezig (`landscape.tsx`); meer varianten per type plek gewenst (fase C) |
+| Getekende landschappen | Alleen nog voor lege toestanden (Mijn reis leeg, niet gevonden, Dichtbij-intro); niet op kaarten of de startpagina |
 | Foto's van plekken | Websitefoto's staan aan (met bron); aanvullend nodig: van bezoekers, eigenaren en Wikimedia Commons |
 | Screenshots voor app-stores | Later (fase C) |

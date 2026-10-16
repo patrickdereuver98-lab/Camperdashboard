@@ -15,8 +15,18 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/mijn-reis", label: "Mijn reis", icon: "heart" },
 ];
 
+// De vertrekpagina's en provinciepagina's zijn zoekresultaten: daar hoort het tabblad Zoeken bij
+const SEARCH_PATHS = ["/zonder-vertrektijd", "/uitslapers", "/overige-plekken", "/camperplaatsen"];
+
 const activeIn = (pathname: string) => (href: string) =>
-  href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  href === "/"
+    ? pathname === "/"
+    : pathname === href ||
+      pathname.startsWith(`${href}/`) ||
+      (href === "/zoeken" && SEARCH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
+
+/** Aantal pagina's binnen dit bezoek; bij 1 kwam je van buiten (Google, een gedeelde link) */
+let pagesSeen = 0;
 
 // usePathname() is pas bij het verzoek bekend op dynamische routes: de chrome
 // streamt daarom binnen <Suspense>, met dezelfde opmaak zonder actieve tab als placeholder.
@@ -65,11 +75,11 @@ function HeaderView({ pathname }: { pathname: string }) {
       <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 rounded-lg bg-ember px-3 py-2 font-semibold text-on-ember">
         Naar de inhoud
       </a>
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
         {pathname.startsWith("/plek/") && <BackButton />}
         <Link href="/" className="flex items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
-          <Logo />
-          <span className="font-display text-xl font-semibold tracking-tight text-forest">VrijStaan</span>
+          <Logo size={30} />
+          <span className="font-display text-lg font-semibold tracking-tight text-forest sm:text-xl">VrijStaan</span>
         </Link>
         <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Hoofdmenu">
           {NAV.map((n) => (
@@ -77,7 +87,7 @@ function HeaderView({ pathname }: { pathname: string }) {
               key={n.href}
               href={n.href}
               aria-current={isActive(n.href) ? "page" : undefined}
-              className="flex h-11 items-center gap-2 rounded-xl px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
+              className="flex h-11 items-center gap-2 rounded-lg px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
             >
               <Icon name={n.icon} size={19} />
               {n.label}
@@ -85,19 +95,33 @@ function HeaderView({ pathname }: { pathname: string }) {
             </Link>
           ))}
           <Link
+            href="/veelgestelde-vragen"
+            aria-current={isActive("/veelgestelde-vragen") ? "page" : undefined}
+            className="flex h-11 items-center gap-2 rounded-xl px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
+          >
+            <Icon name="help" size={19} />
+            Hulp
+          </Link>
+          <Link
             href="/plek-aanmelden"
-            className="ml-2 flex h-11 items-center rounded-xl border border-line px-4 font-semibold text-ink-2 transition-colors hover:border-forest hover:text-forest"
+            className="ml-2 flex h-11 items-center rounded-lg border border-line px-4 font-semibold text-ink-2 transition-colors hover:border-forest hover:text-forest"
           >
             Plek aanmelden
           </Link>
         </nav>
-        <Link
-          href="/veelgestelde-vragen"
-          className="ml-auto grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken md:hidden"
-          aria-label="Hulp en veelgestelde vragen"
-        >
-          <Icon name="help" size={22} />
-        </Link>
+        <div className="ml-auto flex items-center gap-1 md:hidden">
+          <Link
+            href="/plek-aanmelden"
+            className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken"
+            aria-label="Plek aanmelden"
+          >
+            <Icon name="plus" size={22} />
+          </Link>
+          <Link href="/veelgestelde-vragen" className="flex h-11 items-center gap-1.5 rounded-xl px-2.5 font-semibold text-ink-2 hover:bg-sunken">
+            <Icon name="help" size={22} />
+            Hulp
+          </Link>
+        </div>
         <AccountButton active={isActive("/account")} />
       </div>
       <OfflineBar />
@@ -163,7 +187,7 @@ function TabBarView({ pathname }: { pathname: string }) {
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
-                className="relative flex h-16 flex-col items-center justify-center gap-0.5 text-[13px] font-semibold text-muted aria-[current=page]:text-forest"
+                className="relative flex h-16 flex-col items-center justify-center gap-0.5 text-sm font-semibold text-muted aria-[current=page]:text-forest"
               >
                 {active && <span className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-forest" />}
                 <Icon name={t.icon} size={24} strokeWidth={active ? 2.3 : 1.9} />
@@ -191,6 +215,7 @@ export function Runtime() {
 function RuntimeLive() {
   const pathname = usePathname();
   useEffect(() => {
+    pagesSeen += 1;
     if (!pathname.startsWith("/admin")) track("page_view");
   }, [pathname]);
   useEffect(() => {
@@ -234,13 +259,13 @@ function SaveToastLive() {
     <div
       key={toast.id}
       role="status"
-      className={`animate-toast fixed left-1/2 z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-2xl bg-ink py-2 pr-2 pl-4 text-surface shadow-lift md:bottom-6 ${
+      className={`animate-toast fixed left-1/2 z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-xl bg-ink py-2 pr-2 pl-4 text-surface shadow-lift md:bottom-6 ${
         onDetail ? "bottom-[calc(88px+env(safe-area-inset-bottom))]" : "bottom-[calc(76px+env(safe-area-inset-bottom))]"
       }`}
     >
       <Icon name="heart" size={20} filled className="shrink-0 text-ember" />
       <span className="min-w-0 flex-1 truncate font-semibold">Bewaard in Mijn reis</span>
-      <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-xl px-3 font-semibold text-ember underline">
+      <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-lg px-3 font-semibold text-ember underline">
         Bekijk
       </Link>
     </div>
@@ -253,9 +278,10 @@ function BackButton() {
   return (
     <button
       type="button"
-      onClick={() => (window.history.length > 1 ? router.back() : router.push("/zoeken"))}
+      // Alleen terug als de vorige pagina ook van VrijStaan was; wie via Google binnenkwam, gaat naar de resultaten
+      onClick={() => (pagesSeen > 1 ? router.back() : router.push("/zoeken"))}
       aria-label="Terug"
-      className="-ml-2 grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken"
+      className="-ml-2 grid h-11 w-11 place-items-center rounded-lg text-ink-2 hover:bg-sunken"
     >
       <Icon name="arrowLeft" size={22} />
     </button>

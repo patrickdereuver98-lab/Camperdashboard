@@ -14,6 +14,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
+    // page.route onderschept geen verzoeken van de service worker; die cachet /api/places en zou nagemaakte data omzeilen
+    serviceWorkers: "block",
     launchOptions: chromiumPath ? { executablePath: chromiumPath } : undefined,
   },
   projects: [

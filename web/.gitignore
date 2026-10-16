@@ -45,3 +45,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 !.env.example
+
+# kaartworker, gekopieerd uit node_modules (scripts/copy-maplibre-worker.mjs)
+/public/maplibre-gl-worker.mjs

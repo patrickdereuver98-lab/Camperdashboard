@@ -1,7 +1,7 @@
 # 3. App Flow
 
 > Doel: elk scherm, elk pad en het gevolg van elke tik vastleggen.
-> Bijgewerkt: 11 oktober 2026. Routes verwijzen naar `web/src/app/`.
+> Bijgewerkt: 12 oktober 2026. Routes verwijzen naar `web/src/app/`.
 
 ## Ingangen
 
@@ -60,11 +60,11 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 | Bewaren | Hartje op kaart of plekpagina → melding "Bewaard in Mijn reis – Bekijk" → teller op tabblad Mijn reis |
 | Reis plannen | `Mijn reis` → volgorde slepen of "Slimste volgorde" → nachten per stop → startpunt → totale route en kosten → **Delen** (link met `?r=`) of **Open in navigatie** |
 | Gedeelde reis openen | Link `?r=` → voorbeeld van de stops → **Toevoegen aan mijn reis**, **Mijn reis vervangen** (met aantal stops dat weggaat), **Bewaar deze reis** of **Niet bewaren** |
-| Review schrijven | `Plek` → **Schrijf een review** → sheet met cijfer, deelscores, tekst, voertuig, maand van bezoek → **Review versturen** → "We controleren je review" |
+| Review schrijven | `Plek` → **Schrijf een review** → sheet met cijfer, deelscores, tekst, "Hoe laat moest je weg?" (optioneel), voertuig, maand van bezoek → **Review versturen** (een vertrektijd gaat apart als inzending naar beheer) → "We controleren je review" |
 | Fout melden | `Plek` → **Klopt er iets niet? Meld het** (of **Weet jij de vertrektijd?**) → sheet met onderwerp, toelichting, optioneel eigenaar + contact → bevestiging |
 | Plek aanmelden | Header **+** of footer → `Plek aanmelden` → formulier → bevestiging |
 | Contact en support | `Contact` → formulier → persoonlijke link `/support/<token>` → beheerder antwoordt → klant leest en reageert via de link |
-| Terug | Terugknop op `Plek` gaat naar de vorige pagina, of naar `/zoeken` als er geen geschiedenis is |
+| Terug | Terugknop op `Plek` gaat naar de vorige pagina binnen VrijStaan, of naar `/zoeken` als je van buiten kwam (Google, een gedeelde link) |
 | Annuleren | Elke sheet sluit met ×, swipe omlaag of tik buiten de sheet; niets wordt opgeslagen |
 
 ## Per actie: trigger, controle, laden, succes, fout, volgende scherm
@@ -73,9 +73,10 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 |---|---|---|---|---|---|---|
 | Zoeken | Zoek-knop of Enter | Plaats, streek, eiland of provincie gevonden (vergeeft typfouten en aliassen) | Kaarten als skelet | Resultaten met titel "n plekken in <plaats>" | "Geen plaats, streek of plek gevonden" onder het zoekveld | `Zoeken` |
 | Filter toepassen | **Toon n plekken** in de sheet | Knop uit bij 0 resultaten, met voorstel welke filter weg kan | Live teller | Chips boven de lijst, filters in de URL | — | `Zoeken` |
-| Lijst/kaart wisselen | Zwevende knop **Toon kaart/lijst** | — | "Kaart laden…" | Kaart met clusters | "De kaart kon niet worden geladen" + **Toon lijst** | `Zoeken` |
+| Lijst/kaart wisselen | **Kaart** / **Lijst** in de rij met Filters en Sorteren (telefoon en tablet) | — | "Kaart laden…" | Kaart met clusters | "De kaart kon niet worden geladen" + **Toon lijst** | `Zoeken` |
 | Locatie gebruiken | **Gebruik mijn locatie** | Browsertoestemming | "Locatie bepalen…" | Lijst; rijtijden volgen | Geweigerd: uitleg + verwijzing naar zoeken; onbekend: "Probeer opnieuw" | `Dichtbij` |
-| Rijtijd berekenen | **Bereken vanaf mijn locatie** | Toestemming; locatie afgerond op ±1 km | "Bezig…" | "x min rijden, y km over de weg" | "Open de route in je navigatie-app" | `Plek` |
+| Afstand tonen | **Afstand tonen** boven de zoekresultaten (of stil als locatie al eerder is toegestaan) | Browsertoestemming | "Locatie bepalen…" | Op elke kaart "x km van je locatie" (hemelsbreed, berekend op het apparaat, niets naar de server) | Geweigerd: "Locatie staat uit, afstand onbekend" | `Zoeken` |
+| Rijtijd berekenen | **Rijtijd berekenen** (onder de kaart bij Ligging en route) | Toestemming; locatie afgerond op ±1 km | "Bezig…" | "x min rijden, y km over de weg" | "Open de route in je navigatie-app" | `Plek` |
 | Bewaren | Hartje | — | Hartje springt direct | Melding met **Bekijk** | Opslag niet beschikbaar: hartje blijft leeg | Zelfde scherm |
 | Review versturen | **Review versturen** | Totaalcijfer verplicht, tekst 20–3.000 tekens, naam 2–60 tekens; verborgen honeypotveld tegen spam | Knop "Versturen…" | "Bedankt, we controleren je review" | Foutmelding in de sheet | Zelfde scherm |
 | Fout melden | **Versturen** in de sheet | Onderwerp en toelichting (min. 5 tekens) verplicht; e-mail geldig als ingevuld; honeypotveld | Knop uit | "Bedankt voor je melding" | Foutmelding in de sheet | Zelfde scherm |
@@ -86,7 +87,8 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 
 - **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
   vaste actiebalk met prijs, hartje, bellen, website en **Route**.
-- **Header**: logo naar Start, **+** naar Plek aanmelden, **?** naar Veelgestelde vragen. Op `/plek/*` een terugknop.
+- **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden). Op `/plek/*` een terugknop.
+- **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en de provinciepagina's.
 - **Footer**: over VrijStaan, juridisch, Cookie-instellingen, Meld inhoud.
 - **Deep links `/zoeken`**: `waar`, `lat`, `lng`, `straal`, `provincie`, `v` (voorzieningen: stroom, water, lozen,
   toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`ruim`, `vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),
@@ -103,7 +105,8 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 | Offline | Bewaarde reis en eerder bekeken pagina's werken; in Mijn reis de melding "Geen verbinding. Je ziet de gegevens van je reis zoals ze de vorige keer zijn bewaard." |
 | Rijtijden niet beschikbaar | Afstand hemelsbreed, met uitleg |
 | Gegeven onbekend | "Onbekend" in grijs, of bij vertrektijd: "Weet jij de vertrektijd? Laat het weten" |
-| Geen foto | Getekend landschap met "Nog geen foto van deze plek" |
+| Geen foto | Getekend landschap met "Nog geen foto van deze plek" (ook als alle foto's keurmerken, logo's van anderen of te klein zijn) |
+| Geen bruikbare beschrijving | Het blok "Over deze plek" ontbreekt; we schrijven geen eigen tekst |
 | Leeg Mijn reis | Uitleg en knop naar zoeken |
 | Geen statistieken (beheer) | "Nog geen statistieken. Die verschijnen zodra bezoekers statistieken toestaan." |
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
 import { useSharedLink, useTrip } from "@/lib/store";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage, supabase, toJson } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 
 /** Samen een reis plannen: één gedeelde reis die bij iedereen tegelijk bijwerkt */
@@ -40,7 +40,7 @@ export function SharedCard() {
   async function start() {
     setBusy(true);
     setErr(null);
-    const { data, error } = await supabase().rpc("create_shared_trip", { p_stops: trip.stops, p_name: "Onze reis" });
+    const { data, error } = await supabase().rpc("create_shared_trip", { p_stops: toJson(trip.stops), p_name: "Onze reis" });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     setLink(data as { id: string; code: string; name: string });

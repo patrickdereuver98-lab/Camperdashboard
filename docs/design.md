@@ -1,5 +1,9 @@
 # Ontwerpsysteem VrijStaan: "natuur & vrijheid"
 
+> **Let op (12 oktober 2026):** typografie, vormen, iconen en beweging staan nu in `docs/stijlgids.md`, die voorgaat.
+> Fraunces en Inter zijn vervangen door Geist; getekende landschappen en gevulde icoonblokjes zijn verdwenen van
+> kaarten en de startpagina. De kleuren hieronder gelden nog.
+
 ## Uitgangspunt
 
 VrijStaan gaat over het gevoel van vrij staan: een avond aan de bosrand, een plek aan het water, de camper onder
@@ -7,7 +11,7 @@ de ondergaande zon. Het ontwerp is warm en rustig: zandpapier als ondergrond, bo
 avondzon-accenten en meerblauw voor water en routes. Koppen in Fraunces geven karakter, Inter houdt alle
 lopende tekst goed leesbaar.
 
-Het hoofdapparaat is een smartphone, vaak onderweg en vaak bediend door 50-plussers. Daarom: grote tekst (17px basis),
+Het hoofdapparaat is een smartphone, vaak onderweg en vaak bediend door 50-plussers. Daarom: goed leesbare tekst (16px basis op de telefoon, 17px vanaf tablet),
 grote tikvlakken (minimaal 44px), voldoende contrast en één duidelijke actie per scherm.
 
 ## Tokens
@@ -61,8 +65,8 @@ Typografie:
 ```
 
 Resultaten op mobiel: compacte rijen met foto (of landschap) links, naam, plaats, seizoensstatus, pictogrammen en
-de prijs rechtsonder. Filters in een bottom sheet met een live teller ("Toon 128 plekken"). Lijst en kaart wisselen
-via een zwevende knop boven de tabbalk.
+de prijs rechtsonder. Filters in een bottom sheet met een live teller ("Toon 128 plekken"). Boven de lijst één rij
+zoals bij Booking: Filters, Sorteren en Kaart (wisselt naar Lijst); geen zwevende knop meer over de kaarten.
 
 ## Beweging
 

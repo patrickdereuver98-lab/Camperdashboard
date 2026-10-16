@@ -102,13 +102,13 @@ export function TripApp() {
     const merged = [...trip.stops, ...incomingStops.filter((s) => !trip.has(s.slug))];
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 pb-10">
-        <h1 className="font-display text-3xl font-semibold">Gedeelde reis</h1>
+        <h1 className="font-display text-2xl font-semibold sm:text-3xl">Gedeelde reis</h1>
         <p className="mt-2 text-ink-2">Iemand heeft deze reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld.</p>
         <ol className="mt-5 space-y-2">
           {incomingStops.map((s, i) => {
             const p = bySlug.get(s.slug);
             return (
-              <li key={s.slug} className="flex items-center gap-3 rounded-2xl bg-surface p-3 shadow-low">
+              <li key={s.slug} className="flex items-center gap-3 rounded-xl bg-surface p-3 shadow-low">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">{i + 1}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p?.name ?? s.slug}</span>
@@ -125,19 +125,19 @@ export function TripApp() {
         <div className="mt-6 grid gap-2">
           {trip.stops.length > 0 ? (
             <>
-              <button type="button" onClick={() => { trip.replace(merged); router.replace("/mijn-reis"); }} className="h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
+              <button type="button" onClick={() => { trip.replace(merged); router.replace("/mijn-reis"); }} className="h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest">
                 Toevoegen aan mijn reis
               </button>
-              <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-xl border-2 border-line px-6 font-semibold">
+              <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-lg border border-line px-6 font-semibold">
                 Mijn reis vervangen ({pluralize(trip.stops.length, "stop", "stops")} gaan weg)
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-xl bg-forest px-6 font-semibold text-on-forest">
+            <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest">
               Bewaar deze reis
             </button>
           )}
-          <button type="button" onClick={() => router.replace("/mijn-reis")} className="h-12 rounded-xl px-6 font-semibold text-forest underline">
+          <button type="button" onClick={() => router.replace("/mijn-reis")} className="h-12 rounded-lg px-6 font-semibold text-forest underline">
             Niet bewaren
           </button>
         </div>
@@ -148,14 +148,14 @@ export function TripApp() {
   if (trip.stops.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-10 text-center sm:pt-14">
-        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-[1.75rem] shadow-lift">
+        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-2xl shadow-lift">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-8 font-display text-3xl font-semibold sm:text-4xl">Je reis is nog leeg</h1>
-        <p className="mt-3 text-lg text-ink-2">
+        <h1 className="mt-6 font-display text-2xl font-semibold sm:text-4xl">Je reis is nog leeg</h1>
+        <p className="mt-2 text-ink-2 sm:text-lg">
           Tik op het hartje bij een plek om hem te bewaren. Hier zet je ze op volgorde en zie je de echte rijtijd en wat de reis ongeveer kost.
         </p>
-        <Link href="/zoeken" className="mt-8 inline-flex h-14 items-center gap-2 rounded-xl bg-forest px-7 font-display text-lg font-semibold text-on-forest">
+        <Link href="/zoeken" className="mt-8 inline-flex h-14 items-center gap-2 rounded-lg bg-forest px-7 font-display text-lg font-semibold text-on-forest hover:bg-forest-deep">
           <Icon name="search" size={21} /> Plekken zoeken
         </Link>
       </div>
@@ -186,16 +186,16 @@ export function TripApp() {
   })();
 
   return (
-    <div className="mx-auto max-w-6xl px-3 pt-5 pb-10 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="mx-auto max-w-6xl px-3 pt-3 pb-10 sm:px-6 sm:pt-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Mijn reis</h1>
-          <p className="text-ink-2">
+          <h1 className="font-display text-xl font-semibold sm:text-3xl">Mijn reis</h1>
+          <p className="text-sm text-ink-2 sm:text-base">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
         </div>
         {placesError && (
-          <p role="status" className="w-full rounded-xl bg-sunken px-4 py-3 text-sm text-ink-2">
+          <p role="status" className="w-full rounded-lg bg-sunken px-4 py-3 text-sm text-ink-2">
             Geen verbinding. Je ziet de gegevens van je reis zoals ze de vorige keer zijn bewaard.
           </p>
         )}
@@ -203,7 +203,7 @@ export function TripApp() {
           <button
             type="button"
             onClick={() => trip.replace(optimize(stops, start).map(({ slug, nights: n }) => ({ slug, nights: n })))}
-            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest"
+            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-[0.9375rem] font-semibold hover:border-forest"
           >
             <Icon name="route" size={18} /> Slimste volgorde
           </button>
@@ -217,7 +217,7 @@ export function TripApp() {
                 setTimeout(() => setShared(false), 2500);
               }
             }}
-            className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest"
+            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-[0.9375rem] font-semibold hover:border-forest"
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
@@ -227,10 +227,10 @@ export function TripApp() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
+      <div className="mt-4 grid gap-6 sm:mt-6 sm:gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
           {/* Vertrekpunt */}
-          <div className="mb-3 flex items-center gap-3 rounded-2xl bg-surface p-3 shadow-low">
+          <div className="mb-3 flex items-center gap-3 rounded-xl bg-surface p-3 shadow-low">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sunken text-ink-2">
               <Icon name="locate" size={20} />
             </span>
@@ -259,7 +259,7 @@ export function TripApp() {
                     { timeout: 12000 },
                   );
                 }}
-                className="h-11 rounded-xl border-2 border-line px-3 font-semibold hover:border-forest"
+                className="h-11 rounded-lg border border-line px-3 font-semibold hover:border-forest"
               >
                 Mijn locatie
               </button>
@@ -288,16 +288,16 @@ export function TripApp() {
                           : `${formatKm(distanceKm(i === 0 ? start! : stops[i - 1].place, s.place))} hemelsbreed`}
                     </div>
                   )}
-                  <div className="rounded-2xl bg-surface p-3 shadow-low">
+                  <div className="rounded-xl bg-surface p-3 shadow-low">
                     <div className="flex gap-3">
-                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
                         <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
                         <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-forest font-display text-xs font-semibold text-on-forest">
                           {i + 1}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-display text-lg font-semibold hover:text-forest">
+                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
                           {s.place.name}
                         </Link>
                         <OpenChip place={s.place} />
@@ -312,7 +312,7 @@ export function TripApp() {
                       </div>
                     </div>
                     <div className="mt-2 flex items-center gap-1">
-                      <div className="flex items-center rounded-xl border-2 border-line" role="group" aria-label={`Nachten bij ${s.place.name}`}>
+                      <div className="flex items-center rounded-lg border border-line" role="group" aria-label={`Nachten bij ${s.place.name}`}>
                         <button type="button" aria-label="Een nacht minder" disabled={s.nights <= 1} onClick={() => trip.setNights(s.slug, s.nights - 1)} className="grid h-11 w-11 place-items-center disabled:opacity-30">
                           <Icon name="minus" size={18} />
                         </button>
@@ -339,13 +339,13 @@ export function TripApp() {
             })}
           </ol>
           </MotionConfig>
-          <Link href="/zoeken" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line font-semibold text-forest hover:border-forest">
+          <Link href="/zoeken" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-lg border border-dashed border-line font-semibold text-forest hover:border-forest">
             <Icon name="plus" size={19} /> Plek toevoegen
           </Link>
         </div>
 
         <aside className="min-w-0 space-y-4">
-          <div className="rounded-2xl bg-surface p-5 shadow-low">
+          <div className="rounded-xl bg-surface p-4 shadow-low sm:p-5">
             <h2 className="font-display text-xl font-semibold">Overzicht</h2>
             <dl className="mt-3 space-y-2">
               <div className="flex justify-between">
@@ -398,7 +398,7 @@ export function TripApp() {
             )}
             {routeState === "error" && <p className="mt-2 text-sm text-alert">De routeplanner is even niet bereikbaar; afstanden zijn hemelsbreed.</p>}
 
-            <details className="mt-4 rounded-xl bg-sunken p-4">
+            <details className="mt-4 rounded-lg bg-sunken p-4">
               <summary className="cursor-pointer font-semibold">Uitgangspunten aanpassen</summary>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {(
@@ -418,14 +418,14 @@ export function TripApp() {
                       min={0}
                       value={settings[k]}
                       onChange={(e) => setSettings({ ...settings, [k]: Number(e.target.value) || 0 })}
-                      className="h-11 w-full rounded-lg border-2 border-line bg-surface px-3"
+                      className="h-11 w-full rounded-lg border border-line bg-surface px-3"
                     />
                   </label>
                 ))}
               </div>
             </details>
 
-            <a href={gmaps} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-xl bg-forest font-semibold text-on-forest">
+            <a href={gmaps} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest">
               <Icon name="route" size={19} /> Open route in Google Maps
             </a>
           </div>
@@ -440,16 +440,16 @@ export function TripApp() {
             user={start}
             cluster={false}
             fitKey={routeKey ?? stops.map((s) => s.slug).join()}
-            className="h-80 rounded-2xl shadow-low"
+            className="h-80 rounded-xl shadow-low"
           />
           <p className="flex items-center gap-2 text-sm text-muted">
             <Sign name="camper" size={22} /> Route over de weg via OpenRouteService of OSRM.
           </p>
           {confirmClear ? (
-            <div role="alert" className="animate-fade-in rounded-2xl bg-alert-tint p-4">
+            <div role="alert" className="animate-fade-in rounded-xl bg-alert-tint p-4">
               <p className="font-semibold text-alert">Je hele reis wissen? Dit kun je niet ongedaan maken.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setConfirmClear(false)} className="h-12 rounded-xl border-2 border-line bg-surface font-semibold">
+                <button type="button" onClick={() => setConfirmClear(false)} className="h-12 rounded-lg border border-line bg-surface font-semibold">
                   Annuleren
                 </button>
                 <button
@@ -458,7 +458,7 @@ export function TripApp() {
                     trip.clear();
                     setConfirmClear(false);
                   }}
-                  className="h-12 rounded-xl bg-alert font-semibold text-surface"
+                  className="h-12 rounded-lg bg-alert font-semibold text-surface"
                 >
                   Ja, wissen
                 </button>

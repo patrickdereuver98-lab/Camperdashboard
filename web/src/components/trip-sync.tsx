@@ -5,7 +5,7 @@ import { useSession } from "@/lib/auth";
 import { useExpenses, useSharedLink, useTrip, useVehicle } from "@/lib/store";
 import { mergeExpenses, type Expense } from "@/lib/expenses";
 import { cleanVehicle, hasVehicle, type Vehicle } from "@/lib/vehicle";
-import { supabase } from "@/lib/supabase-browser";
+import { supabase, toJson } from "@/lib/supabase-browser";
 import { mergeTrips, sameTrip, type Stop } from "@/lib/trip-merge";
 
 /**
@@ -53,7 +53,7 @@ function VehicleSync() {
         setVehicle(remote);
         lastPushed.current = remote;
       } else if (hasVehicle(vehicle) && !sameVehicle(vehicle, remote)) {
-        await sb.from("user_vehicles").upsert({ user_id: userId, data: cleanVehicle(vehicle), updated_at: new Date().toISOString() });
+        await sb.from("user_vehicles").upsert({ user_id: userId, data: toJson(cleanVehicle(vehicle)), updated_at: new Date().toISOString() });
         lastPushed.current = vehicle;
       } else lastPushed.current = vehicle;
       pulled.current = userId;
@@ -69,7 +69,7 @@ function VehicleSync() {
     if (lastPushed.current && sameVehicle(lastPushed.current, vehicle)) return;
     const t = setTimeout(() => {
       lastPushed.current = vehicle;
-      send(supabase().from("user_vehicles").upsert({ user_id: userId, data: cleanVehicle(vehicle), updated_at: new Date().toISOString() }));
+      send(supabase().from("user_vehicles").upsert({ user_id: userId, data: toJson(cleanVehicle(vehicle)), updated_at: new Date().toISOString() }));
     }, 800);
     return () => clearTimeout(t);
   }, [vehicle, userId]);
@@ -101,7 +101,7 @@ function ExpenseSync() {
       const merged = mergeExpenses(list, data?.entries);
       if (!sameExpenses(merged, list)) replace(merged);
       if (!data || !sameExpenses(merged, mergeExpenses([], data.entries))) {
-        await sb.from("user_expenses").upsert({ user_id: userId, entries: merged, updated_at: new Date().toISOString() });
+        await sb.from("user_expenses").upsert({ user_id: userId, entries: toJson(merged), updated_at: new Date().toISOString() });
       }
       lastPushed.current = merged;
       pulled.current = userId;
@@ -117,7 +117,7 @@ function ExpenseSync() {
     if (lastPushed.current && sameExpenses(lastPushed.current, list)) return;
     const t = setTimeout(() => {
       lastPushed.current = list;
-      send(supabase().from("user_expenses").upsert({ user_id: userId, entries: list, updated_at: new Date().toISOString() }));
+      send(supabase().from("user_expenses").upsert({ user_id: userId, entries: toJson(list), updated_at: new Date().toISOString() }));
     }, 800);
     return () => clearTimeout(t);
   }, [list, userId]);
@@ -180,7 +180,7 @@ function SharedTripSync() {
     if (!tripId || !lastSynced.current || sameTrip(lastSynced.current, stops)) return;
     const t = setTimeout(() => {
       lastSynced.current = stops;
-      send(supabase().from("shared_trips").update({ stops }).eq("id", tripId));
+      send(supabase().from("shared_trips").update({ stops: toJson(stops) }).eq("id", tripId));
     }, 500);
     return () => clearTimeout(t);
   }, [stops, tripId]);
@@ -224,7 +224,7 @@ function TripSyncInner() {
     if (lastPushed.current && sameTrip(lastPushed.current, stops)) return;
     const t = setTimeout(() => {
       lastPushed.current = stops;
-      send(supabase().from("user_trips").upsert({ user_id: userId, stops, updated_at: new Date().toISOString() }));
+      send(supabase().from("user_trips").upsert({ user_id: userId, stops: toJson(stops), updated_at: new Date().toISOString() }));
     }, 800);
     return () => clearTimeout(t);
   }, [stops, userId]);

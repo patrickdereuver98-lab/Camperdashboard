@@ -6,6 +6,7 @@ export function placesQuery(region: string) {
 area["ISO3166-2"="${region}"]->.r;
 (
   nwr["tourism"="caravan_site"](area.r);
+  nwr["tourism"="camp_site"]["motorhome"!="no"]["tents"!="only"](area.r);
   nwr["motorhome"~"^(yes|designated)$",i](area.r);
 );
 out center tags;`;
@@ -86,10 +87,16 @@ function firstBool(t: Tags, keys: string[], kind: BoolKind = "generic") {
 
 // ── Toelating en naam ──────────────────────────────────────────────────────
 
-/** Alleen echte camperplekken: tourism=caravan_site of expliciet motorhome=yes/designated */
+/**
+ * Plekken waar een camper terecht kan: tourism=caravan_site, expliciet motorhome=yes/designated, of een camping die
+ * campers niet uitsluit (geen motorhome=no, niet alleen tenten). Besluit B2 (16 oktober 2026): geen strikte toelating,
+ * want zoveel mogelijk plekken gaat voor; de ±900 campings zonder motorhome-tag blijven ververst.
+ */
 export function isMotorhomePlace(t: Tags): boolean {
   if (t.tourism === "caravan_site") return true;
-  return /^(yes|designated)$/i.test((t.motorhome ?? "").split(";")[0].trim());
+  const motorhome = (t.motorhome ?? "").split(";")[0].trim();
+  if (/^(yes|designated)$/i.test(motorhome)) return true;
+  return t.tourism === "camp_site" && !/^no$/i.test(motorhome) && t.tents !== "only";
 }
 
 // Namen die niets zeggen: die behandelen we als ontbrekend (de database maakt er "Camperplaats <plaats>" van)

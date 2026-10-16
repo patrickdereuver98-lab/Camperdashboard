@@ -55,7 +55,7 @@ export default function Dashboard() {
       </PageTitle>
       <ErrorNote message={error} />
       {!o ? (
-        <p className="text-muted">Cijfers laden…</p>
+        !error && <p className="text-muted">Cijfers laden…</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -74,9 +74,9 @@ export default function Dashboard() {
               <h2 className="font-display text-lg font-semibold">Volledigheid van de data</h2>
               <p className="text-sm text-muted">Gewogen score; een plek gaat online vanaf de drempel in Instellingen en als de harde eisen kloppen.</p>
               <dl className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
-                <div className="rounded-xl bg-sunken p-2"><dt className="text-muted">Geen contact</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_contact}</dd></div>
-                <div className="rounded-xl bg-sunken p-2"><dt className="text-muted">Mist beslisfeiten</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_facts}</dd></div>
-                <div className="rounded-xl bg-sunken p-2"><dt className="text-muted">Score te laag</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_score}</dd></div>
+                <div className="rounded-lg bg-sunken p-2"><dt className="text-muted">Geen contact</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_contact}</dd></div>
+                <div className="rounded-lg bg-sunken p-2"><dt className="text-muted">Mist beslisfeiten</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_facts}</dd></div>
+                <div className="rounded-lg bg-sunken p-2"><dt className="text-muted">Score te laag</dt><dd className="font-display text-lg font-semibold">{o.places.blocked_score}</dd></div>
               </dl>
               <ul className="mt-4 space-y-2">
                 {[...o.buckets].reverse().map((b) => (
@@ -173,7 +173,7 @@ function Stat({ label, value, sub, href, alert }: { label: string; value: number
       {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
     </>
   );
-  const cls = "block rounded-2xl bg-surface p-4 outline-1 outline-line outline";
+  const cls = "block rounded-xl bg-surface p-4 outline-1 outline-line outline";
   return href ? <Link href={href} className={`${cls} hover:outline-forest`}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 

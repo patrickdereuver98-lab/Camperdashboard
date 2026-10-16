@@ -6,27 +6,27 @@ const el = (tags: Record<string, string>, extra: Record<string, unknown> = {}) =
 
 // ── Toelating ────────────────────────────────────────────────────────────────
 
-test("toegelaten: tourism=caravan_site of motorhome=yes/designated", () => {
+test("toegelaten: caravan_site, motorhome=yes/designated en campings die campers niet uitsluiten (besluit B2)", () => {
   assert.equal(isMotorhomePlace({ tourism: "caravan_site" }), true);
   assert.equal(isMotorhomePlace({ amenity: "parking", motorhome: "yes" }), true);
   assert.equal(isMotorhomePlace({ tourism: "camp_site", motorhome: "designated" }), true);
   assert.equal(isMotorhomePlace({ tourism: "camp_site", motorhome: "Yes;fee" }), true);
+  assert.equal(isMotorhomePlace({ tourism: "camp_site" }), true);
+  assert.notEqual(mapOsm(el({ tourism: "camp_site", name: "De Wei" })), null);
 });
 
-test("geweigerd: camping zonder motorhome-tag, motorhome=no, gewone parkeerplaats", () => {
-  assert.equal(isMotorhomePlace({ tourism: "camp_site" }), false);
+test("geweigerd: motorhome=no, alleen tenten, gewone parkeerplaats", () => {
   assert.equal(isMotorhomePlace({ tourism: "camp_site", motorhome: "no" }), false);
+  assert.equal(isMotorhomePlace({ tourism: "camp_site", tents: "only" }), false);
   assert.equal(isMotorhomePlace({ amenity: "parking" }), false);
   assert.equal(isMotorhomePlace({ amenity: "parking", motorhome: "unknown" }), false);
-  assert.equal(mapOsm(el({ tourism: "camp_site", name: "De Wei" })), null);
 });
 
-test("Overpass-query vraagt alleen caravan_site en motorhome=yes|designated op", () => {
+test("Overpass-query vraagt caravan_site, campings zonder uitsluiting en motorhome=yes|designated op", () => {
   const q = placesQuery("NL-UT");
   assert.match(q, /\["tourism"="caravan_site"\]/);
+  assert.match(q, /\["tourism"="camp_site"\]\["motorhome"!="no"\]\["tents"!="only"\]/);
   assert.match(q, /\["motorhome"~"\^\(yes\|designated\)\$",i\]/);
-  assert.doesNotMatch(q, /camp_site/);
-  assert.doesNotMatch(q, /!=/);
 });
 
 test("geweigerd: privé, buiten gebruik, buiten Nederland, zonder coördinaten", () => {

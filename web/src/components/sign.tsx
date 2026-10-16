@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
 /**
- * Voorzieningen als kleine, afgeronde pictogrammen in bosgroen.
- * Aanwezig = gevuld groen, niet aanwezig = doorgestreept, onbekend = zandkleurig.
+ * Voorzieningen als kleine lijniconen op een lichte ondergrond.
+ * Aanwezig = bosgroen icoon op lichtgroen, niet aanwezig = grijs en doorgestreept, onbekend = lichtgrijs.
  */
 
-const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
 const GLYPHS = {
   camper: (
@@ -73,7 +73,9 @@ export function Sign({
   className?: string;
 }) {
   const on = state === "on";
-  const bg = on ? `var(--${tone})` : "var(--sunken)";
+  // Rustige lijniconen op een lichte ondergrond; kleur alleen als het iets betekent (docs/stijlgids.md §8)
+  const bg = on ? `var(--${tone}-tint)` : "var(--sunken)";
+  const fg = on ? `var(--${tone})` : state === "off" ? "var(--muted)" : "color-mix(in srgb, var(--muted) 70%, transparent)";
   return (
     <svg
       width={size}
@@ -85,11 +87,11 @@ export function Sign({
       className={`shrink-0 ${className}`}
       style={{ ["--sign-bg" as string]: bg }}
     >
-      <rect width="32" height="32" rx="10" fill={bg} />
-      <g transform="translate(4 4)" color={on ? "var(--on-forest)" : "var(--muted)"}>
+      <rect width="32" height="32" rx="8" fill={bg} />
+      <g transform="translate(5 5) scale(0.917)" color={fg}>
         {GLYPHS[name]}
       </g>
-      {state === "off" && <path d="M7 25 25 7" stroke="var(--alert)" strokeWidth="2.4" strokeLinecap="round" />}
+      {state === "off" && <path d="M8 24 24 8" stroke="var(--alert)" strokeWidth="2" strokeLinecap="round" />}
     </svg>
   );
 }
