@@ -125,7 +125,7 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 | Door `discover` gevonden websites eerst laten bevestigen | audit A4 | Audit-agent (#9) | Raakt alleen `functions/discover` en één RPC; niemand anders zit daar | ⬜ wacht op akkoord (live deploy) |
 | Overpass-ruis in `app_logs` (110 per week) | audit A6 | Audit-agent (#9) | Alleen `functions/pipeline/index.ts`; #4 en #5 raken die niet | ⬜ wacht op akkoord (live deploy) |
 | Testtabellen `private.probe*` weg | specs open punt 10 | Patrick (SQL-editor) | Verwijderen vraagt bevestiging | ⬜ |
-| Snapshot verversen naar 1.536 plekken | audit A5, #10 S5 en 0.5, #11 D3 | Sessie kernbelofte | Is er al mee bezig (`write_snapshot.py`) | 🔄 |
+| Snapshot verversen naar 1.536 plekken | audit A5, #10 S5 en 0.5, #11 D3 | Sessie kernbelofte | `web/scripts/refresh-snapshot.mjs` en een wekelijkse workflow `snapshot.yml` (PR `data/snapshot` → `acceptatie`) | 🔄 PR #12 |
 
 ## 7. Werkafspraken voor alle agents
 
