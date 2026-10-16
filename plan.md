@@ -164,7 +164,7 @@ Weinig risico en direct zichtbaar. Dit komt uit de UI/UX- en gebruikersreview.
 |---|---|---|
 | D1 | **Meer "vrij staan"-plekken:** OSM `amenity=parking + motorhome=designated` en gemeentelijke camperplaatsen gericht ophalen, "per 24 uur"-plekken herkennen; doel: 150 plekken zonder vertrektijd en de categorie camperparkeerplaats gevuld | L |
 | D2 | **Vertrektijd-campagne:** Doe mee gericht inzetten op de 372 plekken met een onbekende vertrektijd (met regio- en voortgangsdoel) | M |
-| D3 | **Snapshot en live gelijktrekken** (680 ↔ 1.509 plekken) en de 44 plekken onder de publicatieregel nakijken | S |
+| D3 | **Snapshot en live gelijktrekken** (680 ↔ 1.536 plekken) en de 44 plekken onder de publicatieregel nakijken. Status: `web/scripts/refresh-snapshot.mjs` plus de wekelijkse workflow `.github/workflows/snapshot.yml` (PR naar `acceptatie`); eerste run handmatig starten via Actions | S |
 
 ---
 
