@@ -4,7 +4,21 @@
 > Patrick. Werk dit bestand bij als je een PR opent, samenvoegt of een taak oppakt, zodat niemand dubbel werk doet.
 > Cijfers komen uit de live database (alleen lezen), niet uit de snapshot.
 
-## 1. Stand van zaken
+## 0. Stand 16 oktober 2026, avond: alles samengevoegd in `acceptatie`
+
+Na akkoord van Patrick zijn alle open PR's in de volgorde van §3 samengevoegd naar `acceptatie`: #6, #10, #13
+(afrondingsplan, kaart 6.14, CSP, bewaking, back-up), #5, #4, #12 en daarna #11 en #9. Bij elke stap zijn de
+botsingen opgelost, en waren lint, typecheck, 74 unit-tests, de offline build en 90 E2E-tests groen.
+`main` krijgt alles via één PR van `acceptatie` naar `main`, die Patrick samenvoegt na een controle op de
+Vercel-preview.
+
+Besluiten van 16 oktober: B2 nee (toelating uit OSM blijft zoals die was), B3 geen advertenties, B4 en B9 ja
+(werkwijze via `acceptatie`). Websites worden voortaan eens per 30 dagen opnieuw gelezen (cron `scrape-refresh`).
+
+Wat nog openstaat, staat in [`plan.md`](../plan.md): §3 voor Patrick (B5 tot B8, B10, B11, B13), §4 voor de
+polishronde. Dit bord blijft hieronder staan als verslag van hoe het samenvoegen is gegaan.
+
+## 1. Stand van zaken (ochtend 16 oktober)
 
 `main` staat nog op 12 oktober (`c68d087`). Sindsdien zijn zes agents parallel bezig geweest. Niets daarvan is
 samengevoegd, maar een deel staat wel al **live in de database** (migraties van PR #4, #10 en #12).
@@ -71,14 +85,14 @@ worden. Pas daarna de volgende merge. Als B9 bevestigd is, geldt alles hieronder
 | # | Besluit | Waarom nu | Komt uit |
 |---|---|---|---|
 | B1 | ✅ **Besloten door Patrick (16 oktober):** accounts, drukte, push, camperprofiel en uitgaven blijven (PR #4). De privacyverklaring op #4 noemt al account, camperpapieren, drukte, push, uitgaven, samen plannen en foto's (nagekeken) | Staat al live in de database | #4, audit C1 |
-| B2 | Strikte OSM-toelating: zo'n 900 campings zonder tag `caravan_site` of `motorhome=yes` worden dan niet meer ververst | Raakt het aantal plekken, de prioriteit van de eigenaar | #4 open punt 12 |
-| B3 | Advertenties: geen, sponsoring zonder tracking, of AdSense | AdSense botst met "geen tracking van derden" en met Vercel Hobby | #4 open punt 14 |
+| B2 | ✅ **Besloten (16 oktober): nee.** Strikte OSM-toelating: zo'n 900 campings zonder tag `caravan_site` of `motorhome=yes` worden dan niet meer ververst | Raakt het aantal plekken, de prioriteit van de eigenaar | #4 open punt 12 |
+| B3 | ✅ **Besloten (16 oktober): geen advertenties.** Advertenties: geen, sponsoring zonder tracking, of AdSense | AdSense botst met "geen tracking van derden" en met Vercel Hobby | #4 open punt 14 |
 | B4 | ✅ **Volgorde goedgekeurd door Patrick (16 oktober).** PR's gaan één voor één uit draft, in de volgorde van §3 | Elke dag langer wordt het samenvoegen zwaarder | dit bord |
 | B5 | Zelf uitvoeren in de SQL-editor: `web/supabase/retention.sql` (PR #10) en `delete_my_account(p_confirm text)` (onderaan `migrations/20261012_user_accounts.sql` op PR #4) | De Supabase-tool van de agents kan de bevestiging niet geven | #10 0.4, #4 |
 | B6 | Beheeraccount aanmaken via `/admin` | Zonder account blijven inzendingen, reviews en tickets liggen | alle drie de reviews |
 | B7 | Login-sleutels (Google, Facebook) en eigen SMTP | Nodig voor B1 en voor mail bij tickets | #4, #10, audit B5 |
 | B8 | Bedrijfsgegevens in `web/src/lib/company.ts` | Juridische pagina's tonen nog plaatshouders | alle |
-| B9 | Werkwijze via `acceptatie` bevestigen, en de kernbelofte zoals #12 die bouwt: alleen na bevestiging door een mens op `/zonder-vertrektijd`, "per 24 uur" met eigen label, "vrij behalve bij drukte" niet op de kernpagina, bevestiging een jaar geldig | Volgens de sessie van #12 al door Patrick besloten; staat nog niet bij Patrick zelf op dit bord | #12 |
+| B9 | ✅ **Bevestigd (16 oktober).** Werkwijze via `acceptatie` bevestigen, en de kernbelofte zoals #12 die bouwt: alleen na bevestiging door een mens op `/zonder-vertrektijd`, "per 24 uur" met eigen label, "vrij behalve bij drukte" niet op de kernpagina, bevestiging een jaar geldig | Volgens de sessie van #12 al door Patrick besloten; staat nog niet bij Patrick zelf op dit bord | #12 |
 
 ## 5. Eén nummering voor de open punten
 

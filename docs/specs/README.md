@@ -14,7 +14,10 @@ code niet bij de documenten, dan is dat een open punt (zie onder).
 | 6 | [Implementatieplan](06-implementatieplan.md) | Mijlpalen en taken met status |
 
 Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `docs/design.md` (ontwerpdetails),
-`docs/onderzoek.md` (vooronderzoek), `docs/review-2026-10.md` (review en wijzigingsplan, oktober 2026).
+`docs/onderzoek.md` (vooronderzoek), `docs/review-2026-10.md` (review en wijzigingsplan, oktober 2026),
+`docs/audit-2026-10.md` (audit 12 oktober), `docs/review/` (feature review), `docs/samenwerking.md` (hoe de PR's van
+oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md` (terugdraaien, back-up, bewaking) en
+[`plan.md`](../../plan.md) (wat nog openstaat).
 
 ## Zo gebruik je ze
 
