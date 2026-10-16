@@ -75,6 +75,8 @@ export interface Filters {
   /** Bij een prijsfilter ook plekken tonen waarvan de prijs onbekend is */
   priceUnknown: boolean;
   minLength?: number;
+  /** Lengtefilter bewust uitgezet (`lengte=0`): dan zet het camperprofiel het niet automatisch aan */
+  lengthOff?: boolean;
   /** Vertrekgroep; bepaalt ook op welke pagina je zit (zie DEPARTURE_PAGES) */
   departure?: DepartureGroup;
   openNow: boolean;
@@ -114,6 +116,7 @@ export function parseFilters(p: Params): Filters {
     maxPrice: num("maxprijs"),
     priceUnknown: p.get("onbekend") === "1",
     minLength: num("lengte"),
+    lengthOff: p.get("lengte") === "0" || undefined,
     departure: parseDeparture(p.get("vertrek")) ?? (p.get("vrij") === "1" ? "vrij" : undefined),
     openNow: p.get("open") === "1",
     minScore: num("score"),
@@ -143,6 +146,7 @@ export function filtersToQuery(f: Filters): string {
   if (f.maxPrice) p.set("maxprijs", String(f.maxPrice));
   if (f.priceUnknown && (f.free || f.maxPrice)) p.set("onbekend", "1");
   if (f.minLength) p.set("lengte", String(f.minLength));
+  else if (f.lengthOff) p.set("lengte", "0");
   if (f.departure && OTHER.includes(f.departure as DepartureKind)) p.set("vertrek", f.departure);
   if (f.openNow) p.set("open", "1");
   if (f.minScore) p.set("score", String(f.minScore));
@@ -280,7 +284,7 @@ export function relaxations(places: PlaceSummary[], f: Filters): { label: string
     ...(f.free ? [{ label: "Tot € 10 per nacht", next: { ...f, free: false, maxPrice: 10 } }] : []),
     ...(f.free || f.maxPrice ? [{ label: "Ook met onbekende prijs", next: { ...f, priceUnknown: true } }] : []),
     ...(f.maxPrice ? [{ label: "Zonder prijsgrens", next: { ...f, maxPrice: undefined } }] : []),
-    ...(f.minLength ? [{ label: "Zonder lengtefilter", next: { ...f, minLength: undefined } }] : []),
+    ...(f.minLength ? [{ label: "Zonder lengtefilter", next: { ...f, minLength: undefined, lengthOff: true } }] : []),
     ...(f.departure === "vrij" ? [{ label: "Bekijk uitslapers", next: { ...f, departure: "uitslapers" as const } }] : []),
     ...(f.departure ? [{ label: "Alle vertrektijden", next: { ...f, departure: undefined } }] : []),
     ...(f.openNow ? [{ label: "Ook gesloten plekken", next: { ...f, openNow: false } }] : []),

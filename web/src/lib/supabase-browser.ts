@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database as Generated } from "./database.types";
+import type { Database as Generated, Json } from "./database.types";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 
 // De generator maakt functieargumenten nooit nullable, maar de formulieren sturen `null` voor lege velden en
@@ -9,17 +9,25 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 type NullableArgs<F> = {
   [K in keyof F]: F[K] extends { Args: infer A } ? Omit<F[K], "Args"> & { Args: { [P in keyof A]: A[P] | null } } : F[K];
 };
+// Staat in migrations/20261012_user_accounts.sql maar nog niet live (besluit B5); weg zodra de types opnieuw gegenereerd zijn
+type NotYetLive = { delete_my_account: { Args: { p_confirm: string }; Returns: undefined } };
 type PublicSchema = Generated["public"];
 export type Database = Omit<Generated, "public"> & {
-  public: Omit<PublicSchema, "Functions"> & { Functions: NullableArgs<PublicSchema["Functions"]> };
+  public: Omit<PublicSchema, "Functions"> & { Functions: NullableArgs<PublicSchema["Functions"] & NotYetLive> };
 };
+
+/** Eigen types (reis, camper, uitgaven) als JSON-kolom opslaan; de generator kent alleen `Json` */
+export function toJson<T>(value: T): Json {
+  return value as unknown as Json;
+}
 
 let client: SupabaseClient<Database> | null = null;
 
 /** Supabase in de browser: publieke formulieren en de beheeromgeving (beveiligd met RLS). */
 export function supabase(): SupabaseClient<Database> {
   client ??= createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, storageKey: "vrijstaan-auth", autoRefreshToken: true },
+    // PKCE: OAuth en magic links komen terug met ?code= dat de client zelf (één keer) inwisselt
+    auth: { persistSession: true, storageKey: "vrijstaan-auth", autoRefreshToken: true, flowType: "pkce", detectSessionInUrl: true },
   });
   return client;
 }

@@ -1,5 +1,6 @@
-# Controles op pull requests naar acceptatie of main en op elke push daarnaartoe: lint, typecheck, tests en een
-# build zonder netwerk. Werkwijze: PR's gaan eerst naar acceptatie (testen op de Vercel-preview), daarna naar main.
+# Controles op pull requests naar acceptatie of main en op elke push daarnaartoe: lint, typecheck, unit tests, een
+# build zonder netwerk en E2E-tests (Playwright) op die build. Werkwijze: PR's gaan eerst naar acceptatie (testen op de
+# Vercel-preview), daarna naar main.
 name: CI
 
 on:
@@ -12,9 +13,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: web
@@ -31,6 +36,12 @@ jobs:
       - name: Geen bekende lekken in pakketten van de site
         run: npm audit --omit=dev --audit-level=high
       - name: Build met de snapshot
-        run: npm run build
-        env:
-          VRIJSTAAN_OFFLINE: "1"
+        run: npm run build:offline
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: web/playwright-report
+          retention-days: 7

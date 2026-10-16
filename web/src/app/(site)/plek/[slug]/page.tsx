@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { getNearby, getPlace, getRedirect, getReviews, getSummaries } from "@/lib/places";
+import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
 import { cardPrice, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
@@ -15,17 +15,13 @@ import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-
 import { PlaceMap } from "@/components/place-map";
 import { Legend } from "@/components/legend";
 import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
+import { PhotoUpload } from "./photo-upload";
+import { CrowdStatusCard } from "./crowd-status";
 
-/**
- * Alleen de 100 meest complete plekken bij de build; de rest wordt bij het eerste bezoek gemaakt en daarna
- * uit de cache geserveerd. Zo blijft de build kort en klein.
- */
+// Alleen de top-100 tijdens de build: alle plekken prerenderen liep op Vercel stuk (RangeError). De rest wordt bij het
+// eerste bezoek gerenderd ("blocking": params worden buiten <Suspense> afgewacht) en daarna uit de cache geserveerd.
 export async function generateStaticParams() {
-  const places = await getSummaries();
-  return [...places]
-    .sort((a, b) => b.completeness - a.completeness)
-    .slice(0, 100)
-    .map((p) => ({ slug: p.slug }));
+  return (await getTopPlaceSlugs()).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): Promise<Metadata> {
@@ -136,6 +132,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         </nav>
         <Gallery slug={place.slug} name={place.name} photos={photos} kind={place.kind} town={place.town} />
       </div>
+      <div className="mx-auto min-h-14 max-w-6xl px-4 pt-3 sm:px-6">
+        <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
+      </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Kop: wat en waar, in één blik */}
@@ -170,6 +169,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
             <Decision place={place} />
+            <CrowdStatusCard placeId={place.id} slug={place.slug} />
 
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">

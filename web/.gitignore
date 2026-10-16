@@ -40,5 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+!.env.example
+
 # kaartworker, gekopieerd uit node_modules (scripts/copy-maplibre-worker.mjs)
 /public/maplibre-gl-worker.mjs

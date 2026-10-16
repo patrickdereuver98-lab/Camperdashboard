@@ -26,6 +26,17 @@
 | `internal_secrets` | Sleutel waarmee de database de edge function aanroept |
 | `private.scrape_queue` | Wachtrij van websites die de scraper moet lezen |
 | `private.admin_invites` | E-mailadressen die een beheeraccount mogen aanmaken |
+| `profiles` | Profiel van een bezoekersaccount (naam en foto van Google/Apple/Facebook) |
+| `user_trips` | Mijn reis van een ingelogde bezoeker (`stops` jsonb, ≤ 200) |
+| `place_photos` | Foto van een bezoeker bij een plek, met moderatiestatus; goedgekeurd → `places.photos` |
+| `duplicate_dismissals` | Paren plekken die beheer als "geen dubbel" heeft gemarkeerd |
+| `crowd_reports` | Drukte-melding van een ingelogde camperaar (rustig, druk, vol); de site toont alleen de laatste 3 uur |
+| `push_subscriptions` | Push-abonnement van een browser, gekoppeld aan een account |
+| `user_vehicles` | Camperprofiel van een account (naam, maten, brandstof, verbruik) |
+| `user_expenses` | Uitgaven onderweg van een account (kosten- en brandstoftracker) |
+| `shared_trips` + `shared_trip_members` | Gedeelde reis (samen plannen) en wie meedoet |
+| Storage `vehicle-docs` | Privé-map per account voor papieren van de camper (PDF of foto, max. 5 MB) |
+| `crowd_watches` | Een ingelogde camperaar volgt een plek 24 uur en krijgt één pushmelding als het rustig wordt |
 
 ## Tabellen
 
@@ -64,6 +75,8 @@
 | `completeness` | numeric | ja | `0` | gewogen score 0–1, berekend door trigger |
 | `status` | text | ja | `draft` | `draft`, `published`, `hidden` |
 | `status_locked` | boolean | ja | `false` | handmatig vastgezet; trigger verandert de status dan niet |
+| `geom` | geometry(Point, 4326) | | gegenereerd | uit `lng`/`lat`; GIST-indexen voor `places_in_bbox` en de dubbelen-zoektocht |
+| `merged_into` | uuid | | | samengevoegd in deze plek; de oude slug stuurt door (`place_redirect`) |
 | `sources` | jsonb | ja | `{}` | `osm`, `website` (tijdstip), `website_fields`, `beheer` (velden die beheer invulde), `duplicate_of` |
 | `last_scraped_at`, `verified_at`, `created_at`, `updated_at` | timestamptz | | | |
 
@@ -73,6 +86,18 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 
 | Tabel | Velden (verplicht met *) | Standaarden en indexen |
 |---|---|---|
+| `profiles` | id* (= auth.users.id), display_name (≤ 80), avatar_url (https), created_at*, updated_at* | alleen eigen rij lezen/wijzigen |
+| `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200), updated_at* | alleen eigen rij |
+| `place_photos` | id*, place_id*, user_id, storage_path* (`<user_id>/<uuid>.webp|jpg`), width/height (200–4.000), caption (≤ 140), credit (≤ 80), status* (`pending`, `approved`, `rejected`), reviewed_by, reviewed_at, created_at* | status `pending`; max. 20 per gebruiker per dag; vertrouwde gebruikers (`site_settings.trust`) worden automatisch goedgekeurd |
+| `duplicate_dismissals` | a*, b* (a < b), dismissed_by, created_at* | alleen beheer |
+| `shared_trips` | id*, owner_id*, name* (1–60), stops* (≤ 200), invite_code* (uniek, 18 hex), updated_by, updated_at*, created_at* | lezen en `stops`/`name` wijzigen alleen voor leden (`is_trip_member`); in de Realtime-publicatie; maken via `create_shared_trip`, meedoen via `join_shared_trip` (max. 6) |
+| `shared_trip_members` | trip_id* + user_id* (pk), display_name, joined_at*, left_at | verlaten via `leave_shared_trip` (zet left_at) |
+| `user_expenses` | user_id* (pk), entries* (jsonb-array ≤ 1.000: id, date, category, amountEur, liters?, placeSlug?, note?), updated_at* | alleen eigen rij; samenvoegen op id via `mergeExpenses` |
+| `user_vehicles` | user_id* (pk), data* (jsonb, < 2 kB), updated_at* | alleen eigen rij; waarden gecontroleerd door `cleanVehicle` |
+| Storage `vehicle-docs` | `<user_id>/<tijd>-<naam>` | niet openbaar; lezen, uploaden en weghalen alleen in je eigen map; openen via een ondertekende link van 60 seconden |
+| `push_subscriptions` | id*, user_id*, endpoint* (uniek, https), p256dh*, auth*, created_at*, disabled_at | alleen via `push_subscribe`; uitgezet bij 404/410 van de pushdienst |
+| `crowd_watches` | user_id* + place_id* (pk), created_at*, expires_at* (+24 uur), notified_at | via `watch_place` (max. 10 tegelijk); trigger op `crowd_reports` roept edge function `push` aan als de stand "rustig" wordt. VAPID-sleutels in `private.secrets` (alleen service_role) |
+| `crowd_reports` | id*, place_id*, user_id*, level* (`rustig`, `druk`, `vol`), created_at* | melden via `report_crowd` (1 per persoon per plek per 30 min, max. 30 per dag); lezen via `crowd_status` (geaggregeerd, zonder persoonsgegevens); cron `crowd-retention` wist na 30 dagen |
 | `reviews` | id*, place_id*, author_name*, author_email, rating* (1–10), score_location/quiet/facilities/value (1–10), title (≤120), body* (20–3.000), vehicle (`camper`, `buscamper`, `caravan`, `overig`), visited_month, status*, admin_note, created_at* | status `pending`; index op place_id |
 | `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, created_at* | status `nieuw` |
 | `tickets` | id*, number* (uniek), access_token* (uniek, willekeurig), name* (2–80), email*, subject* (3–140), category*, status*, priority*, place_id, assignee, created_at*, updated_at* | category `vraag`, status `open`, priority `normaal` |

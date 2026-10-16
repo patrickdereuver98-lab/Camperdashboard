@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useOffline } from "next/offline";
 import { Suspense, useEffect, useState } from "react";
+import { useSession } from "@/lib/auth";
 import { useTrip } from "@/lib/store";
 import { track } from "@/lib/track";
 import { Icon, Logo, type IconName } from "./icons";
@@ -121,9 +122,37 @@ function HeaderView({ pathname }: { pathname: string }) {
             Hulp
           </Link>
         </div>
+        <AccountButton active={isActive("/account")} />
       </div>
       <OfflineBar />
     </header>
+  );
+}
+
+function AccountButton({ active }: { active: boolean }) {
+  const { session, loading } = useSession();
+  const meta = session?.user.user_metadata as { avatar_url?: string; picture?: string; full_name?: string; name?: string } | undefined;
+  const avatar = meta?.avatar_url ?? meta?.picture;
+  const label = session ? `Mijn account${meta?.full_name || meta?.name ? ` (${meta.full_name ?? meta.name})` : ""}` : "Inloggen";
+  return (
+    <Link
+      href={session ? "/account" : "/inloggen"}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
+      data-testid="account-button"
+      data-state={loading ? "loading" : session ? "in" : "out"}
+      className="-mr-1 grid h-11 min-w-11 place-items-center rounded-xl px-1 text-ink-2 hover:bg-sunken aria-[current=page]:text-forest md:ml-1"
+    >
+      {avatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-8 w-8 rounded-full object-cover outline-2 outline-forest outline" />
+      ) : (
+        <span className="flex items-center gap-2 font-semibold">
+          <Icon name="user" size={22} />
+          <span className="hidden lg:inline">{session ? "Account" : "Inloggen"}</span>
+        </span>
+      )}
+    </Link>
   );
 }
 

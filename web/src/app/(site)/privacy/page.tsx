@@ -10,6 +10,54 @@ const HEAD = ["Doel", "Gegevens", "Grondslag (AVG)", "Bewaartermijn"];
 
 const ROWS: string[][] = [
   [
+    "Account (optioneel)",
+    "E-mailadres, naam en profielfoto zoals Google, Apple of Facebook die doorgeven, de manier van inloggen, je bewaarde reis en tijdstippen van aanmaken en inloggen",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je kiest zelf voor een account",
+    "Tot je je account verwijdert",
+  ],
+  [
+    "Samen plannen",
+    "De gedeelde reis (plekken en nachten), wie hem het laatst wijzigde, en je naam zoals de andere deelnemers die zien. Alleen deelnemers kunnen de reis zien",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je doet zelf mee",
+    "Zolang de gedeelde reis bestaat; je deelname eindigt als je stopt of je account verwijdert",
+  ],
+  [
+    "Uitgaven onderweg",
+    "Datum, soort, bedrag, eventueel liters, de stop en je notitie. Zonder account alleen op je toestel; met account ook in je account",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",
+    "Tot je ze weghaalt of je account verwijdert",
+  ],
+  [
+    "Mijn camper",
+    "Naam, maten, brandstof en verbruik die je zelf invult. Zonder account alleen op je toestel; met account ook in je account",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",
+    "Tot je de gegevens wist of je account verwijdert",
+  ],
+  [
+    "Papieren van je camper",
+    "Bestanden die je zelf uploadt (bijvoorbeeld kentekenbewijs of verzekering). Ze staan in een afgeschermde map die alleen jij kunt openen; wij kijken er niet in",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b)",
+    "Tot je ze weghaalt of je account verwijdert",
+  ],
+  [
+    "Drukte die je doorgeeft",
+    "Of het rustig, druk of vol is, de plek, je account-id en het tijdstip. Anderen zien alleen het totaal van de laatste 3 uur, nooit wie iets meldde",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je geeft de drukte zelf door",
+    "30 dagen",
+  ],
+  [
+    "Meldingen als het rustig wordt",
+    "Welke plek je volgt (24 uur), en het adres waarop de pushdienst van je browser jouw toestel bereikt, met de sleutels om de melding te versleutelen",
+    "Toestemming (art. 6 lid 1 sub a): je zet de melding zelf aan en kunt hem altijd uitzetten",
+    "Tot je de melding uitzet, de toestemming in je browser intrekt of je account verwijdert",
+  ],
+  [
+    "Foto's die je toevoegt",
+    "De foto (verkleind in je browser, zonder locatie- of cameragegevens), het bijschrift, de naam die je bij de foto zet, je account-id en het tijdstip",
+    "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je plaatst de foto zelf",
+    "Zolang de foto online staat of tot je om verwijdering vraagt; bij het verwijderen van je account blijft een goedgekeurde foto staan zonder koppeling aan jou",
+  ],
+  [
     "Statistieken",
     "Wat er gebeurde (pagina bekeken, zoekopdracht, plek bekeken, link naar buiten, route, bewaard), het pad van de pagina, een klein detail zoals de zoekterm of de plek, een willekeurig sessienummer en het tijdstip",
     "Toestemming (art. 6 lid 1 sub a)",
@@ -130,9 +178,13 @@ export default function PrivacyPage() {
       <Section title="In het kort">
         <ul>
           <li>Je hebt geen account nodig. We plaatsen geen cookies bij bezoekers en tonen geen advertenties.</li>
+          <li>Kies je toch voor een account, dan bewaren we alleen wat nodig is om je reis op al je apparaten te tonen.</li>
           <li>Statistieken verzamelen we alleen als je dat toestaat, zonder IP-adres en zonder cookies.</li>
           <li>We verkopen geen gegevens en delen ze niet voor reclame.</li>
-          <li>Je bewaarde reis en instellingen staan alleen op je eigen apparaat. Wij kunnen ze niet zien.</li>
+          <li>
+            Zonder account staan je bewaarde reis en instellingen alleen op je eigen apparaat; wij kunnen ze niet zien. Met
+            een account bewaren we je reis ook in onze database.
+          </li>
         </ul>
       </Section>
 
@@ -141,6 +193,20 @@ export default function PrivacyPage() {
         <p>
           De bewaartermijnen gelden voor onze eigen database. Daarna verwijderen we de gegevens of maken we ze anoniem. We
           nemen geen besluiten over je die alleen door een computer worden genomen, en we maken geen profielen.
+        </p>
+      </Section>
+
+      <Section title="Een account (optioneel)">
+        <p>
+          Je kunt inloggen met Google, Apple, Facebook of een inloglink per e-mail. Log je in via een van die diensten, dan
+          krijgen we van hen alleen je naam, e-mailadres en profielfoto. We plaatsen nooit iets namens je en vragen geen
+          toegang tot je contacten of berichten. Bij Apple kun je je e-mailadres verbergen.
+        </p>
+        <p>
+          Met een account bewaren we je reis (de plekken en het aantal nachten) zodat je hem op al je apparaten ziet. Om
+          ingelogd te blijven staat er een sessiesleutel in de lokale opslag van je browser; dat is strikt noodzakelijk en
+          geen tracking-cookie. Je verwijdert je account zelf op <Link href="/account">Mijn account</Link>; je profiel en reis
+          verdwijnen dan direct.
         </p>
       </Section>
 
@@ -235,6 +301,14 @@ export default function PrivacyPage() {
           <li>
             <strong>Supabase</strong> levert onze database en backend, in de regio Frankfurt (EU). Met Supabase hebben we een
             verwerkersovereenkomst. Voor hun subverwerkers gelden de standaardcontractbepalingen van de Europese Commissie.
+          </li>
+          <li>
+            <strong>De pushdienst van je browser</strong> (bij Chrome Google, bij Safari Apple, bij Firefox Mozilla) als je een
+            melding aanzet. Die dienst bezorgt alleen de versleutelde melding op je toestel.
+          </li>
+          <li>
+            <strong>Google</strong>, <strong>Apple</strong> of <strong>Meta (Facebook)</strong> als je via hen inlogt. Daarvoor
+            gelden ook hun eigen privacyregels.
           </li>
           <li>
             <strong>OpenRouteService</strong> (HeiGIT gGmbH) of <strong>FOSSGIS e.V.</strong> krijgen coördinaten als je een

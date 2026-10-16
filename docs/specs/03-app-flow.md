@@ -26,7 +26,7 @@
 | Filterscherm | sheet op `/zoeken` | Vertrekken, voorzieningen, prijs, soort, lengte, overig, met live teller | Samenvattingen |
 | Plek | `/plek/<slug>` | Beslissen: vertrek, open, prijs en extra kosten, voorzieningen, contact, route, reviews | Volledige plek, reviews, plekken in de buurt |
 | Dichtbij | `/dichtbij` | Plekken rond je locatie op rijtijd | Locatie (toestemming), samenvattingen, `/api/distances` |
-| Mijn reis | `/mijn-reis` | Bewaarde plekken, volgorde, nachten, kosten, route, delen | `localStorage`, samenvattingen, `/api/route` |
+| Mijn reis | `/mijn-reis` | Bewaarde plekken, volgorde, nachten, kosten (inclusief prijs per persoon bij plekken zonder basisprijs en de toeristenbelasting die de plek zelf per persoon per nacht noemt; overige toeslagen apart onder "+ toeslagen, niet meegeteld"), route, delen. Paneel "Uitgaven onderweg": uitgave toevoegen (soort, bedrag, datum, liters bij brandstof, stop), totaal tegenover de begroting, gemiddelde per dag en literprijs, weghalen | `localStorage`, samenvattingen, `/api/route` |
 | Doe mee | `/doe-mee` | Camperaars (o.a. de Facebookgroep) vullen vertrektijden in van plekken waar die onbekend is, of melden een plek | Samenvattingen; formulier → `submit_place` (soort `correctie`, onderwerp `vertrektijd`) → Beheer → Inzendingen |
 | Plek aanmelden | `/plek-aanmelden` | Nieuwe plek of eigenaarsclaim indienen | Formulier → `submit_place` |
 | Contact | `/contact` | Vraag stellen, ticket maken | Formulier → `create_ticket` |
@@ -35,7 +35,15 @@
 | Veelgestelde vragen | `/veelgestelde-vragen` | Antwoorden zoeken | `faq` |
 | Over ons, Reviews en ranking, Privacy, Cookies, Voorwaarden, Disclaimer, Toegankelijkheid | eigen routes | Uitleg en juridische informatie | `src/lib/company.ts`, statistieken |
 | Niet gevonden | elke onbekende route | "Verkeerd afgeslagen" met terugweg | — |
-| Beheer | `/admin/*` | Overzicht, Statistieken, Plekken, Support, Inzendingen, Reviews, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
+| Inloggen | `/inloggen?next=<pad>` | Google, Apple, Facebook of inloglink per mail; daarna terug naar `next` | Supabase Auth |
+| Inlog-terugkomst | `/auth/callback` | Code inwisselen, door naar `next`; bij een fout een begrijpelijke melding | Supabase Auth |
+| Reisstatistieken | `/mijn-reis/statistieken` | Kerncijfers (km langs je stops, nachten, gemiddelde nachtprijs over bekende prijzen, aandeel nachten zonder stroom over bekende nachten) en staafdiagrammen (nachten per stroomsituatie, uitgaven per soort) met tabelweergave. Onbekend blijft onbekend | Mijn reis, uitgaven, `/api/route` |
+| Mijn camper | `/mijn-camper` | Maten, brandstof en verbruik invullen (werkt zonder account). Lengte zet bij zoeken het lengtefilter vanzelf aan (chip "Mijn camper"; wegtikken → `lengte=0`, blijft uit). Verbruik vult Mijn reis. Ingelogd: papieren uploaden, openen, weghalen | localStorage, `user_vehicles`, Storage `vehicle-docs` |
+| Mijn account | `/account` | Naam, inlogmanier, aantal plekken in Mijn reis, uitloggen, account verwijderen (tweestaps: knop, dan VERWIJDEREN typen; papieren worden eerst weggehaald; `delete_my_account(p_confirm)` controleert het woord ook) |
+| Samen plannen | kaart in `/mijn-reis`, uitnodiging `/samen/<code>` | Starten maakt een gedeelde reis van je reis; uitnodiging delen; meedoen vervangt je reis (met waarschuwing); wijzigingen realtime bij iedereen; stoppen maakt je los | `shared_trips` (Realtime), RPC's | Sessie, `user_trips` |
+| Drukte | kaart onder prijs op `/plek/<slug>` | Meldingen van de laatste 3 uur ("Druk, volgens 3 camperaars, laatste melding 20 minuten geleden") of "Nog niemand gemeld". Ingelogd: Rustig / Druk / Vol doorgeven; anders inloggen. Bij druk of vol: "Laat het me weten als het hier rustig is" → toestemming voor meldingen → één pushmelding binnen 24 uur (iPhone: alleen vanaf het beginscherm) | `crowd_status`, `report_crowd` |
+| Foto toevoegen | knop onder de foto's op `/plek/<slug>` | Niet ingelogd → `/inloggen`; ingelogd → foto kiezen, verkleinen (zonder EXIF), bijschrift, licentie aanvinken, versturen → "we bekijken je foto" of (vertrouwd) "staat zo online" | Storage `place-photos`, `place_photos` |
+| Beheer | `/admin/*` | Overzicht, Statistieken, Plekken, Dubbelen, Support, Inzendingen, Reviews, Foto's, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
 
 ## Hoofdroute: vannacht een plek vinden
 

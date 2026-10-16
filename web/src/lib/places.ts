@@ -3,6 +3,8 @@ import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
 import { departureKind, inDepartureGroup, isOpenOn } from "./search";
+import { PRERENDER_LIMIT, rankForPrerender } from "./prerender";
+import { inBbox, type Bbox } from "./bbox";
 import { cleanDescription } from "./description";
 import { rankPhotos } from "./photos";
 import type { Photo, Place, PlaceSummary, Review, Town } from "./types";
@@ -27,15 +29,23 @@ class SupabaseError extends Error {
   }
 }
 
+/** Bij drukte (429) of een haperende database (5xx) één keer opnieuw proberen voordat we op de snapshot terugvallen */
+async function fetchWithRetry(url: string, init: RequestInit, retries = 1): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) });
+    if (res.ok || attempt >= retries || !(res.status === 429 || res.status >= 500)) return res;
+    await new Promise((r) => setTimeout(r, 300 * 2 ** attempt + Math.random() * 200));
+  }
+}
+
 async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
   const out: T[] = [];
   for (let offset = 0; ; offset += 1000) {
     const sep = path.includes("?") ? "&" : "?";
     // Een eigen limit in het pad: één verzoek, geen paginering
     const own = /[?&]limit=/.test(path);
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${own ? "" : `${sep}limit=1000&offset=${offset}`}`, {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${path}${own ? "" : `${sep}limit=1000&offset=${offset}`}`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) throw new SupabaseError(res.status, await res.text());
     const rows = (await res.json()) as T[];
@@ -175,7 +185,7 @@ export async function getRedirect(slug: string): Promise<string | undefined> {
   "use cache";
   cacheLife("minutes");
   cacheTag("places", `plek-${slug}`);
-  if (OFFLINE_BUILD) return undefined;
+  if (OFFLINE_BUILD || !/^[a-z0-9-]{1,120}$/.test(slug)) return undefined;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/place_redirect`, {
       method: "POST",
@@ -192,6 +202,27 @@ export async function getRedirect(slug: string): Promise<string | undefined> {
 }
 
 /**
+ * Plekken binnen een (op het raster afgeronde) bounding box, via PostGIS (`places_in_bbox`, GIST-index).
+ * Gecachet per bbox: bezoekers die hetzelfde gebied bekijken delen één database-aanvraag.
+ */
+export async function getSummariesInBbox(bbox: Bbox): Promise<PlaceSummary[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places");
+  const [w, s, e, n] = bbox;
+  const { website_photos } = await getSettings();
+  return withFallback(
+    async () =>
+      (
+        await rest<Record<string, unknown>>(
+          `rpc/places_in_bbox?min_lng=${w}&min_lat=${s}&max_lng=${e}&max_lat=${n}&select=${SUMMARY_COLUMNS}`,
+        )
+      ).map((r) => toSummary(normalize(toCamel<Place>(r), website_photos))),
+    () => SNAP.places.filter((p) => inBbox(p, bbox)).map((p) => toSummary(normalize(p, website_photos))),
+  );
+}
+
+/**
  * Eén plek. Bewust een eigen query en geen filter op de hele lijst: elke plekpagina bewaart de cache die hij
  * leest, en met 1.300 pagina's maal de hele dataset liep de build vast ("Invalid string length").
  */
@@ -199,6 +230,7 @@ export async function getPlace(slug: string): Promise<Place | undefined> {
   "use cache";
   cacheLife("minutes");
   cacheTag("places", `plek-${slug}`);
+  if (!/^[a-z0-9-]{1,120}$/.test(slug)) return undefined;
   const { website_photos } = await getSettings();
   return withFallback(
     async () => {
@@ -213,6 +245,10 @@ export async function getPlace(slug: string): Promise<Place | undefined> {
       return p ? normalize(p, website_photos) : undefined;
     },
   );
+}
+
+export async function getTopPlaceSlugs(limit = PRERENDER_LIMIT): Promise<string[]> {
+  return rankForPrerender(await getSummaries(), limit).map((p) => p.slug);
 }
 
 /** Plekken in de buurt: alleen een vak rond de plek ophalen (±55 km), niet de hele lijst */

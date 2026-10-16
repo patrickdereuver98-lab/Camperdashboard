@@ -5,14 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { MotionConfig, motion } from "motion/react";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
-import { eur, formatDuration, pluralize } from "@/lib/format";
+import { eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
 import { readTripPlaces, rememberTripPlaces, usePlaces, useTrip, useTripSettings, type TripStop } from "@/lib/store";
+import { tripCosts } from "@/lib/trip-extras";
 import type { PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
 import { OpenChip, PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
+import { ExpensesPanel } from "./expenses-panel";
+import { SharedCard } from "./shared-card";
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
 type Stop = TripStop & { place: PlaceSummary };
@@ -166,12 +169,11 @@ export function TripApp() {
   const totalKm = route ? route.distanceM / 1000 : null;
   const nights = stops.reduce((a, s) => a + s.nights, 0);
   // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag)
-  const unknownPriceStops = stops.filter((s) => s.place.priceEur === undefined).length;
   const fromPrice = stops.some((s) => s.place.priceFrom);
-  const stay = stops.reduce((a, s) => a + (s.place.priceEur ?? 0) * s.nights, 0);
+  // Prijs per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart
+  const costs = tripCosts(stops, settings.persons, settings.touristTax);
+  const { stay, tax, unknownPriceStops } = costs;
   const fuel = totalKm !== null ? (totalKm * settings.litersPer100 * settings.fuelPrice) / 100 : null;
-  const taxNights = stops.filter((s) => s.place.priceEur !== 0 && s.place.touristTaxIncluded !== true).reduce((a, s) => a + s.nights, 0);
-  const tax = settings.persons * settings.touristTax * taxNights;
   const total = stay + (fuel ?? 0) + tax;
 
   const shareUrl = typeof window !== "undefined" ? `${location.origin}/mijn-reis?r=${trip.stops.map((s) => `${s.slug}.${s.nights}`).join(",")}` : "";
@@ -219,6 +221,9 @@ export function TripApp() {
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
+          <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest">
+            <Icon name="chart" size={18} /> Statistieken
+          </Link>
         </div>
       </div>
 
@@ -374,8 +379,23 @@ export function TripApp() {
               </div>
             </dl>
             <p className="mt-2 text-sm text-muted">
-              * Berekend met jouw uitgangspunten hieronder. Toeristenbelasting telt niet mee bij gratis plekken en plekken waar die al in de prijs zit.
+              * Berekend met jouw uitgangspunten hieronder. Noemt een plek zelf de toeristenbelasting per persoon per nacht,
+              dan rekenen we met dat bedrag. Gratis plekken en plekken waar de belasting al in de prijs zit tellen niet mee.
             </p>
+            {costs.listed.length > 0 && (
+              <div className="mt-3 rounded-xl bg-sunken p-3 text-sm" data-testid="surcharges">
+                <p className="font-semibold">+ toeslagen, niet meegeteld</p>
+                <p className="mt-0.5 text-ink-2">Of je deze betaalt hangt af van je situatie, of de plek zegt niet waar het bedrag per geldt.</p>
+                <ul className="mt-2 space-y-1.5">
+                  {costs.listed.map(({ index, extras }) => (
+                    <li key={stops[index].slug}>
+                      <span className="font-semibold">{stops[index].place.name}:</span>{" "}
+                      <span className="text-ink-2">{extras.map((x) => `${x.label.toLowerCase()} ${extraLabel(x)}`).join(", ")}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {routeState === "error" && <p className="mt-2 text-sm text-alert">De routeplanner is even niet bereikbaar; afstanden zijn hemelsbreed.</p>}
 
             <details className="mt-4 rounded-lg bg-sunken p-4">
@@ -409,6 +429,10 @@ export function TripApp() {
               <Icon name="route" size={19} /> Open route in Google Maps
             </a>
           </div>
+
+          <SharedCard />
+
+          <ExpensesPanel stops={stops.map((s) => ({ slug: s.slug, name: s.place.name }))} budget={{ stay, fuel, tax }} />
 
           <PlaceMap
             places={stops.map((s) => s.place)}

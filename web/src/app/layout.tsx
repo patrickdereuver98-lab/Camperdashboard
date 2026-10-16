@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import { Header, Runtime, SaveToast, TabBar } from "@/components/chrome";
+import { TripSync } from "@/components/trip-sync";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SITE_URL } from "@/lib/env";
 import { OPEN_GRAPH } from "@/lib/meta";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SaveToast />
         <CookieBanner />
         <Runtime />
+        <TripSync />
       </body>
     </html>
   );

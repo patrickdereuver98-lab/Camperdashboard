@@ -28,6 +28,22 @@
 | ⬜ Bewaartermijnen activeren | Patrick | Deel "Bewaartermijnen" van `web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
 | ✅ Tickets na 12 maanden opruimen | Agent | Privacyverklaring | Uitbreiding van `apply_retention` | Gesloten tickets ouder dan 12 maanden verdwijnen | Bewaartermijnen |
 | ⬜ `web/supabase/schema.sql` opnieuw genereren | Agent | Live database | Actueel schemabestand | Nieuw project op te zetten met schema + seed | — |
+| ✅ Test-infrastructuur: Playwright E2E (mobiel + desktop), unit tests, CI-workflow | Agent | Opdracht Patrick | `web/e2e`, `web/tests`, `.github/workflows/ci.yml` | `npm run test:unit` en `npm run test:e2e` groen | — |
+| ✅ Kaart laadt per bounding box (PostGIS) met clustering | Agent | Opdracht Patrick | `places_in_bbox`, `/api/places?bbox=` | Geen limiet van 600 markers; gedeelde CDN-cache | Schema |
+| ✅ OSM-toelating, naam-fallback, strikte booleans | Agent | Opdracht Patrick, besluit B2 | `osm.ts` + tests | Toelating zoals voorheen (caravan_site, motorhome=yes/designated, campings zonder motorhome=no); booleans alleen uit een vaste lijst waarden | — |
+| ~~Strikte OSM-query live zetten~~ | — | Besluit B2 (16 oktober 2026): nee | Migratie verwijderd | — | — |
+| ✅ Optionele bezoekersaccounts + synchronisatie Mijn reis | Agent | Opdracht Patrick | `/inloggen`, `/account`, `user_trips` | E2E groen | — |
+| ⬜ OAuth-sleutels Google, Apple, Facebook + SMTP | Patrick | Handleiding stap 4 | Supabase-instellingen | Inloggen met elke dienst werkt | Vercel-adres |
+| 🔄 `delete_my_account` met tweestaps-bevestiging | Agent + Patrick | Akkoord Patrick (12 okt) | UI klaar; SQL onderaan `migrations/20261012_user_accounts.sql` | Live na uitvoeren van de SQL (de MCP-bevestiging verliep) | — |
+| ✅ Foto-upload door bezoekers met moderatie en trust-score | Agent | Opdracht Patrick | Storage, `place_photos`, `/admin/fotos` | Foto verschijnt na goedkeuring; geen EXIF | Accounts |
+| ✅ Live drukte (crowdsourced: rustig, druk, vol) | Agent | Opdracht Patrick (Fase 5) | `crowd_reports`, kaart op de plekpagina | Alleen echte meldingen van de laatste 3 uur, met aantal en tijd | Accounts |
+| ✅ Pushmelding als een gevolgde plek rustig wordt | Agent | Fase 5 | Edge function `push`, `crowd_watches`, `push_subscriptions`, service worker | Versleutelde melding (getest met web-push tegen een nep-pushdienst); één melding per volger | Drukte |
+| ✅ Voertuigkluis: camperprofiel met automatisch lengtefilter, papieren in een privé-map | Agent | Opdracht Patrick (Fase 5) | `/mijn-camper`, `user_vehicles`, Storage `vehicle-docs` | Lengtefilter vanzelf aan; uitzetten blijft uit; papieren alleen voor de eigenaar | Accounts |
+| ✅ Losse toeslagen (`price_extras`) in de reiskosten | Agent | Voorstel audit-sessie, akkoord Patrick (16 okt) | `trip-extras.ts` | Alleen eenduidige toeslagen tellen mee; de rest wordt per plek genoemd | Mijn reis |
+| ✅ Kosten- en brandstoftracker in Mijn reis | Agent | Opdracht Patrick (Fase 5) | `ExpensesPanel`, `user_expenses` | Uitgaven naast de begroting; werkt zonder account | Mijn reis |
+| ✅ Reisstatistieken (dashboard) | Agent | Opdracht Patrick (Fase 5) | `/mijn-reis/statistieken`, `trip-stats.ts` | Alleen berekend uit bekende gegevens; tabel bij elke grafiek | Mijn reis, uitgaven |
+| ✅ Samen een reis plannen (realtime) | Agent | Opdracht Patrick (Fase 5) | `shared_trips`, `/samen/<code>`, `SharedCard` | Leden zien wijzigingen direct; buitenstaanders niet | Accounts |
+| ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
 | ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 
 ## Mijlpaal 3: hoofdroute ✅

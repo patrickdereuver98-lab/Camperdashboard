@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { applyFilters, DEFAULT_FILTERS, FACILITIES, pageOf, relaxations, type DepartureGroup, type Filters } from "@/lib/search";
 import { KIND_LABEL, type PlaceKind, type PlaceSummary } from "@/lib/types";
+import Link from "next/link";
+import { useVehicle } from "@/lib/store";
 import { Sheet } from "./sheet";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
 
@@ -65,6 +67,7 @@ export function FilterSheet({
   showScore?: boolean;
 }) {
   const [draft, setDraft] = useState(filters);
+  const [vehicle] = useVehicle();
   const [lastOpen, setLastOpen] = useState(open);
   if (open !== lastOpen) {
     setLastOpen(open);
@@ -209,11 +212,18 @@ export function FilterSheet({
         </p>
         <div className="grid grid-cols-4 gap-2">
           {LENGTHS.map((l) => (
-            <Toggle key={l} pressed={draft.minLength === l} onClick={() => set({ minLength: draft.minLength === l ? undefined : l })}>
+            <Toggle key={l} pressed={draft.minLength === l} onClick={() => set(draft.minLength === l ? { minLength: undefined, lengthOff: true } : { minLength: l, lengthOff: undefined })}>
               <span className="w-full text-center">{l} m</span>
             </Toggle>
           ))}
         </div>
+        <p className="mt-3 text-sm text-ink-2">
+          {vehicle.lengthM ? (
+            <>Je camper is {String(vehicle.lengthM).replace(".", ",")} m. Aanpassen kan op <Link href="/mijn-camper" className="font-semibold text-forest underline">Mijn camper</Link>.</>
+          ) : (
+            <>Vul je camper één keer in op <Link href="/mijn-camper" className="font-semibold text-forest underline">Mijn camper</Link>, dan filteren we voortaan vanzelf op lengte.</>
+          )}
+        </p>
       </Section>
 
       <Section title="Overig">
