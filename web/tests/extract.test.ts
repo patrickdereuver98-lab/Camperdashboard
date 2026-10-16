@@ -72,3 +72,18 @@ test("Duitse FAQ: 'spätestens um 12 Uhr' na de vraag over auschecken (gevonden 
   assert.equal(r.departure, "vast");
   assert.equal(r.checkout_until, "12:00");
 });
+
+test("'of in overleg' maakt een vaste vertrektijd niet onzeker (gevonden met inspect)", () => {
+  const a = page("<p>Onze huisregels Aankomst ná 13:00 uur en vertrek vóór 11:00 uur of in overleg.</p>");
+  assert.equal(a.departure, "vast");
+  assert.equal(a.checkout_until, "11:00");
+  const b = page("<p>Bijzettentje €3,- per nacht (altijd in overleg) Aankomst en vertrek: De aankomsttijd is na 13:00, het vertrek voor 12:00.</p>");
+  assert.equal(b.departure, "vast");
+  assert.equal(b.checkout_until, "12:00");
+});
+
+test("een punt na een tijd sluit de zin af: 'later vertrekken' in de volgende zin telt niet mee", () => {
+  const r = page("<p>De aankomsttijd is na 13:00, het vertrek voor 12:00. Wil je eerder aankomen of later vertrekken? Neem dan contact met ons op.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "12:00");
+});

@@ -426,7 +426,8 @@ const RENTAL =
   /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
 const EXCEPTION =
   /vroege? aankomst|eerder aankomen|vroeg aankomen|laat vertrek|later vertrek|later vertrekken|laat vertrekken|late check-?out|early check-?in|late check-?in|annuler|toeslag|bijbetaling|tegen betaling|datum/;
-const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien|in overleg/;
+// "In overleg" is geen voorwaarde: "vertrek vóór 11:00 of in overleg" is gewoon een vaste tijd met uitzonderingen op verzoek
+const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien/;
 const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
 const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
 // Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
@@ -456,7 +457,8 @@ const ACCESS_NOT = /telefo|bellen|receptie|noodnummer|wifi|winkel|bereikbaar per
 type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; camper: boolean; cond: boolean };
 
 function sentenceBounds(text: string, index: number): [number, number] {
-  const boundary = /(?<!\d)[.!?](?!\d)/g;
+  // Een punt na een tijd ("voor 12:00.") sluit de zin af; een decimaal ("12.00") en een opsommingsnummer ("1.") niet
+  const boundary = /(?<!\b\d)[.!?](?!\d)/g;
   let start = 0;
   let end = text.length;
   for (const m of text.matchAll(boundary)) {
