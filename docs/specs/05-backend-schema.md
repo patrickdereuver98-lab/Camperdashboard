@@ -65,6 +65,8 @@
 | `reservation` | boolean | | | |
 | `max_stay_nights` | integer | | | |
 | `departure` | text | | | `vrij`, `per24`, `vast`; `null` = onbekend |
+| `departure_check` | text | | | menselijke controle: `bevestigd`, `voorwaardelijk`, `afgewezen`; `null` = nog niet gecontroleerd. Alleen `bevestigd` zet een plek op Zonder vertrektijd. Wordt automatisch leeg als `departure`, `checkout_until` of `times_note` verandert, en na een jaar (cron `departure-recheck`) |
+| `departure_checked_at`, `departure_checked_by` | timestamptz, text | | | wanneer en door wie (`beheer`, `eigenaar`); te zetten via RPC `check_departure` (alleen beheer) |
 | `checkout_until`, `checkin_from` | text | | | formaat `uu:mm` |
 | `access_hours` | text | | | slagboom of poort, bv. `07:30–23:00` |
 | `access_24h` | boolean | | | |

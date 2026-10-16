@@ -25,15 +25,26 @@ export const LATE_CHECKOUT = "12:00";
 export const ROOMY_CHECKOUT = "11:00";
 
 /**
- * Groep per plek: zonder vertrektijd, uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
+ * Groep per plek: zonder vertrektijd (alleen bevestigd), uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
  * Verdeling okt. 2026 (gepubliceerd, vaste tijd): ±350 uitslapers, ±310 ruim, ±60 vroeg.
  */
 export type DepartureKind = "vrij" | "uitslapers" | "ruim" | "vroeg" | "onbekend";
 /** Filter: een groep, of "overig" (ruim + vroeg + onbekend) */
 export type DepartureGroup = DepartureKind | "overig";
 
-export function departureKind(p: Pick<PlaceSummary, "departure" | "checkoutUntil">): DepartureKind {
-  if (p.departure === "vrij" || p.departure === "per24") return "vrij";
+/** Wat we per plek over vertrekken weten */
+export type DepartureFacts = Pick<PlaceSummary, "departure" | "checkoutUntil" | "departureCheck">;
+
+/**
+ * "Geen vaste vertrektijd" volgens de bron, maar nog niet door een mens bevestigd (of met een voorwaarde).
+ * Zulke plekken staan bij Overige, nooit op Zonder vertrektijd: daar moet het 100% zeker zijn.
+ */
+export function departureUnconfirmed(p: DepartureFacts): boolean {
+  return (p.departure === "vrij" || p.departure === "per24") && p.departureCheck !== "bevestigd";
+}
+
+export function departureKind(p: DepartureFacts): DepartureKind {
+  if (p.departure === "vrij" || p.departure === "per24") return p.departureCheck === "bevestigd" ? "vrij" : "onbekend";
   if (p.departure === "vast" && p.checkoutUntil) {
     if (p.checkoutUntil >= LATE_CHECKOUT) return "uitslapers";
     return p.checkoutUntil >= ROOMY_CHECKOUT ? "ruim" : "vroeg";
@@ -43,7 +54,7 @@ export function departureKind(p: Pick<PlaceSummary, "departure" | "checkoutUntil
 
 const OTHER: DepartureKind[] = ["ruim", "vroeg", "onbekend"];
 
-export function inDepartureGroup(p: Pick<PlaceSummary, "departure" | "checkoutUntil">, g: DepartureGroup): boolean {
+export function inDepartureGroup(p: DepartureFacts, g: DepartureGroup): boolean {
   const k = departureKind(p);
   return g === "overig" ? OTHER.includes(k) : k === g;
 }

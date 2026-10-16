@@ -322,16 +322,30 @@ function Decision({ place }: { place: Place }) {
   const kind = departureKind(place);
   const free = kind === "vrij";
   const late = kind === "uitslapers";
-  const departure =
-    place.departure === "vrij"
-      ? "Geen vaste vertrektijd"
-      : place.departure === "per24"
-        ? "Geen vaste tijd, je betaalt per 24 uur"
-        : place.departure === "vast"
-          ? place.checkoutUntil
-            ? `Uiterlijk ${place.checkoutUntil}`
-            : "Vaste vertrektijd"
-          : "Onbekend";
+  // Groen alleen als een mens het heeft bevestigd (kernbelofte); anders zeggen we eerlijk wat we wel en niet weten
+  const claimed = place.departure === "vrij" || place.departure === "per24";
+  const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
+  const departure = !known
+    ? "Onbekend"
+    : claimed && place.departureCheck === "voorwaardelijk"
+      ? "Meestal geen vaste tijd"
+      : claimed && !free
+        ? "Nog niet bevestigd"
+        : place.departure === "vrij"
+          ? "Geen vaste vertrektijd"
+          : place.departure === "per24"
+            ? "Geen vaste tijd, je betaalt per 24 uur"
+            : place.checkoutUntil
+              ? `Uiterlijk ${place.checkoutUntil}`
+              : "Vaste vertrektijd";
+  const note =
+    claimed && place.departureCheck === "voorwaardelijk"
+      ? "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na."
+      : claimed && known && !free
+        ? "Volgens de website is er geen vaste vertrektijd. Dat hebben we nog niet bij de plek zelf gecontroleerd."
+        : free && place.departureCheckedAt
+          ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
+          : undefined;
   const times = [
     place.checkinFrom && `Aankomst vanaf ${place.checkinFrom}`,
     place.accessHours && `Slagboom of poort open ${place.accessHours}`,
@@ -367,18 +381,19 @@ function Decision({ place }: { place: Place }) {
         {/* Vertrekken: het kernfeit */}
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
-            <Sign name="clock" size={28} state={place.departure ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
+            <Sign name="clock" size={28} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
             <dt className="text-ink-2">Vertrekken</dt>
             <dd
               className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${
-                free ? "text-forest" : late ? "text-lake" : place.departure ? "" : "text-muted"
+                free ? "text-forest" : late ? "text-lake" : known ? "" : "text-muted"
               }`}
             >
               {departure}
             </dd>
           </div>
+          {note && <dd className="mt-1 pl-10 text-sm text-ink-2">{note}</dd>}
           {times.length > 0 && <dd className="mt-1 pl-10 text-sm text-ink-2">{times.join(". ")}.</dd>}
-          {!place.departure && (
+          {!known && (
             <dd className="mt-1 pl-10 text-sm text-ink-2">
               Bel even voor je gaat.
               <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd?" />

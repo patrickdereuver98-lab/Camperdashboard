@@ -54,10 +54,15 @@ export function websiteLabel(url: string) {
   return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 }
 
-type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string };
+type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string; departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen" };
 
 /** Korte vertrekregel voor kaarten en kerngegevens; undefined = onbekend */
 export function departureShort(p: Departure): string | undefined {
+  if (p.departure === "vrij" || p.departure === "per24") {
+    if (p.departureCheck === "afgewezen") return undefined;
+    if (p.departureCheck === "voorwaardelijk") return "Meestal geen vaste vertrektijd";
+    if (p.departureCheck !== "bevestigd") return "Vertrektijd nog niet bevestigd";
+  }
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";
   if (p.departure === "vast") return p.checkoutUntil ? `Vertrek uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
