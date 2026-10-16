@@ -13,7 +13,8 @@ echte data met bron.
 | [`docs/onderzoek.md`](docs/onderzoek.md) | Doelgroep- en marktonderzoek (booking.com, trivago, park4night, ACSI, NKC) |
 | [`docs/design.md`](docs/design.md) | Ontwerpsysteem "natuur & vrijheid" |
 
-Snel starten:
+Snel starten: `node start.mjs` in de map van de repo. Dat installeert de pakketten als dat nodig is, start de
+server en opent de browser. In VS Code kan het ook via *Terminal → Run Build Task* (Ctrl+Shift+B). Met de hand:
 
 ```bash
 cd web

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
 import { KIND_LABEL, PROVINCES } from "@/lib/types";
-import { errorMessage } from "@/lib/supabase-browser";
+import { errorMessage, type Database } from "@/lib/supabase-browser";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, primary, secondary, textarea, useQuery, when } from "../ui";
 
 type Row = {
@@ -74,7 +74,7 @@ export default function PlacesAdmin() {
     <div className="mx-auto max-w-6xl space-y-4">
       <PageTitle title="Plekken" />
       <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
-        <label className="flex h-12 items-center gap-2 rounded-xl border-2 border-line bg-surface px-3 focus-within:border-forest">
+        <label className="flex h-12 items-center gap-2 rounded-lg border border-line bg-surface px-3 focus-within:border-forest">
           <Icon name="search" size={20} className="text-muted" />
           <span className="sr-only">Zoek op naam of plaats</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek op naam of plaats" className="h-full flex-1 bg-transparent focus:outline-none" />
@@ -100,7 +100,7 @@ export default function PlacesAdmin() {
       {!loading && rows.length === 0 ? (
         <Empty>Geen plekken gevonden.</Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface outline-1 outline-line outline">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface outline-1 outline-line outline">
           {rows.map((r) => (
             <li key={r.id}>
               <button onClick={() => setEditing(r.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken">
@@ -133,7 +133,8 @@ export default function PlacesAdmin() {
 
 function Meter({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color = value >= 0.8 ? "text-forest" : value >= 0.7 ? "text-forest" : "text-muted";
+  // Groen vanaf de standaard-publicatiedrempel (0,45; instelbaar in Beheer, Instellingen)
+  const color = value >= 0.45 ? "text-forest" : "text-muted";
   return (
     <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full bg-sunken font-display text-sm font-semibold tabular-nums ${color}`} title={`${pct}% compleet`}>
       {pct}
@@ -148,10 +149,16 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // Snel naar een andere plek: het antwoord van de vorige mag de nieuwe niet overschrijven
+    let live = true;
     db().from("places").select("*").eq("id", id).single().then(({ data, error }) => {
+      if (!live) return;
       if (error) setErr(errorMessage(error));
       else setPlace(data as Full);
     });
+    return () => {
+      live = false;
+    };
   }, [id]);
 
   const v = (k: string) => (k in draft ? draft[k] : place?.[k]);
@@ -163,11 +170,18 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
     if (!Object.keys(draft).length) return onClose();
     setBusy(true);
     setErr(null);
-    // Handmatig ingevulde velden markeren: de pipeline overschrijft ze dan nooit
-    const sources = { ...((place?.sources as Record<string, unknown>) ?? {}) };
-    const data = Object.keys(draft).filter((k) => !["status", "status_locked"].includes(k));
-    sources.beheer = [...new Set([...((sources.beheer as string[] | undefined) ?? []), ...data])];
-    const { error } = await db().from("places").update({ ...draft, sources }).eq("id", id);
+    // Handmatig ingevulde velden markeren: de pipeline overschrijft ze dan nooit. De server voegt ze samen met wat er
+    // al staat, zodat een scrape die intussen draaide zijn eigen gegevens in `sources` houdt.
+    const fields = Object.keys(draft).filter((k) => !["status", "status_locked"].includes(k));
+    if (fields.length) {
+      const { error } = await db().rpc("admin_mark_beheer", { p_place_id: id, p_fields: fields });
+      if (error) {
+        setBusy(false);
+        return setErr(errorMessage(error));
+      }
+    }
+    // De velden komen uit de editor hieronder, met dezelfde namen als de kolommen
+    const { error } = await db().from("places").update(draft as Database["public"]["Tables"]["places"]["Update"]).eq("id", id);
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     onSaved();
@@ -196,7 +210,7 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
             <a href={`/plek/${place.slug}`} target="_blank" rel="noreferrer" className="font-semibold text-forest underline">Bekijk op de site</a>
           </div>
 
-          <fieldset className="space-y-3 rounded-2xl bg-sunken p-4">
+          <fieldset className="space-y-3 rounded-xl bg-sunken p-4">
             <legend className="sr-only">Publicatie</legend>
             <label className="flex items-center justify-between gap-3">
               <span className="font-semibold">Status</span>
@@ -264,7 +278,7 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
           <div>
             <p className="mb-2 font-semibold">Voorzieningen</p>
             <p className="mb-3 text-sm text-muted">Vul alleen in wat zeker is. Onbekend telt niet mee en wordt niet getoond.</p>
-            <ul className="divide-y divide-line rounded-2xl bg-surface outline-1 outline-line outline">
+            <ul className="divide-y divide-line rounded-xl bg-surface outline-1 outline-line outline">
               {BOOLS.map(([k, label]) => (
                 <li key={k} className="flex items-center justify-between gap-3 px-3 py-2">
                   <span>{label}</span>
@@ -281,7 +295,7 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
           </div>
           <Field label="Hoofdfoto (URL)"><input type="url" className={input} value={text("image_url")} onChange={(e) => set("image_url", e.target.value || null)} /></Field>
 
-          <details className="rounded-2xl bg-sunken p-4 text-sm">
+          <details className="rounded-xl bg-sunken p-4 text-sm">
             <summary className="cursor-pointer font-semibold">Bronnen per veld</summary>
             <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs">{JSON.stringify(place.sources, null, 2)}</pre>
           </details>
@@ -304,7 +318,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function TriState({ value, onChange }: { value: boolean | null; onChange: (v: boolean | null) => void }) {
   const opts: [boolean | null, string][] = [[true, "Ja"], [false, "Nee"], [null, "?"]];
   return (
-    <span className="flex overflow-hidden rounded-lg border-2 border-line">
+    <span className="flex overflow-hidden rounded-lg border border-line">
       {opts.map(([o, l]) => (
         <button
           key={l}

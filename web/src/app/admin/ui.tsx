@@ -3,27 +3,45 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 
-/** Kleine hook om een Supabase-query te laden; herlaadt als `deps` veranderen of via reload() */
+/**
+ * Kleine hook om een Supabase-query te laden; herlaadt als `deps` veranderen of via reload().
+ * Bij herladen blijft de vorige data staan; bij andere `deps` (ander tabblad, andere zoekterm) niet, zodat er nooit
+ * rijen van de vorige query met het verkeerde type verschijnen.
+ */
 export function useQuery<T>(fn: () => PromiseLike<{ data: T | null; error: unknown }>, deps: unknown[]) {
-  const [state, setState] = useState<{ key: string; data: T | null; error: string | null }>({ key: "", data: null, error: null });
+  const [state, setState] = useState<{ key: string; deps: string; data: T | null; error: string | null }>({
+    key: "",
+    deps: "",
+    data: null,
+    error: null,
+  });
   const [tick, setTick] = useState(0);
   const fnRef = useRef(fn);
   useEffect(() => {
     fnRef.current = fn;
   });
-  const key = `${JSON.stringify(deps)}#${tick}`;
+  const depsKey = JSON.stringify(deps);
+  const key = `${depsKey}#${tick}`;
   useEffect(() => {
     let live = true;
     Promise.resolve(fnRef.current()).then(
-      (res) => live && setState((s) => ({ key, data: res.error ? s.data : res.data, error: res.error ? errorMessage(res.error) : null })),
-      (e) => live && setState((s) => ({ ...s, key, error: errorMessage(e) })),
+      (res) =>
+        live &&
+        setState((s) => ({
+          key,
+          deps: depsKey,
+          data: res.error ? (s.deps === depsKey ? s.data : null) : res.data,
+          error: res.error ? errorMessage(res.error) : null,
+        })),
+      (e) => live && setState((s) => ({ key, deps: depsKey, data: s.deps === depsKey ? s.data : null, error: errorMessage(e) })),
     );
     return () => {
       live = false;
     };
-  }, [key]);
+  }, [key, depsKey]);
   const reload = useCallback(() => setTick((t) => t + 1), []);
-  return { data: state.data, error: state.error, loading: state.key !== key, reload };
+  const same = state.deps === depsKey;
+  return { data: same ? state.data : null, error: same ? state.error : null, loading: state.key !== key, reload };
 }
 
 export const db = supabase;
@@ -38,7 +56,7 @@ export function PageTitle({ title, children }: { title: string; children?: React
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl bg-surface p-4 outline-1 outline-line outline ${className}`}>{children}</div>;
+  return <div className={`rounded-xl bg-surface p-4 outline-1 outline-line outline ${className}`}>{children}</div>;
 }
 
 const TONES = {
@@ -56,23 +74,23 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
 export function ErrorNote({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-xl bg-alert-tint px-4 py-3 font-semibold text-alert">
+    <p role="alert" className="rounded-lg bg-alert-tint px-4 py-3 font-semibold text-alert">
       {message}
     </p>
   );
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="rounded-2xl border-2 border-dashed border-line px-4 py-10 text-center text-muted">{children}</p>;
+  return <p className="rounded-xl border border-dashed border-line px-4 py-10 text-center text-muted">{children}</p>;
 }
 
 export const input =
-  "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none disabled:opacity-60";
-export const textarea = "w-full rounded-xl border-2 border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none";
-export const button = "inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 font-semibold transition-colors disabled:opacity-50";
+  "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none disabled:opacity-60";
+export const textarea = "w-full rounded-lg border border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none";
+export const button = "inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 font-semibold transition-colors disabled:opacity-50";
 export const primary = `${button} bg-forest text-on-forest hover:bg-forest-deep`;
-export const secondary = `${button} border-2 border-line bg-surface hover:border-forest`;
-export const danger = `${button} border-2 border-alert/40 bg-surface text-alert hover:bg-alert-tint`;
+export const secondary = `${button} border border-line bg-surface hover:border-forest`;
+export const danger = `${button} border border-alert/40 bg-surface text-alert hover:bg-alert-tint`;
 
 export function Segmented<T extends string>({
   value,
@@ -93,7 +111,7 @@ export function Segmented<T extends string>({
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 border-line bg-surface px-4 text-sm font-semibold aria-checked:border-forest aria-checked:bg-forest aria-checked:text-on-forest"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm font-semibold aria-checked:border-forest aria-checked:bg-forest aria-checked:text-on-forest"
         >
           {o.label}
           {o.count !== undefined && <span className="opacity-75">{o.count}</span>}

@@ -5,7 +5,8 @@ description: Huisstijl voor teksten en ontwerp van VrijStaan. Gebruik bij elke w
 
 # VrijStaan: schrijven en ontwerpen
 
-Lees ook `docs/specs/04-ui-ux-brief.md` (thema staat vast) en de algemene skill `frontend-design`.
+Lees ook `docs/stijlgids.md` (hoe het eruitziet en beweegt) en `docs/specs/04-ui-ux-brief.md` (wat er op welk scherm
+staat). Kleuren staan vast; typografie, vormen en beweging volgen de stijlgids.
 
 ## Schrijven
 
@@ -32,11 +33,14 @@ Niet doen (dit verraadt een tekstgenerator):
 
 ## Ontwerpen
 
-- Thema vast: zandpapier, bosgroen, avondzon, meerblauw, Fraunces + Inter, bosachtige donkere modus.
+- Kleuren vast: zandpapier, bosgroen, avondzon, meerblauw, bosachtige donkere modus. Lettertype: Geist voor alles
+  (geen Fraunces of andere sierletters). Eén accent per scherm; kleur betekent iets.
+- Professioneel en rustig, niet speels: geen getekende landschappen op kaarten, geen gevulde icoonblokjes, geen dikke
+  randen (1 px of een schaduw), hoeken volgens de schaal (knop 8, kaart 12, sheet 16 px).
 - Diepte met schaduw in lagen (`shadow-low`, `shadow-raised`, `shadow-float` uit `globals.css`), niet met randen om alles heen.
   Belangrijk ligt hoger: zoekkaart en sheets het hoogst, kaarten laag, achtergrondvlakken plat.
-- Afronding volgt de hiërarchie: grote vlakken ruimer (24–28 px), kaarten 16–20 px, knoppen 12 px, chips rond.
-- Beweging alleen als antwoord op een handeling (openen, bewaren, wisselen) plus één moment op de startpagina.
-  Gebruik de veren uit `motion` (zie bestaande componenten) en respecteer `prefers-reduced-motion`.
+- Afronding volgt de stijlgids: sheets 16 px, kaarten 12 px, knoppen en velden 8 px, chips rond.
+- Beweging kort en vloeiend (`--ease-out`, 150–300 ms): als antwoord op een handeling, en content die rustig
+  binnenkomt (`.enter`, `.lift`). Alleen `transform` en `opacity`; respecteer `prefers-reduced-motion`.
 - Tikdoelen minstens 44 px, tekst minstens 14 px, contrast minstens 4,5:1 in licht en donker.
 - Controleer elke wijziging op iPhone-formaat, licht en donker, met een screenshot.

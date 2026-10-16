@@ -1,0 +1,42 @@
+# Bewaking zonder externe dienst: faalt deze workflow, dan mailt GitHub de eigenaar van de repository.
+# Elk uur: staat de site online (alleen als de variabele SITE_URL is gezet), antwoordt de database, en staan er nog
+# genoeg plekken online (een grote daling wijst op een fout in de pipeline of een verkeerde publicatiedrempel).
+name: Bewaking
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE_URL: ${{ vars.SITE_URL }}
+      SUPABASE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co
+      SUPABASE_KEY: sb_publishable_EGEUx5L3Df4w18_DgmtbHw_6RUoglht
+      MIN_PLEKKEN: "1000"
+    steps:
+      - name: Site bereikbaar
+        if: env.SITE_URL != ''
+        run: |
+          for path in / /zonder-vertrektijd /sitemap.xml; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$SITE_URL$path")
+            echo "$path antwoordde met HTTP $code"
+            test "$code" = "200"
+          done
+      - name: Site-adres nog niet ingesteld
+        if: env.SITE_URL == ''
+        run: echo "::notice::Zet de repositoryvariabele SITE_URL (Settings → Secrets and variables → Actions → Variables) om ook de site te bewaken."
+      - name: Database en aantal plekken
+        run: |
+          range=$(curl -s -D - -o /dev/null --max-time 30 \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" -H "Prefer: count=exact" \
+            -H "Range: 0-0" "$SUPABASE_URL/rest/v1/places?select=id&status=eq.published" | tr -d '\r' | grep -i '^content-range:')
+          echo "$range"
+          total=${range##*/}
+          test -n "$total" && test "$total" -ge "$MIN_PLEKKEN" || { echo "::error::Maar ${total:-0} gepubliceerde plekken (minimaal $MIN_PLEKKEN verwacht)"; exit 1; }

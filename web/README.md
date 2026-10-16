@@ -29,6 +29,9 @@ Zonder internet (bijvoorbeeld in CI) bouwen met de meegeleverde snapshot: `VRIJS
 | `supabase/schema.sql` | Volledige databasestructuur, functies, RLS en cron-jobs |
 | `supabase/seed.sql` | Startgegevens (instellingen, FAQ, provincies, woonplaatsen, Overpass-sjablonen) |
 | `supabase/functions/pipeline/` | Edge function: OpenStreetMap-import en website-scraper |
+| `supabase/functions/push/` | Edge function: pushmeldingen (test: `deno test push/notify_test.ts`, zie de kop van dat bestand) |
+| `supabase/migrations/` | Losse wijzigingen na `schema.sql`, in volgorde uit te voeren (bovenaan staat of ze live al zijn toegepast) |
+| `e2e/`, `tests/` | Playwright-tests (`npm run test:e2e`, na `npm run build:offline`) en unit tests (`npm run test:unit`) |
 
 ## Data
 
