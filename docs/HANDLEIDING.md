@@ -61,7 +61,7 @@ Productieversie lokaal testen: `npm run build` en daarna `npm start`.
    vóórdat je de code merget die ze nodig heeft. De preview gebruikt dezelfde live database.
 
 Instellen (eenmalig): GitHub → **Settings → Branches → Add rule** voor `main`: "Require a pull request" en "Require
-status checks: Lint, typecheck en build".
+status checks" met de CI-job uit `.github/workflows/ci.yml`.
 6. Eigen domein: in Vercel **Settings → Domains** het domein toevoegen en de DNS-records volgen.
 
 > De site werkt ook op elk ander platform dat Node.js draait (`npm run build && npm start`, poort 3000).

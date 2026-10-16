@@ -29,7 +29,7 @@ store, RLS op alle tabellen, geen geheimen in de repo, `npm run check` en de off
 
 1. **De kernbelofte haalt de data niet.** Maar 19 van de 680 plekken (2,8%) staan als "zonder vaste vertrektijd"
    (PRD-doel 150), 55% heeft een onbekende vertrektijd, 59% zijn campings en er zijn 0 camperparkeerplaatsen. De
-   prijs met toeslagen, die de startpagina belooft, ontbreekt in de data.
+   toeslagen staan live wel bij ±965 plekken (`price_extras`), maar niet in de snapshot en niet in het reistotaal.
 2. **Vertrouwen lekt weg.** "100% van de gegevens bekend" staat naast vier keer "Onbekend". Er is één pipeline-datum
    als "laatste update", er zijn 0 reviews, en in de juridische pagina's staan plaatshouders. De
    toegankelijkheidsverklaring belooft dingen die de code niet waarmaakt.
@@ -63,7 +63,7 @@ afgekapte zin) en staat er één dubbel in.
 
 | # | Taak | Status | Omvang |
 |---|---|---|---|
-| K1 | **Bevestiging in de database:** kolommen `departure_check`, `departure_checked_at` en `departure_checked_by`, de RPC `check_departure` (alleen beheer), automatisch vervallen bij een wijziging (trigger) en na een jaar (nachtelijke job), en de snapshot met vertrekgegevens (`web/supabase/migrations/20261015120000_vertrektijd_bevestiging.sql`) | Gebouwd, nog niet op live gezet | S |
+| K1 | **Bevestiging in de database:** kolommen `departure_check`, `departure_checked_at` en `departure_checked_by`, de RPC `check_departure` (alleen beheer), automatisch vervallen bij een wijziging (trigger) en na een jaar (nachtelijke job), en de snapshot met vertrekgegevens (`web/supabase/migrations/20261015120000_vertrektijd_bevestiging.sql`) | Gebouwd, live sinds 16 oktober | S |
 | K2 | **Site:** de kernpagina toont alleen bevestigde plekken. Kandidaten staan bij Overige als "Vertrektijd nog niet bevestigd", met uitleg op de plekpagina. Een bevestigde plek toont "Gecontroleerd op <datum>" | Gebouwd | S |
 | K3 | **Beheer → Vertrektijden:** een controlelijst met de bronzin, een link naar de bron, telefoon en mail, en de knoppen Bevestigd, Eigenaar bevestigde het, Met voorwaarde, Klopt niet en Opnieuw controleren | Gebouwd | S |
 | K4 | **Eerste controleronde:** de 21 kandidaten nalopen (minstens Halfweg, Vlisterhoeve, Gideonse en de dubbele Duurswoldje). Hiervoor moet een beheeraccount actief zijn: live is er nog 0 beheerder en 1 openstaande uitnodiging | Open | S |
@@ -122,11 +122,11 @@ Weinig risico en direct zichtbaar. Dit komt uit de UI/UX- en gebruikersreview.
 
 | # | Taak | Omvang |
 |---|---|---|
-| E1 | **CI** (`.github/workflows/ci.yml`, gebouwd: lint, typecheck, offline build en een informatieve audit) op elke PR: `npm ci` → lint → typecheck → Vitest → `VRIJSTAAN_OFFLINE=1 npm run build` → `npm audit --omit=dev --audit-level=high`. Actions op commit-SHA, `permissions: contents: read` | S |
+| E1 | **CI** (`.github/workflows/ci.yml` komt uit PR #10, met `acceptatie` in de triggers; PR #4 voegt Playwright toe) op elke PR: `npm ci` → lint → typecheck → Vitest → `VRIJSTAAN_OFFLINE=1 npm run build` → `npm audit --omit=dev --audit-level=high`. Actions op commit-SHA, `permissions: contents: read` | S |
 | E2 | **Database-job:** `supabase db reset` op de migraties, advisors (falen bij nieuwe WARN), pgTAP-tests op RLS en grants per rol | M |
 | E3 | **Unit-tests** (Vitest) voor `lib/search.ts`, `lib/format.ts`, `lib/geo.ts`, `lib/routing.ts`, `places.ts normalize()`, de reiskosten, en golden tests voor de extractor ("niets verzinnen" als assert) | M |
 | E4 | **E2E** (Playwright, iPhone-viewport, licht en donker) voor zes kernflows: zoeken → filter → plek; bewaren → reis → offline; Dichtbij met nep-locatie; contact → supportticket; cookie weigeren = geen event; niet-admin krijgt geen beheer. Met `@axe-core/playwright` en een Lighthouse-budget (LCP < 2,5 s, CLS < 0,1) | M |
-| E5 | **Acceptatieomgeving (besluit 16 oktober 2026):** branch `acceptatie` naast `main`. Werkwijze: feature-branch → PR naar `acceptatie` → testen op de vaste Vercel-preview van `acceptatie` → PR van `acceptatie` naar `main`. De preview leest de live database; schemawijzigingen gaan als migratie in `web/supabase/migrations/` mee in de PR en worden pas na akkoord op live gezet. Branch protection op `main` (alleen via PR, CI groen). Dependabot voor `npm` en `github-actions`. Status: branch en CI gebouwd, protection en Vercel nog instellen | S |
+| E5 | **Acceptatieomgeving (besluit 16 oktober 2026):** branch `acceptatie` naast `main`. Werkwijze: feature-branch → PR naar `acceptatie` → testen op de vaste Vercel-preview van `acceptatie` → PR van `acceptatie` naar `main`. De preview leest de live database; schemawijzigingen gaan als migratie in `web/supabase/migrations/` mee in de PR en worden pas na akkoord op live gezet. Branch protection op `main` (alleen via PR, CI groen). Dependabot voor `npm` en `github-actions`. Status: branch staat; CI via PR #10; protection en Vercel nog instellen | S |
 | E6 | **Pre-commit:** lefthook of husky + lint-staged (eslint, prettier, tsc) en gitleaks | S |
 | E7 | **Monitoring zonder tracking van derden:** `instrumentation.ts` `onRequestError` → `app_logs` (of GlitchTip/Sentry EU zonder PII), een uptime-check en een versheid-endpoint (`max(verified_at)`, alarm na 24 uur), en een wekelijkse advisor-run | M |
 
@@ -150,7 +150,7 @@ Weinig risico en direct zichtbaar. Dit komt uit de UI/UX- en gebruikersreview.
 | P4 | **Compacte mobiele zoekkop** die bij scrollen inklapt tot "Waar · n filters · Kaart"; tabbladen passen op 390 px | UX | M |
 | P5 | **Zoekstaat behouden:** `kaart`, "toon meer" en de Dichtbij-filters in de URL plus scroll-restore; terugknop zonder `history.length`-gok | UX | S |
 | P6 | **Laadstaten:** `loading.tsx` voor `/plek/[slug]`, `/camperplaatsen/*` en home, `params` binnen `<Suspense>`, skelet voor Mijn reis | UX | S |
-| P7 | **Prijs zoals camperaars rekenen:** `priceExtras` echt in de dataset, standaardprijs "camper + 2 personen" (of duidelijk "per persoon"), sanity-check op uitschieters, en Mijn reis telt personen, hond en stroom mee | gebruiker | M |
+| P7 | **Prijs zoals camperaars rekenen:** `priceExtras` staat live al bij ±965 plekken (correctie 16 oktober; de review keek naar de snapshot), dus snapshot verversen, standaardprijs "camper + 2 personen" (of duidelijk "per persoon"), sanity-check op uitschieters, en Mijn reis telt personen, hond en stroom mee | gebruiker | M |
 | P8 | **Eerlijke actualiteit:** bron en datum per kernfeit (vertrektijd, prijs) i.p.v. één pipeline-datum | gebruiker | S |
 | P9 | **Lengtefilter betrouwbaar:** verdachte waarden ≤ 6 m bij campings markeren, eerlijk chiplabel ("lengte bij 14% bekend"), optie "alleen plekken waarvan bekend is dat ik pas" | gebruiker | S |
 | P10 | **Aankomen 's avonds:** aankomst-, slagboom- en receptietijden en "24 uur toegankelijk / zelf inchecken" in data, plekpagina en als chip in Dichtbij | gebruiker, forum | M |
@@ -232,5 +232,6 @@ Daarna      Fase 3 in volgorde S1 → S3 → S6 → S5 → S9, dan de rest
   build vóór de push.
 - Taken uit dit plan worden opgenomen in `docs/specs/06-implementatieplan.md` met status. Nieuwe tegenstrijdigheden
   komen in `docs/specs/README.md` (nieuw: punt 12 over de toegankelijkheidsverklaring en punt 13 over de beloofde
-  prijs met toeslagen).
+  prijs met toeslagen). Alle agents gebruiken het samenwerkingsbord `docs/samenwerking.md` (PR #9) voor de volgorde
+  van samenvoegen en wie wat oppakt.
 - Tekst of uiterlijk aanpassen gaat via de skills `vrijstaan-stijl` en `frontend-design`.

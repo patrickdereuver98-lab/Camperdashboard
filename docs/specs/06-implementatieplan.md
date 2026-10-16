@@ -67,9 +67,9 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Totaal in Mijn reis eerlijk ("€ x + 2 onbekend") | Agent | UX-audit | `trip-app.tsx` | Geen totaal dat volledig lijkt bij onbekende prijzen | — |
 | ⬜ Plaatsnaam per postcode (dorp in plaats van gemeente) | Agent | UX-audit | Pipeline | Steekproef van 20 plekken klopt | — |
 | ⬜ Automatische tests voor extractor en filters | Agent | Testscripts in sessie | `web/tests/` + script in `package.json` | Draait in CI | — |
-| ✅ CI op GitHub (lint, typecheck, offline build) | Agent | TRD | `.github/workflows/ci.yml` | Groen op elke PR | — |
+| 🔄 CI op GitHub (lint, typecheck, offline build) | Agent | TRD | `.github/workflows/ci.yml` (PR #10) | Groen op elke PR, ook naar `acceptatie` | — |
 | 🔄 Acceptatieomgeving: branch `acceptatie`, PR's eerst daarheen, Vercel-preview | Agent + Patrick | `plan.md` E5 | Branch + CI; Vercel en branch protection door Patrick | Niets gaat meer direct naar `main` | CI |
-| 🔄 Kernbelofte 100% zeker: bevestiging door mens vóór Zonder vertrektijd | Agent | `plan.md` K1–K3 | Migratie `20261015120000_vertrektijd_bevestiging.sql`, Beheer → Vertrektijden | Migratie op live, eerste ronde gecontroleerd | Beheeraccount |
+| 🔄 Kernbelofte 100% zeker: bevestiging door mens vóór Zonder vertrektijd | Agent | `plan.md` K1–K3 | Migratie `20261015120000_vertrektijd_bevestiging.sql` (live sinds 16 oktober), Beheer → Vertrektijden | Eerste ronde gecontroleerd | Beheeraccount |
 | ⬜ Beveiligingsadviezen van Supabase nalopen | Agent | Supabase advisors | Opgeloste waarschuwingen | Geen kritieke meldingen | — |
 
 ## Mijlpaal 6: release ⬜

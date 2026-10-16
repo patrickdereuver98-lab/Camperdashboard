@@ -56,4 +56,4 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 | 10 | Testtabellen `private.probe` en `private.probe2` staan nog in de database | Backend Schema | Verwijderen |
 | 11 | Kop van de startpagina is een tekening; een echte sfeerfoto vraagt een foto met vrije licentie of eigen foto | UI/UX Brief | Foto aanleveren (eigen of Wikimedia Commons, CC BY/CC0) en in `web/public/` zetten met bronvermelding |
 | 12 | Toegankelijkheidsverklaring noemt WCAG 2.2, ≥ 17 px tekst en ≥ 44 × 44 tikdoelen; de code heeft 12 px tekst, 36 px chips en ±12 px markers | UI/UX Brief, toegankelijkheid | Verklaring laten kloppen; herstel in `plan.md` fase 1 en P13 |
-| 13 | Startpagina belooft prijzen met alle toeslagen; het veld met toeslagen ontbreekt in de data | PRD, home | `plan.md` P7 |
+| 13 | Startpagina belooft prijzen met alle toeslagen; live staan toeslagen bij ±965 plekken, maar de snapshot heeft ze niet en Mijn reis telt ze niet mee | PRD, home | `plan.md` P7 (nummering volgt het bord in `docs/samenwerking.md`) |
