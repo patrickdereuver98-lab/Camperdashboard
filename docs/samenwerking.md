@@ -6,18 +6,22 @@
 
 ## 1. Stand van zaken
 
-`main` staat nog op 12 oktober (`c68d087`). Sindsdien zijn vijf agents parallel bezig geweest. Niets daarvan is
-samengevoegd, maar een deel staat wel al **live in de database** (migraties van PR #4 en #10).
+`main` staat nog op 12 oktober (`c68d087`). Sindsdien zijn zes agents parallel bezig geweest. Niets daarvan is
+samengevoegd, maar een deel staat wel al **live in de database** (migraties van PR #4, #10 en #12).
+
+Sinds 16 oktober is er een branch `acceptatie` (nu gelijk aan `main`). PR #10, #11 en #12 hebben die al als basis.
+Volgens de sessie van #11/#12 is de nieuwe werkwijze: feature-branch → PR naar `acceptatie` → testen op de
+Vercel-preview → PR `acceptatie` → `main`. **Nog door Patrick te bevestigen** (§4, B9).
 
 | PR | Branch | Wat | Grootte | Live in database? | Status |
 |---|---|---|---|---|---|
 | [#4](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/4) | `claude/launch-hardening` | Tests en CI, kaart per gebied (PostGIS), strikte OSM-toelating, **accounts** (Google, Apple, Facebook, inloglink), foto-uploads met moderatie, dubbelen samenvoegen, drukte, push, camperprofiel met documenten, uitgaven, reisstatistieken, samen plannen | 108 bestanden | Ja: 11 migraties. Nog niet live: `strict_osm_query` (B2) en `delete_my_account` (B5) | Draft, wacht op B2, B3 en B5 |
 | [#5](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/5) | `claude/mobile-ui-photos-ux-axxlae` | Nieuwe stijlgids (Geist), compactere UI, scherpe foto's, nette beschrijving, scraper v17 | 212 bestanden | Scraper v17 is uitgerold | Draft, Vercel groen, wacht op review |
-| [#6](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/6) | `claude/local-host-setup-3xwg5y` | `node start.mjs` om lokaal te draaien | 1 commit | Nee | Draft, botst met niets |
+| [#6](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/6) | `claude/local-host-setup-3xwg5y` | `node start.mjs` om lokaal te draaien | 1 commit | Nee | Klaar voor review, botst met niets |
 | [#9](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/9) | `claude/brave-wright-odz441` | Audit 12 oktober + dit bord | Alleen documenten | Nee | Draft |
-| [#10](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/10) | `claude/deelafbeelding-en-review` | Review in fases 0 tot 2: limieten op RPC's en API's, privacy (supporttoken), CI met 15 tests, getypeerde Supabase-client, deelafbeelding, cookiebanner, zoekpagina | 64 bestanden | Ja: 1 migratie (limieten) | Draft, CI en Vercel groen |
-| [#11](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/11) | `review/feature-review-plan` | Feature review (UI/UX, gebruiker) en `plan.md` | Alleen documenten | Nee | Draft |
-| geen PR | `feature/kernbelofte-acceptatie` | Sessie "Feature review en plan" werkt aan de kernbelofte (meer plekken zonder vertrektijd). Nog niet gepusht | | | Bezig |
+| [#10](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/10) | `claude/deelafbeelding-en-review` | Review in fases 0 tot 2: limieten op RPC's en API's, privacy (supporttoken), CI met 15 tests, getypeerde Supabase-client, deelafbeelding, cookiebanner, zoekpagina | 64 bestanden | Ja: 4 migraties (limieten, `admin_mark_beheer`) | Klaar voor review, basis `acceptatie`, CI en Vercel groen |
+| [#11](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/11) | `review/feature-review-plan` | Feature review (UI/UX, gebruiker) en `plan.md` | Alleen documenten | Nee | Draft, basis `acceptatie` |
+| [#12](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/12) | `feature/kernbelofte-acceptatie` | Kernbelofte: een plek staat pas op `/zonder-vertrektijd` na bevestiging door een mens (beheer of eigenaar), een jaar geldig; scherm `/admin/vertrektijden`. Raakt `places.ts`, `search.ts`, `format.ts`, `types.ts`, `place-ui.tsx`, `legend.tsx`, plekpagina, zoekpagina, startpagina, `admin/shell.tsx` | | Ja: `vertrektijd_bevestiging` (kolommen `departure_check*`, RPC `check_departure`, cron `departure-recheck`) | Draft, basis `acceptatie` |
 
 ### Live cijfers (16 oktober 2026)
 
@@ -26,7 +30,7 @@ samengevoegd, maar een deel staat wel al **live in de database** (migraties van 
 | Gepubliceerde plekken | 1.536 |
 | Zonder vaste vertrektijd (`vrij` of `per24`) | 21 (doel 150) |
 | Met prijs | 880 |
-| Met losse toeslagen (`price_extras`) | ±965. **Let op:** de snapshot (680 plekken) heeft dit veld niet, de live data wel. `plan.md` P7, open punt 13 van PR #11 ("veld ontbreekt in de data") en review #10 punt 3.1 gaan uit van de snapshot |
+| Met losse toeslagen (`price_extras`) | ±965. **Let op:** de snapshot (680 plekken) heeft dit veld niet, de live data wel. `plan.md` P7, open punt 13 van PR #11 ("veld ontbreekt in de data") en review #10 punt 3.1 gaan uit van de snapshot. De sessie van #11 past `plan.md` aan |
 | Beheeraccounts | 0 (één uitnodiging klaar) |
 | Bewaartermijnen actief | Nee: geen `apply_retention`, geen cron `retention` |
 | Scrape-wachtrij | Leeg (herscrape met v17 klaar) |
@@ -50,7 +54,7 @@ Gemeten met `git merge-tree` op 16 oktober 2026. Elke combinatie van PR #4, #5, 
 
 Uitgangspunt: eerst het vangnet (CI), daarna de grote UI-wijziging, dan de nieuwe functies. Na elke merge werkt de
 agent van de **volgende** PR zijn branch bij met `main` (merge, geen rebase), lost de botsingen op en laat CI groen
-worden. Pas daarna de volgende merge.
+worden. Pas daarna de volgende merge. Als B9 bevestigd is, geldt alles hieronder voor `acceptatie` in plaats van `main`.
 
 1. **#6 startscript.** Botst met niets.
 2. **#10 review fase 0 tot 2.** Brengt CI, tests en de limieten. Al groen. Daarna draait CI op elke volgende PR.
@@ -59,7 +63,8 @@ worden. Pas daarna de volgende merge.
    `formValue()`, `DepartureRadios`, de focusring en de cookiebanner).
 4. **#4 accounts en meer**, na de besluiten B2 en B3 in §4. De agent van #4 voegt `main` samen; `ci.yml` wordt één workflow
    (die van #10 als basis, met de Playwright-stap van #4 erbij).
-5. **#11 en #9 documenten** als laatste. De open punten krijgen dan één doorlopende nummering (§5).
+5. **#12 kernbelofte**, na #5: de sessie van #12 zet haar logica op het nieuwe ontwerp van #5. #12 haalt haar eigen `ci.yml` weg, zodat die van #10 de enige is.
+6. **#11 en #9 documenten** als laatste. De open punten krijgen dan één doorlopende nummering (§5).
 
 ## 4. Besluiten die alleen Patrick kan nemen
 
@@ -73,6 +78,7 @@ worden. Pas daarna de volgende merge.
 | B6 | Beheeraccount aanmaken via `/admin` | Zonder account blijven inzendingen, reviews en tickets liggen | alle drie de reviews |
 | B7 | Login-sleutels (Google, Facebook) en eigen SMTP | Nodig voor B1 en voor mail bij tickets | #4, #10, audit B5 |
 | B8 | Bedrijfsgegevens in `web/src/lib/company.ts` | Juridische pagina's tonen nog plaatshouders | alle |
+| B9 | Werkwijze via `acceptatie` bevestigen, en de kernbelofte zoals #12 die bouwt: alleen na bevestiging door een mens op `/zonder-vertrektijd`, "per 24 uur" met eigen label, "vrij behalve bij drukte" niet op de kernpagina, bevestiging een jaar geldig | Volgens de sessie van #12 al door Patrick besloten; staat nog niet bij Patrick zelf op dit bord | #12 |
 
 ## 5. Eén nummering voor de open punten
 
@@ -112,7 +118,7 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 
 | Taak | Bron | Voorstel eigenaar | Waarom die | Status |
 |---|---|---|---|---|
-| Kernbelofte: meer plekken zonder vertrektijd (OSM `motorhome=designated`, "per 24 uur" herkennen, Doe mee gericht) | audit A1, #11 D1/D2 | Sessie "Feature review en plan" (`feature/kernbelofte-acceptatie`) | Is er al mee bezig | 🔄 |
+| Kernbelofte: meer plekken zonder vertrektijd (OSM `motorhome=designated`, "per 24 uur" herkennen, Doe mee gericht) en bevestiging door een mens | audit A1, #11 D1/D2 | Sessie "Feature review en plan" | Bezig | 🔄 PR #12 |
 | Mijn reis telt toeslagen per persoon en per nacht mee | audit B1, #11 P7, #10 3.1 en G2 | Agent van #4, ná stap 4 | #4 bouwde al uitgaven en reiskosten in `trip-app.tsx`; anders twee keer hetzelfde bestand | ⬜ Toegezegd door #4 |
 | Routecache op dagen (privacy) | audit C5 | Agent van #10 | `routing.ts` is in #10 al aangepast; één regel | ⬜ |
 | Eerste resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | audit B4, #10 2.12 (LCP) | Agent van #5, ná stap 3 | `search-app.tsx` is in #5 herschreven | ⬜ |
