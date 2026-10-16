@@ -5,6 +5,7 @@
 //   { "action": "osm", "region": "NL-GE" }  → Overpass rechtstreeks (handmatig; edge-IP's worden soms geweigerd)
 //   { "action": "scrape", "n": 6 }          → volgende batch websites
 //   { "action": "enqueue" }                 → plekken met website in de scrape-wachtrij
+//   { "action": "inspect", "url": "…" }     → diagnose: gekozen pagina's en vertrekzinnen (schrijft niets)
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
@@ -180,18 +181,34 @@ async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]>
   return pages.map((url) => ({ url, text: "" }));
 }
 
-async function scrapeOne(place: { id: string; website: string }) {
-  const home = new URL(place.website);
+async function collectPages(website: string) {
+  const home = new URL(website);
   const html = await fetchPage(home);
   if (!html) throw new Error("Geen HTML of geblokkeerd door robots.txt");
-  const pages = [html];
   const links = extractLinks(html, home);
   let picked = rankLinks(links, home);
   // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij
-  if (needsSitemap(picked)) picked = rankLinks([...links, ...(await sitemapPages(home))], home);
+  const viaSitemap = needsSitemap(picked);
+  if (viaSitemap) picked = rankLinks([...links, ...(await sitemapPages(home))], home);
   const subs = await Promise.all(picked.map((href) => fetchPage(new URL(href)).catch(() => null)));
+  return { home, html, links: links.length, picked, viaSitemap, subs };
+}
+
+async function scrapeOne(place: { id: string; website: string }) {
+  const { home, html, subs } = await collectPages(place.website);
+  const pages = [html];
   for (const sub of subs) if (sub) pages.push(sub);
   return extract(pages, home);
+}
+
+/** Diagnose (alleen lezen): welke pagina's kiest de scraper en welke zinnen over vertrekken staan erop */
+async function inspect(website: string) {
+  const c = await collectPages(website);
+  const pages = [c.html, ...c.subs.filter((x): x is string => !!x)];
+  const text = pages.join(" ").replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  const snippets = [...text.matchAll(/[^.]{0,90}(vertrek|uitcheck|check-?out|abreise|per 24 uur|24 uur)[^.]{0,90}/gi)].slice(0, 8).map((m) => m[0].trim());
+  const data = extract(pages, c.home) as Record<string, unknown>;
+  return { links: c.links, viaSitemap: c.viaSitemap, picked: c.picked, fetched: c.subs.map((x) => !!x), departure: data.departure ?? null, snippets };
 }
 
 async function runScrape(n: number) {
@@ -228,6 +245,7 @@ Deno.serve(async (req) => {
         (e) => ({ ok: true, count: e.length }),
         (e) => ({ ok: false, error: String(e) }),
       );
+    else if (body.action === "inspect") result = await inspect(String(body.url));
     else if (body.action === "enqueue") result = (await db.rpc("enqueue_scrape", { p_only_missing: body.all !== true })).data;
     else return new Response("Onbekende actie", { status: 400 });
     return Response.json(result);
