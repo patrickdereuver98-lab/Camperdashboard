@@ -119,7 +119,7 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 | Taak | Bron | Voorstel eigenaar | Waarom die | Status |
 |---|---|---|---|---|
 | Kernbelofte: meer plekken zonder vertrektijd (OSM `motorhome=designated`, "per 24 uur" herkennen, Doe mee gericht) en bevestiging door een mens | audit A1, #11 D1/D2 | Sessie "Feature review en plan" | Bezig | 🔄 PR #12 |
-| Mijn reis telt toeslagen per persoon en per nacht mee | audit B1, #11 P7, #10 3.1 en G2 | Agent van #4, ná stap 4 | #4 bouwde al uitgaven en reiskosten in `trip-app.tsx`; anders twee keer hetzelfde bestand | ⬜ Toegezegd door #4 |
+| Mijn reis telt toeslagen per persoon en per nacht mee | audit B1, #11 P7, #10 3.1 en G2 | Agent van #4, ná stap 4 | #4 bouwde al uitgaven en reiskosten in `trip-app.tsx`; anders twee keer hetzelfde bestand | ✅ PR #4 (`a0e73f7`): "per persoon" als nachtprijs alleen zonder basisprijs, toeristenbelasting van de plek vervangt de schatting, overige toeslagen als "+ toeslagen, niet meegeteld" |
 | Routecache op dagen (privacy) | audit C5 | Agent van #10 | `routing.ts` is in #10 al aangepast; één regel | ✅ PR #10 (`a0301b2`) |
 | Eerste resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | audit B4, #10 2.12 (LCP) | Agent van #5, ná stap 3 | `search-app.tsx` is in #5 herschreven | ⬜ |
 | Door `discover` gevonden websites eerst laten bevestigen | audit A4 | Audit-agent (#9) | Raakt alleen `functions/discover` en één RPC; niemand anders zit daar | ⬜ wacht op akkoord (live deploy) |
