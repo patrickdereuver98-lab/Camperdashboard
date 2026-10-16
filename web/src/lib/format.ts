@@ -26,8 +26,9 @@ export function scoreLabel(n: number) {
   return n.toFixed(1).replace(".", ",");
 }
 
-const dateFmt = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", year: "numeric" });
-const monthFmt = new Intl.DateTimeFormat("nl-NL", { month: "long", year: "numeric" });
+// Altijd Nederlandse tijd: de server draait in UTC, dus rond middernacht zou een andere dag verschijnen
+const dateFmt = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
+const monthFmt = new Intl.DateTimeFormat("nl-NL", { month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
 export function formatDate(iso: string) {
   return dateFmt.format(new Date(iso));

@@ -74,12 +74,18 @@ export default function ReviewsRankingPage() {
         </p>
       </Section>
 
+      <Section title="Vertrektijd in je review">
+        <p>
+          In het reviewformulier kun je invullen hoe laat je weg moest. Dat antwoord gaat apart naar ons. We controleren het
+          en passen dan de vertrektijd van de plek aan.
+        </p>
+      </Section>
+
       <Section title="Binnenkort">
-        <p>Deze twee dingen kun je nog niet, maar komen er binnenkort bij:</p>
-        <ul>
-          <li>Foto&apos;s toevoegen bij je review. Ook die bekijken we eerst voordat ze online komen.</li>
-          <li>De vraag &quot;Moest je voor een vaste tijd vertrekken?&quot; in het reviewformulier.</li>
-        </ul>
+        <p>
+          Foto&apos;s toevoegen bij je review kan nog niet. Dat komt er binnenkort bij. Ook die bekijken we eerst voordat ze
+          online komen.
+        </p>
       </Section>
 
       <Section title="Hoe de volgorde van zoekresultaten werkt">

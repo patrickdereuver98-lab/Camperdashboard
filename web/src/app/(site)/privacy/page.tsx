@@ -47,7 +47,7 @@ const ROWS: string[][] = [
   ],
   [
     "Moderatie en beveiliging",
-    "Foutmeldingen uit de browser (de melding en de pagina), het aantal inzendingen per e-mailadres om misbruik te beperken en een logboek van wat beheerders wijzigen",
+    "Foutmeldingen uit de browser (de melding en de pagina), het aantal inzendingen per e-mailadres om misbruik te beperken, het aantal routeverzoeken per IP-adres (alleen een minuut in het werkgeheugen, nooit opgeslagen) en een logboek van wat beheerders wijzigen",
     "Gerechtvaardigd belang: de site veilig en betrouwbaar houden (art. 6 lid 1 sub f)",
     "Zolang nodig voor dat doel",
   ],

@@ -105,9 +105,8 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <div className="min-w-0">
-        {/* Zoekbalk en filters, plakt op mobiel onder de header */}
-        <DepartureTabs page={page} filters={filters} places={places} />
-        <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
+        {/* Zoekbalk en filters bovenaan (plakt op mobiel onder de header), daarna de vertrektabbladen */}
+        <div className="sticky top-16 z-30 border-b border-line bg-surface px-3 pt-3 pb-3 sm:px-6 lg:static lg:border-0 lg:bg-transparent lg:pt-6">
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} />
           <div className="mt-3 flex min-w-0 items-center gap-2">
             <button
@@ -155,7 +154,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
                   <button
                     type="button"
                     onClick={() => update(c.without)}
-                    className="flex h-9 items-center gap-1.5 rounded-full bg-forest-tint pr-2.5 pl-3.5 text-sm font-semibold text-forest"
+                    className="flex h-11 items-center gap-1.5 rounded-full bg-forest-tint pr-3 pl-4 text-sm font-semibold text-forest"
                     aria-label={`Filter ${c.label} verwijderen`}
                   >
                     {c.label}
@@ -169,6 +168,8 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
           )}
         </div>
 
+        <DepartureTabs page={page} filters={filters} places={places} />
+
         {/* Mobiele kaart */}
         {!wide && mapOpen && <div className="animate-fade-in h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] min-h-80">{map}</div>}
 
@@ -177,9 +178,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
             <span key={results?.length} className="animate-fade-in inline-block">
               {results ? pluralize(results.length, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
-            <span className="font-semibold text-muted">
-              {filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}
-            </span>
+            <span>{filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}</span>
           </h1>
           <div className="flex flex-wrap items-center justify-between gap-x-4">
             {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
@@ -187,9 +186,12 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
           </div>
 
           {error && (
-            <p className="mt-4 rounded-2xl bg-alert-tint p-5 text-alert">
-              De plekken konden niet worden geladen. Controleer je verbinding en ververs de pagina.
-            </p>
+            <div className="mt-4 rounded-2xl bg-alert-tint p-5 text-alert">
+              <p>De plekken konden niet worden geladen. Controleer je verbinding en probeer het opnieuw.</p>
+              <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-xl bg-surface px-4 font-semibold text-ink shadow-low">
+                Opnieuw proberen
+              </button>
+            </div>
           )}
           {!results && !error && (
             <div className="mt-4 space-y-3">
@@ -262,7 +264,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
     }
   }, [active, counts]);
   return (
-    <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-3 sm:px-6 lg:border-0 lg:bg-transparent lg:pt-6">
+    <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-1 sm:px-6 lg:border-0 lg:bg-transparent">
       <ul ref={list} className="no-scrollbar -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
         {tabs.map((t) => (
           <li key={t.key} className="shrink-0">
@@ -282,11 +284,17 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
         ))}
       </ul>
       {page && (
-        <div className="pt-3 pb-1">
-          <h2 className="font-display text-xl font-semibold">{DEPARTURE_PAGES[page].title}</h2>
-          <p className="mt-1 text-ink-2">{INTRO[page]}</p>
+        <div className="pb-2">
+          {/* Uitleg ingeklapt, zodat de resultaten hoog op het scherm beginnen */}
+          <details className="group">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+              {DEPARTURE_PAGES[page].title}
+              <Icon name="chevronDown" size={16} className="text-forest transition-transform group-open:rotate-180" />
+            </summary>
+            <p className="pb-1 text-ink-2">{INTRO[page]}</p>
+          </details>
           {page === "overig" && (
-            <div className="no-scrollbar -mx-3 mt-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
+            <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
               {(
                 [
                   ["overig", "Alle"],

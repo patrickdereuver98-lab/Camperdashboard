@@ -1,0 +1,36 @@
+# Controles op pull requests naar acceptatie of main en op elke push daarnaartoe: lint, typecheck, tests en een
+# build zonder netwerk. Werkwijze: PR's gaan eerst naar acceptatie (testen op de Vercel-preview), daarna naar main.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, acceptatie]
+  push:
+    branches: [main, acceptatie]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Geen bekende lekken in pakketten van de site
+        run: npm audit --omit=dev --audit-level=high
+      - name: Build met de snapshot
+        run: npm run build
+        env:
+          VRIJSTAAN_OFFLINE: "1"

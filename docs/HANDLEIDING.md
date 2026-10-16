@@ -21,7 +21,9 @@ Supabase-URL en de publieke sleutel staan als standaardwaarde in `web/src/lib/en
 ## 2. Lokaal draaien (5 minuten)
 
 1. Installeer [Node.js 22 LTS](https://nodejs.org) (versie 20.9 of hoger).
-2. Open een terminal in de map van de repo en voer uit:
+2. Open een terminal in de map van de repo en voer uit: `node start.mjs`. Dat installeert de pakketten als dat
+   nodig is, start de server en opent de browser. In VS Code kan het ook via *Terminal → Run Build Task*
+   (Ctrl+Shift+B). Liever met de hand:
 
    ```bash
    cd web

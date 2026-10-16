@@ -3,27 +3,45 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 
-/** Kleine hook om een Supabase-query te laden; herlaadt als `deps` veranderen of via reload() */
+/**
+ * Kleine hook om een Supabase-query te laden; herlaadt als `deps` veranderen of via reload().
+ * Bij herladen blijft de vorige data staan; bij andere `deps` (ander tabblad, andere zoekterm) niet, zodat er nooit
+ * rijen van de vorige query met het verkeerde type verschijnen.
+ */
 export function useQuery<T>(fn: () => PromiseLike<{ data: T | null; error: unknown }>, deps: unknown[]) {
-  const [state, setState] = useState<{ key: string; data: T | null; error: string | null }>({ key: "", data: null, error: null });
+  const [state, setState] = useState<{ key: string; deps: string; data: T | null; error: string | null }>({
+    key: "",
+    deps: "",
+    data: null,
+    error: null,
+  });
   const [tick, setTick] = useState(0);
   const fnRef = useRef(fn);
   useEffect(() => {
     fnRef.current = fn;
   });
-  const key = `${JSON.stringify(deps)}#${tick}`;
+  const depsKey = JSON.stringify(deps);
+  const key = `${depsKey}#${tick}`;
   useEffect(() => {
     let live = true;
     Promise.resolve(fnRef.current()).then(
-      (res) => live && setState((s) => ({ key, data: res.error ? s.data : res.data, error: res.error ? errorMessage(res.error) : null })),
-      (e) => live && setState((s) => ({ ...s, key, error: errorMessage(e) })),
+      (res) =>
+        live &&
+        setState((s) => ({
+          key,
+          deps: depsKey,
+          data: res.error ? (s.deps === depsKey ? s.data : null) : res.data,
+          error: res.error ? errorMessage(res.error) : null,
+        })),
+      (e) => live && setState((s) => ({ key, deps: depsKey, data: s.deps === depsKey ? s.data : null, error: errorMessage(e) })),
     );
     return () => {
       live = false;
     };
-  }, [key]);
+  }, [key, depsKey]);
   const reload = useCallback(() => setTick((t) => t + 1), []);
-  return { data: state.data, error: state.error, loading: state.key !== key, reload };
+  const same = state.deps === depsKey;
+  return { data: same ? state.data : null, error: same ? state.error : null, loading: state.key !== key, reload };
 }
 
 export const db = supabase;

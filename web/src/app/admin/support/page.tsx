@@ -52,7 +52,7 @@ export default function SupportAdmin() {
     if (filter === "opgelost") q = q.in("status", ["opgelost", "gesloten"]);
     return q;
   }, [filter]);
-  const tickets = (data as Ticket[] | null) ?? [];
+  const tickets: Ticket[] = data ?? [];
   const current = tickets.find((t) => t.id === openId);
 
   return (
@@ -137,7 +137,7 @@ function TicketDetail({ ticket, onBack, onChange }: { ticket: Ticket; onBack: ()
     };
   }, [ticket.id, version]);
 
-  async function update(fields: Partial<Ticket>) {
+  async function update(fields: Partial<Omit<Ticket, "number">>) {
     const { error } = await db().from("tickets").update(fields).eq("id", ticket.id);
     if (error) setErr(errorMessage(error));
     else onChange();
