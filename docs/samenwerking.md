@@ -11,7 +11,7 @@ samengevoegd, maar een deel staat wel al **live in de database** (migraties van 
 
 | PR | Branch | Wat | Grootte | Live in database? | Status |
 |---|---|---|---|---|---|
-| [#4](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/4) | `claude/launch-hardening` | Tests en CI, kaart per gebied (PostGIS), strikte OSM-toelating, **accounts** (Google, Apple, Facebook, inloglink), foto-uploads met moderatie, dubbelen samenvoegen, drukte, push, camperprofiel met documenten, uitgaven, reisstatistieken, samen plannen | 108 bestanden | Ja: 10 migraties | Draft, wacht op 3 besluiten (zie §4) |
+| [#4](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/4) | `claude/launch-hardening` | Tests en CI, kaart per gebied (PostGIS), strikte OSM-toelating, **accounts** (Google, Apple, Facebook, inloglink), foto-uploads met moderatie, dubbelen samenvoegen, drukte, push, camperprofiel met documenten, uitgaven, reisstatistieken, samen plannen | 108 bestanden | Ja: 11 migraties. Nog niet live: `strict_osm_query` (B2) en `delete_my_account` (B5) | Draft, wacht op B2, B3 en B5 |
 | [#5](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/5) | `claude/mobile-ui-photos-ux-axxlae` | Nieuwe stijlgids (Geist), compactere UI, scherpe foto's, nette beschrijving, scraper v17 | 212 bestanden | Scraper v17 is uitgerold | Draft, Vercel groen, wacht op review |
 | [#6](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/6) | `claude/local-host-setup-3xwg5y` | `node start.mjs` om lokaal te draaien | 1 commit | Nee | Draft, botst met niets |
 | [#9](https://github.com/patrickdereuver98-lab/Camperdashboard/pull/9) | `claude/brave-wright-odz441` | Audit 12 oktober + dit bord | Alleen documenten | Nee | Draft |
@@ -46,7 +46,7 @@ Gemeten met `git merge-tree` op 16 oktober 2026. Elke combinatie van PR #4, #5, 
 | #9 + iedereen | Niets: alleen nieuwe bestanden in `docs/` (de verwijzing in de README komt bij stap 5) |
 | #6 + iedereen | Niets |
 
-## 3. Voorgestelde volgorde van samenvoegen
+## 3. Volgorde van samenvoegen (goedgekeurd 16 oktober)
 
 Uitgangspunt: eerst het vangnet (CI), daarna de grote UI-wijziging, dan de nieuwe functies. Na elke merge werkt de
 agent van de **volgende** PR zijn branch bij met `main` (merge, geen rebase), lost de botsingen op en laat CI groen
@@ -57,7 +57,7 @@ worden. Pas daarna de volgende merge.
 3. **#5 UI en stijlgids.** De agent van #5 voegt `main` samen (17 botsingen; meestal kleine wijzigingen van #10 in
    bestanden die #5 herschreef: neem het ontwerp van #5 en zet de functionele fixes van #10 er weer in, zoals
    `formValue()`, `DepartureRadios`, de focusring en de cookiebanner).
-4. **#4 accounts en meer**, na de besluiten in §4. De agent van #4 voegt `main` samen; `ci.yml` wordt één workflow
+4. **#4 accounts en meer**, na de besluiten B2 en B3 in §4. De agent van #4 voegt `main` samen; `ci.yml` wordt één workflow
    (die van #10 als basis, met de Playwright-stap van #4 erbij).
 5. **#11 en #9 documenten** als laatste. De open punten krijgen dan één doorlopende nummering (§5).
 
@@ -65,11 +65,11 @@ worden. Pas daarna de volgende merge.
 
 | # | Besluit | Waarom nu | Komt uit |
 |---|---|---|---|
-| B1 | Accounts, drukte, push, camperprofiel met documenten en uitgaven: houden (PR #4) of niet? | Staat al live in de database. De PRD op `main` zegt nog "geen accounts"; PR #4 past de PRD aan. De privacyverklaring moet dan ook accounts, de bucket `vehicle-docs` en pushdiensten noemen | #4, audit C1 |
+| B1 | ✅ **Besloten door Patrick (16 oktober):** accounts, drukte, push, camperprofiel en uitgaven blijven (PR #4). Nog te doen op #4: de privacyverklaring noemt accounts, de bucket `vehicle-docs` en de pushdiensten | Staat al live in de database | #4, audit C1 |
 | B2 | Strikte OSM-toelating: zo'n 900 campings zonder tag `caravan_site` of `motorhome=yes` worden dan niet meer ververst | Raakt het aantal plekken, de prioriteit van de eigenaar | #4 open punt 12 |
 | B3 | Advertenties: geen, sponsoring zonder tracking, of AdSense | AdSense botst met "geen tracking van derden" en met Vercel Hobby | #4 open punt 14 |
-| B4 | Volgorde van samenvoegen (§3) goedkeuren en de PR's uit draft halen | Elke dag langer wordt het samenvoegen zwaarder | dit bord |
-| B5 | Zelf uitvoeren in de SQL-editor: `web/supabase/retention.sql` (PR #10) en `delete_my_account` (PR #4) | De Supabase-tool van de agents kan de bevestiging niet geven | #10 0.4, #4 |
+| B4 | ✅ **Volgorde goedgekeurd door Patrick (16 oktober).** PR's gaan één voor één uit draft, in de volgorde van §3 | Elke dag langer wordt het samenvoegen zwaarder | dit bord |
+| B5 | Zelf uitvoeren in de SQL-editor: `web/supabase/retention.sql` (PR #10) en `delete_my_account(p_confirm text)` (onderaan `migrations/20261012_user_accounts.sql` op PR #4) | De Supabase-tool van de agents kan de bevestiging niet geven | #10 0.4, #4 |
 | B6 | Beheeraccount aanmaken via `/admin` | Zonder account blijven inzendingen, reviews en tickets liggen | alle drie de reviews |
 | B7 | Login-sleutels (Google, Facebook) en eigen SMTP | Nodig voor B1 en voor mail bij tickets | #4, #10, audit B5 |
 | B8 | Bedrijfsgegevens in `web/src/lib/company.ts` | Juridische pagina's tonen nog plaatshouders | alle |
@@ -113,7 +113,7 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 | Taak | Bron | Voorstel eigenaar | Waarom die | Status |
 |---|---|---|---|---|
 | Kernbelofte: meer plekken zonder vertrektijd (OSM `motorhome=designated`, "per 24 uur" herkennen, Doe mee gericht) | audit A1, #11 D1/D2 | Sessie "Feature review en plan" (`feature/kernbelofte-acceptatie`) | Is er al mee bezig | 🔄 |
-| Mijn reis telt toeslagen per persoon en per nacht mee | audit B1, #11 P7, #10 3.1 en G2 | Agent van #4, ná stap 4 | #4 bouwde al uitgaven en reiskosten in `trip-app.tsx`; anders twee keer hetzelfde bestand | ⬜ |
+| Mijn reis telt toeslagen per persoon en per nacht mee | audit B1, #11 P7, #10 3.1 en G2 | Agent van #4, ná stap 4 | #4 bouwde al uitgaven en reiskosten in `trip-app.tsx`; anders twee keer hetzelfde bestand | ⬜ Toegezegd door #4 |
 | Routecache op dagen (privacy) | audit C5 | Agent van #10 | `routing.ts` is in #10 al aangepast; één regel | ⬜ |
 | Eerste resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | audit B4, #10 2.12 (LCP) | Agent van #5, ná stap 3 | `search-app.tsx` is in #5 herschreven | ⬜ |
 | Door `discover` gevonden websites eerst laten bevestigen | audit A4 | Audit-agent (#9) | Raakt alleen `functions/discover` en één RPC; niemand anders zit daar | ⬜ wacht op akkoord (live deploy) |
