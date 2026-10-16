@@ -49,6 +49,19 @@ Productieversie lokaal testen: `npm run build` en daarna `npm start`.
    | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | alleen als je een ander Supabase-project gebruikt |
 
 5. Klik **Deploy**. Na ±3 minuten staat de site online. Elke push naar `main` zet automatisch een nieuwe versie live.
+
+**Werkwijze met acceptatie.** Push nooit direct naar `main`:
+
+1. Werk op een eigen branch en open een PR naar `acceptatie`. GitHub draait dan de controle (lint, typecheck, build).
+2. Na het mergen zet Vercel `acceptatie` automatisch als preview online, op een vast adres
+   (Vercel → project → **Deployments**, filter op branch `acceptatie`; het adres eindigt op `-git-acceptatie-….vercel.app`).
+   Test daar op je telefoon.
+3. Klopt alles, open dan een PR van `acceptatie` naar `main`. Na het mergen gaat het live.
+4. Databasewijzigingen staan als bestand in `web/supabase/migrations/`. Zet ze pas op live als de PR is goedgekeurd,
+   vóórdat je de code merget die ze nodig heeft. De preview gebruikt dezelfde live database.
+
+Instellen (eenmalig): GitHub → **Settings → Branches → Add rule** voor `main`: "Require a pull request" en "Require
+status checks: Lint, typecheck en build".
 6. Eigen domein: in Vercel **Settings → Domains** het domein toevoegen en de DNS-records volgen.
 
 > De site werkt ook op elk ander platform dat Node.js draait (`npm run build && npm start`, poort 3000).

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getNearby, getPlace, getReviews, getSummaries } from "@/lib/places";
-import { searchHref } from "@/lib/search";
+import { departureKind, searchHref } from "@/lib/search";
 import { cardPrice, departureShort, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { directionsUrl } from "@/lib/geo";
 import { SITE_URL } from "@/lib/env";
@@ -50,7 +50,7 @@ function keyFacts(p: Place): Fact[] {
       value: price?.value ?? "Onbekend",
       known: !!price,
     },
-    { sign: "clock", label: "Vertrekken", value: departureShort(p) ?? "Onbekend", known: !!p.departure },
+    { sign: "clock", label: "Vertrekken", value: departureShort(p) ?? "Onbekend", known: departureShort(p) !== undefined },
     {
       sign: "calendar",
       label: "Open",
@@ -383,17 +383,31 @@ function SideColumn({ place, tel, nearby }: { place: Place; tel?: string; nearby
 
 /** De kernvraag: kun je vertrekken wanneer je wilt? (De bronzin staat in beheer, niet op de site.) */
 function Departure({ place }: { place: Place }) {
-  const free = place.departure === "vrij" || place.departure === "per24";
-  const title =
-    place.departure === "vrij"
-      ? "Geen vaste vertrektijd"
-      : place.departure === "per24"
-        ? "Geen vaste vertrektijd: je betaalt per 24 uur"
-        : place.departure === "vast"
-          ? place.checkoutUntil
-            ? `Vertrekken uiterlijk om ${place.checkoutUntil}`
-            : "Vaste vertrektijd"
-          : "Vertrektijd nog onbekend";
+  // Groen alleen als een mens het heeft bevestigd; anders zeggen we eerlijk wat we wel en niet weten
+  const free = departureKind(place) === "vrij";
+  const claimed = place.departure === "vrij" || place.departure === "per24";
+  const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
+  const title = !known
+    ? "Vertrektijd nog onbekend"
+    : claimed && place.departureCheck === "voorwaardelijk"
+      ? "Meestal geen vaste vertrektijd"
+      : claimed && !free
+        ? "Vertrektijd nog niet bevestigd"
+        : place.departure === "vrij"
+          ? "Geen vaste vertrektijd"
+          : place.departure === "per24"
+            ? "Geen vaste vertrektijd: je betaalt per 24 uur"
+            : place.checkoutUntil
+              ? `Vertrekken uiterlijk om ${place.checkoutUntil}`
+              : "Vaste vertrektijd";
+  const note =
+    claimed && place.departureCheck === "voorwaardelijk"
+      ? "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na."
+      : claimed && known && !free
+        ? "Volgens de website is er geen vaste vertrektijd. Dat hebben we nog niet bij de plek zelf gecontroleerd."
+        : free && place.departureCheckedAt
+          ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
+          : undefined;
   const lines = [
     place.checkinFrom && `Aankomst vanaf ${place.checkinFrom}`,
     place.accessHours && `Slagboom of poort open ${place.accessHours}`,
@@ -406,10 +420,10 @@ function Departure({ place }: { place: Place }) {
       className={`mt-4 rounded-2xl p-4 outline-1 outline ${free ? "bg-forest-tint outline-forest/40" : "bg-surface outline-line"}`}
     >
       <div className="flex items-center gap-3">
-        <Sign name="clock" size={34} state={place.departure ? "on" : "unknown"} />
+        <Sign name="clock" size={34} state={free || (known && !claimed) ? "on" : "unknown"} />
         <div className="min-w-0">
           <p className="text-sm text-muted">Aankomen en vertrekken</p>
-          <h2 id="vertrek" className={`font-display text-lg leading-tight font-semibold ${place.departure ? (free ? "text-forest" : "") : "text-muted"}`}>
+          <h2 id="vertrek" className={`font-display text-lg leading-tight font-semibold ${known ? (free ? "text-forest" : "") : "text-muted"}`}>
             {title}
           </h2>
         </div>
@@ -421,7 +435,8 @@ function Departure({ place }: { place: Place }) {
           ))}
         </ul>
       )}
-      {!place.departure && (
+      {note && <p className="mt-3 text-ink-2">{note}</p>}
+      {!known && (
         <div className="mt-2 text-sm">
           <p className="text-ink-2">We weten nog niet hoe laat je hier weg moet. Bel even voor je gaat.</p>
           <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd? Laat het weten" />

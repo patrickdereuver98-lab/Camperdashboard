@@ -226,9 +226,9 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
 }
 
 const INTRO: Record<DeparturePage, string> = {
-  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst.",
+  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst. Elke plek op deze lijst hebben we gecontroleerd bij de plek zelf.",
   uitslapers: "Je hoeft pas om 12:00 of later weg. Genoeg tijd voor een rustig ontbijt.",
-  overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet weten.",
+  overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet zeker weten.",
 };
 
 /** De drie pagina's als tabbladen, met het aantal plekken bij de huidige zoekopdracht */

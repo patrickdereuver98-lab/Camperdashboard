@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
-import { departureKind, FACILITIES, openStatus } from "@/lib/search";
+import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/lib/search";
 import { formatKm } from "@/lib/geo";
 import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
@@ -297,7 +297,7 @@ export function CardSkeleton() {
 }
 
 /** Vertrekregel op de kaart: groen als je kunt vertrekken wanneer je wilt */
-export function DepartureChip({ place }: { place: Pick<PlaceSummary, "departure" | "checkoutUntil"> }) {
+export function DepartureChip({ place }: { place: DepartureFacts }) {
   const label = departureShort(place);
   if (!label) return null;
   const kind = departureKind(place);

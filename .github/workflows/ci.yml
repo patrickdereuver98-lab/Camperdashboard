@@ -1,0 +1,41 @@
+# Controle bij elke wijziging. Werkwijze: feature-branch → PR naar acceptatie → testen op de preview → PR naar main.
+name: Controle
+
+on:
+  pull_request:
+    branches: [acceptatie, main]
+  push:
+    branches: [acceptatie]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, typecheck en build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - name: Build met de offline snapshot
+        run: npm run build
+        env:
+          VRIJSTAAN_OFFLINE: "1"
+      # Informatief tot de maplibre-upgrade (plan.md, 0.8) gedaan is; daarna blokkerend maken
+      - name: Kwetsbaarheden in runtime-pakketten
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

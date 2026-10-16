@@ -43,6 +43,37 @@ store, RLS op alle tabellen, geen geheimen in de repo, `npm run check` en de off
 
 ---
 
+## 1b. Kernbelofte: alle plekken zonder vertrektijd, 100% zeker (hoogste prioriteit, besluit 16 oktober 2026)
+
+De pagina **Zonder vertrektijd** is het hart van VrijStaan. Een plek staat daar alleen als het zeker is. De andere
+plekken blijven op de site, met Uitslapers en Overige.
+
+**Besluiten van de eigenaar:**
+- Een plek komt op de kernpagina pas na **bevestiging door een mens**: beheer heeft de bron gecontroleerd, of de
+  eigenaar heeft het bevestigd (mail of telefoon). Een automatische treffer op de website is alleen een kandidaat.
+- "In principe geen vertrektijd, bij drukte vóór 13:00" komt **niet** op de kernpagina, maar bij Overige, met de tekst
+  "Meestal geen vaste vertrektijd".
+- "Je betaalt per 24 uur vanaf aankomst" telt **wel** mee, met het eigen label "Per 24 uur, geen vaste tijd".
+- Een bevestiging is een jaar geldig. Ze vervalt meteen als de vertrekregel of de bronzin op de website verandert.
+
+**Uitgangssituatie (live, 16 oktober 2026):** 1.536 gepubliceerde plekken. Daarvan hebben 21 volgens hun website geen
+vaste vertrektijd en 769 een onbekende vertrektijd. Er zijn ±2.000 concepten, onder andere 148 camperplaatsen en 15
+parkeerplaatsen zonder vertrektijd. Van de 21 zijn er minstens 3 niet eenduidig (tegenstrijdige tijd, "in principe",
+afgekapte zin) en staat er één dubbel in.
+
+| # | Taak | Status | Omvang |
+|---|---|---|---|
+| K1 | **Bevestiging in de database:** kolommen `departure_check`, `departure_checked_at` en `departure_checked_by`, de RPC `check_departure` (alleen beheer), automatisch vervallen bij een wijziging (trigger) en na een jaar (nachtelijke job), en de snapshot met vertrekgegevens (`web/supabase/migrations/20261015120000_vertrektijd_bevestiging.sql`) | Gebouwd, nog niet op live gezet | S |
+| K2 | **Site:** de kernpagina toont alleen bevestigde plekken. Kandidaten staan bij Overige als "Vertrektijd nog niet bevestigd", met uitleg op de plekpagina. Een bevestigde plek toont "Gecontroleerd op <datum>" | Gebouwd | S |
+| K3 | **Beheer → Vertrektijden:** een controlelijst met de bronzin, een link naar de bron, telefoon en mail, en de knoppen Bevestigd, Eigenaar bevestigde het, Met voorwaarde, Klopt niet en Opnieuw controleren | Gebouwd | S |
+| K4 | **Eerste controleronde:** de 21 kandidaten nalopen (minstens Halfweg, Vlisterhoeve, Gideonse en de dubbele Duurswoldje). Hiervoor moet een beheeraccount actief zijn: live is er nog 0 beheerder en 1 openstaande uitnodiging | Open | S |
+| K5 | **Alle kandidaten vinden:** alle concepten en plekken met een onbekende vertrektijd opnieuw scrapen met de huisregel- en FAQ-pagina's; gericht ophalen uit OSM (`motorhome=designated`, `amenity=parking` met camperbord, gemeentelijke camperplaatsen); camperplaatsen met een automaat herkennen ("per 24 uur") | Open | M |
+| K6 | **Eigenaar laten bevestigen:** een mailtje of telefoonronde met één vraag ("Hoe laat moeten gasten weg?"), en een eenmalige link waarmee de eigenaar "geen vaste vertrektijd" zelf bevestigt (wordt `departure_checked_by = eigenaar`). Ook de antwoorden via Doe mee en Plek aanmelden belanden in de controlelijst | Open | M |
+| K7 | **Strengere herkenning:** een treffer met tegelijk een vaste vertrektijd op dezelfde site (zoals Halfweg) of met woorden als "in principe" en "bij drukte" automatisch als "met voorwaarde" voorstellen; dubbele plekken samenvoegen | Open | S |
+| K8 | **Meten:** het aantal bevestigde plekken op de kernpagina per provincie in Beheer → Overzicht, met het doel van 150 uit de PRD | Open | S |
+
+---
+
 ## 2. Fase 0: beveiliging en privacy (direct, ±1 week)
 
 De volledige security-audit (ernst, bestand:regel, faalscenario, fix) is bewust **niet** in deze publieke repo
@@ -91,11 +122,11 @@ Weinig risico en direct zichtbaar. Dit komt uit de UI/UX- en gebruikersreview.
 
 | # | Taak | Omvang |
 |---|---|---|
-| E1 | **CI** (`.github/workflows/ci.yml`) op elke PR: `npm ci` → lint → typecheck → Vitest → `VRIJSTAAN_OFFLINE=1 npm run build` → `npm audit --omit=dev --audit-level=high`. Actions op commit-SHA, `permissions: contents: read` | S |
+| E1 | **CI** (`.github/workflows/ci.yml`, gebouwd: lint, typecheck, offline build en een informatieve audit) op elke PR: `npm ci` → lint → typecheck → Vitest → `VRIJSTAAN_OFFLINE=1 npm run build` → `npm audit --omit=dev --audit-level=high`. Actions op commit-SHA, `permissions: contents: read` | S |
 | E2 | **Database-job:** `supabase db reset` op de migraties, advisors (falen bij nieuwe WARN), pgTAP-tests op RLS en grants per rol | M |
 | E3 | **Unit-tests** (Vitest) voor `lib/search.ts`, `lib/format.ts`, `lib/geo.ts`, `lib/routing.ts`, `places.ts normalize()`, de reiskosten, en golden tests voor de extractor ("niets verzinnen" als assert) | M |
 | E4 | **E2E** (Playwright, iPhone-viewport, licht en donker) voor zes kernflows: zoeken → filter → plek; bewaren → reis → offline; Dichtbij met nep-locatie; contact → supportticket; cookie weigeren = geen event; niet-admin krijgt geen beheer. Met `@axe-core/playwright` en een Lighthouse-budget (LCP < 2,5 s, CLS < 0,1) | M |
-| E5 | **Branch protection** op `main` (CI groen en review verplicht), Vercel promoveert pas na groene CI. Dependabot voor `npm` en `github-actions` | S |
+| E5 | **Acceptatieomgeving (besluit 16 oktober 2026):** branch `acceptatie` naast `main`. Werkwijze: feature-branch → PR naar `acceptatie` → testen op de vaste Vercel-preview van `acceptatie` → PR van `acceptatie` naar `main`. De preview leest de live database; schemawijzigingen gaan als migratie in `web/supabase/migrations/` mee in de PR en worden pas na akkoord op live gezet. Branch protection op `main` (alleen via PR, CI groen). Dependabot voor `npm` en `github-actions`. Status: branch en CI gebouwd, protection en Vercel nog instellen | S |
 | E6 | **Pre-commit:** lefthook of husky + lint-staged (eslint, prettier, tsc) en gitleaks | S |
 | E7 | **Monitoring zonder tracking van derden:** `instrumentation.ts` `onRequestError` → `app_logs` (of GlitchTip/Sentry EU zonder PII), een uptime-check en een versheid-endpoint (`max(verified_at)`, alarm na 24 uur), en een wekelijkse advisor-run | M |
 
@@ -179,6 +210,7 @@ Weinig risico en direct zichtbaar. Dit komt uit de UI/UX- en gebruikersreview.
 ## 7. Volgorde en mijlpalen
 
 ```
+Nu          Kernbelofte K1–K4 (bevestigen) en acceptatie (E5), daarna K5–K8 doorlopend
 Week 1      Fase 0 (security/privacy)  +  Fase 1 (snelle winst)
 Week 2      E1–E6 vangnet  +  P1, P2, P5, P6, P11 (kleine productfixes)
 Week 3–4    C1 componenten → P3, P4, P13  ·  P7–P10 prijs/vertrouwen  ·  D3
