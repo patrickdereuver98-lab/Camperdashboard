@@ -416,11 +416,11 @@ export function extract(pages: string[], base: URL) {
 
 const CLOCK = String.raw`(\d{1,2})(?:[:.](\d{2}))?\s*(uur|uhr|u\b|h\b|hrs?\b)?`;
 const TIME_AFTER = new RegExp(
-  String.raw`^[^0-9]{0,45}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|from|after|before|until|by|ab|bis|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
+  String.raw`^[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|from|after|before|until|by|ab|bis|um|spätestens|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
 );
-const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis)\s*${CLOCK}\s*$`);
+const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis|um)\s*${CLOCK}\s*(?:zu\s*)?$`);
 const KEY =
-  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|check-?out|abreise|departure|verlaten|vrij te zijn|vrij zijn)/g;
+  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|check-?out|auschecken|abreise|departure|verlaten|verlassen|vrij te zijn|vrij zijn)/g;
 const ARRIVAL_KEY = /aankom|incheck|check-?in|anreise|arrival/;
 const RENTAL =
   /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
@@ -431,7 +431,7 @@ const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
 const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
 // Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
 const FREE =
-  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr/g;
+  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr|vrije (aankomst-? ?(en|of) ?)?vertrek(tijd(en)?|-? ?(en|of) ?aankomsttijd(en)?)|vrije aankomst- en vertrektijd(en)?/g;
 // Zwak: "komen en gaan wanneer je wilt" gaat vaak over een seizoensplaats of dagtochtjes. Alleen geldig bij campers
 // en zonder seizoensplaats-context.
 const FREE_WEAK =

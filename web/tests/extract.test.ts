@@ -61,3 +61,14 @@ test("per 24 uur zonder campers, of met een vaste vertrektijd, telt niet", () =>
   assert.equal(r.departure, "vast");
   assert.equal(r.checkout_until, "11:00");
 });
+
+test("opsomming 'Vrije vertrek- en aankomsttijden' wordt 'vrij' (gevonden bij Camping Zandman)", () => {
+  assert.equal(page("<ul><li>Wifi gratis</li><li>Vrije vertrek- en aankomsttijden</li></ul>").departure, "vrij");
+  assert.equal(page("<p>Vrije aankomst- en vertrektijden voor campers.</p>").departure, "vrij");
+});
+
+test("Duitse FAQ: 'spätestens um 12 Uhr' na de vraag over auschecken (gevonden bij De Lepelaar)", () => {
+  const r = page("<h3>Bis wann muss ich spätestens auschecken?</h3><p>Am Abreisetag bitten wir Sie, den Stellplatz spätestens um 12:00 Uhr zu verlassen.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "12:00");
+});
