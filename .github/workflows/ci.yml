@@ -1,10 +1,12 @@
-# Controles op elke pull request en elke push naar main: lint, typecheck, tests en een build zonder netwerk.
+# Controles op pull requests naar acceptatie of main en op elke push daarnaartoe: lint, typecheck, tests en een
+# build zonder netwerk. Werkwijze: PR's gaan eerst naar acceptatie (testen op de Vercel-preview), daarna naar main.
 name: CI
 
 on:
   pull_request:
+    branches: [main, acceptatie]
   push:
-    branches: [main]
+    branches: [main, acceptatie]
 
 concurrency:
   group: ci-${{ github.ref }}

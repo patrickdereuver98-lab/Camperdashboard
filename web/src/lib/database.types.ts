@@ -1,4 +1,4 @@
-// Gegenereerd uit de live database (Supabase MCP generate_typescript_types, 15 oktober 2026). Niet met de hand
+// Gegenereerd uit de live database (Supabase MCP generate_typescript_types, 16 oktober 2026). Niet met de hand
 // aanpassen: opnieuw genereren na een migratie (van de helpers onderaan is alleen `Tables` bewaard).
 // Aanvullingen staan in supabase-browser.ts.
 
@@ -478,6 +478,9 @@ export type Database = {
           completeness: number
           created_at: string
           departure: string | null
+          departure_check: string | null
+          departure_checked_at: string | null
+          departure_checked_by: string | null
           description: string | null
           description_source: string | null
           dogs: boolean | null
@@ -538,6 +541,9 @@ export type Database = {
           completeness?: number
           created_at?: string
           departure?: string | null
+          departure_check?: string | null
+          departure_checked_at?: string | null
+          departure_checked_by?: string | null
           description?: string | null
           description_source?: string | null
           dogs?: boolean | null
@@ -598,6 +604,9 @@ export type Database = {
           completeness?: number
           created_at?: string
           departure?: string | null
+          departure_check?: string | null
+          departure_checked_at?: string | null
+          departure_checked_by?: string | null
           description?: string | null
           description_source?: string | null
           dogs?: boolean | null
@@ -1146,6 +1155,10 @@ export type Database = {
           p_key: string
           p_provider: string
         }
+        Returns: undefined
+      }
+      check_departure: {
+        Args: { p_by?: string; p_check: string; p_id: string }
         Returns: undefined
       }
       create_shared_trip: {
