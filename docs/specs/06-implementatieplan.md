@@ -71,6 +71,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | 🔄 Beveiligingsadviezen van Supabase nalopen | Agent | Supabase advisors | Opgeloste waarschuwingen | Geen kritieke meldingen (16 oktober: geen kritieke; 13 openbare SECURITY DEFINER-functies nog nalopen, zie `plan.md` §4b) | — |
 | ✅ Kaartbibliotheek 6.14 (kritiek XSS-lek in 5.x), CSP, HSTS en COOP | Agent | `npm audit` | `package.json`, `place-map.tsx`, `next.config.ts`, `scripts/copy-maplibre-worker.mjs` | `npm audit --omit=dev` geeft 0; kaart en 8 pagina's zonder CSP-meldingen | — |
 | ✅ Dependabot | Agent | — | `.github/dependabot.yml` | Wekelijkse PR's naar `acceptatie` | — |
+| ✅ Websites eens per 30 dagen opnieuw lezen | Agent | Besluit B12 | Cron `scrape-refresh`, `private.enqueue_stale_scrape` | Geen website ouder dan ±31 dagen | Scraper |
 
 ## Mijlpaal 6: release ⬜
 

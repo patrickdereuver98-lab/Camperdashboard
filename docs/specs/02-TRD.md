@@ -80,6 +80,7 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `osm-staging` | elke minuut | 300 rijen uit `osm_staging` verwerken met `ingest_osm` |
 | `scrape` | elke 15 s | 8 websites lezen zolang er werk in `private.scrape_queue` staat |
 | `scrape-enqueue` | elk half uur | Nieuwe plekken met een website inplannen |
+| `scrape-refresh` | elk half uur (:07 en :37) | De 10 plekken die het langst en minstens 30 dagen niet gelezen zijn opnieuw inplannen |
 | `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd |
 
 **Volgorde van gezag bij gegevens:** beheer (`sources.beheer`) > eigen website (`sources.website_fields`) > OSM.

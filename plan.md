@@ -98,7 +98,7 @@ Werkwijze (besluit B9, nog bevestigen): feature-branch → PR naar `acceptatie` 
 | — | Domein koppelen in Vercel en `NEXT_PUBLIC_SITE_URL` zetten; Site URL en redirect-URL's in Supabase Auth | Livegang | 30 min |
 | B2 | Strikte OSM-toelating ja of nee (±900 campings worden dan niet meer ververst) | PR #4 wacht erop | besluit |
 | B3 | Advertenties: geen, sponsoring zonder tracking, of AdSense | PR #4 wacht erop; AdSense botst met "geen tracking van derden" | besluit |
-| B12 | **Nieuw:** hoe vaak websites opnieuw lezen (§6, punt 1). Voorstel: elke plek eens per 30 dagen, in kleine porties | Nu wordt een website maar één keer gelezen; vertrektijden en prijzen verouderen ongemerkt | besluit |
+| B12 | ✅ Besloten 16 oktober: elke website eens per 30 dagen opnieuw lezen, 10 per half uur (R1) | Websites werden maar één keer gelezen | klaar |
 | B13 | Standaard voor de totaalprijs (voorstel: 2 volwassenen, 1 nacht, stroom als die apart kost) | Nodig voor P7 en "prijzen met alle toeslagen" | besluit |
 | — | Juridische teksten laten nalezen | Na B8 | extern |
 
@@ -143,7 +143,7 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 | K8 | Teller bevestigde plekken per provincie in Beheer → Overzicht | S | ⬜ |
 | D2 | Doe mee gericht inzetten op plekken met onbekende vertrektijd (769 live) | M | ⬜ |
 | D3 | Snapshot wekelijks verversen (680 → 1.536 plekken) | S | 🟢 PR #12 |
-| R1 | **Nieuw:** websites periodiek opnieuw lezen (B12) | S | ⬜ |
+| R1 | Websites periodiek opnieuw lezen (B12): cron `scrape-refresh`, migratie `20261016200000_opnieuw_lezen.sql` | S | ✅ live sinds 16 oktober |
 | A6 | Overpass-ruis in `app_logs` als `warn` | S | ⬜ |
 
 ### 4d. UX-polish
@@ -191,7 +191,8 @@ eigenaarsportaal. Daarna S2, S4, S7, S8, S10 tot en met S15 en fase 4 (N1 tot N1
 1. **Websites worden maar één keer gelezen.** `scrape-enqueue` roept `enqueue_scrape(true)` aan, en dat plant alleen
    plekken in die nog nooit gescraped zijn. De laatste scrape was op 12 oktober. De handleiding (§6, punt 3) belooft
    dat een waarde verdwijnt als die "bij een volgende controle" niet meer op de site staat, maar die volgende controle
-   komt er niet. Voor de vertrektijd, het kernfeit, is dat het grootste datarisico. Voorstel: B12 en R1.
+   kwam er niet. Voor de vertrektijd, het kernfeit, was dat het grootste datarisico. **Opgelost (R1):** cron
+   `scrape-refresh` zet elk half uur de 10 plekken terug die het langst en minstens 30 dagen niet gelezen zijn.
 2. **Bewaartermijnen draaien nog steeds niet.** Geen `private.apply_retention`, geen cron `retention`.
    `cron.job_run_details` telt 58.126 rijen. Vandaag opnieuw geprobeerd via de Supabase-tool: die blijft hangen op de
    bevestiging. Alleen Patrick kan dit (B5).
@@ -210,7 +211,7 @@ eigenaarsportaal. Daarna S2, S4, S7, S8, S10 tot en met S15 en fase 4 (N1 tot N1
 Deze week    Samenvoegen stap 1 t/m 4 (§2)  ·  Patrick: B9, B6, B5, B8, B10, B11  ·  K4 bevestigen
 Week 2       Stap 5 t/m 7  ·  E1, E5, E7, E9  ·  0.4, 0.7, 0.10  ·  P1, P5, P6, P11, kleine 1.x-punten
 Week 3       Domein, SMTP en DNS (B7)  ·  testplan op echte toestellen  ·  E4 e2e met Lighthouse-budget
-Week 3 en 4  P2/P3 kaart, P13, B4, C1  ·  P7 prijs (na B13)  ·  R1 opnieuw lezen (na B12)
+Week 3 en 4  P2/P3 kaart, P13, B4, C1  ·  P7 prijs (na B13)
 Livegang     Als alles in §1 ✅ is, behalve de punten die aan livegang zelf hangen
 Doorlopend   K5 tot K8 en D2: de kernbelofte is uiteindelijk een datavraag
 ```
