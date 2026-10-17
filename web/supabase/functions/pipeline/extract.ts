@@ -39,15 +39,27 @@ function toRawText(html: string): string {
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;|&#160;/g, " ")
     .replace(/&euro;|&#8364;|&#x20ac;/gi, "€")
-    .replace(/&amp;/g, "&")
-    .replace(/&eacute;/g, "é")
-    .replace(/&euml;/g, "ë")
-    .replace(/&uuml;/g, "ü")
-    .replace(/&auml;/g, "ä")
     .replace(/&ndash;|&mdash;|&#8211;/g, "–")
-    .replace(/&[a-z]+;/g, " ")
+    .replace(/&#(\d+);|&#x([0-9a-f]+);/gi, (_, d, x) => String.fromCodePoint(d ? Number(d) : parseInt(x, 16)))
+    .replace(/&([a-z]+);/gi, (m, n) => decodeEntity(n) ?? " ")
     .replace(/\s+/g, " ");
 }
+
+const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", szlig: "ß" };
+const ACCENTS: Record<string, string> = { acute: "\u0301", grave: "\u0300", uml: "\u0308", circ: "\u0302", tilde: "\u0303" };
+
+/** &oacute; → ó: "Uitchecken: v&oacute;&oacute;r 11:00 uur" moet als "vóór 11:00 uur" gelezen worden */
+function decodeEntity(name: string): string | undefined {
+  const m = /^([a-z])(acute|grave|uml|circ|tilde)$/i.exec(name);
+  if (m) return (m[1] + ACCENTS[m[2].toLowerCase()]).normalize("NFC");
+  return ENTITIES[name.toLowerCase()];
+}
+
+/** Alle HTML-entiteiten in platte tekst (ook voor de zoekagenten-controle in index.ts) */
+export const decodeEntities = (s: string) =>
+  s
+    .replace(/&#(\d+);|&#x([0-9a-f]+);/gi, (_, d, x) => String.fromCodePoint(d ? Number(d) : parseInt(x, 16)))
+    .replace(/&([a-z]+);/gi, (m, n) => decodeEntity(n) ?? m);
 
 function meta(html: string, name: string): string | undefined {
   const re = new RegExp(
@@ -430,12 +442,14 @@ export function extract(pages: string[], base: URL) {
 
 const CLOCK = String.raw`(\d{1,2})(?:[:.](\d{2}))?\s*(uur|uhr|u\b|h\b|hrs?\b)?`;
 const TIME_AFTER = new RegExp(
-  String.raw`^[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|is|from|after|before|until|by|ab|bis|um|spätestens|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
+  // Met een verbindingswoord ("vertrek vóór 11:00"), of de tijd direct erna ("vertrek 12 uur", "vertrektijd 11.00 uur")
+  String.raw`^(?:[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|is|from|after|before|until|by|ab|bis|um|spätestens|:|\|)|[\s–-]{0,3})\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
 );
-const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis|um)\s*${CLOCK}\s*(?:zu\s*)?$`);
+// "uiterlijk 11.00 uur uitchecken", "om 11:00 uur de plaats verlaten" (hoogstens vier woorden ertussen, zoals "op de dag van"; geen leesteken)
+const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis|um)\s*${CLOCK}\s*(?:[a-zà-ÿ]+\s+){0,4}$`);
 const TIME_BEFORE_IN = new RegExp(String.raw`(?:vanaf|na|from|after|ab)\s*${CLOCK}\s*$`);
 const KEY =
-  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|check-?out|auschecken|abreise|departure|verlaten|verlassen|vrij te zijn|vrij zijn)/g;
+  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|uit te checken|leeg (?:te )?(?:zijn|maken)|check-?out|auschecken|abreise|departure|verlaten|verlassen|vrij te zijn|vrij zijn)/g;
 const ARRIVAL_KEY = /aankom|incheck|check-?in|anreise|arrival/;
 const RENTAL =
   /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
@@ -462,7 +476,7 @@ const PITCH_OUT = new RegExp(
   String.raw`(kampeerpla(?:ats|atsen|tsen)|kampeerplek(?:ken)?|camperpla(?:ats|atsen)|camperplek(?:ken)?|staanpla(?:ats|atsen)|standpla(?:ats|atsen)|camping|kampeermiddel(?:en)?)\b(?:(?:(?!open|geopend|receptie|winkel|bereikbaar)[^.?!0-9]){0,40}?(?:voor|vóór|uiterlijk|om|is dat|:))?\s*(\d{1,2})(?:[:.](\d{2})\s*(?:uur|u\b|h\b)?|\s*(?:uur|u\b|h\b))`,
   "g",
 );
-const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|verlaat|auschecken|abreise/g;
+const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|verlaat|leeg|auschecken|abreise/g;
 const ARRIVAL_WORD = /aankomst|aankomen|inchecken|check-?in|anreise|beschikbaar vanaf/;
 // "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
 const PER24 =
@@ -519,15 +533,19 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     const type = ARRIVAL_KEY.test(k[0]) ? "in" : "out";
     // Vooruit kijken tot de eerstvolgende tijd, maar niet voorbij een sleutelwoord van het andere soort. Is de "zin" een
     // kort kopje ("Uitchecken" boven "Tot 11:00 uur"), dan ook de volgende zin
-    const end = e - i < 25 && e < text.length ? sentenceBounds(text, e + 1)[1] : e;
+    const end = e - s < 30 && e < text.length ? sentenceBounds(text, e + 1)[1] : e;
     let ahead = text.slice(i + k[0].length, Math.min(end, i + k[0].length + 70));
     const other = [...ahead.matchAll(KEY)].find((o) => ARRIVAL_KEY.test(o[0]) !== (type === "in"));
     if (other) ahead = ahead.slice(0, other.index);
     let h: string | undefined;
     let m: string | undefined;
     let a = TIME_AFTER.exec(ahead);
+    // "vertrek 12.07.2026" is een datum, geen tijd
+    if (a && /^[./-]\d/.test(ahead.slice(a[0].length))) a = null;
     // "tussen 23:00 en 7:00" is een nachtregel, geen vertrektijd
     if (a && a[4] && Number(a[4]) < Number(a[1])) continue;
+    // "vanaf 14:00" is nooit een vertrektijd ("…verlaten. Vanaf 14:00 uur kunt u inchecken"); "vanaf 8:00 tot 12:00" wel de eindtijd
+    if (a && type === "out" && !a[4] && /(?:vanaf|from|after|ab)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
     // "inchecken en uiterlijk 11.00 uur uitchecken": "uiterlijk" of "voor" hoort niet bij een aankomsttijd
     if (a && type === "in" && /(?:uiterlijk|voor|vóór|before|spätestens)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
     if (a && (a[2] || a[3])) {
@@ -536,7 +554,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       else [h, m] = [a[1], a[2]];
     } else {
       // "uiterlijk 11.00 uur uitchecken", "vanaf 13.00 uur inchecken"
-      const b = (type === "out" ? TIME_BEFORE : TIME_BEFORE_IN).exec(text.slice(Math.max(s, i - 30), i));
+      const b = (type === "out" ? TIME_BEFORE : TIME_BEFORE_IN).exec(text.slice(Math.max(s, i - 50), i));
       if (b && (b[2] || b[3])) [h, m] = [b[1], b[2]];
     }
     if (!h) continue;
@@ -565,7 +583,10 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     for (const m of text.matchAll(PITCH_OUT)) {
       const before = text.slice(Math.max(0, m.index! - 140), m.index!);
       const lastOut = Math.max(...[...before.matchAll(OUT_WORD)].map((x) => x.index!), -1);
-      if (lastOut < 0 || ARRIVAL_WORD.test(before.slice(lastOut)) || EXCEPTION.test(before.slice(lastOut) + m[0])) continue;
+      // Het vertrekwoord mag ook in de zin zelf staan: "Kampeerplaatsen verlaat je voor 12:00 uur"
+      const inside = new RegExp(OUT_WORD.source).test(m[0]);
+      const tail = lastOut < 0 ? "" : before.slice(lastOut);
+      if ((lastOut < 0 && !inside) || ARRIVAL_WORD.test(tail) || EXCEPTION.test(tail + m[0])) continue;
       const hour = Number(m[2]);
       if (hour < 7 || hour > 14 || Number(m[3] ?? 0) > 59) continue;
       const near = text.slice(Math.max(0, m.index! - 60), m.index! + m[0].length + 30);

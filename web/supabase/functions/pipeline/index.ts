@@ -10,7 +10,7 @@
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
-import { extract } from "./extract.ts";
+import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
 import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
@@ -258,16 +258,6 @@ const pageText = (pages: string[]) =>
 // website wordt het een kandidaat (zoals de scraper); van een andere bron (gids, review, forum) alleen een inzending
 // voor Beheer, want daar is het een aanwijzing, geen feit.
 type Finding = { id: string; url: string; departure: AiAnswer["departure"]; checkout: string | null; quote: string | null };
-
-const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
-const ACCENTS: Record<string, string> = { acute: "\u0301", grave: "\u0300", uml: "\u0308", circ: "\u0302", tilde: "\u0303" };
-/** &oacute; &#243; &#xf3; → ó, zodat de zin van de agent ("vóór 11.00 uur") te vergelijken is met de pagina */
-const decodeEntities = (s: string) =>
-  s
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-    .replace(/&([a-z])(acute|grave|uml|circ|tilde);/gi, (_, c, a) => (c + ACCENTS[a.toLowerCase()]).normalize("NFC"))
-    .replace(/&([a-z]+);/gi, (m, n) => ENTITIES[n.toLowerCase()] ?? m);
 
 async function verifyFinding(f: Finding) {
   const url = new URL(f.url);

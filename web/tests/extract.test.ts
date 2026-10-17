@@ -141,3 +141,34 @@ test("'vertrekken wanneer u wilt' naast een vaste tijd is tegenstrijdig: niets i
   const r = page("<p>Met de camper kunt u aankomen en vertrekken wanneer u wilt.</p><p>Aankomst vanaf 13.00 uur en vertrek vóór 12.00 uur.</p>");
   assert.equal(r.departure, undefined);
 });
+
+test("HTML-entiteiten: 'v&oacute;&oacute;r 11:00 uur' wordt herkend", () => {
+  const r = page("<p>In- &amp; uitchecken Inchecken: vanaf 12:00 uur Uitchecken: v&oacute;&oacute;r 11:00 uur</p>");
+  assert.equal(r.checkout_until, "11:00");
+  assert.match(String(r.times_note), /vóór 11:00/);
+  assert.equal(page("<p>Vertrek v&#243;&#243;r 10.30 uur.</p>").checkout_until, "10:30");
+});
+
+test("tijd direct na het vertrekwoord, zonder 'voor' of 'om'; een datum telt niet", () => {
+  const r = page("<p>Inclusief toeristenbelasting Aankomsttijd op dag van aankomst 14:00 uur Vertrektijd op dag van vertrek 12:00 uur</p>");
+  assert.equal(r.checkout_until, "12:00");
+  assert.equal(r.checkin_from, "14:00");
+  assert.equal(page("<p>Aankomst 14 uur, vertrek 12 uur.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Aankomst 05.07.2026, vertrek 12.07.2026.</p>").departure, undefined);
+  assert.equal(page("<p>Vertrek 2 personen per kampeerplaats.</p>").departure, undefined);
+});
+
+test("'vanaf' is nooit een vertrektijd, ook niet in de zin na het vertrekwoord", () => {
+  const r = page("<p>Indien u een kampeerplaats heeft, moet u om 11:00 uur de plaats verlaten. Als u een kampeerplaats heeft geboekt, dan kunt u vanaf 14:00 uur inchecken.</p>");
+  assert.equal(r.checkout_until, "11:00");
+  assert.equal(r.checkin_from, "14:00");
+});
+
+test("vierde steekproef (bestaande bronzinnen): uit te checken, woorden tussen tijd en werkwoord, leeg te zijn, tijdsbestek", () => {
+  assert.equal(page("<p>Voor op de camping kunt u om 14:00 inchecken en dient u uiterlijk om 12:00 uit te checken.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Op de camping dient u voor 10:00 uur uw tentplaats te verlaten.</p>").checkout_until, "10:00");
+  assert.equal(page("<p>De huur van de standplaats eindigt om 12.00 op de dag van vertrek.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Kampeerplaatsen verlaat je voor 12:00 uur, het appartement voor 10:00 uur.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>De kampeerplaatsen dienen voor 11.30 uur leeg te zijn.</p>").checkout_until, "11:30");
+  assert.equal(page("<p>Op de dag van vertrek kunt u vanaf 8:00 tot 12:00 uur uitchecken.</p>").checkout_until, "12:00");
+});
