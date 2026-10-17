@@ -172,3 +172,14 @@ test("vierde steekproef (bestaande bronzinnen): uit te checken, woorden tussen t
   assert.equal(page("<p>De kampeerplaatsen dienen voor 11.30 uur leeg te zijn.</p>").checkout_until, "11:30");
   assert.equal(page("<p>Op de dag van vertrek kunt u vanaf 8:00 tot 12:00 uur uitchecken.</p>").checkout_until, "12:00");
 });
+
+test("formuleringen uit de zoekagentenronde: vòòr, ten laatste, verlaat, vrij te maken, opgeleverd, laatste dag, Engels", () => {
+  assert.equal(page("<p>Op de vertrekdag, dient u de kampeerplaats vòòr 12.00 uur te verlaten.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Voor kampeerders geldt aankomst vanaf 13.30 uur en vertrek ten laatste 11.30 uur.</p>").checkout_until, "11:30");
+  assert.equal(page("<p>Voor 12.00 uur verlaat u de plaats op uw vertrekdag.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Het verzoek is om de plaats vóór 11.30 uur vrij te maken op de vertrekdag, de lodges vóór 10.00 uur.</p>").checkout_until, "11:30");
+  assert.equal(page("<p>Op de dag van vertrek zien wij graag dat de plaats voor 12.00 uur weer wordt opgeleverd.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Op de laatste dag van uw verblijf kunt u tot 11:30 uur van uw kampeerplek genieten.</p>").checkout_until, "11:30");
+  assert.equal(page("<p>Check-out is at 12:00 at the latest.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Het vertrekuur is 11u.</p>").checkout_until, "11:00");
+});
