@@ -141,3 +141,20 @@ export function rankLinks(links: Link[], home: URL, max = MAX_SUBPAGES): string[
 
 /** Weinig bruikbare links op de homepage? Dan ook de sitemap proberen. */
 export const needsSitemap = (picked: string[]) => picked.length < 3;
+
+/**
+ * Tekenset: uit de header, anders uit <meta charset> in het begin van de pagina. Oude sites in ISO-8859-1 zonder
+ * header werden anders als UTF-8 gelezen, en dan werd "vóór" onleesbaar ("v r") en viel de vertrektijd weg.
+ */
+export function decodeHtml(bytes: Uint8Array, contentType: string): string {
+  const head = new TextDecoder("latin1").decode(bytes.subarray(0, 4096));
+  const charset =
+    /charset=["']?([\w-]+)/i.exec(contentType)?.[1] ??
+    /<meta[^>]+charset=["']?([\w-]+)/i.exec(head)?.[1] ??
+    "utf-8";
+  try {
+    return new TextDecoder(charset).decode(bytes);
+  } catch {
+    return new TextDecoder().decode(bytes);
+  }
+}

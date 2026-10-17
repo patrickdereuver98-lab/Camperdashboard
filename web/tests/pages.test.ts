@@ -1,7 +1,7 @@
 // Welke pagina's de scraper leest: vertrekpagina's eerst, op adres én linktekst, met de sitemap als terugval.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { deeperLinks, extractLinks, needsSitemap, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
+import { decodeHtml, deeperLinks, extractLinks, needsSitemap, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
 
 const home = new URL("https://camping-dewei.nl/");
 
@@ -62,4 +62,10 @@ test("PDF's met het reglement of de tarieven, niet elke PDF", () => {
 test("tweede laag: vanaf de FAQ alleen links over aankomst en vertrek, niet al bezochte", () => {
   const faq = `<a href="/faq/aankomst-en-vertrek">Hoe laat kan ik aankomen?</a><a href="/faq/honden">Honden</a><a href="/huisregels">Huisregels</a>`;
   assert.deepEqual(deeperLinks([faq], home, ["https://camping-dewei.nl/huisregels"]), ["https://camping-dewei.nl/faq/aankomst-en-vertrek"]);
+});
+
+test("tekenset uit <meta charset> als de header die mist: 'vóór' blijft leesbaar", () => {
+  const bytes = new Uint8Array([...new TextEncoder().encode('<meta charset="iso-8859-1"><p>Vertrek v'), 0xf3, 0xf3, ...new TextEncoder().encode("r 12.00 uur</p>")]);
+  assert.match(decodeHtml(bytes, "text/html"), /Vertrek vóór 12\.00 uur/);
+  assert.match(decodeHtml(new TextEncoder().encode("<p>vóór</p>"), "text/html; charset=utf-8"), /vóór/);
 });
