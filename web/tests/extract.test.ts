@@ -183,3 +183,10 @@ test("formuleringen uit de zoekagentenronde: vòòr, ten laatste, verlaat, vrij 
   assert.equal(page("<p>Check-out is at 12:00 at the latest.</p>").checkout_until, "12:00");
   assert.equal(page("<p>Het vertrekuur is 11u.</p>").checkout_until, "11:00");
 });
+
+test("'De overnachting is per 24 uur' en 'tarieven per 24 uur' zijn per24 (zonder vaste vertrektijd)", () => {
+  assert.equal(page("<p>Camperplaats aan het water. De overnachting is per 24 uur.</p>").departure, "per24");
+  assert.equal(page("<p>Onze tarieven zijn per 24 uur, inclusief stroom.</p>").departure, "per24");
+  assert.equal(page("<p>De overnachting is per 24 uur. Vertrek voor 12:00 uur.</p>").departure, "vast");
+  assert.equal(page("<p>Chalet: de overnachting is per 24 uur.</p>").departure, undefined);
+});

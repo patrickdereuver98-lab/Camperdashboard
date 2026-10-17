@@ -481,7 +481,7 @@ const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|ver
 const ARRIVAL_WORD = /aankomst|aankomen|inchecken|check-?in|anreise|beschikbaar vanaf/;
 // "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
 const PER24 =
-  /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival/g;
+  /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival|(?:de |een )?(?:overnachting|verblijf|staanplaats|camperplaats|plaats) (?:is|geldt|duurt|loopt) (?:telkens |steeds )?(?:voor |per )24 uur|(?:prijzen|tarieven|tarief|prijs) (?:zijn |is |gelden |geldt )?per 24 uur|per periode van 24 uur/g;
 // Camperplaatsen met een automaat: "€ 12,50 per 24 uur". Alleen als er geen vaste vertrektijd op de site staat en het
 // over campers gaat; de kernpagina toont zo'n plek pas na bevestiging door een mens (kernbelofte).
 const PER24_PRICE =
