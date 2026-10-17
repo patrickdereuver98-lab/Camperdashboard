@@ -2,8 +2,12 @@ import { cacheLife, cacheTag } from "next/cache";
 import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
-import { departureKind, isOpenOn } from "./search";
-import type { Place, PlaceSummary, Review, Town } from "./types";
+import { departureKind, inDepartureGroup, isOpenOn } from "./search";
+import { PRERENDER_LIMIT, rankForPrerender } from "./prerender";
+import { inBbox, type Bbox } from "./bbox";
+import { cleanDescription } from "./description";
+import { rankPhotos } from "./photos";
+import type { Photo, Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
 
@@ -11,13 +15,29 @@ const PLACE_COLUMNS =
   "id,slug,name,kind,lat,lng,street,postcode,town,province,description,description_source,price_eur,price_note," +
   "tourist_tax_included,power,water,dump_station,toilet,shower,wifi,dogs,capacity,max_length_m,surface,open_all_year," +
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
-  "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras";
+  "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras," +
+  "departure_check,departure_checked_at,departure_checked_by";
 
-/** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten, beschrijvingen of tijdregels */
+/** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten of beschrijvingen */
 const SUMMARY_COLUMNS =
   "id,slug,name,kind,lat,lng,town,province,price_eur,price_note,tourist_tax_included,power,water,dump_station,toilet," +
   "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
-  "completeness,departure,checkout_until,price_extras";
+  "completeness,departure,checkout_until,price_extras,departure_check,checkin_from,access_24h,access_hours";
+
+class SupabaseError extends Error {
+  constructor(readonly status: number, body: string) {
+    super(`Supabase ${status}: ${body.slice(0, 300)}`);
+  }
+}
+
+/** Bij drukte (429) of een haperende database (5xx) één keer opnieuw proberen voordat we op de snapshot terugvallen */
+async function fetchWithRetry(url: string, init: RequestInit, retries = 1): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) });
+    if (res.ok || attempt >= retries || !(res.status === 429 || res.status >= 500)) return res;
+    await new Promise((r) => setTimeout(r, 300 * 2 ** attempt + Math.random() * 200));
+  }
+}
 
 async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
   const out: T[] = [];
@@ -25,11 +45,10 @@ async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
     const sep = path.includes("?") ? "&" : "?";
     // Een eigen limit in het pad: één verzoek, geen paginering
     const own = /[?&]limit=/.test(path);
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}${own ? "" : `${sep}limit=1000&offset=${offset}`}`, {
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${path}${own ? "" : `${sep}limit=1000&offset=${offset}`}`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
+    if (!res.ok) throw new SupabaseError(res.status, await res.text());
     const rows = (await res.json()) as T[];
     out.push(...rows);
     if (own || !all || rows.length < 1000) return out;
@@ -60,7 +79,13 @@ async function withFallback<T>(live: () => Promise<T>, offline: () => T): Promis
   try {
     return await live();
   } catch (err) {
-    console.warn("[vrijstaan] Supabase niet bereikbaar, snapshot gebruikt:", (err as Error).message);
+    // Een 4xx is een fout in onze query of het schema, geen storing. Dan niet stil de snapshot tonen (oude prijzen,
+    // verborgen plekken die terugkomen): de fout gaat door, en Next.js blijft de laatst goede versie serveren.
+    if (err instanceof SupabaseError && err.status < 500) {
+      console.error("[vrijstaan] Supabase weigert de query:", err.message);
+      throw err;
+    }
+    console.error("[vrijstaan] Supabase niet bereikbaar, snapshot gebruikt:", (err as Error).message);
     return offline();
   }
 }
@@ -106,17 +131,22 @@ function cleanUrl(u: string): string {
 const NOT_A_PHOTO = /(logo|icon|favicon|\/fav\.|button|knop|reserv|placeholder|sprite|badge|keurmerk|payment|ideal|zoover|acsi|anwb-|flag)[^/]*$/i;
 
 function normalize(p: Place, websitePhotos = false): Place {
-  const photos = (p.photos ?? [])
-    .map((ph) => ({ ...ph, url: cleanUrl(ph.url) }))
-    .filter((ph) => /^https:\/\//.test(ph.url) && !NOT_A_PHOTO.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos))
-    .map((ph) => ({ ...ph, credit: ph.credit?.replace(/^www\./, "") ?? sourceCredit(ph.url) }));
   const image = p.imageUrl ? cleanUrl(p.imageUrl) : undefined;
-  const imageUrl = image && /^https:\/\//.test(image) && !NOT_A_PHOTO.test(image) && photoAllowed(image, p.photos?.find((ph) => ph.url === p.imageUrl)?.permission, websitePhotos) ? image : photos[0]?.url;
+  const allowed = (ph: Photo) => /^https:\/\//.test(ph.url) && !NOT_A_PHOTO.test(ph.url) && photoAllowed(ph.url, ph.permission, websitePhotos);
+  // Hoofdfoto en galerij samen sorteren: een echte foto van de plek vooraan, keurmerken en miniaturen eruit
+  const candidates: Photo[] = (p.photos ?? []).map((ph) => ({ ...ph, url: cleanUrl(ph.url) }));
+  if (image && !candidates.some((ph) => ph.url === image)) candidates.unshift({ url: image, credit: p.imageCredit });
+  const photos = rankPhotos(candidates.filter(allowed)).map((ph) => ({ ...ph, credit: ph.credit?.replace(/^www\./, "") ?? sourceCredit(ph.url) }));
+  // Kaarten en zoeken halen geen fotolijst op: dan alleen de hoofdfoto, als die de toets doorstaat
+  const cover = photos[0];
   return {
     ...p,
+    description: cleanDescription(p.description),
+    // Alleen gewone weblinks: OSM en websites zijn door iedereen te bewerken (geen javascript:- of data:-links)
+    website: p.website && /^https?:\/\//i.test(p.website) ? p.website : undefined,
     photos,
-    imageUrl,
-    imageCredit: imageUrl ? (imageUrl === image ? (p.imageCredit?.replace(/^www\./, "") ?? sourceCredit(image)) : photos[0]?.credit) : undefined,
+    imageUrl: cover?.url,
+    imageCredit: cover?.credit,
     // "vanaf € x": de laagste genoemde prijs, er zijn duurdere tarieven
     priceFrom: p.priceEur !== undefined && p.priceEur > 0 && /^vanaf/i.test(p.priceNote ?? "") ? true : undefined,
   };
@@ -125,7 +155,8 @@ function normalize(p: Place, websitePhotos = false): Place {
 const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
   "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
-  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "priceExtras", "imageCredit",
+  "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "departureCheck", "priceExtras", "imageCredit",
+  "checkinFrom", "access24h", "accessHours",
 ];
 
 export function toSummary(p: Place): PlaceSummary {
@@ -152,6 +183,48 @@ export async function getSummaries(): Promise<PlaceSummary[]> {
   );
 }
 
+/** Nieuwe slug van een plek die is samengevoegd met een andere; undefined als er niets is samengevoegd */
+export async function getRedirect(slug: string): Promise<string | undefined> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places", `plek-${slug}`);
+  if (OFFLINE_BUILD || !/^[a-z0-9-]{1,120}$/.test(slug)) return undefined;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/place_redirect`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_slug: slug }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return undefined;
+    const target = (await res.json()) as string | null;
+    return target && target !== slug ? target : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Plekken binnen een (op het raster afgeronde) bounding box, via PostGIS (`places_in_bbox`, GIST-index).
+ * Gecachet per bbox: bezoekers die hetzelfde gebied bekijken delen één database-aanvraag.
+ */
+export async function getSummariesInBbox(bbox: Bbox): Promise<PlaceSummary[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places");
+  const [w, s, e, n] = bbox;
+  const { website_photos } = await getSettings();
+  return withFallback(
+    async () =>
+      (
+        await rest<Record<string, unknown>>(
+          `rpc/places_in_bbox?min_lng=${w}&min_lat=${s}&max_lng=${e}&max_lat=${n}&select=${SUMMARY_COLUMNS}`,
+        )
+      ).map((r) => toSummary(normalize(toCamel<Place>(r), website_photos))),
+    () => SNAP.places.filter((p) => inBbox(p, bbox)).map((p) => toSummary(normalize(p, website_photos))),
+  );
+}
+
 /**
  * Eén plek. Bewust een eigen query en geen filter op de hele lijst: elke plekpagina bewaart de cache die hij
  * leest, en met 1.300 pagina's maal de hele dataset liep de build vast ("Invalid string length").
@@ -160,6 +233,7 @@ export async function getPlace(slug: string): Promise<Place | undefined> {
   "use cache";
   cacheLife("minutes");
   cacheTag("places", `plek-${slug}`);
+  if (!/^[a-z0-9-]{1,120}$/.test(slug)) return undefined;
   const { website_photos } = await getSettings();
   return withFallback(
     async () => {
@@ -174,6 +248,10 @@ export async function getPlace(slug: string): Promise<Place | undefined> {
       return p ? normalize(p, website_photos) : undefined;
     },
   );
+}
+
+export async function getTopPlaceSlugs(limit = PRERENDER_LIMIT): Promise<string[]> {
+  return rankForPrerender(await getSummaries(), limit).map((p) => p.slug);
 }
 
 /** Plekken in de buurt: alleen een vak rond de plek ophalen (±55 km), niet de hele lijst */
@@ -279,7 +357,7 @@ export async function getStats() {
     lateCheckout: places.filter((p) => departureKind(p) === "uitslapers").length,
     roomyCheckout: places.filter((p) => departureKind(p) === "ruim").length,
     unknownDeparture: places.filter((p) => departureKind(p) === "onbekend").length,
-    otherDeparture: places.filter((p) => ["ruim", "vroeg", "onbekend"].includes(departureKind(p))).length,
+    otherDeparture: places.filter((p) => inDepartureGroup(p, "overig")).length,
     withPhoto: places.filter((p) => p.imageUrl).length,
     updatedAt,
     byProvince,

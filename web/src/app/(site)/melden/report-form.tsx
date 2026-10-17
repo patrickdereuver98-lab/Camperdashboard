@@ -16,7 +16,7 @@ const REASONS = [
   { value: "anders", label: "Iets anders", short: "anders", category: "overig" },
 ] as const;
 
-const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
 /** Een pad als "/plek/x" wordt een volledig adres op vrijstaan.nl */
 function fullUrl(raw: string): string {
@@ -59,13 +59,13 @@ export function ReportForm() {
     });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
-    const row = (data as { number: number; access_token: string }[])[0];
+    const row = data[0];
     setDone({ number: row.number, token: row.access_token });
   }
 
   if (done)
     return (
-      <div className="mt-8 rounded-2xl bg-forest-tint p-6">
+      <div className="mt-8 rounded-xl bg-forest-tint p-6">
         <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Melding ontvangen (#{done.number})
         </p>
@@ -79,7 +79,7 @@ export function ReportForm() {
           Bewaar de link hieronder. Daar zie je hoe het ervoor staat en wat we antwoorden. Je kunt er ook reageren, zonder
           account.
         </p>
-        <Link href={`/support/${done.token}`} className="mt-4 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
+        <Link href={`/support/${done.token}`} className="mt-4 inline-flex h-12 items-center rounded-lg bg-forest px-5 font-semibold text-on-forest">
           Naar mijn melding
         </Link>
       </div>
@@ -147,7 +147,7 @@ export function ReportForm() {
       </label>
       <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Melding versturen"}
       </button>
     </form>

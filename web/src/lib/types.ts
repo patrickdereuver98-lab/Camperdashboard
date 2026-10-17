@@ -52,6 +52,13 @@ export interface Place {
   /** vrij = geen vaste vertrektijd, per24 = je betaalt per 24 uur, vast = vertrek uiterlijk checkoutUntil */
   departure?: "vrij" | "per24" | "vast";
   checkoutUntil?: string;
+  /**
+   * Menselijke controle van de vertrekregel. Alleen "bevestigd" (door beheer of eigenaar, hoogstens een jaar oud)
+   * zet een plek op Zonder vertrektijd; "voorwaardelijk" = soms toch een tijd (bv. bij drukte).
+   */
+  departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen";
+  departureCheckedAt?: string;
+  departureCheckedBy?: "beheer" | "eigenaar";
   checkinFrom?: string;
   /** Toegangstijden van slagboom of poort, bv. "07:30–23:00" */
   accessHours?: string;
@@ -100,12 +107,16 @@ export type PlaceSummary = Pick<
   | "season"
   | "departure"
   | "checkoutUntil"
+  | "departureCheck"
   | "priceExtras"
   | "imageUrl"
   | "ratingAvg"
   | "ratingCount"
   | "completeness"
   | "imageCredit"
+  | "checkinFrom"
+  | "access24h"
+  | "accessHours"
 >;
 
 export interface Review {

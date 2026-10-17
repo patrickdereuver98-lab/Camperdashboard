@@ -22,11 +22,12 @@ const KIND = { nieuw: "Nieuwe plek", correctie: "Correctie", eigenaar: "Eigenaar
 
 export default function Submissions() {
   const [status, setStatus] = useState<Submission["status"]>("nieuw");
-  const { data, error, reload } = useQuery(
+  const { data, error, loading, reload } = useQuery(
     () => db().from("submissions").select("*, places(name, slug)").eq("status", status).order("created_at", { ascending: false }).limit(100),
     [status],
   );
-  const rows = (data as Submission[] | null) ?? [];
+  // `kind` en `status` zijn in de database tekst met een CHECK; hier als vaste keuzes
+  const rows = (data ?? []) as Submission[];
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -45,7 +46,7 @@ export default function Submissions() {
         ]}
       />
       <ErrorNote message={error} />
-      {rows.length === 0 ? <Empty>Niets in deze lijst.</Empty> : rows.map((s) => <Item key={s.id} s={s} onChange={reload} />)}
+      {loading && rows.length === 0 ? <p className="text-muted">Laden…</p> : rows.length === 0 ? <Empty>Niets in deze lijst.</Empty> : rows.map((s) => <Item key={s.id} s={s} onChange={reload} />)}
     </div>
   );
 }

@@ -70,7 +70,7 @@ export default function Statistieken() {
         <div className={`space-y-6 transition-opacity ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             {TILES.map((tile) => (
-              <div key={tile.key} className="rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+              <div key={tile.key} className="rounded-xl bg-surface p-4 outline-1 outline-line outline">
                 <p className="text-sm font-semibold text-muted">{tile.label}</p>
                 <p className="mt-1 font-display text-2xl font-semibold tabular-nums sm:text-3xl">{nf(t![tile.key])}</p>
               </div>

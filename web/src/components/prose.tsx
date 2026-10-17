@@ -6,7 +6,7 @@ export function ProsePage({ title, intro, updated, children }: { title: string; 
     <article className="mx-auto max-w-2xl px-4 pt-8 pb-4 sm:px-6">
       <h1 className="font-display text-3xl font-semibold sm:text-4xl">{title}</h1>
       {intro && <p className="mt-3 text-lg text-ink-2">{intro}</p>}
-      {updated && <p className="mt-2 text-sm text-muted">Laatst bijgewerkt: {updated}</p>}
+      {updated && <p className="mt-2 text-sm text-muted">Laatste update: {updated}</p>}
       <div className="prose-vs mt-8 space-y-6">{children}</div>
     </article>
   );

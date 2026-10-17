@@ -2,6 +2,10 @@
 // Regel: alleen wat expliciet op de site staat. Ontkenningen ("geen honden") gaan voor.
 // Niets wordt afgeleid of aangenomen; een veld zonder vermelding blijft leeg.
 
+// Gedeeld met de site, zodat scraper en weergave dezelfde regels volgen
+import { cleanDescription } from "../../../src/lib/description.ts";
+import { rankPhotos, upgradePhotoUrl } from "../../../src/lib/photos.ts";
+
 const MONTHS_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 const MONTH_ALIASES: Record<string, number> = {
   jan: 0, januari: 0, january: 0, januar: 0,
@@ -58,6 +62,27 @@ function decode(s: string) {
   return s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&nbsp;/g, " ").trim();
 }
 
+/**
+ * De eerste echte alinea's van de pagina (geen menu, kop, voet of cookiemelding), samen hooguit ±700 tekens.
+ * cleanDescription knipt daarna af op een hele zin en keurt slechte tekst af.
+ */
+function introText(html: string): string {
+  const body = html
+    .replace(/<(script|style|noscript|nav|header|footer|aside|form)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+(cookie|consent|gdpr)[^>]*>[\s\S]*?<\/div>/gi, " ");
+  let text = "";
+  for (const m of body.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
+    const p = decode(m[1].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    // Alleen gewone alinea's: hoofdletter vooraan, minstens één hele zin, geen knoptekst ("Lees hier …")
+    if (p.length < 60 || !/^[A-ZÀ-Ý0-9'‘"“]/.test(p) || !/[.!?]/.test(p) || /^(lees|klik|bekijk|boek|reserveer)\b/i.test(p)) continue;
+    text = text ? `${text} ${p}` : p;
+    if (text.length >= 250) break;
+  }
+  if (text.length <= 700) return text;
+  const cut = text.slice(0, 700);
+  return cut.slice(0, Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? ")) + 1);
+}
+
 function flag(text: string, pos: RegExp, neg: RegExp): boolean | undefined {
   if (neg.test(text)) return false;
   if (pos.test(text)) return true;
@@ -107,21 +132,24 @@ function contentImages(html: string, base: URL): string[] {
     const src =
       /\sdata-(?:src|lazy-src|original)=["']([^"']+)["']/i.exec(tag)?.[1] ?? set ?? /\ssrc=["']([^"']+)["']/i.exec(tag)?.[1];
     if (!src || src.startsWith("data:")) continue;
-    const w = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
-    const h = Number(/\sheight=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
-    if ((w && w < 400) || (h && h < 250)) continue;
     if (NOT_A_PHOTO.test(tag.replace(/src(set)?=["'][^"']*["']/gi, ""))) continue;
     const url = absolute(src, base);
-    if (url && !out.includes(url)) out.push(url);
-    if (out.length >= 8) break;
+    if (!url) continue;
+    // Klein getoond is pas een probleem als er geen grotere versie bestaat (WordPress, Wix … geven die wel)
+    const w = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
+    const h = Number(/\sheight=["']?(\d+)/i.exec(tag)?.[1] ?? 0);
+    const min = upgradePhotoUrl(url) !== url ? [120, 80] : [400, 250];
+    if ((w && w < min[0]) || (h && h < min[1])) continue;
+    if (!out.includes(url)) out.push(url);
+    if (out.length >= 16) break;
   }
   // Achtergrondfoto's van headers en sliders (style="background-image:url(…)", data-bg, data-background)
-  if (out.length < 8) {
+  if (out.length < 16) {
     const bg = /background(?:-image)?\s*:\s*url\(\s*(?:&quot;|["'])?([^"')&]+?)(?:&quot;|["'])?\s*\)|\sdata-(?:bg|background|background-image)=["']([^"']+)["']/gi;
     for (const m of html.matchAll(bg)) {
       const url = absolute(m[1] ?? m[2], base);
       if (url && !out.includes(url) && !NOT_A_PHOTO.test(url)) out.push(url);
-      if (out.length >= 8) break;
+      if (out.length >= 16) break;
     }
   }
   return out;
@@ -164,22 +192,29 @@ export function extract(pages: string[], base: URL) {
   }
 
   // ── Beschrijving en foto's ──────────────────────────────────────────────
-  const desc = meta(pages[0], "og:description") ?? meta(pages[0], "description");
-  if (desc) {
-    const d = decode(desc);
-    if (d.length >= 40 && d.length <= 400 && !/cookie|javascript|lorem ipsum/i.test(d)) out.description = d;
-  }
-  const photos: string[] = [];
-  const add = (u?: string) => u && !photos.includes(u) && photos.push(u);
+  // Dezelfde regels als de site (web/src/lib/description.ts): alleen hele Nederlandse zinnen. De meta-omschrijving
+  // is vaak afgekapt ("Lees meer"); de eerste alinea's van de pagina zelf zijn meestal vollediger.
+  const metaDesc = cleanDescription(decode(meta(pages[0], "og:description") ?? meta(pages[0], "description") ?? ""));
+  const intro = cleanDescription(introText(pages[0]));
+  const description = intro && intro.length > (metaDesc?.length ?? 0) ? intro : metaDesc;
+  if (description) out.description = description;
+
+  // Foto's: alles verzamelen, dan dezelfde rangorde als de site (web/src/lib/photos.ts): een echte foto van de plek
+  // vooraan, keurmerken en logo's van anderen, stockfoto's en miniaturen eruit. De URL blijft het origineel.
+  const candidates: string[] = [];
+  const add = (u?: string) => u && !candidates.includes(u) && candidates.push(u);
   add(out.image_url as string | undefined);
   for (const p of pages) {
     add(absolute(meta(p, "og:image") ?? meta(p, "og:image:secure_url") ?? meta(p, "twitter:image"), base));
   }
   for (const p of pages) for (const u of contentImages(p, base)) add(u);
+  const photos = rankPhotos(candidates.map((url) => ({ url, credit: base.host }))).slice(0, 8);
   if (photos.length) {
-    out.image_url = photos[0];
+    out.image_url = photos[0].url;
     out.image_credit = base.host;
-    out.photos = photos.slice(0, 8).map((url) => ({ url, credit: base.host }));
+    out.photos = photos;
+  } else {
+    delete out.image_url;
   }
 
   // ── Contact ──────────────────────────────────────────────────────────────
@@ -360,6 +395,20 @@ export function extract(pages: string[], base: URL) {
   // ── Aankomst- en vertrektijden ───────────────────────────────────────────
   const raw = pages.map(toRawText).join(" . ");
   Object.assign(out, arrivalDeparture(text, raw.length === text.length ? raw : text));
+  // Niets in de tekst? Boekingssystemen zetten de tijden soms alleen in gestructureerde gegevens (schema.org
+  // checkoutTime). Alleen als dat over de camping of camperplaats zelf gaat, niet over een chalet of hotelkamer.
+  if (out.departure === undefined) {
+    const ld = pages.flatMap((p) => jsonLd(p)).find((i) => /Campground|RVPark/i.test(String(i["@type"] ?? "")) && i.checkoutTime);
+    const clock = (v: unknown) => /(?:^|T)(\d{1,2}):(\d{2})/.exec(String(v ?? ""));
+    const outTime = clock(ld?.checkoutTime);
+    if (ld && outTime && Number(outTime[1]) >= 7 && Number(outTime[1]) <= 14) {
+      out.departure = "vast";
+      out.checkout_until = `${outTime[1].padStart(2, "0")}:${outTime[2]}`;
+      const inTime = clock(ld.checkinTime);
+      if (inTime && out.checkin_from === undefined) out.checkin_from = `${inTime[1].padStart(2, "0")}:${inTime[2]}`;
+      out.times_note = `Volgens de gegevens op de website: vertrek uiterlijk ${out.checkout_until}`;
+    }
+  }
 
   // ── Reserveren ───────────────────────────────────────────────────────────
   const res = flag(
@@ -381,22 +430,26 @@ export function extract(pages: string[], base: URL) {
 
 const CLOCK = String.raw`(\d{1,2})(?:[:.](\d{2}))?\s*(uur|uhr|u\b|h\b|hrs?\b)?`;
 const TIME_AFTER = new RegExp(
-  String.raw`^[^0-9]{0,45}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|from|after|before|until|by|ab|bis|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
+  String.raw`^[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|is|from|after|before|until|by|ab|bis|um|spätestens|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
 );
-const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis)\s*${CLOCK}\s*$`);
+const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis|um)\s*${CLOCK}\s*(?:zu\s*)?$`);
+const TIME_BEFORE_IN = new RegExp(String.raw`(?:vanaf|na|from|after|ab)\s*${CLOCK}\s*$`);
 const KEY =
-  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|check-?out|abreise|departure|verlaten|vrij te zijn|vrij zijn)/g;
+  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|check-?out|auschecken|abreise|departure|verlaten|verlassen|vrij te zijn|vrij zijn)/g;
 const ARRIVAL_KEY = /aankom|incheck|check-?in|anreise|arrival/;
 const RENTAL =
   /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
 const EXCEPTION =
-  /vroege? aankomst|eerder aankomen|vroeg aankomen|laat vertrek|later vertrek|later vertrekken|laat vertrekken|late check-?out|early check-?in|late check-?in|annuler|toeslag|bijbetaling|tegen betaling|datum/;
-const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien|in overleg/;
+  /\d+ (werk)?dagen voor (vertrek|aankomst)|weken voor (vertrek|aankomst)|deelnemers|aanbetaling|restbedrag|voldaan|vroege? aankomst|eerder aankomen|vroeg aankomen|laat vertrek|later vertrek|later vertrekken|laat vertrekken|late check-?out|early check-?in|late check-?in|annuler|toeslag|bijbetaling|tegen betaling|datum/;
+// "In overleg" is geen voorwaarde: "vertrek vóór 11:00 of in overleg" is gewoon een vaste tijd met uitzonderingen op verzoek
+const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien/;
 const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
+// Specifieker dan "camping": deze tijd gaat over de kampeerplek zelf, niet over de camping in het algemeen
+const PITCH_ONLY = /kampeerpla|kampeerplek|standpla|staanpla|kampeermiddel|camperpla|camperplek/;
 const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
 // Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
 const FREE =
-  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr/g;
+  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr|vrije (aankomst-? ?(en|of) ?)?vertrek(tijd(en)?|-? ?(en|of) ?aankomsttijd(en)?)|vrije aankomst- en vertrektijd(en)?|check-?in ?\/ ?check-?out \(?24\/7|24\/7 (in- en )?uit(checken|rijden)|(in- en )?uitchecken (is )?24\/7/g;
 // Zwak: "komen en gaan wanneer je wilt" gaat vaak over een seizoensplaats of dagtochtjes. Alleen geldig bij campers
 // en zonder seizoensplaats-context.
 const FREE_WEAK =
@@ -404,9 +457,20 @@ const FREE_WEAK =
 const SEASONAL = /seizoen|uitvalsbasis|jaarplaats|toercaravan|vouwwagen|laten staan|periode|vaste plaats|seizoensplaats|tussen \d+ \w+ en/;
 const ACCESS24 =
   /24 ?uur per dag (bereikbaar|toegankelijk|open|geopend|aankomen|inrijden)|24\/7 (bereikbaar|toegankelijk|open|geopend)|dag en nacht (bereikbaar|toegankelijk|aankomen|open|inrijden)|rund um die uhr (geöffnet|zugänglich|anreisen)|jederzeit anreisen|aankomst (is )?(op elk tijdstip|altijd mogelijk|24 uur per dag)|arrive (at )?any ?time/g;
+// Een tijd die direct bij de kampeerplek hoort: "Kampeerplaatsen verlaat je voor 12:00 uur", "uitchecken camping 12.00 uur"
+const PITCH_OUT = new RegExp(
+  String.raw`(kampeerpla(?:ats|atsen|tsen)|kampeerplek(?:ken)?|camperpla(?:ats|atsen)|camperplek(?:ken)?|staanpla(?:ats|atsen)|standpla(?:ats|atsen)|camping|kampeermiddel(?:en)?)\b(?:(?:(?!open|geopend|receptie|winkel|bereikbaar)[^.?!0-9]){0,40}?(?:voor|vóór|uiterlijk|om|is dat|:))?\s*(\d{1,2})(?:[:.](\d{2})\s*(?:uur|u\b|h\b)?|\s*(?:uur|u\b|h\b))`,
+  "g",
+);
+const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|verlaat|auschecken|abreise/g;
+const ARRIVAL_WORD = /aankomst|aankomen|inchecken|check-?in|anreise|beschikbaar vanaf/;
 // "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
 const PER24 =
   /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival/g;
+// Camperplaatsen met een automaat: "€ 12,50 per 24 uur". Alleen als er geen vaste vertrektijd op de site staat en het
+// over campers gaat; de kernpagina toont zo'n plek pas na bevestiging door een mens (kernbelofte).
+const PER24_PRICE =
+  /(?:€|eur|euro)\s?\d+(?:[.,]\d{1,2})?(?:,-)?\s*(?:per|p\.?|\/)\s?24\s?(?:uur|u\b|h\b)|(?:tarief|prijs|kosten|staanplaats|overnachting|parkeren)[^.]{0,40}?\bper 24 uur|pro 24 stunden|je 24 stunden/g;
 // Toegangstijden van slagboom of poort: "de slagboom is geopend van 07:30 tot 23:00 uur"
 const GATE = new RegExp(
   String.raw`\b(?:slagboom|schuifpoort|toegangspoort|poort|hek|barri[eè]re|schranke|tor|gate)\b[^.?!]{0,40}?(?:open|geopend|ge[öo]ffnet)[^.0-9]{0,20}?${CLOCK}\s*(?:tot|en|-|–|bis|to)\s*${CLOCK}|(?:tussen|zwischen|between)\s*${CLOCK}\s*(?:en|und|and)\s*${CLOCK}[^.]{0,30}?(?:aankomen en vertrekken|aankomen|an- und abreise|arrive)`,
@@ -414,10 +478,11 @@ const GATE = new RegExp(
 );
 const ACCESS_NOT = /telefo|bellen|receptie|noodnummer|wifi|winkel|bereikbaar per|mail|sanitair|toilet|douche|wasruimte|wasserette|sauna|zwembad|restaurant|bar\b/;
 
-type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; camper: boolean; cond: boolean };
+type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; pitch?: boolean; camper: boolean; cond: boolean };
 
 function sentenceBounds(text: string, index: number): [number, number] {
-  const boundary = /(?<!\d)[.!?](?!\d)/g;
+  // Een punt na een tijd ("voor 12:00.") sluit de zin af; een decimaal ("12.00") en een opsommingsnummer ("1.") niet
+  const boundary = /(?<!\b\d)[.!?](?!\d)/g;
   let start = 0;
   let end = text.length;
   for (const m of text.matchAll(boundary)) {
@@ -452,19 +517,26 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     const local = text.slice(Math.max(s, i - 60), Math.min(e, i + 90));
     if (RENTAL.test(local) || EXCEPTION.test(local)) continue;
     const type = ARRIVAL_KEY.test(k[0]) ? "in" : "out";
-    // Vooruit kijken tot de eerstvolgende tijd, maar niet voorbij een sleutelwoord van het andere soort
-    let ahead = text.slice(i + k[0].length, Math.min(e, i + k[0].length + 70));
+    // Vooruit kijken tot de eerstvolgende tijd, maar niet voorbij een sleutelwoord van het andere soort. Is de "zin" een
+    // kort kopje ("Uitchecken" boven "Tot 11:00 uur"), dan ook de volgende zin
+    const end = e - i < 25 && e < text.length ? sentenceBounds(text, e + 1)[1] : e;
+    let ahead = text.slice(i + k[0].length, Math.min(end, i + k[0].length + 70));
     const other = [...ahead.matchAll(KEY)].find((o) => ARRIVAL_KEY.test(o[0]) !== (type === "in"));
     if (other) ahead = ahead.slice(0, other.index);
     let h: string | undefined;
     let m: string | undefined;
-    const a = TIME_AFTER.exec(ahead);
+    let a = TIME_AFTER.exec(ahead);
+    // "tussen 23:00 en 7:00" is een nachtregel, geen vertrektijd
+    if (a && a[4] && Number(a[4]) < Number(a[1])) continue;
+    // "inchecken en uiterlijk 11.00 uur uitchecken": "uiterlijk" of "voor" hoort niet bij een aankomsttijd
+    if (a && type === "in" && /(?:uiterlijk|voor|vóór|before|spätestens)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
     if (a && (a[2] || a[3])) {
       // "tussen 9.00 en 11.00": aankomen vanaf het begin, vertrekken uiterlijk aan het eind
       if (type === "out" && a[4] && (a[5] || a[6])) [h, m] = [a[4], a[5]];
       else [h, m] = [a[1], a[2]];
-    } else if (type === "out") {
-      const b = TIME_BEFORE.exec(text.slice(Math.max(s, i - 30), i));
+    } else {
+      // "uiterlijk 11.00 uur uitchecken", "vanaf 13.00 uur inchecken"
+      const b = (type === "out" ? TIME_BEFORE : TIME_BEFORE_IN).exec(text.slice(Math.max(s, i - 30), i));
       if (b && (b[2] || b[3])) [h, m] = [b[1], b[2]];
     }
     if (!h) continue;
@@ -475,6 +547,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       time: asClock(h, m),
       index: i,
       strong: PITCH_CONTEXT.test(local),
+      pitch: PITCH_ONLY.test(text.slice(Math.max(s, i - 150), Math.min(e, i + 90))),
       camper: CAMPER.test(local),
       cond: CONDITIONAL.test(local),
     });
@@ -482,10 +555,24 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
 
   const pick = (type: "in" | "out") => {
     const firm = hits.filter((x) => x.type === type && !x.cond);
-    return firm.find((x) => x.camper) ?? firm.find((x) => x.strong) ?? firm[0];
+    return firm.find((x) => x.camper) ?? firm.find((x) => x.pitch) ?? firm.find((x) => x.strong) ?? firm[0];
   };
-  const out = pick("out");
+  let out = pick("out");
   const arrive = pick("in");
+  // Geen losse vertrektijd gevonden? Dan een tijd die direct bij de kampeerplek hoort, vlak na een vertrekwoord, ook
+  // over een vraag heen ("Hoe laat moet ik uitchecken? Voor kampeerplekken is dat 11:00 uur, voor de glampingtent 10:00")
+  if (!out)
+    for (const m of text.matchAll(PITCH_OUT)) {
+      const before = text.slice(Math.max(0, m.index! - 140), m.index!);
+      const lastOut = Math.max(...[...before.matchAll(OUT_WORD)].map((x) => x.index!), -1);
+      if (lastOut < 0 || ARRIVAL_WORD.test(before.slice(lastOut)) || EXCEPTION.test(before.slice(lastOut) + m[0])) continue;
+      const hour = Number(m[2]);
+      if (hour < 7 || hour > 14 || Number(m[3] ?? 0) > 59) continue;
+      const near = text.slice(Math.max(0, m.index! - 60), m.index! + m[0].length + 30);
+      if (CONDITIONAL.test(near)) continue;
+      out = { type: "out", time: asClock(m[2], m[3]), index: m.index!, strong: true, camper: CAMPER.test(m[1]), cond: false };
+      break;
+    }
 
   let free: { index: number; camper: boolean } | undefined;
   for (const f of text.matchAll(FREE)) {
@@ -512,6 +599,13 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     per24 = p.index!;
     break;
   }
+  if (per24 === undefined)
+    for (const p of text.matchAll(PER24_PRICE)) {
+      const near = text.slice(Math.max(0, p.index! - 150), p.index! + 120);
+      if (!CAMPER.test(near) || RENTAL.test(near)) continue;
+      per24 = p.index!;
+      break;
+    }
   if (per24 !== undefined && !free && !out) {
     res.departure = "per24";
     notes.push(quote(raw, text, per24));

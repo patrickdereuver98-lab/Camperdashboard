@@ -2,13 +2,13 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { FACILITIES } from "@/lib/search";
 import { PROVINCES } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 
-const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
 export function SubmitForm() {
   const params = useSearchParams();
@@ -22,36 +22,36 @@ export function SubmitForm() {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    if (f.get("website_hp")) return;
+    if (formValue(f, "website_hp")) return;
     const facilities: Record<string, boolean> = {};
-    for (const fac of FACILITIES) if (f.get(`v_${fac.key}`)) facilities[fac.key] = true;
+    for (const fac of FACILITIES) if (formValue(f, `v_${fac.key}`)) facilities[fac.key] = true;
     setBusy(true);
     setErr(null);
     const { error } = await supabase().rpc("submit_place", {
       p_kind: owner ? "eigenaar" : "nieuw",
       p_place_id: null,
       p_payload: {
-        naam: f.get("name"),
-        plaats: f.get("town"),
-        provincie: f.get("province"),
-        adres: f.get("address"),
+        naam: formValue(f, "name"),
+        plaats: formValue(f, "town"),
+        provincie: formValue(f, "province"),
+        adres: formValue(f, "address"),
         website: (() => {
           // "www.camping.nl" is ook goed: we zetten er zelf https:// voor
-          const w = String(f.get("website") ?? "").trim();
+          const w = String(formValue(f, "website") ?? "").trim();
           return w && !/^https?:\/\//i.test(w) ? `https://${w}` : w;
         })(),
-        telefoon: f.get("phone"),
-        prijs_per_nacht: f.get("price"),
-        aantal_plekken: f.get("capacity"),
-        seizoen: f.get("season"),
+        telefoon: formValue(f, "phone"),
+        prijs_per_nacht: formValue(f, "price"),
+        aantal_plekken: formValue(f, "capacity"),
+        seizoen: formValue(f, "season"),
         vertrek: departure || null,
-        vertrek_uiterlijk: departure === "vast" ? f.get("checkout") || null : null,
-        max_lengte_m: f.get("max_length") || null,
+        vertrek_uiterlijk: departure === "vast" ? formValue(f, "checkout") || null : null,
+        max_lengte_m: formValue(f, "max_length") || null,
         voorzieningen: facilities,
-        toelichting: f.get("notes"),
+        toelichting: formValue(f, "notes"),
       },
-      p_contact_name: String(f.get("contact_name") || ""),
-      p_contact_email: String(f.get("contact_email") || ""),
+      p_contact_name: String(formValue(f, "contact_name") || ""),
+      p_contact_email: String(formValue(f, "contact_email") || ""),
     });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
@@ -60,7 +60,7 @@ export function SubmitForm() {
 
   if (done)
     return (
-      <div className="mt-8 rounded-2xl bg-forest-tint p-6">
+      <div className="mt-8 rounded-xl bg-forest-tint p-6">
         <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
@@ -81,7 +81,7 @@ export function SubmitForm() {
             role="radio"
             aria-checked={owner === v}
             onClick={() => setOwner(v as boolean)}
-            className="h-12 rounded-xl border-2 border-line font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+            className="h-12 rounded-lg border border-line font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
           >
             {l as string}
           </button>
@@ -147,7 +147,7 @@ export function SubmitForm() {
                 role="radio"
                 aria-checked={departure === v}
                 onClick={() => setDeparture(v)}
-                className="min-h-12 rounded-xl border-2 border-line px-3 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+                className="min-h-12 rounded-lg border border-line px-3 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
               >
                 {l}
               </button>
@@ -185,7 +185,7 @@ export function SubmitForm() {
             return (
               <label
                 key={fac.key}
-                className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl border-2 border-line px-3 font-semibold has-[:checked]:border-forest has-[:checked]:bg-forest-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
+                className="relative flex min-h-12 cursor-pointer items-center gap-2.5 rounded-lg border border-line px-3 font-semibold has-[:checked]:border-forest has-[:checked]:bg-forest-tint has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
               >
                 <input
                   type="checkbox"
@@ -224,7 +224,7 @@ export function SubmitForm() {
 
       <input name="website_hp" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Plek aanmelden"}
       </button>
     </form>

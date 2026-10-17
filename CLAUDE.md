@@ -17,5 +17,8 @@ Werkwijze:
 - Vaste regels: nooit data verzinnen (onbekend blijft leeg), vertrektijd is het kernfeit, prijzen met alle toeslagen,
   mobiel eerst, Nederlands eerst, geen tracking van derden.
 - Next.js 16 wijkt af van oudere kennis: lees `web/AGENTS.md`.
-- Zichtbare tekst of uiterlijk aanpassen? Gebruik de skills `vrijstaan-stijl` en `frontend-design` in `.claude/skills/`.
+- Zichtbare tekst of uiterlijk aanpassen? Volg `docs/stijlgids.md` en de skill `vrijstaan-stijl`. De design-skills in
+  `.claude/skills/` (design-taste-frontend, minimalist-ui, high-end-visual-design, redesign, ui-ux-pro-max, Vercel
+  react-best-practices en web-design-guidelines) zijn naslag; bij een conflict gaan de stijlgids en `vrijstaan-stijl`
+  voor (zie `.claude/skills/BRONNEN.md`).
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.

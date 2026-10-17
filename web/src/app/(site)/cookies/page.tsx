@@ -25,7 +25,7 @@ export default function CookiePage() {
         {/* Mobiel: kaartjes; vanaf sm een tabel */}
         <ul className="space-y-2 sm:hidden">
           {ROWS.map((r) => (
-            <li key={r[0]} className="!ml-0 !list-none rounded-xl bg-surface p-3 outline-1 outline-line outline">
+            <li key={r[0]} className="!ml-0 !list-none rounded-lg bg-surface p-3 outline-1 outline-line outline">
               <p className="font-mono text-xs break-all text-ink">{r[0]}</p>
               <dl className="mt-1 grid grid-cols-[7rem_1fr] gap-x-2 gap-y-0.5 text-sm">
                 <dt className="text-muted">Soort</dt>
@@ -38,7 +38,7 @@ export default function CookiePage() {
             </li>
           ))}
         </ul>
-        <div className="hidden overflow-hidden rounded-xl outline-1 outline-line outline sm:block">
+        <div className="hidden overflow-hidden rounded-lg outline-1 outline-line outline sm:block">
           <table className="w-full text-left text-sm">
             <thead className="bg-sunken">
               <tr>

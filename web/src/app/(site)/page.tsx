@@ -1,23 +1,23 @@
 import Link from "next/link";
 import { getStats, getSummaries } from "@/lib/places";
-import { searchHref } from "@/lib/search";
+import { departureKind, searchHref } from "@/lib/search";
 import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { HomeSearch } from "@/components/home-search";
 import { Icon } from "@/components/icons";
-import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 import { CreditedPhoto, PlaceCard } from "@/components/place-ui";
+import { looksLikeGraphic } from "@/lib/photos";
 
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
-const SCRIM = "from-[#14281d]/90 via-[#14281d]/40 to-transparent";
+const SCRIM = "from-[#14281d]/80 via-[#14281d]/20 to-transparent";
 
 export default async function Home() {
   const [stats, places] = await Promise.all([getStats(), getSummaries()]);
   const withDeparture = places.filter((p) => p.departure).length;
 
   // Uitgelicht: eerst plekken zonder vaste vertrektijd, dan foto, score en de meeste informatie
-  const free = (p: PlaceSummary) => (p.departure === "vrij" || p.departure === "per24" ? 1 : 0);
+  const free = (p: PlaceSummary) => (departureKind(p) === "vrij" ? 1 : 0);
   const featured = [...places]
     .sort(
       (a, b) =>
@@ -31,35 +31,35 @@ export default async function Home() {
   // Populaire bestemmingen: provincies met de meeste plekken, met een echte foto van een plek daar
   const coverOf = (prov: string) =>
     places
-      .filter((p) => p.province === prov && p.imageUrl)
+      .filter((p) => p.province === prov && p.imageUrl && !looksLikeGraphic(p.imageUrl))
       .sort((a, b) => b.completeness - a.completeness || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0))[0];
   const provinces = [...PROVINCES].sort((a, b) => (stats.byProvince[b] ?? 0) - (stats.byProvince[a] ?? 0));
   const destinations = provinces.slice(0, 6).map((prov) => ({ prov, count: stats.byProvince[prov] ?? 0, cover: coverOf(prov) }));
 
-  const ways: { href: string; title: string; text: string; count: number; variant: 0 | 1 | 2 | 3; tone: string }[] = [
+  const ways: { href: string; title: string; text: string; count: number; sign: SignName; tone: "forest" | "lake" }[] = [
     {
       href: searchHref({ departure: "vrij" }),
       title: "Zonder vertrektijd",
       text: "Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf aankomst.",
       count: stats.freeDeparture,
-      variant: 0,
-      tone: "bg-forest text-on-forest",
+      sign: "clock",
+      tone: "forest",
     },
     {
       href: searchHref({ departure: "uitslapers" }),
       title: "Voor uitslapers",
       text: "Je hoeft pas om 12:00 of later weg.",
       count: stats.lateCheckout,
-      variant: 1,
-      tone: "bg-lake text-on-forest",
+      sign: "clock",
+      tone: "lake",
     },
     {
       href: "/zoeken",
       title: "Alle camperplaatsen",
       text: "Alle plekken in de gids, ook die waarvan we de vertrektijd nog niet weten.",
       count: stats.total,
-      variant: 3,
-      tone: "bg-ink text-paper",
+      sign: "camper",
+      tone: "forest",
     },
   ];
 
@@ -72,27 +72,21 @@ export default async function Home() {
 
   return (
     <>
-      {/* Kop: landschap over de volle breedte, zoekkaart eroverheen */}
-      <section className="relative">
-        <div className="relative h-[17.5rem] overflow-hidden sm:h-[22rem] lg:h-[27rem]">
-          <Landscape seed="vrijstaan-avond" variant={2} water wide className="absolute inset-0 h-full w-full" />
-          <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
-          <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-end px-4 pb-20 sm:px-6 sm:pb-24 lg:pb-28">
-            <h1 className="animate-rise max-w-3xl font-display text-[2.4rem] leading-[1.02] font-semibold text-[#fffcf6] [text-shadow:0_2px_24px_rgb(10_24_16/0.45)] sm:text-5xl lg:text-[4rem]">
-              Waar sta je vannacht?
-            </h1>
-            <p className="animate-rise mt-2 max-w-xl text-[#efe9dc] [animation-delay:80ms] sm:text-lg">
-              {nf.format(stats.total)} camperplaatsen in Nederland, met vertrektijd en prijs.
-            </p>
-          </div>
-        </div>
-        <div className="relative z-10 mx-auto -mt-16 max-w-6xl px-3 sm:-mt-20 sm:px-6">
+      {/* Kop: rustig en zakelijk, de zoekkaart is het belangrijkste (docs/stijlgids.md) */}
+      <section className="mx-auto w-full max-w-6xl px-3 pt-5 sm:px-6 sm:pt-10">
+        <h1 className="animate-rise font-display text-[1.75rem] leading-[1.1] font-semibold tracking-tight text-ink sm:text-5xl">
+          Waar sta je vannacht?
+        </h1>
+        <p className="animate-rise mt-1.5 max-w-xl text-[0.9375rem] text-ink-2 [animation-delay:60ms] sm:mt-2 sm:text-lg">
+          {nf.format(stats.total)} camperplaatsen in Nederland, met vertrektijd en prijs.
+        </p>
+        <div className="animate-rise mt-4 [animation-delay:120ms] sm:mt-6">
           <HomeSearch />
         </div>
       </section>
 
       {/* Vertrouwen: wat je hier zeker weet */}
-      <section aria-label="Waarom VrijStaan" className="mx-auto max-w-6xl px-3 pt-5 sm:px-6">
+      <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-3 pt-4 sm:px-6">
         <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
           {[
             `Van ${nf.format(withDeparture)} plekken weten we hoe laat je weg moet`,
@@ -109,30 +103,23 @@ export default async function Home() {
         </ul>
       </section>
 
-      {/* Hoe wil je staan: de drie vertrekpagina's */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Hoe wil je staan?</h2>
-        <p className="mt-1 text-ink-2">Voor camperaars is de vertrektijd vaak belangrijker dan de prijs.</p>
-        <ul className="no-scrollbar -mx-3 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
+      {/* Hoe wil je staan: de drie vertrekpagina's, als rustige lijst */}
+      <section className="mx-auto w-full max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-lg font-semibold sm:text-2xl">Hoe wil je staan?</h2>
+        <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">Voor camperaars is de vertrektijd vaak belangrijker dan de prijs.</p>
+        <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {ways.map((w) => (
-            <li key={w.title} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
-              <Link
-                href={w.href}
-                className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] bg-surface shadow-low transition-shadow duration-200 hover:shadow-raised"
-              >
-                <div className="relative h-32 overflow-hidden">
-                  <Landscape seed={`soort-${w.title}`} variant={w.variant} water={w.variant === 1} className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-105" />
-                  <span className={`absolute top-3 left-3 rounded-full px-3 py-1 text-sm font-semibold ${w.tone}`}>
-                    {nf.format(w.count)} plekken
+            <li key={w.title}>
+              <Link href={w.href} className="group flex h-full items-start gap-3 p-3.5 hover:bg-sunken/50 sm:flex-col sm:gap-2 sm:p-5">
+                <Sign name={w.sign} size={32} tone={w.tone} />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="font-semibold">{w.title}</span>
+                    <span className="text-sm text-muted tabular-nums">{nf.format(w.count)}</span>
                   </span>
-                </div>
-                <div className="flex flex-1 flex-col p-4">
-                  <h3 className="font-display text-xl font-semibold">{w.title}</h3>
-                  <p className="mt-1 flex-1 text-ink-2">{w.text}</p>
-                  <span className="mt-3 flex items-center gap-1 font-semibold text-forest">
-                    Bekijk plekken <Icon name="chevronRight" size={18} />
-                  </span>
-                </div>
+                  <span className="mt-0.5 block text-sm text-ink-2">{w.text}</span>
+                </span>
+                <Icon name="chevronRight" size={18} className="mt-1 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 sm:hidden" />
               </Link>
             </li>
           ))}
@@ -140,37 +127,37 @@ export default async function Home() {
       </section>
 
       {/* Populaire bestemmingen met echte foto's */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Populaire bestemmingen</h2>
-        <p className="mt-1 text-ink-2">Hier staan de meeste plekken.</p>
-        <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-12">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-lg font-semibold sm:text-2xl">Populaire bestemmingen</h2>
+        <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">Hier staan de meeste plekken.</p>
+        <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-12">
           {destinations.map((d, i) => (
             <li key={d.prov} className={i < 2 ? "col-span-2 sm:col-span-1 lg:col-span-6" : "lg:col-span-3"}>
               <Link
                 href={`/camperplaatsen/${d.prov.toLowerCase()}`}
-                className={`group relative block overflow-hidden bg-sunken shadow-raised ${i < 2 ? "h-48 rounded-[1.5rem] sm:h-56 lg:h-64" : "h-36 rounded-[1.25rem] sm:h-44"}`}
+                className={`group relative block overflow-hidden bg-sunken shadow-low ${i < 2 ? "h-36 rounded-xl sm:h-56 lg:h-64" : "h-28 rounded-xl sm:h-44"}`}
               >
                 <CreditedPhoto
                   src={d.cover?.imageUrl}
                   alt={`Camperplaatsen in ${d.prov}`}
                   credit={d.cover?.imageCredit}
-                  className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-105"
+                  className="absolute inset-0 h-full w-full transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
                 <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                  <h3 className={`font-display font-semibold text-[#fffcf6] ${i < 2 ? "text-2xl sm:text-3xl" : "text-xl"}`}>{d.prov}</h3>
+                  <h3 className={`font-display font-semibold text-[#fffcf6] ${i < 2 ? "text-lg sm:text-2xl" : "text-base sm:text-lg"}`}>{d.prov}</h3>
                   <p className="text-sm font-semibold text-[#efe9dc]">{nf.format(d.count)} plekken</p>
                 </div>
               </Link>
             </li>
           ))}
         </ul>
-        <ul className="mt-4 flex flex-wrap gap-2">
+        <ul className="mt-3 flex flex-wrap gap-2">
           {provinces.slice(6).map((prov) => (
             <li key={prov}>
               <Link
                 href={`/camperplaatsen/${prov.toLowerCase()}`}
-                className="flex h-11 items-center gap-2 rounded-full bg-surface px-4 font-semibold shadow-low transition-shadow hover:shadow-raised"
+                className="flex h-11 items-center gap-1.5 rounded-full bg-surface px-3.5 text-[0.9375rem] font-semibold shadow-low transition-shadow hover:shadow-raised"
               >
                 {prov} <span className="font-normal text-muted">{nf.format(stats.byProvince[prov] ?? 0)}</span>
               </Link>
@@ -181,9 +168,9 @@ export default async function Home() {
 
       {/* Uitgelicht */}
       {featured.length > 0 && (
-        <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <h2 className="font-display text-2xl font-semibold sm:text-3xl">
+        <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+          <div className="mb-3 flex items-end justify-between gap-4">
+            <h2 className="font-display text-lg font-semibold sm:text-2xl">
               {stats.freeDeparture > 0 ? "Vertrekken wanneer je wilt" : "Meest complete informatie"}
             </h2>
             <Link href={stats.freeDeparture > 0 ? searchHref({ departure: "vrij" }) : "/zoeken"} className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-forest hover:underline">
@@ -192,7 +179,7 @@ export default async function Home() {
           </div>
           <ul className="no-scrollbar -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
             {featured.map((p) => (
-              <li key={p.id} className="w-[82vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
+              <li key={p.id} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
                 <PlaceCard place={p} layout="stack" />
               </li>
             ))}
@@ -201,18 +188,18 @@ export default async function Home() {
       )}
 
       {/* Zoeken op voorziening */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Zoek op wat je nodig hebt</h2>
-        <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-lg font-semibold sm:text-2xl">Zoek op wat je nodig hebt</h2>
+        <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-4">
           {facilities
             .filter((f) => f.count > 0)
             .map((f) => (
               <li key={f.label}>
                 <Link
                   href={f.href}
-                  className="flex h-full min-h-20 items-center gap-3 rounded-2xl bg-surface p-3 shadow-low transition-shadow hover:shadow-raised sm:p-4"
+                  className="flex h-full min-h-16 items-center gap-2.5 rounded-xl bg-surface p-3 shadow-low transition-shadow hover:shadow-raised sm:min-h-20 sm:gap-3 sm:p-4"
                 >
-                  <Sign name={f.sign} size={40} />
+                  <Sign name={f.sign} size={34} />
                   <span className="min-w-0">
                     <span className="block font-semibold leading-tight">{f.label}</span>
                     <span className="block text-sm text-muted">{nf.format(f.count)} plekken</span>
@@ -224,9 +211,9 @@ export default async function Home() {
       </section>
 
       {/* Zo werkt het */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <h2 className="font-display text-2xl font-semibold sm:text-3xl">Zo werkt VrijStaan</h2>
-        <ol className="mt-5 grid gap-6 md:grid-cols-3 md:gap-8">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <h2 className="font-display text-lg font-semibold sm:text-2xl">Zo werkt VrijStaan</h2>
+        <ol className="mt-3 grid gap-4 md:mt-5 md:grid-cols-3 md:gap-8">
           {[
             {
               sign: "pin" as SignName,
@@ -244,14 +231,14 @@ export default async function Home() {
               text: "Je ziet hoe lang je nog moet rijden. Met één tik open je de route in je eigen navigatie.",
             },
           ].map((s, i) => (
-            <li key={s.title} className="flex gap-4 border-t-2 border-line pt-5 md:flex-col">
-              <div className="relative shrink-0">
-                <Sign name={s.sign} size={48} />
-                <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-ember text-sm font-bold text-on-ember">{i + 1}</span>
-              </div>
+            <li key={s.title} className="flex gap-3 border-t border-line pt-4 md:flex-col md:gap-3 md:pt-5">
+              <Sign name={s.sign} size={32} />
               <div>
-                <h3 className="font-display text-xl font-semibold">{s.title}</h3>
-                <p className="mt-1 text-ink-2">{s.text}</p>
+                <h3 className="font-display text-base font-semibold sm:text-lg">
+                  <span className="mr-1.5 text-muted tabular-nums">{i + 1}.</span>
+                  {s.title}
+                </h3>
+                <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">{s.text}</p>
               </div>
             </li>
           ))}
@@ -259,11 +246,11 @@ export default async function Home() {
       </section>
 
       {/* Eigenaren */}
-      <section className="mx-auto max-w-6xl px-3 pt-12 sm:px-6">
-        <div className="relative overflow-hidden rounded-2xl bg-forest-tint">
-          <div className="relative flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <div className="relative overflow-hidden rounded-xl bg-forest-tint">
+          <div className="relative flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-8">
             <div>
-              <h2 className="font-display text-2xl font-semibold text-forest">Heb je een camperplaats?</h2>
+              <h2 className="font-display text-xl font-semibold text-forest sm:text-2xl">Heb je een camperplaats?</h2>
               <p className="mt-1 max-w-xl text-ink-2">
                 Meld je plek aan of vul de gegevens aan, zoals je vertrektijd en tarieven. Aanmelden is gratis.
               </p>
@@ -271,7 +258,7 @@ export default async function Home() {
             <div className="flex shrink-0 flex-col gap-1 sm:items-end">
               <Link
                 href="/plek-aanmelden?soort=eigenaar"
-                className="flex h-12 items-center justify-center rounded-xl bg-forest px-6 font-semibold text-on-forest hover:bg-forest-deep"
+                className="flex h-12 items-center justify-center rounded-lg bg-forest px-6 font-semibold text-on-forest hover:bg-forest-deep"
               >
                 Plek aanmelden
               </Link>
