@@ -127,3 +127,12 @@ test("termijnen en betalingen ('2 werkdagen voor vertrek uiterlijk 12.00 uur') z
   assert.equal(page("<p>Vermindering van het aantal deelnemers kan tot 2 werkdagen voor vertrek uiterlijk 12.00 uur.</p>").departure, undefined);
   assert.equal(page("<p>Het restbedrag dient uiterlijk 14 dagen voor aankomst voldaan te zijn.</p>").departure, undefined);
 });
+
+test("derde steekproef (volledige run): nachtregel, kampeerplaats boven algemene tijd, 'uiterlijk' hoort bij vertrek", () => {
+  assert.equal(page("<p>Wenst u te vertrekken tussen 23:00 en 7:00 dan dient u uw vervoermiddel buiten het park te parkeren.</p>").departure, undefined);
+  const r = page(
+    "<p>Inchecken kan vanaf 16.00 uur en uitchecken tot 10.00 uur. Bij kampeerplaatsen kun je vanaf 13.00 uur inchecken en uiterlijk 11.00 uur uitchecken.</p>",
+  );
+  assert.equal(r.checkout_until, "11:00");
+  assert.equal(r.checkin_from, "13:00");
+});

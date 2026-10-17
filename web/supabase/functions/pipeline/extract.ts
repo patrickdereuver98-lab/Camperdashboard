@@ -433,6 +433,7 @@ const TIME_AFTER = new RegExp(
   String.raw`^[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|is|from|after|before|until|by|ab|bis|um|spätestens|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
 );
 const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis|um)\s*${CLOCK}\s*(?:zu\s*)?$`);
+const TIME_BEFORE_IN = new RegExp(String.raw`(?:vanaf|na|from|after|ab)\s*${CLOCK}\s*$`);
 const KEY =
   /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekken|vertrek|uitchecktijd|uitchecken|check-?out|auschecken|abreise|departure|verlaten|verlassen|vrij te zijn|vrij zijn)/g;
 const ARRIVAL_KEY = /aankom|incheck|check-?in|anreise|arrival/;
@@ -443,6 +444,8 @@ const EXCEPTION =
 // "In overleg" is geen voorwaarde: "vertrek vóór 11:00 of in overleg" is gewoon een vaste tijd met uitzonderingen op verzoek
 const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien/;
 const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
+// Specifieker dan "camping": deze tijd gaat over de kampeerplek zelf, niet over de camping in het algemeen
+const PITCH_ONLY = /kampeerpla|kampeerplek|standpla|staanpla|kampeermiddel|camperpla|camperplek/;
 const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
 // Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
 const FREE =
@@ -475,7 +478,7 @@ const GATE = new RegExp(
 );
 const ACCESS_NOT = /telefo|bellen|receptie|noodnummer|wifi|winkel|bereikbaar per|mail|sanitair|toilet|douche|wasruimte|wasserette|sauna|zwembad|restaurant|bar\b/;
 
-type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; camper: boolean; cond: boolean };
+type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; pitch?: boolean; camper: boolean; cond: boolean };
 
 function sentenceBounds(text: string, index: number): [number, number] {
   // Een punt na een tijd ("voor 12:00.") sluit de zin af; een decimaal ("12.00") en een opsommingsnummer ("1.") niet
@@ -522,13 +525,18 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     if (other) ahead = ahead.slice(0, other.index);
     let h: string | undefined;
     let m: string | undefined;
-    const a = TIME_AFTER.exec(ahead);
+    let a = TIME_AFTER.exec(ahead);
+    // "tussen 23:00 en 7:00" is een nachtregel, geen vertrektijd
+    if (a && a[4] && Number(a[4]) < Number(a[1])) continue;
+    // "inchecken en uiterlijk 11.00 uur uitchecken": "uiterlijk" of "voor" hoort niet bij een aankomsttijd
+    if (a && type === "in" && /(?:uiterlijk|voor|vóór|before|spätestens)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
     if (a && (a[2] || a[3])) {
       // "tussen 9.00 en 11.00": aankomen vanaf het begin, vertrekken uiterlijk aan het eind
       if (type === "out" && a[4] && (a[5] || a[6])) [h, m] = [a[4], a[5]];
       else [h, m] = [a[1], a[2]];
-    } else if (type === "out") {
-      const b = TIME_BEFORE.exec(text.slice(Math.max(s, i - 30), i));
+    } else {
+      // "uiterlijk 11.00 uur uitchecken", "vanaf 13.00 uur inchecken"
+      const b = (type === "out" ? TIME_BEFORE : TIME_BEFORE_IN).exec(text.slice(Math.max(s, i - 30), i));
       if (b && (b[2] || b[3])) [h, m] = [b[1], b[2]];
     }
     if (!h) continue;
@@ -539,6 +547,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       time: asClock(h, m),
       index: i,
       strong: PITCH_CONTEXT.test(local),
+      pitch: PITCH_ONLY.test(text.slice(Math.max(s, i - 150), Math.min(e, i + 90))),
       camper: CAMPER.test(local),
       cond: CONDITIONAL.test(local),
     });
@@ -546,7 +555,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
 
   const pick = (type: "in" | "out") => {
     const firm = hits.filter((x) => x.type === type && !x.cond);
-    return firm.find((x) => x.camper) ?? firm.find((x) => x.strong) ?? firm[0];
+    return firm.find((x) => x.camper) ?? firm.find((x) => x.pitch) ?? firm.find((x) => x.strong) ?? firm[0];
   };
   let out = pick("out");
   const arrive = pick("in");
