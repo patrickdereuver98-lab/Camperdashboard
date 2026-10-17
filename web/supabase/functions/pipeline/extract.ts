@@ -446,7 +446,7 @@ const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
 const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
 // Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
 const FREE =
-  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr|vrije (aankomst-? ?(en|of) ?)?vertrek(tijd(en)?|-? ?(en|of) ?aankomsttijd(en)?)|vrije aankomst- en vertrektijd(en)?/g;
+  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr|vrije (aankomst-? ?(en|of) ?)?vertrek(tijd(en)?|-? ?(en|of) ?aankomsttijd(en)?)|vrije aankomst- en vertrektijd(en)?|check-?in ?\/ ?check-?out \(?24\/7|24\/7 (in- en )?uit(checken|rijden)|(in- en )?uitchecken (is )?24\/7/g;
 // Zwak: "komen en gaan wanneer je wilt" gaat vaak over een seizoensplaats of dagtochtjes. Alleen geldig bij campers
 // en zonder seizoensplaats-context.
 const FREE_WEAK =
@@ -454,6 +454,13 @@ const FREE_WEAK =
 const SEASONAL = /seizoen|uitvalsbasis|jaarplaats|toercaravan|vouwwagen|laten staan|periode|vaste plaats|seizoensplaats|tussen \d+ \w+ en/;
 const ACCESS24 =
   /24 ?uur per dag (bereikbaar|toegankelijk|open|geopend|aankomen|inrijden)|24\/7 (bereikbaar|toegankelijk|open|geopend)|dag en nacht (bereikbaar|toegankelijk|aankomen|open|inrijden)|rund um die uhr (geöffnet|zugänglich|anreisen)|jederzeit anreisen|aankomst (is )?(op elk tijdstip|altijd mogelijk|24 uur per dag)|arrive (at )?any ?time/g;
+// Een tijd die direct bij de kampeerplek hoort: "Kampeerplaatsen verlaat je voor 12:00 uur", "uitchecken camping 12.00 uur"
+const PITCH_OUT = new RegExp(
+  String.raw`(kampeerpla(?:ats|atsen|tsen)|kampeerplek(?:ken)?|camperpla(?:ats|atsen)|camperplek(?:ken)?|staanpla(?:ats|atsen)|standpla(?:ats|atsen)|camping|kampeermiddel(?:en)?)\b(?:(?:(?!open|geopend|receptie|winkel|bereikbaar)[^.?!0-9]){0,40}?(?:voor|vóór|uiterlijk|om|is dat|:))?\s*(\d{1,2})(?:[:.](\d{2}))\s*(?:uur|u\b|h\b)?`,
+  "g",
+);
+const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|verlaat|auschecken|abreise/g;
+const ARRIVAL_WORD = /aankomst|aankomen|inchecken|check-?in|anreise|beschikbaar vanaf/;
 // "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
 const PER24 =
   /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival/g;
@@ -539,8 +546,22 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     const firm = hits.filter((x) => x.type === type && !x.cond);
     return firm.find((x) => x.camper) ?? firm.find((x) => x.strong) ?? firm[0];
   };
-  const out = pick("out");
+  let out = pick("out");
   const arrive = pick("in");
+  // Geen losse vertrektijd gevonden? Dan een tijd die direct bij de kampeerplek hoort, vlak na een vertrekwoord, ook
+  // over een vraag heen ("Hoe laat moet ik uitchecken? Voor kampeerplekken is dat 11:00 uur, voor de glampingtent 10:00")
+  if (!out)
+    for (const m of text.matchAll(PITCH_OUT)) {
+      const before = text.slice(Math.max(0, m.index! - 140), m.index!);
+      const lastOut = Math.max(...[...before.matchAll(OUT_WORD)].map((x) => x.index!), -1);
+      if (lastOut < 0 || ARRIVAL_WORD.test(before.slice(lastOut)) || EXCEPTION.test(before.slice(lastOut) + m[0])) continue;
+      const hour = Number(m[2]);
+      if (hour < 7 || hour > 14 || Number(m[3] ?? 0) > 59) continue;
+      const near = text.slice(Math.max(0, m.index! - 60), m.index! + m[0].length + 30);
+      if (CONDITIONAL.test(near)) continue;
+      out = { type: "out", time: asClock(m[2], m[3]), index: m.index!, strong: true, camper: CAMPER.test(m[1]), cond: false };
+      break;
+    }
 
   let free: { index: number; camper: boolean } | undefined;
   for (const f of text.matchAll(FREE)) {

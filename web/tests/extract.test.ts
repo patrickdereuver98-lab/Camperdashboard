@@ -96,3 +96,21 @@ test("JSON-LD checkoutTime van een camping telt als vaste vertrektijd, van een h
   assert.equal(r.checkin_from, "13:00");
   assert.equal(page(ld("Hotel")).departure, undefined);
 });
+
+test("FAQ: tijd in het antwoord op de vraag, bij de kampeerplek en niet bij verhuur (gevonden met inspect)", () => {
+  const a = page("<h3>Hoe laat moet ik uitchecken?</h3><p>Voor kampeerplekken is dat 11:00 uur, voor de glampingtent 10:00 uur.</p>");
+  assert.equal(a.checkout_until, "11:00");
+  const b = page("<h3>Hoe laat moet ik vertrekken?</h3><p>Kampeerplaatsen verlaat je voor 12:00 uur, het appartement voor 10:00 uur.</p>");
+  assert.equal(b.checkout_until, "12:00");
+  const c = page("<p>uitchecken camping 12.00 uur, uitchecken accomodaties 11.00 uur</p>");
+  assert.equal(c.checkout_until, "12:00");
+});
+
+test("openingstijden van de receptie na een vertrekwoord zijn geen vertrektijd", () => {
+  assert.equal(page("<p>Bij vertrek graag de sleutel inleveren. De receptie van de camping is open van 9.00 tot 17.00 uur.</p>").departure, undefined);
+  assert.equal(page("<p>Hoe laat moet ik vertrekken? De camping is geopend van 8.00 uur.</p>").departure, undefined);
+});
+
+test("selfservice checkin/checkout 24/7 bij camperplaatsen wordt 'vrij'", () => {
+  assert.equal(page("<p>28 ruime camperplaatsen. Selfservice checkin/checkout (24/7). Hele jaar open.</p>").departure, "vrij");
+});

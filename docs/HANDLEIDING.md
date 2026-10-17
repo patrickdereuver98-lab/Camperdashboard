@@ -142,10 +142,20 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 
 1. **OpenStreetMap** (wekelijks, per provincie): alle campings, camperplaatsen en camperparkeerplaatsen met
    naam, ligging, contact en voorzieningen zoals ze op de kaart staan, plus losse loos- en waterpunten.
-2. **Website van de plek** (continu, ±14 sites per minuut): de scraper leest de homepage en maximaal zes
-   relevante subpagina's (tarieven, faciliteiten, info) en haalt alleen letterlijk genoemde feiten op:
-   prijs per nacht, voorzieningen, aantal plekken, maximale lengte, seizoen, honden, reserveren, foto's.
+2. **Website van de plek** (continu, ±30 sites per minuut): de scraper leest de homepage en tot 10 subpagina's,
+   gekozen op adres én linktekst, vertrekpagina's eerst (aankomst en vertrek, huisregels, reglement, FAQ). Heeft de
+   homepage geen bruikbare links (menu in JavaScript), dan gebruikt hij de sitemap of probeert hij vaste adressen
+   (`/huisregels`, `/faq` …). Vanaf de FAQ en huisregels volgt hij nog één laag links over aankomst en vertrek.
+   `www.` en zonder `www.` gelden als dezelfde site. Vindt hij geen vertrektijd, dan leest hij PDF's met het reglement
+   of de tarieven, en als laatste de gestructureerde gegevens (`checkoutTime`) van de camping. Alleen letterlijk
+   genoemde feiten: prijs per nacht, voorzieningen, aantal plekken, maximale lengte, seizoen, honden, reserveren, foto's.
    Ontkenningen ("geen honden") gaan altijd voor. `robots.txt` wordt gerespecteerd.
+   **AI-lezer** (alleen met het geheim `ANTHROPIC_API_KEY` in Supabase → Edge Functions → Secrets; model via `AI_MODEL`,
+   standaard `claude-opus-5-5`): vinden de vaste regels geen vertrektijd maar staat er wel iets over vertrekken, dan
+   leest een taalmodel die passages. Het antwoord telt alleen als de geciteerde zin letterlijk op de pagina staat en de
+   tijd of "geen vaste tijd" erin staat. De bronzin begint dan met "AI-lezer:".
+   **Diagnose:** `select private.call_pipeline('{"action":"inspect","url":"https://…"}')` en daarna het antwoord in
+   `net._http_response`: gekozen pagina's, PDF's en de zinnen over vertrekken. Schrijft niets.
 3. **Volgorde van gezag**: wat jij in beheer invult > de eigen website (voor prijs en seizoen) > OpenStreetMap.
    Komt een waarde van een website en staat die er bij een volgende controle niet meer, dan wordt hij gewist.
 4. **Vertrektijden (de kern)**: de scraper leest ook aankomst- en vertrektijden, slagboomtijden en "per 24 uur".
