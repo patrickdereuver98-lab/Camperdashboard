@@ -14,7 +14,7 @@ import { extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
 import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
-import { decodeHtml, deeperLinks, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -129,13 +129,13 @@ async function allowed(url: URL): Promise<boolean> {
   return !robotsCache.get(url.host)!.some((p) => url.pathname.startsWith(p));
 }
 
-async function fetchPage(url: URL, accept: "html" | "xml" = "html"): Promise<string | null> {
+async function fetchPage(url: URL, accept: "html" | "xml" = "html", timeout = 9000): Promise<string | null> {
   if (!/^https?:$/.test(url.protocol)) return null;
   if (!(await allowed(url))) return null;
   const res = await fetch(url, {
     headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "nl,en;q=0.5" },
     redirect: "follow",
-    signal: AbortSignal.timeout(9000),
+    signal: AbortSignal.timeout(timeout),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
@@ -198,10 +198,28 @@ async function fetchPdf(url: URL): Promise<string | null> {
   return t.trim() ? `<html><body><p>${t}</p></body></html>` : null;
 }
 
+/** De startpagina, met terugval (zie homeCandidates); bij een time-out één keer opnieuw met meer tijd */
+async function fetchHome(website: string): Promise<{ home: URL; html: string }> {
+  let first: unknown;
+  for (const href of homeCandidates(website)) {
+    const url = new URL(href);
+    for (const timeout of [9000, 15000]) {
+      try {
+        const html = await fetchPage(url, "html", timeout);
+        if (html) return { home: url, html };
+        first ??= new Error("Geen HTML of geblokkeerd door robots.txt");
+        break;
+      } catch (e) {
+        first ??= e;
+        if (!(e instanceof DOMException && e.name === "TimeoutError")) break;
+      }
+    }
+  }
+  throw first;
+}
+
 async function collectPages(website: string) {
-  const home = new URL(website);
-  const html = await fetchPage(home);
-  if (!html) throw new Error("Geen HTML of geblokkeerd door robots.txt");
+  const { home, html } = await fetchHome(website);
   const links = extractLinks(html, home);
   let picked = rankLinks(links, home);
   // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij, en anders vaste adressen proberen

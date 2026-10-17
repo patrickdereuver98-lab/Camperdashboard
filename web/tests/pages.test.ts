@@ -1,7 +1,7 @@
 // Welke pagina's de scraper leest: vertrekpagina's eerst, op adres én linktekst, met de sitemap als terugval.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decodeHtml, deeperLinks, extractLinks, needsSitemap, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
+import { decodeHtml, deeperLinks, extractLinks, homeCandidates, needsSitemap, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
 
 const home = new URL("https://camping-dewei.nl/");
 
@@ -68,4 +68,15 @@ test("tekenset uit <meta charset> als de header die mist: 'vóór' blijft leesba
   const bytes = new Uint8Array([...new TextEncoder().encode('<meta charset="iso-8859-1"><p>Vertrek v'), 0xf3, 0xf3, ...new TextEncoder().encode("r 12.00 uur</p>")]);
   assert.match(decodeHtml(bytes, "text/html"), /Vertrek vóór 12\.00 uur/);
   assert.match(decodeHtml(new TextEncoder().encode("<p>vóór</p>"), "text/html; charset=utf-8"), /vóór/);
+});
+
+test("startpagina: verhuisde subpagina één niveau diep valt terug op het domein, dieper niet; www en http als terugval", () => {
+  assert.deepEqual(homeCandidates("https://campingdenesse.nl/minicamping"), [
+    "https://campingdenesse.nl/minicamping",
+    "https://campingdenesse.nl/",
+    "https://www.campingdenesse.nl/minicamping",
+    "http://campingdenesse.nl/minicamping",
+  ]);
+  assert.ok(!homeCandidates("https://www.logerenbijdeboswachter.nl/kamperen/dasselaar").includes("https://www.logerenbijdeboswachter.nl/"));
+  assert.deepEqual(homeCandidates("https://www.camping.nl/"), ["https://www.camping.nl/", "https://camping.nl/", "http://www.camping.nl/"]);
 });
