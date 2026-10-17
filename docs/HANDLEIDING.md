@@ -156,6 +156,12 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
    tijd of "geen vaste tijd" erin staat. De bronzin begint dan met "AI-lezer:".
    **Diagnose:** `select private.call_pipeline('{"action":"inspect","url":"https://…"}')` en daarna het antwoord in
    `net._http_response`: gekozen pagina's, PDF's en de zinnen over vertrekken. Schrijft niets.
+   **Zoekagenten** (handmatige ronde, bijvoorbeeld vanuit Claude Code): agents zoeken per plek op het web (eigen site,
+   gidsen, reviews, fora) en leveren een letterlijke zin met de bron-URL. Die gaan naar
+   `{"action":"verify","items":[{"id","url","departure","checkout","quote"}]}` (hoogstens 25 per aanroep). De pipeline
+   haalt de URL zelf op en neemt alleen over wat letterlijk op de pagina staat. Staat het op de eigen website, dan wordt
+   het een kandidaat zoals bij de scraper (bronzin eindigt met "(bron: …)"). Staat het elders, dan komt het als
+   correctie in Beheer → Inzendingen, met citaat en bron: een gids of review is een aanwijzing, geen feit.
 3. **Volgorde van gezag**: wat jij in beheer invult > de eigen website (voor prijs en seizoen) > OpenStreetMap.
    Komt een waarde van een website en staat die er bij een volgende controle niet meer, dan wordt hij gewist.
 4. **Vertrektijden (de kern)**: de scraper leest ook aankomst- en vertrektijden, slagboomtijden en "per 24 uur".
@@ -182,7 +188,7 @@ Automatische taken (pg_cron in Supabase):
 | Taak | Wanneer |
 |---|---|
 | `osm-regions` / `osm-collect` / `osm-staging` | Elke paar minuten; elke provincie wordt eens per 7 dagen ververst |
-| `scrape` | Elke 15 seconden een batch van 8 websites, zolang er werk in de wachtrij staat |
+| `scrape`, `scrape-2`, `scrape-3` | Drie workers, elk elke 15 seconden een batch van 8 websites, zolang er werk in de wachtrij staat (`skip locked`: nooit twee keer dezelfde plek) |
 | `scrape-enqueue` | Elk half uur: nieuwe plekken met een website worden ingepland |
 | `scrape-refresh` | Elk half uur de 10 plekken die het langst (minstens 30 dagen) niet gelezen zijn; zo is elke website eens per maand opnieuw aan de beurt |
 

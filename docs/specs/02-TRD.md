@@ -70,7 +70,7 @@ Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/route, 
    │  REST + RPC (publishable key, Row Level Security)
    ▼
 Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (OSM)        [elke 3 min: volgende provincie]
-   │                              └──────► Edge Function "pipeline"          [elke 15 s: 8 websites]
+   │                              └──────► Edge Function "pipeline"          [elke 15 s: 3 × 8 websites]
    │                                         ├─ leest websites (robots.txt)
    │                                         └─ schrijft via apply_scrape / ingest_osm
    └── Beheer (/admin) via Supabase Auth + is_admin()
@@ -83,7 +83,7 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `osm-regions` | elke 3 min | Volgende provincie ophalen die ouder is dan 7 dagen (twee Overpass-verzoeken via `pg_net`) |
 | `osm-collect` | elke minuut | Antwoorden ophalen; bij succes de functie `parse` aanroepen, bij fout later opnieuw via een andere server |
 | `osm-staging` | elke minuut | 300 rijen uit `osm_staging` verwerken met `ingest_osm` |
-| `scrape` | elke 15 s | 8 websites lezen zolang er werk in `private.scrape_queue` staat |
+| `scrape`, `scrape-2`, `scrape-3` | elke 15 s | Drie workers, elk 8 websites, zolang er werk in `private.scrape_queue` staat |
 | `scrape-enqueue` | elk half uur | Nieuwe plekken met een website inplannen |
 | `scrape-refresh` | elk half uur (:07 en :37) | De 10 plekken die het langst en minstens 30 dagen niet gelezen zijn opnieuw inplannen |
 | `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd in de SQL-editor (bevat ook tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log) |
