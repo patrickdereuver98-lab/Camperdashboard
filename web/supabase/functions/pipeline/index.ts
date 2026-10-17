@@ -14,7 +14,7 @@ import { extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
 import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
-import { deeperLinks, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { decodeHtml, deeperLinks, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -140,7 +140,6 @@ async function fetchPage(url: URL, accept: "html" | "xml" = "html"): Promise<str
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
   if (accept === "html" ? !type.includes("html") : !/xml|text\/plain/.test(type)) return null;
-  const charset = /charset=([\w-]+)/i.exec(type)?.[1] ?? "utf-8";
   const reader = res.body!.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -151,11 +150,7 @@ async function fetchPage(url: URL, accept: "html" | "xml" = "html"): Promise<str
     size += value.length;
   }
   reader.cancel().catch(() => {});
-  try {
-    return new TextDecoder(charset).decode(concat(chunks));
-  } catch {
-    return new TextDecoder().decode(concat(chunks));
-  }
+  return decodeHtml(concat(chunks), type);
 }
 
 function concat(chunks: Uint8Array[]) {
@@ -173,7 +168,14 @@ async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]>
   const queue = [...(sitemapCache.get(home.host) ?? []), `${home.origin}/sitemap.xml`];
   const pages: string[] = [];
   for (let i = 0; i < queue.length && i < 4 && pages.length < 500; i++) {
-    const xml = await fetchPage(new URL(queue[i]), "xml").catch(() => null);
+    // "Sitemap: /sitemap.xml" in robots.txt is relatief; een kapot adres mag de plek niet laten mislukken
+    let url: URL;
+    try {
+      url = new URL(queue[i], home);
+    } catch {
+      continue;
+    }
+    const xml = await fetchPage(url, "xml").catch(() => null);
     if (!xml) continue;
     const sm = parseSitemap(xml);
     pages.push(...sm.pages);
@@ -232,6 +234,64 @@ const pageText = (pages: string[]) =>
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/\s+/g, " ");
+
+// Zoekagenten (handmatige multi-agentronde): een agent levert per plek een letterlijke zin en de bron-URL. We halen die
+// URL hier zelf op en nemen het alleen over als de zin er echt staat (zelfde controle als de AI-lezer). Van de eigen
+// website wordt het een kandidaat (zoals de scraper); van een andere bron (gids, review, forum) alleen een inzending
+// voor Beheer, want daar is het een aanwijzing, geen feit.
+type Finding = { id: string; url: string; departure: AiAnswer["departure"]; checkout: string | null; quote: string | null };
+
+const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
+const ACCENTS: Record<string, string> = { acute: "\u0301", grave: "\u0300", uml: "\u0308", circ: "\u0302", tilde: "\u0303" };
+/** &oacute; &#243; &#xf3; → ó, zodat de zin van de agent ("vóór 11.00 uur") te vergelijken is met de pagina */
+const decodeEntities = (s: string) =>
+  s
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&([a-z])(acute|grave|uml|circ|tilde);/gi, (_, c, a) => (c + ACCENTS[a.toLowerCase()]).normalize("NFC"))
+    .replace(/&([a-z]+);/gi, (m, n) => ENTITIES[n.toLowerCase()] ?? m);
+
+async function verifyFinding(f: Finding) {
+  const url = new URL(f.url);
+  const raw = /\.pdf($|\?)/i.test(url.pathname) ? await fetchPdf(url) : await fetchPage(url);
+  if (!raw) return { id: f.id, ok: false, reason: "pagina niet te lezen" };
+  const fields = verify({ departure: f.departure, checkout: f.checkout, quote: f.quote }, decodeEntities(pageText([raw])));
+  if (!fields) return { id: f.id, ok: false, reason: "zin niet letterlijk op de pagina of zonder tijd" };
+  const { data: place } = await db.from("places").select("website, departure, sources").eq("id", f.id).single();
+  if (!place) return { id: f.id, ok: false, reason: "plek onbekend" };
+  const quote = String(fields.times_note).replace(/^AI-lezer: /, "");
+  let own = false;
+  try {
+    own = !!place.website && sameSite(new URL(place.website).host, url.host);
+  } catch {
+    own = false;
+  }
+  if (own && place.departure === null && !(place.sources?.beheer ?? {}).departure) {
+    const { error } = await db
+      .from("places")
+      .update({ ...fields, times_note: `${quote} (bron: ${url.href})`.slice(0, 480) })
+      .eq("id", f.id)
+      .is("departure", null);
+    if (error) throw error;
+    return { id: f.id, ok: true, applied: "kandidaat" };
+  }
+  const { error } = await db.from("submissions").insert({
+    kind: "correctie",
+    place_id: f.id,
+    contact_name: "Zoekagent (automatisch)",
+    payload: {
+      veld: "vertrektijd",
+      voorstel: fields.departure === "vast" ? `vast, uiterlijk ${fields.checkout_until}` : String(fields.departure),
+      citaat: quote,
+      bron: url.href,
+      toelichting: own
+        ? "Gevonden op de eigen website, maar de plek heeft al een vertrekregel: vergelijk beide."
+        : "Gevonden buiten de eigen website (gids, review of forum). Controleer bij de plek zelf voordat je iets overneemt.",
+    },
+  });
+  if (error) throw error;
+  return { id: f.id, ok: true, applied: "inzending" };
+}
 
 /** Vraag het taalmodel naar de vertrektijd; alleen een controleerbaar, letterlijk onderbouwd antwoord telt */
 async function aiDeparture(pages: string[]): Promise<Record<string, unknown> | null> {
@@ -333,6 +393,10 @@ Deno.serve(async (req) => {
         (e) => ({ ok: false, error: String(e) }),
       );
     else if (body.action === "inspect") result = await inspect(String(body.url));
+    else if (body.action === "verify")
+      result = await Promise.all(
+        (body.items as Finding[]).slice(0, 25).map((f) => verifyFinding(f).catch((e) => ({ id: f.id, ok: false, reason: String(e).slice(0, 120) }))),
+      );
     else if (body.action === "enqueue") result = (await db.rpc("enqueue_scrape", { p_only_missing: body.all !== true })).data;
     else return new Response("Onbekende actie", { status: 400 });
     return Response.json(result);

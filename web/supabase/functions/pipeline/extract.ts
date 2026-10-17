@@ -574,7 +574,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       break;
     }
 
-  let free: { index: number; camper: boolean } | undefined;
+  let free: { index: number; camper: boolean; weak?: boolean } | undefined;
   for (const f of text.matchAll(FREE)) {
     const [s, e] = sentenceBounds(text, f.index!);
     const local = text.slice(Math.max(s, f.index! - 60), Math.min(e, f.index! + 90));
@@ -586,7 +586,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     for (const f of text.matchAll(FREE_WEAK)) {
       const near = text.slice(Math.max(0, f.index! - 150), f.index! + 120);
       if (!CAMPER.test(near) || SEASONAL.test(near) || RENTAL.test(near)) continue;
-      free = { index: f.index!, camper: true };
+      free = { index: f.index!, camper: true, weak: true };
       break;
     }
 
@@ -609,7 +609,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
   if (per24 !== undefined && !free && !out) {
     res.departure = "per24";
     notes.push(quote(raw, text, per24));
-  } else if (free && (!out || (free.camper && !out.camper))) {
+  } else if (free && (!out || (free.camper && !free.weak && !out.camper))) {
     res.departure = "vrij";
     notes.push(quote(raw, text, free.index));
     // Een voorwaardelijke tijd ("bij drukte graag voor 13:00 vertrekken") hoort bij het eerlijke verhaal
