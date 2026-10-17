@@ -168,7 +168,14 @@ async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]>
   const queue = [...(sitemapCache.get(home.host) ?? []), `${home.origin}/sitemap.xml`];
   const pages: string[] = [];
   for (let i = 0; i < queue.length && i < 4 && pages.length < 500; i++) {
-    const xml = await fetchPage(new URL(queue[i]), "xml").catch(() => null);
+    // "Sitemap: /sitemap.xml" in robots.txt is relatief; een kapot adres mag de plek niet laten mislukken
+    let url: URL;
+    try {
+      url = new URL(queue[i], home);
+    } catch {
+      continue;
+    }
+    const xml = await fetchPage(url, "xml").catch(() => null);
     if (!xml) continue;
     const sm = parseSitemap(xml);
     pages.push(...sm.pages);
