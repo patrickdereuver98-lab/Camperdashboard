@@ -35,7 +35,7 @@
 ## Authenticatie en rollen
 
 - **Bezoekers:** account optioneel. Zonder account staan bewaren, reis en keuzes in `localStorage`. Met account
-  (Supabase Auth: Google, Apple, Facebook of magic link, PKCE via `/auth/callback`) wordt Mijn reis gesynchroniseerd
+  (Supabase Auth: Google, Apple, Facebook of e-mail met code (`verifyOtp`) of magic link, PKCE via `/auth/callback`) wordt Mijn reis gesynchroniseerd
   met `user_trips` en kunnen ze foto's toevoegen (`place_photos`). Elke gebruiker ziet alleen zijn eigen rijen (RLS).
 - **Beheerrechten** alleen voor een **bevestigd** e-mailadres uit `private.admin_invites` (trigger bij aanmaken én
   bij bevestigen), zodat een publiek account nooit vanzelf beheerder wordt.

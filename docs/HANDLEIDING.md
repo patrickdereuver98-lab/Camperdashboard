@@ -81,9 +81,23 @@ In het [Supabase-dashboard](https://supabase.com/dashboard/project/qkrmthrhwmmmw
 2. **Authentication → Emails → SMTP Settings** (aanbevolen): koppel een eigen mailprovider
    (bijv. Resend, Postmark of Brevo). De ingebouwde mail van Supabase verstuurt maar een paar mails per uur.
 
-### Inloggen voor bezoekers (Google, Apple, Facebook, inloglink)
+### Inloggen voor bezoekers (Google, Apple, Facebook, code per mail)
 
-Bezoekers loggen in op `/inloggen`. De inloglink per e-mail werkt meteen (wel eigen SMTP instellen, zie hierboven:
+Bezoekers loggen in op `/inloggen`. Met hun e-mailadres krijgen ze een mail met een code die ze op dezelfde pagina
+invullen; de link in die mail werkt ook. De eerste keer wordt daarmee meteen een account aangemaakt.
+
+Zodat de mail de code toont: **Authentication → Emails → Templates**, bij zowel **Magic Link** als **Confirm signup**
+de inhoud vervangen door (onderwerp: `Je inlogcode voor VrijStaan`):
+
+```html
+<h2>Je inlogcode</h2>
+<p>Vul deze code in op VrijStaan:</p>
+<p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+<p>Of tik op deze link: <a href="{{ .ConfirmationURL }}">inloggen bij VrijStaan</a></p>
+<p>Heb je dit niet aangevraagd? Dan kun je deze mail negeren.</p>
+```
+
+De e-mailcode werkt meteen (wel eigen SMTP instellen, zie hierboven:
 de ingebouwde mail haalt een drukke lancering niet). De drie diensten zet je aan in **Authentication → Sign In /
 Providers**. Bij elke dienst vul je als *redirect/callback URL* in:
 `https://qkrmthrhwmmmwswmfgwc.supabase.co/auth/v1/callback`
