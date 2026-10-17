@@ -198,7 +198,7 @@ export default function PrivacyPage() {
 
       <Section title="Een account (optioneel)">
         <p>
-          Je kunt inloggen met Google, Apple, Facebook of een inloglink per e-mail. Log je in via een van die diensten, dan
+          Je kunt inloggen met Google, Apple, Facebook of een inlogcode per e-mail. Log je in via een van die diensten, dan
           krijgen we van hen alleen je naam, e-mailadres en profielfoto. We plaatsen nooit iets namens je en vragen geen
           toegang tot je contacten of berichten. Bij Apple kun je je e-mailadres verbergen.
         </p>

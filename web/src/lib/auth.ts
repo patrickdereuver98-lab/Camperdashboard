@@ -5,7 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase-browser";
 import { safeNext } from "./auth-utils";
 
-export { authErrorMessage, safeNext } from "./auth-utils";
+export { authErrorMessage, cleanCode, codeErrorMessage, safeNext } from "./auth-utils";
 
 export type OAuthProvider = "google" | "apple" | "facebook";
 
@@ -29,6 +29,12 @@ export async function signInWithEmail(email: string, next?: string | null) {
     email,
     options: { emailRedirectTo: callbackUrl(next), shouldCreateUser: true },
   });
+  if (error) throw error;
+}
+
+/** Inloggen met de code uit de mail (zelfde mail als de inloglink; werkt ook op een ander apparaat) */
+export async function verifyEmailCode(email: string, code: string) {
+  const { error } = await supabase().auth.verifyOtp({ email, token: code, type: "email" });
   if (error) throw error;
 }
 

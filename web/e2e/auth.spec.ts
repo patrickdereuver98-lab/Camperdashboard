@@ -1,5 +1,5 @@
 import { expect, PLACES, test } from "./fixtures";
-import { signIn, SUPABASE, USER } from "./session";
+import { SESSION, signIn, SUPABASE, USER } from "./session";
 
 test.describe("inloggen", () => {
   test("toont Google, Apple, Facebook en e-mail", async ({ page }) => {
@@ -32,10 +32,46 @@ test.describe("inloggen", () => {
     });
     await page.goto("/inloggen");
     await page.getByLabel("E-mailadres").fill("kampeerder@example.com");
-    await page.getByRole("button", { name: "Stuur mij een inloglink" }).click();
+    await page.getByRole("button", { name: "Stuur mij een inlogcode" }).click();
     await expect(page.getByText("Check je mail")).toBeVisible();
     expect(body).toMatchObject({ email: "kampeerder@example.com", create_user: true });
     expect(body!.code_challenge).toBeTruthy();
+  });
+
+  test("code uit de mail: logt in en gaat door naar next", async ({ page }) => {
+    let verify: Record<string, unknown> | null = null;
+    await page.route(`${SUPABASE}/auth/v1/otp**`, (r) => r.fulfill({ json: {} }));
+    await page.route(`${SUPABASE}/auth/v1/verify**`, async (r) => {
+      verify = r.request().postDataJSON();
+      await r.fulfill({ json: SESSION });
+    });
+    await page.route(`${SUPABASE}/auth/v1/user`, (r) => r.fulfill({ json: USER }));
+    await page.route(`${SUPABASE}/rest/v1/**`, (r) => r.fulfill(r.request().method() === "GET" ? { json: [] } : { status: 201, json: [] }));
+    await page.goto("/inloggen?next=/mijn-reis");
+    await page.getByLabel("E-mailadres").fill("kampeerder@example.com");
+    await page.getByRole("button", { name: "Stuur mij een inlogcode" }).click();
+    const box = page.getByLabel("Code uit de mail");
+    await expect(box).toBeFocused();
+    await expect(page.getByRole("button", { name: "Inloggen", exact: true })).toBeDisabled();
+    await box.fill("123 456");
+    await expect(box).toHaveValue("123456");
+    await page.getByRole("button", { name: "Inloggen", exact: true }).click();
+    await page.waitForURL(/\/mijn-reis$/);
+    expect(verify).toMatchObject({ email: "kampeerder@example.com", token: "123456", type: "email" });
+  });
+
+  test("code uit de mail: verkeerde code geeft een begrijpelijke melding", async ({ page }) => {
+    await page.route(`${SUPABASE}/auth/v1/otp**`, (r) => r.fulfill({ json: {} }));
+    await page.route(`${SUPABASE}/auth/v1/verify**`, (r) =>
+      r.fulfill({ status: 403, json: { code: 403, error_code: "otp_expired", msg: "Token has expired or is invalid" } }),
+    );
+    await page.goto("/inloggen");
+    await page.getByLabel("E-mailadres").fill("kampeerder@example.com");
+    await page.getByRole("button", { name: "Stuur mij een inlogcode" }).click();
+    await page.getByLabel("Code uit de mail").fill("000000");
+    await page.getByRole("button", { name: "Inloggen", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "klopt niet of is verlopen" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Nieuwe code sturen" })).toBeVisible();
   });
 
   test("magic link: te vaak aangevraagd geeft een begrijpelijke melding", async ({ page }) => {
@@ -44,7 +80,7 @@ test.describe("inloggen", () => {
     );
     await page.goto("/inloggen");
     await page.getByLabel("E-mailadres").fill("kampeerder@example.com");
-    await page.getByRole("button", { name: "Stuur mij een inloglink" }).click();
+    await page.getByRole("button", { name: "Stuur mij een inlogcode" }).click();
     await expect(page.getByRole("alert").filter({ hasText: "Wacht een minuutje" })).toBeVisible();
   });
 
