@@ -142,6 +142,8 @@ function normalize(p: Place, websitePhotos = false): Place {
   return {
     ...p,
     description: cleanDescription(p.description),
+    // Alleen gewone weblinks: OSM en websites zijn door iedereen te bewerken (geen javascript:- of data:-links)
+    website: p.website && /^https?:\/\//i.test(p.website) ? p.website : undefined,
     photos,
     imageUrl: cover?.url,
     imageCredit: cover?.credit,

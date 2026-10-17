@@ -103,7 +103,9 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
 
   const count = refinementCount(filters);
   const chips = activeChips(filters);
-  const heading = filters.where ?? filters.province ?? "Nederland";
+  // Een plaatsnaam in de link zonder coördinaten of provincie kennen we niet: zeg dat eerlijk in plaats van "in xyz"
+  const unknownPlace = filters.where && !filters.center && !filters.province ? filters.where : undefined;
+  const heading = unknownPlace ? "Nederland" : (filters.where ?? filters.province ?? "Nederland");
 
   const map = results && (
     <PlaceMap
@@ -114,6 +116,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
       onSelect={focusCard}
       fitKey={key}
       user={filters.where === "Mijn locatie" ? filters.center : null}
+      onShowList={() => setMapOpen(false)}
       className="h-full w-full"
     />
   );
@@ -213,6 +216,12 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
             </span>{" "}
             <span>{filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}</span>
           </h1>
+          {unknownPlace && (
+            <p role="status" className="mt-2 rounded-lg bg-sunken px-4 py-3 text-ink-2">
+              We kennen geen plaats die &ldquo;{unknownPlace}&rdquo; heet. Daarom zie je alle plekken. Typ een plaats of
+              provincie in het zoekveld.
+            </p>
+          )}
           {/* Eén regel: datum, uitleg en afstand; loopt door op een smal scherm */}
           <div className="-mb-1 flex flex-wrap items-center gap-x-4">
             {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
@@ -265,7 +274,7 @@ function DistanceToggle() {
 }
 
 const INTRO: Record<DeparturePage, string> = {
-  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst. Elke plek op deze lijst hebben we gecontroleerd bij de plek zelf.",
+  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst. Bovenaan staan de plekken die we bij de plek zelf hebben gecontroleerd. Daaronder plekken waar het volgens hun website zo is; die controleren we nog.",
   uitslapers: "Je hoeft pas om 12:00 of later weg. Genoeg tijd voor een rustig ontbijt.",
   overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet zeker weten.",
 };
