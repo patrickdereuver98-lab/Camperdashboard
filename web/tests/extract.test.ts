@@ -114,3 +114,16 @@ test("openingstijden van de receptie na een vertrekwoord zijn geen vertrektijd",
 test("selfservice checkin/checkout 24/7 bij camperplaatsen wordt 'vrij'", () => {
   assert.equal(page("<p>28 ruime camperplaatsen. Selfservice checkin/checkout (24/7). Hele jaar open.</p>").departure, "vrij");
 });
+
+test("tweede controlesteekproef: 'is' als verbinding, '12 uur' bij de camping, kopje boven de tijd", () => {
+  assert.equal(page("<p>De vertrektijd is 12.00 uur.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Vertrek van de camping moet voor 12 uur ( Accommodatie, 11 uur).</p>").checkout_until, "12:00");
+  const kop = page("<h2>Inchecken</h2><p>Vanaf 14:00 uur.</p><h2>Uitchecken</h2><p>Tot 11:00 uur.</p>");
+  assert.equal(kop.checkout_until, "11:00");
+  assert.equal(kop.checkin_from, "14:00");
+});
+
+test("termijnen en betalingen ('2 werkdagen voor vertrek uiterlijk 12.00 uur') zijn geen vertrektijd", () => {
+  assert.equal(page("<p>Vermindering van het aantal deelnemers kan tot 2 werkdagen voor vertrek uiterlijk 12.00 uur.</p>").departure, undefined);
+  assert.equal(page("<p>Het restbedrag dient uiterlijk 14 dagen voor aankomst voldaan te zijn.</p>").departure, undefined);
+});

@@ -430,7 +430,7 @@ export function extract(pages: string[], base: URL) {
 
 const CLOCK = String.raw`(\d{1,2})(?:[:.](\d{2}))?\s*(uur|uhr|u\b|h\b|hrs?\b)?`;
 const TIME_AFTER = new RegExp(
-  String.raw`^[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|from|after|before|until|by|ab|bis|um|spätestens|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
+  String.raw`^[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|tot|om|tussen|is|from|after|before|until|by|ab|bis|um|spätestens|:|\|)\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
 );
 const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|om|before|bis|um)\s*${CLOCK}\s*(?:zu\s*)?$`);
 const KEY =
@@ -439,7 +439,7 @@ const ARRIVAL_KEY = /aankom|incheck|check-?in|anreise|arrival/;
 const RENTAL =
   /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
 const EXCEPTION =
-  /vroege? aankomst|eerder aankomen|vroeg aankomen|laat vertrek|later vertrek|later vertrekken|laat vertrekken|late check-?out|early check-?in|late check-?in|annuler|toeslag|bijbetaling|tegen betaling|datum/;
+  /\d+ (werk)?dagen voor (vertrek|aankomst)|weken voor (vertrek|aankomst)|deelnemers|aanbetaling|restbedrag|voldaan|vroege? aankomst|eerder aankomen|vroeg aankomen|laat vertrek|later vertrek|later vertrekken|laat vertrekken|late check-?out|early check-?in|late check-?in|annuler|toeslag|bijbetaling|tegen betaling|datum/;
 // "In overleg" is geen voorwaarde: "vertrek vóór 11:00 of in overleg" is gewoon een vaste tijd met uitzonderingen op verzoek
 const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien/;
 const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
@@ -456,7 +456,7 @@ const ACCESS24 =
   /24 ?uur per dag (bereikbaar|toegankelijk|open|geopend|aankomen|inrijden)|24\/7 (bereikbaar|toegankelijk|open|geopend)|dag en nacht (bereikbaar|toegankelijk|aankomen|open|inrijden)|rund um die uhr (geöffnet|zugänglich|anreisen)|jederzeit anreisen|aankomst (is )?(op elk tijdstip|altijd mogelijk|24 uur per dag)|arrive (at )?any ?time/g;
 // Een tijd die direct bij de kampeerplek hoort: "Kampeerplaatsen verlaat je voor 12:00 uur", "uitchecken camping 12.00 uur"
 const PITCH_OUT = new RegExp(
-  String.raw`(kampeerpla(?:ats|atsen|tsen)|kampeerplek(?:ken)?|camperpla(?:ats|atsen)|camperplek(?:ken)?|staanpla(?:ats|atsen)|standpla(?:ats|atsen)|camping|kampeermiddel(?:en)?)\b(?:(?:(?!open|geopend|receptie|winkel|bereikbaar)[^.?!0-9]){0,40}?(?:voor|vóór|uiterlijk|om|is dat|:))?\s*(\d{1,2})(?:[:.](\d{2}))\s*(?:uur|u\b|h\b)?`,
+  String.raw`(kampeerpla(?:ats|atsen|tsen)|kampeerplek(?:ken)?|camperpla(?:ats|atsen)|camperplek(?:ken)?|staanpla(?:ats|atsen)|standpla(?:ats|atsen)|camping|kampeermiddel(?:en)?)\b(?:(?:(?!open|geopend|receptie|winkel|bereikbaar)[^.?!0-9]){0,40}?(?:voor|vóór|uiterlijk|om|is dat|:))?\s*(\d{1,2})(?:[:.](\d{2})\s*(?:uur|u\b|h\b)?|\s*(?:uur|u\b|h\b))`,
   "g",
 );
 const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|verlaat|auschecken|abreise/g;
@@ -514,8 +514,10 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     const local = text.slice(Math.max(s, i - 60), Math.min(e, i + 90));
     if (RENTAL.test(local) || EXCEPTION.test(local)) continue;
     const type = ARRIVAL_KEY.test(k[0]) ? "in" : "out";
-    // Vooruit kijken tot de eerstvolgende tijd, maar niet voorbij een sleutelwoord van het andere soort
-    let ahead = text.slice(i + k[0].length, Math.min(e, i + k[0].length + 70));
+    // Vooruit kijken tot de eerstvolgende tijd, maar niet voorbij een sleutelwoord van het andere soort. Is de "zin" een
+    // kort kopje ("Uitchecken" boven "Tot 11:00 uur"), dan ook de volgende zin
+    const end = e - i < 25 && e < text.length ? sentenceBounds(text, e + 1)[1] : e;
+    let ahead = text.slice(i + k[0].length, Math.min(end, i + k[0].length + 70));
     const other = [...ahead.matchAll(KEY)].find((o) => ARRIVAL_KEY.test(o[0]) !== (type === "in"));
     if (other) ahead = ahead.slice(0, other.index);
     let h: string | undefined;
