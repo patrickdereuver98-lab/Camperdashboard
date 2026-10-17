@@ -11,7 +11,7 @@ Dit plan voegt alles samen wat nog open staat, uit:
 Dit bestand vervangt de `plan.md` van PR #11 en #12. Wat daar stond, staat hieronder in §4 tot en met §6, met
 dezelfde codes (K, P, S, N, E, C, D) zodat je de herkomst kunt nalezen.
 
-Status: ✅ klaar op `main` · 🟢 gebouwd, wacht op samenvoegen (PR genoemd) · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
+Status: ✅ klaar op `main` · 🟢 gebouwd en samengevoegd in `acceptatie` (PR genoemd), live na de merge naar `main` · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 
 ---
 
@@ -23,23 +23,23 @@ Status: ✅ klaar op `main` · 🟢 gebouwd, wacht op samenvoegen (PR genoemd) �
 | Unit-tests | 🟢 | PR #10 (`web/tests/`, extractor en zoeken) en PR #4 (17 testbestanden) |
 | Smoke- en regressietests | 🟢 / ⬜ | Playwright-basis in PR #4. Zes kernflows als e2e (E4) open |
 | SEO en vindbaarheid (sitemap, robots.txt, gestructureerde data) | ✅ / ⬜ | Sitemap, robots en JSON-LD op `main`. Resultaten op zoek- en vertrekpagina's alleen in de browser (B4/P-SSR) |
-| Alerting | 🟢 | Deze PR: `monitor.yml` (site, database, aantal plekken), GitHub mailt bij een fout |
+| Alerting | 🟢 | #13: `monitor.yml` (site, database, aantal plekken), GitHub mailt bij een fout |
 | Performance monitoring | ⬜ | Lighthouse-budget in CI (E4). Nu LCP 4 tot 6,6 s door de cookiebanner; banner is verkleind in PR #10 |
 | Analytics | ✅ | Eigen statistieken, alleen met toestemming, zonder cookies of derden |
 | Auth op elk endpoint | ✅ / ⬜ | RLS op alle tabellen, beheer-RPC's controleren `is_admin()`. Open: rollen admin en support scheiden, MFA, open aanmelding (B-0.4) |
-| Dependency audit | 🟢 | Deze PR: `maplibre-gl` 5 → 6.14 (kritiek XSS-lek), `npm audit --omit=dev` = 0, Dependabot |
+| Dependency audit | 🟢 | #13: `maplibre-gl` 5 → 6.14 (kritiek XSS-lek), `npm audit --omit=dev` = 0, Dependabot |
 | Testen op meerdere toestellen | ⬜ 👤 | Testplan M6 op iPhone en Android |
 | Testen op trage netwerken | ⬜ | Lighthouse met gesimuleerd 4G (E4); offline-basis (P12) |
 | Uitgavenlimieten en betaalmeldingen | 🟢 👤 | Uitgelegd in `docs/draaiboek.md` §4; alles draait nu gratis, dus geen rekening mogelijk |
-| Database back-up | 🟢 👤 | Deze PR: `backup.yml` wekelijks, versleuteld. Werkt pas na twee geheimen in GitHub |
+| Database back-up | 🟢 👤 | #13: `backup.yml` wekelijks, versleuteld. Werkt pas na twee geheimen in GitHub |
 | Echt een herstel testen | 🟢 👤 | Zelfde workflow zet elke back-up terug in een lege database en vergelijkt de rijen |
-| Plan om terug te draaien | 🟢 | Deze PR: `docs/draaiboek.md` §1 |
+| Plan om terug te draaien | 🟢 | #13: `docs/draaiboek.md` §1 |
 | Geheimen buiten de repo | ✅ | Alleen de publieke sleutel staat in de repo. Edge functions lezen de sleutel nog uit de database (B-0.7) |
 | Gelekte sleutels vervangen | ✅ | Niets gelekt gevonden |
 | Rate limiting | 🟢 | PR #10: limieten per tijdvak op alle publieke RPC's, 30 per minuut op `/api/route` en `/api/distances` |
 | Foutregistratie | ✅ / ⬜ | Browserfouten naar `app_logs`. Serverfouten (`onRequestError`) nog niet (E7) |
 | Logging | ✅ | `app_logs`, auditlog en ingest-runs in Beheer → Logs |
-| Uptime-bewaking | 🟢 | Deze PR: `monitor.yml` elk uur, zodra `SITE_URL` is gezet |
+| Uptime-bewaking | 🟢 | #13: `monitor.yml` elk uur, zodra `SITE_URL` is gezet |
 | Testomgeving | 🔄 | Branch `acceptatie` met Vercel-preview (besluit B9 nog bevestigen) |
 | Eigen domein en SSL | ⬜ 👤 | Domein koppelen in Vercel, `NEXT_PUBLIC_SITE_URL` zetten |
 | E-mail (SPF, DKIM, DMARC) | ⬜ 👤 | Uitleg in `docs/draaiboek.md` §5; eerst mailprovider kiezen (B7) |
@@ -61,26 +61,14 @@ grootste werk is nu samenvoegen, daarna een korte ronde met dingen die alleen Pa
 
 ---
 
-## 2. Stap 1: samenvoegen (gaat voor alles)
+## 2. Samenvoegen: gedaan (16 oktober 2026)
 
-`main` staat nog op 12 oktober. Sindsdien hebben zes sessies gebouwd en staat een deel al live in de database (11
-migraties van PR #4, 4 van PR #10, 1 van PR #12). Elke dag langer wordt samenvoegen zwaarder.
+Alle open PR's zijn in de goedgekeurde volgorde samengevoegd naar `acceptatie`: #6, #10, #13, #5, #4, #12, en de
+documenten van #11 en #9. Na elke stap waren lint, typecheck, 74 unit-tests, de offline build en 90 E2E-tests groen.
+Hoe de botsingen zijn opgelost staat in de merge-commits en in `docs/samenwerking.md` §0.
 
-Volgorde zoals goedgekeurd op 16 oktober (bord §3). Na elke merge werkt de volgende PR zijn branch bij (merge, geen
-rebase) en wordt eerst CI groen.
-
-| Stap | PR | Wat | Botst met | Wacht op |
-|---|---|---|---|---|
-| 1 | #6 | Startscript `node start.mjs` | niets | review |
-| 2 | #10 | CI, tests, limieten, privacy, deelafbeelding | `ci.yml` met #4, veel UI-bestanden met #5 | review |
-| 3 | deze PR | Kaart 6.14, CSP, Dependabot, bewaking, back-up, draaiboek, dit plan | `package.json` en lockfile (opnieuw genereren) | #10 |
-| 4 | #5 | Nieuwe stijlgids en compacte UI | 17 bestanden met #10 | #10 |
-| 5 | #4 | Accounts, foto's, moderatie, drukte, push, reisfuncties | `ci.yml`, `places.ts`, plekpagina | B2, B3 |
-| 6 | #12 | Kernbelofte: alleen bevestigde plekken op Zonder vertrektijd | logica op het ontwerp van #5 | #5 |
-| 7 | #11, #9 | Documenten | alleen `docs/specs/README.md` | alles |
-
-Werkwijze (besluit B9, nog bevestigen): feature-branch → PR naar `acceptatie` → testen op de Vercel-preview → PR van
-`acceptatie` naar `main`. Branch protection op `main` aanzetten zodra CI uit #10 erin zit.
+**Nog te doen door Patrick:** de PR van `acceptatie` naar `main` bekijken op de Vercel-preview en samenvoegen. Daarna
+branch protection op `main` en `acceptatie` aanzetten (alleen via PR, CI groen).
 
 ---
 
@@ -88,7 +76,6 @@ Werkwijze (besluit B9, nog bevestigen): feature-branch → PR naar `acceptatie` 
 
 | # | Wat | Waarom het nu telt | Tijd |
 |---|---|---|---|
-| B9 | Werkwijze via `acceptatie` bevestigen | Drie sessies wachten erop | 1 min |
 | B6 | Beheeraccount aanmaken op `/admin` (live: 0 gebruikers) | Zonder beheer blijven reviews, inzendingen en tickets liggen, en kan niemand vertrektijden bevestigen (K4) | 5 min |
 | B5 | In de SQL-editor van Supabase uitvoeren: `web/supabase/retention.sql` (PR #10), `delete_my_account` (PR #4), en `drop table private.probe, private.probe2;` | De privacyverklaring belooft bewaartermijnen die nu niet draaien; `cron.job_run_details` heeft al 58.126 rijen. De agents kunnen dit niet: de bevestiging komt niet door (ook vandaag opnieuw geprobeerd) | 5 min |
 | B8 | Bedrijfsgegevens in `web/src/lib/company.ts` | Juridische pagina's tonen plaatshouders | 10 min |
@@ -96,8 +83,8 @@ Werkwijze (besluit B9, nog bevestigen): feature-branch → PR naar `acceptatie` 
 | B11 | Tweestapsverificatie op GitHub, Vercel en Supabase | Wie daar binnenkomt, heeft de hele site | 10 min |
 | B7 | Mailprovider (EU) kiezen, SMTP in Supabase, SPF/DKIM/DMARC (draaiboek §5) | Nodig voor wachtwoord-reset, e-mailverificatie, inloglinks en antwoorden op tickets | 1 uur |
 | — | Domein koppelen in Vercel en `NEXT_PUBLIC_SITE_URL` zetten; Site URL en redirect-URL's in Supabase Auth | Livegang | 30 min |
-| B2 | Strikte OSM-toelating ja of nee (±900 campings worden dan niet meer ververst) | PR #4 wacht erop | besluit |
-| B3 | Advertenties: geen, sponsoring zonder tracking, of AdSense | PR #4 wacht erop; AdSense botst met "geen tracking van derden" | besluit |
+| B2 | ✅ Besloten 16 oktober: geen strikte OSM-toelating | Zoveel mogelijk plekken gaat voor | klaar |
+| B3 | ✅ Besloten 16 oktober: geen advertenties | Past bij "geen tracking van derden" | klaar |
 | B12 | ✅ Besloten 16 oktober: elke website eens per 30 dagen opnieuw lezen, 10 per half uur (R1) | Websites werden maar één keer gelezen | klaar |
 | B13 | Standaard voor de totaalprijs (voorstel: 2 volwassenen, 1 nacht, stroom als die apart kost) | Nodig voor P7 en "prijzen met alle toeslagen" | besluit |
 | — | Juridische teksten laten nalezen | Na B8 | extern |
@@ -112,22 +99,22 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 
 | # | Taak | Omvang | Status |
 |---|---|---|---|
-| E1 | Eén `ci.yml` (basis #10, plus Playwright uit #4 en `npm audit --omit=dev --audit-level=high`), actions op vaste versie, `permissions: contents: read` | S | 🔄 bij stap 2 en 5 |
+| E1 | Eén `ci.yml` (basis #10, plus Playwright uit #4 en `npm audit --omit=dev --audit-level=high`), `permissions: contents: read` | S | 🟢 |
 | E2 | Database-job in CI: migraties op een lege database, advisors, RLS-tests per rol | M | ⬜ |
 | E4 | Zes kernflows als e2e op iPhone-formaat, licht en donker: zoeken → filter → plek; bewaren → reis → offline; Dichtbij met nep-locatie; contact → ticket; cookie weigeren = geen event; geen beheer zonder rechten. Met axe en een Lighthouse-budget (LCP < 2,5 s, CLS < 0,1) | M | ⬜ |
 | E5 | Branch protection op `main` en `acceptatie` | S | ⬜ 👤 na stap 2 |
 | E7 | Serverfouten naar `app_logs` via `instrumentation.ts` (`onRequestError`); wekelijkse samenvatting van `app_logs` in Beheer → Overzicht | S | 🔄 serverfouten gebouwd (polishronde); samenvatting open |
 | E8 | `schema.sql` vervangen door een nulmeting in `web/supabase/migrations/` (`supabase db dump`), zodat een nieuw project op te bouwen is | M | 🔄 map bestaat in #4 en #10 |
-| E9 | Back-up en uptime-check (deze PR) eerste keer handmatig draaien en groen zien | S | ⬜ na B10 |
+| E9 | Back-up en uptime-check (#13) eerste keer handmatig draaien en groen zien | S | ⬜ na B10 |
 
 ### 4b. Beveiliging en privacy
 
 | # | Taak | Omvang | Status |
 |---|---|---|---|
 | 0.4 | Beheer: MFA verplicht, open aanmelding alleen voor bezoekersaccounts (PR #4), leaked-password-check aan, rollen admin en support scheiden | M | ⬜ |
-| 0.5 | CSP, HSTS en COOP | S | 🟢 deze PR (getest: geen meldingen op 8 pagina's, kaart werkt) |
+| 0.5 | CSP, HSTS en COOP | S | 🟢 #13 (getest: geen meldingen op 8 pagina's, kaart werkt) |
 | 0.7 | Edge functions: pipelinesleutel als edge-secret, vergelijken in constante tijd, scraper weigert interne adressen; één robots.txt-lezer | M | ⬜ |
-| 0.8 | `maplibre-gl` naar 6.14 | S | 🟢 deze PR |
+| 0.8 | `maplibre-gl` naar 6.14 | S | 🟢 #13 |
 | 0.10 | Service worker cachet geen `/support/*`; tokens laten verlopen; `place.website` alleen `http(s)` | S | 🔄 service worker en websites gebouwd (polishronde); verlopen van tokens open |
 | A4 | Websites die `discover` vindt eerst door een mens laten bevestigen (een verkeerde match is verzonnen data) | S | ⬜ |
 | — | Advisors: 13 openbare SECURITY DEFINER-functies nalopen. Voor de formulieren is dat de bedoeling; `is_admin`, `is_trip_member`, `push_public_key` en `crowd_status` bewust houden of dichtzetten | S | ⬜ |
@@ -208,8 +195,8 @@ eigenaarsportaal. Daarna S2, S4, S7, S8, S10 tot en met S15 en fase 4 (N1 tot N1
 ## 7. Volgorde
 
 ```
-Deze week    Samenvoegen stap 1 t/m 4 (§2)  ·  Patrick: B9, B6, B5, B8, B10, B11  ·  K4 bevestigen
-Week 2       Stap 5 t/m 7  ·  E1, E5, E7, E9  ·  0.4, 0.7, 0.10  ·  P1, P5, P6, P11, kleine 1.x-punten
+Deze week    acceptatie → main (§2)  ·  Patrick: B6, B5, B8, B10, B11  ·  K4 bevestigen
+Week 2       E5, E7, E9  ·  0.4, 0.7, 0.10  ·  P1, P5, P6, P11, kleine 1.x-punten
 Week 3       Domein, SMTP en DNS (B7)  ·  testplan op echte toestellen  ·  E4 e2e met Lighthouse-budget
 Week 3 en 4  P2/P3 kaart, P13, B4, C1  ·  P7 prijs (na B13)
 Livegang     Als alles in §1 ✅ is, behalve de punten die aan livegang zelf hangen
