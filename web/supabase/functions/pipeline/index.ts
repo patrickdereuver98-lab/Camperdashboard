@@ -14,7 +14,7 @@ import { extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
 import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
-import { deeperLinks, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { decodeHtml, deeperLinks, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -140,7 +140,6 @@ async function fetchPage(url: URL, accept: "html" | "xml" = "html"): Promise<str
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
   if (accept === "html" ? !type.includes("html") : !/xml|text\/plain/.test(type)) return null;
-  const charset = /charset=([\w-]+)/i.exec(type)?.[1] ?? "utf-8";
   const reader = res.body!.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -151,11 +150,7 @@ async function fetchPage(url: URL, accept: "html" | "xml" = "html"): Promise<str
     size += value.length;
   }
   reader.cancel().catch(() => {});
-  try {
-    return new TextDecoder(charset).decode(concat(chunks));
-  } catch {
-    return new TextDecoder().decode(concat(chunks));
-  }
+  return decodeHtml(concat(chunks), type);
 }
 
 function concat(chunks: Uint8Array[]) {
@@ -173,7 +168,14 @@ async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]>
   const queue = [...(sitemapCache.get(home.host) ?? []), `${home.origin}/sitemap.xml`];
   const pages: string[] = [];
   for (let i = 0; i < queue.length && i < 4 && pages.length < 500; i++) {
-    const xml = await fetchPage(new URL(queue[i]), "xml").catch(() => null);
+    // "Sitemap: /sitemap.xml" in robots.txt is relatief; een kapot adres mag de plek niet laten mislukken
+    let url: URL;
+    try {
+      url = new URL(queue[i], home);
+    } catch {
+      continue;
+    }
+    const xml = await fetchPage(url, "xml").catch(() => null);
     if (!xml) continue;
     const sm = parseSitemap(xml);
     pages.push(...sm.pages);

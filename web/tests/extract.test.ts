@@ -136,3 +136,8 @@ test("derde steekproef (volledige run): nachtregel, kampeerplaats boven algemene
   assert.equal(r.checkout_until, "11:00");
   assert.equal(r.checkin_from, "13:00");
 });
+
+test("'vertrekken wanneer u wilt' naast een vaste tijd is tegenstrijdig: niets invullen", () => {
+  const r = page("<p>Met de camper kunt u aankomen en vertrekken wanneer u wilt.</p><p>Aankomst vanaf 13.00 uur en vertrek vóór 12.00 uur.</p>");
+  assert.equal(r.departure, undefined);
+});
