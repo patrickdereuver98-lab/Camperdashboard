@@ -152,7 +152,8 @@ function times(t: Tags): Record<string, unknown> {
   };
   // "-18:00" of "06:00-10:00": vertrekken kan uiterlijk tot de laatste tijd
   const out_ = clock(t.check_out, true);
-  if (out_) Object.assign(out, { departure: "vast", checkout_until: out_ });
+  // Een check_out na 14:00 (17:00, 22:00) is in de praktijk een openingstijd, geen vertrektijd: dan niets invullen
+  if (out_ && Number(out_.slice(0, 2)) >= 7 && Number(out_.slice(0, 2)) <= 14) Object.assign(out, { departure: "vast", checkout_until: out_ });
   const in_ = t.check_in && !t.check_in.trim().startsWith("-") ? clock(t.check_in) : undefined;
   if (in_) out.checkin_from = in_;
   const stay = /^(\d{1,3})\s*(nights?|days?|nachten|dagen)$/i.exec(t.maxstay ?? "") ?? /^(\d{1,3})\s*(hours?|h|uur)$/i.exec(t.maxstay ?? "");
