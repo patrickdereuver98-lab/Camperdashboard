@@ -9,7 +9,8 @@ test("adres binnen 75 m wordt straat + postcode", () => {
     postcode: "8256 PJ",
     afstand: 39,
   });
-  assert.equal(addressFrom({ straatnaam: "Dorpsstraat", huisnummer: 3, huisnummertoevoeging: "2", postcode: "1234AB", afstand: 5 })?.street, "Dorpsstraat 3-2");
+  // toevoeging (standplaats of chalet op een camping) laten we weg
+  assert.equal(addressFrom({ straatnaam: "Essenburgweg", huisnummer: 16, huisnummertoevoeging: "0004", postcode: "8077SE", afstand: 57 })?.street, "Essenburgweg 16");
 });
 
 test("te ver weg, onvolledig of geen resultaat: niets", () => {

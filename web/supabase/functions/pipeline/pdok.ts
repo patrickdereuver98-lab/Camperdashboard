@@ -35,6 +35,6 @@ export function addressFrom(doc: PdokDoc | undefined): { street: string; postcod
   const nr = doc.huisnummer != null ? String(doc.huisnummer).trim() : "";
   const pc = doc.postcode?.replace(/\s/g, "").toUpperCase();
   if (!street || !nr || !pc || !/^\d{4}[A-Z]{2}$/.test(pc)) return null;
-  const suffix = `${doc.huisletter ?? ""}${doc.huisnummertoevoeging ? `-${doc.huisnummertoevoeging}` : ""}`;
-  return { street: `${street} ${nr}${suffix}`, postcode: `${pc.slice(0, 4)} ${pc.slice(4)}`, afstand: Math.round(doc.afstand) };
+  // Geen huisnummertoevoeging: op een camping is "16-0004" een losse standplaats of chalet, niet het adres van de plek
+  return { street: `${street} ${nr}${doc.huisletter ?? ""}`, postcode: `${pc.slice(0, 4)} ${pc.slice(4)}`, afstand: Math.round(doc.afstand) };
 }
