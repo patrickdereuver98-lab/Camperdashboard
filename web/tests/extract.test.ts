@@ -355,3 +355,10 @@ test("run v36: steekproef op nieuwe vertrektijden", () => {
   // alleen aankomsttijden is geen vrij vertrek
   assert.equal(out("<p>Geen vaste aankomsttijden, geen verplichtingen voor de camper</p>"), undefined);
 });
+
+test("prijs: 'Campingplaats 2 pers (excl. toeristenbelasting) € 22,50' en 'toeristenplaats'", () => {
+  assert.equal(page("<p>Campingplaats 2 pers** (excl. toeristenbelasting) € 22,50 Extra volwassene € 4,00 Huisdier € 2,50</p>").price_eur, 22.5);
+  assert.equal(page("<p>Toeristenplaats met stroom € 26,50</p>").price_eur, 26.5);
+  // een toeslag blijft een toeslag
+  assert.equal(page("<p>Toeristenbelasting (excl. btw) € 1,50 per persoon</p>").price_eur, undefined);
+});

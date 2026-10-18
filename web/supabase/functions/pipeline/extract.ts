@@ -264,7 +264,7 @@ export function extract(pages: string[], base: URL) {
     new RegExp(`€\\s?${AMOUNT}\\s*(?:euro\\s*)?${PER}`, "g"),
     new RegExp(`${AMOUNT}\\s*(?:euro|eur|€)\\s*${PER}`, "g"),
     // Tarieventabel: "camperplaats … € 15,00" (max. 40 tekens ertussen)
-    new RegExp(`(?:camperplaats|camperplek|campertarief|camper|kampeerplaats|standplaats|staanplaats|stellplatz)[^€.]{0,40}€\\s?${AMOUNT}`, "g"),
+    new RegExp(`(?:camperplaats|camperplek|campertarief|camper|kampeerplaats|kampeerplek|campingplaats|toeristenplaats|passantenplaats|standplaats|staanplaats|stellplatz)(?:[^€.]|\\b(?:excl|incl|pers|max|ca)\\.){0,40}€\\s?${AMOUNT}`, "g"),
     new RegExp(`(?:overnachting|overnachten|nachttarief|tarief per nacht|prijs per nacht|kosten per nacht|camperstandplaats)[^€.]{0,30}€\\s?${AMOUNT}`, "g"),
     // Eenheid vóór het bedrag: "tent, caravan of camper, 2 personen, per nacht* € 22,00"
     // ook met wat er inbegrepen is en een seizoen ertussen: "camper, inclusief 2 personen, …, per nacht: hoogseizoen € 26,50"
@@ -282,7 +282,8 @@ export function extract(pages: string[], base: URL) {
       if (/(?:per|p\.?|\/|pro)\s*(?:week|maand|seizoen|jaar|monat|saison|month|year)|(?:week|maand|seizoens?|jaar)(?:prijs|tarief|plaats|plaatsen)|seizoensplaats|jaarplaats|monat|month|year/.test(m[0])) continue;
       if (/^\s*(?:euro\s*)?(?:per|p\.?|\/|pro)\s*(?:persoon|pers|p\.?p|person|uur|hour|stunde|kwh|week|maand|hond|dog|kind)/.test(after)) continue;
       // Wat er inbegrepen is ("inclusief 2 personen, 1 auto, elektra, douche") is geen toeslag
-      const included = /\b(?:incl\.?|inclusief|inkl\.?)[^€]{0,160}/g;
+      // Net zo "(excl. toeristenbelasting)": dat zegt dat het bedrag zónder die toeslag is, het is zelf geen toeslag
+      const included = /\b(?:incl\.?|inclusief|inkl\.?)[^€]{0,160}|\(?\b(?:excl\.?|exclusief|exkl\.?)\s[^€)]{0,60}\)?|\bmet (?:stroom|elektra|elektriciteit)\b/g;
       if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test(m[0].replace(included, " "))) continue;
       // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
       const before = text.slice(Math.max(0, m.index! - 50), m.index!);
