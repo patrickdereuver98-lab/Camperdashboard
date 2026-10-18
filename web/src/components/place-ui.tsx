@@ -383,7 +383,7 @@ function CardPrice({ place }: { place: PlaceSummary }) {
     <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
       <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
-      {(place.priceEur ?? 0) > 0 && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
+      {price.perNight && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
       {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
     </div>
   );

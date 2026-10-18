@@ -1,3 +1,5 @@
+import { perPersonPrice, type Extra } from "./trip-extras";
+
 const eurFmt = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" });
 const eurRound = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
@@ -56,12 +58,13 @@ export function websiteLabel(url: string) {
 
 type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string; departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen" };
 
-/** Korte vertrekregel voor kaarten en kerngegevens; undefined = onbekend */
+/** Korte vertrekregel voor kaarten, kaartpopup en kerngegevens; undefined = onbekend. "Per 24 uur" blijft altijd staan. */
 export function departureShort(p: Departure): string | undefined {
   if (p.departure === "vrij" || p.departure === "per24") {
+    const per24 = p.departure === "per24";
     if (p.departureCheck === "afgewezen") return undefined;
-    if (p.departureCheck === "voorwaardelijk") return "Meestal geen vaste vertrektijd";
-    if (p.departureCheck !== "bevestigd") return "Geen vaste tijd, nog niet bevestigd";
+    if (p.departureCheck === "voorwaardelijk") return per24 ? "Meestal per 24 uur" : "Meestal geen vaste vertrektijd";
+    if (p.departureCheck !== "bevestigd") return per24 ? "Per 24 uur, nog niet bevestigd" : "Geen vaste tijd, nog niet bevestigd";
   }
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";
@@ -69,15 +72,41 @@ export function departureShort(p: Departure): string | undefined {
   return undefined;
 }
 
+/** Vertrekregel op de plekpagina (blok "Vertrekken"); "Onbekend" als we het niet weten */
+export function departureLong(p: Departure): string {
+  const claimed = p.departure === "vrij" || p.departure === "per24";
+  const per24 = p.departure === "per24";
+  if (!p.departure || (claimed && p.departureCheck === "afgewezen")) return "Onbekend";
+  if (claimed && p.departureCheck === "voorwaardelijk") return per24 ? "Meestal per 24 uur" : "Meestal geen vaste tijd";
+  if (claimed && p.departureCheck !== "bevestigd") return per24 ? "Per 24 uur, nog niet bevestigd" : "Nog niet bevestigd";
+  if (p.departure === "vrij") return "Geen vaste vertrektijd";
+  if (per24) return "Geen vaste tijd, je betaalt per 24 uur";
+  return p.checkoutUntil ? `Uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
+}
+
 /** "Toeristenbelasting € 1,35 per persoon per nacht" */
 export function extraLabel(x: { label: string; amount: number; unit?: string }): string {
   return `${eur(x.amount)}${x.unit ? ` ${x.unit}` : ""}`;
 }
 
-/** Prijs voor kaarten: nachtprijs, of als die ontbreekt de prijs per persoon */
-export function cardPrice(p: { priceEur?: number; priceFrom?: boolean; priceExtras?: { label: string; amount: number; unit?: string }[] }) {
-  if (p.priceEur !== undefined) return { value: priceLabel(p.priceEur, p.priceFrom), extras: (p.priceExtras?.length ?? 0) > 0 };
-  const pp = p.priceExtras?.find((x) => x.label === "Per persoon" && x.unit?.startsWith("per persoon"));
-  if (pp) return { value: `${eur(pp.amount)} p.p.`, extras: (p.priceExtras?.length ?? 0) > 1 };
+/**
+ * Prijs voor kaarten, kaartpopup en plekpagina: de nachtprijs, of als die ontbreekt de prijs per persoon volgens
+ * dezelfde regel als Mijn reis (`perPersonPrice`). `perNight` zegt of het bedrag per nacht is; `extras` of er nog
+ * andere toeslagen bekend zijn. undefined = prijs onbekend.
+ */
+export function cardPrice(p: { priceEur?: number; priceFrom?: boolean; priceExtras?: Extra[] }):
+  | { value: string; perNight: boolean; perPerson: boolean; extras: boolean }
+  | undefined {
+  const extras = p.priceExtras ?? [];
+  if (p.priceEur !== undefined) return { value: priceLabel(p.priceEur, p.priceFrom), perNight: p.priceEur > 0, perPerson: false, extras: extras.length > 0 };
+  const pp = perPersonPrice(p);
+  if (pp) return { value: `${eur(pp.amount)} p.p.`, perNight: pp.perNight, perPerson: true, extras: extras.some((x) => x !== pp.extra) };
   return undefined;
+}
+
+/** Tekst bij een kaartmarker: dezelfde prijs als op de kaart in de lijst, met "+" bij een vanaf-prijs; leeg = onbekend */
+export function markerPrice(p: { priceEur?: number; priceFrom?: boolean; priceExtras?: Extra[] }): string {
+  const price = cardPrice(p);
+  if (!price) return "";
+  return p.priceFrom && p.priceEur !== undefined ? `${price.value.replace(/^vanaf /, "")}+` : price.value;
 }

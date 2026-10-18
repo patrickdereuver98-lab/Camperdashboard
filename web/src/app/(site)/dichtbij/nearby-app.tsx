@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { formatDuration } from "@/lib/format";
-import { applyFilters, DEFAULT_FILTERS, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
-import { usePlaces } from "@/lib/store";
+import { applyFilters, confirmedFirst, DEFAULT_FILTERS, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
+import { usePlaces, useVehicle } from "@/lib/store";
+import { applyVehicle } from "@/lib/vehicle";
 import { useMediaQuery } from "@/lib/use-media";
 import type { PlaceSummary } from "@/lib/types";
 import { CardSkeleton, PlaceCard } from "@/components/place-ui";
@@ -29,6 +30,9 @@ export function NearbyApp() {
   // Voor "vannacht" standaard aan: verbergt alleen plekken die nu zeker dicht zijn
   const [openNow, setOpenNow] = useState(true);
   const [departure, setDeparture] = useState<"vrij" | "uitslapers" | undefined>(undefined);
+  // Lengte uit Mijn camper, net als bij Zoeken; met de chip zet je het filter uit
+  const [vehicle] = useVehicle();
+  const [lengthOff, setLengthOff] = useState(false);
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -61,12 +65,12 @@ export function NearbyApp() {
   // Dichtstbijzijnde plekken hemelsbreed, daarna echte rijafstand
   const nearest = useMemo(() => {
     if (!places || !pos) return null;
-    return applyFilters(places, { ...DEFAULT_FILTERS, facilities, openNow, departure })
+    return applyFilters(places, applyVehicle({ ...DEFAULT_FILTERS, facilities, openNow, departure, lengthOff: lengthOff || undefined }, vehicle))
       .map((r) => ({ place: r.place, km: distanceKm(pos, r.place) }))
       .filter((r) => r.km < 80)
-      .sort((a, b) => a.km - b.km)
+      .sort((a, b) => a.km - b.km || confirmedFirst(a.place, b.place))
       .slice(0, MAX);
-  }, [places, pos, facilities, openNow, departure]);
+  }, [places, pos, facilities, openNow, departure, vehicle, lengthOff]);
 
   useEffect(() => {
     if (!pos || !nearest?.length) return;
@@ -94,7 +98,10 @@ export function NearbyApp() {
   const sorted = useMemo(() => {
     if (!nearest) return null;
     const now = new Date();
-    const byDrive = drives ? [...nearest].sort((a, b) => (drives[a.place.slug]?.seconds ?? 1e9) - (drives[b.place.slug]?.seconds ?? 1e9)) : nearest;
+    // Rijtijd gaat voor; bij gelijke rijtijd staat bevestigd "geen vaste vertrektijd" eerst
+    const byDrive = drives
+      ? [...nearest].sort((a, b) => (drives[a.place.slug]?.seconds ?? 1e9) - (drives[b.place.slug]?.seconds ?? 1e9) || confirmedFirst(a.place, b.place))
+      : nearest;
     // Zeker gesloten plekken onderaan
     return [...byDrive.filter((r) => isOpenOn(r.place, now) !== false), ...byDrive.filter((r) => isOpenOn(r.place, now) === false)];
   }, [nearest, drives]);
@@ -157,6 +164,19 @@ export function NearbyApp() {
               Nu open
             </button>
           </li>
+          {vehicle.lengthM && (
+            <li className="shrink-0">
+              <button
+                type="button"
+                aria-pressed={!lengthOff}
+                onClick={() => setLengthOff((o) => !o)}
+                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+              >
+                <Sign name="length" size={24} state={lengthOff ? "unknown" : "on"} />
+                Mijn camper ({String(vehicle.lengthM).replace(".", ",")} m)
+              </button>
+            </li>
+          )}
           {(
             [
               ["vrij", "Zonder vertrektijd"],
