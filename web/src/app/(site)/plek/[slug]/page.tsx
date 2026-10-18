@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
-import { cardPrice, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
+import { cardPrice, departureLong, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
+import { knownFacts } from "@/lib/place-facts";
 import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
@@ -41,24 +42,6 @@ type Row = { sign: SignName; label: string; value: string; known: boolean; tone?
 
 function facilityText(f: (typeof FACILITY_ROWS)[number], v: boolean) {
   return v ? f.yes : f.no;
-}
-
-/** Wat een camperaar wil weten, en of wij het weten. De publicatiescore (completeness) is gewogen en zegt dat niet. */
-function knownFacts(p: Place): { label: string; known: boolean }[] {
-  return [
-    { label: "vertrektijd", known: !!p.departure },
-    { label: "prijs", known: p.priceEur !== undefined || !!cardPrice(p) },
-    { label: "openingsperiode", known: p.openAllYear === true || !!p.season },
-    { label: "maximale lengte", known: !!p.maxLengthM },
-    { label: "stroom", known: p.power !== undefined },
-    { label: "water", known: p.water !== undefined },
-    { label: "lozen", known: p.dumpStation !== undefined },
-    { label: "toilet", known: p.toilet !== undefined },
-    { label: "honden", known: p.dogs !== undefined },
-    { label: "reserveren", known: p.reservation !== undefined },
-    { label: "toeristenbelasting", known: p.touristTaxIncluded !== undefined || !!p.priceExtras?.length },
-    { label: "ondergrond", known: !!p.surface },
-  ];
 }
 
 const FACILITY_ROWS: { key: keyof Place; sign: SignName; label: string; yes: string; no: string }[] = [
@@ -236,7 +219,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className={`font-display leading-none font-semibold ${price ? "text-lg" : "text-sm text-muted"}`}>{price?.value ?? "Prijs onbekend"}</p>
-            {!!place.priceEur && <p className="mt-0.5 truncate text-sm leading-tight text-muted">per nacht{place.priceExtras?.length ? " + extra's" : ""}</p>}
+            {price?.perNight && <p className="mt-0.5 truncate text-sm leading-tight text-muted">per nacht{price.extras ? " + extra's" : ""}</p>}
           </div>
           <SaveButton slug={place.slug} />
           {tel && (
@@ -266,7 +249,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
       <div className="hidden rounded-xl bg-surface p-5 shadow-low md:block">
         <p className="font-display text-3xl font-semibold">
           {cardPrice(place)?.value ?? "Prijs onbekend"}
-          {place.priceEur ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
+          {cardPrice(place)?.perNight ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
         </p>
         <div className="mt-4 grid gap-2">
           {place.website && (
@@ -320,31 +303,17 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
  */
 function Decision({ place }: { place: Place }) {
   const kind = departureKind(place);
-  // Groen alleen na bevestiging; een kandidaat staat wel op Zonder vertrektijd maar met uitleg
-  const free = kind === "vrij" && place.departureCheck === "bevestigd";
+  // Groen bij geen vaste vertrektijd: een bron is genoeg (besluit eigenaar 18 oktober 2026). Met voorwaarde of
+  // afgewezen door beheer is het geen "vrij" meer.
+  const free = kind === "vrij";
   const late = kind === "uitslapers";
-  // Groen alleen als een mens het heeft bevestigd (kernbelofte); anders zeggen we eerlijk wat we wel en niet weten
   const claimed = place.departure === "vrij" || place.departure === "per24";
   const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
-  const departure = !known
-    ? "Onbekend"
-    : claimed && place.departureCheck === "voorwaardelijk"
-      ? "Meestal geen vaste tijd"
-      : claimed && !free
-        ? "Nog niet bevestigd"
-        : place.departure === "vrij"
-          ? "Geen vaste vertrektijd"
-          : place.departure === "per24"
-            ? "Geen vaste tijd, je betaalt per 24 uur"
-            : place.checkoutUntil
-              ? `Uiterlijk ${place.checkoutUntil}`
-              : "Vaste vertrektijd";
+  const departure = departureLong(place);
   const note =
     claimed && place.departureCheck === "voorwaardelijk"
       ? "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na."
-      : claimed && known && !free
-        ? "Volgens de website is er geen vaste vertrektijd. Dat hebben we nog niet bij de plek zelf gecontroleerd."
-        : free && place.departureCheckedAt
+      : free && place.departureCheck === "bevestigd" && place.departureCheckedAt
           ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
           : undefined;
   const times = [
@@ -358,7 +327,7 @@ function Decision({ place }: { place: Place }) {
   const rows: Row[] = [
     {
       sign: "euro",
-      label: place.priceEur === undefined && price ? "Per persoon" : "Per nacht",
+      label: price?.perPerson ? (price.perNight ? "Per persoon per nacht" : "Per persoon") : "Per nacht",
       value: price?.value ?? "Onbekend",
       known: !!price,
     },

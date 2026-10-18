@@ -362,13 +362,11 @@ export function DepartureChip({ place }: { place: DepartureFacts }) {
   const label = departureShort(place);
   if (!label) return null;
   const kind = departureKind(place);
-  // Groen alleen na bevestiging door een mens; een kandidaat krijgt de neutrale stijl met "nog niet bevestigd"
-  const confirmed = kind !== "vrij" || place.departureCheck === "bevestigd";
-  const style =
-    kind === "vrij" && confirmed ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
+  // Groen bij geen vaste vertrektijd (een bron is genoeg); met voorwaarde of afgewezen valt het onder "onbekend"
+  const style = kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm leading-tight font-semibold ${style}`}>
-      <Sign name="clock" size={16} state={(kind === "vrij" && confirmed) || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
+      <Sign name="clock" size={16} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
       {label}
     </span>
   );
@@ -383,7 +381,7 @@ function CardPrice({ place }: { place: PlaceSummary }) {
     <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
       <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
-      {(place.priceEur ?? 0) > 0 && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
+      {price.perNight && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
       {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
     </div>
   );

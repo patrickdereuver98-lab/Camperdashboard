@@ -4,6 +4,25 @@ type ExtrasStop = { nights: number; place: { priceEur?: number; priceExtras?: Ex
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const perPersonPerNight = (x: Extra) => x.unit === "per persoon per nacht" || (x.label === "Per persoon" && x.unit === "per nacht");
 
+type PricedPlace = { priceEur?: number; priceExtras?: Extra[] };
+
+/**
+ * De prijs per persoon van een plek zonder basisprijs: één regel voor kaarten, plekpagina, zoeken en Mijn reis.
+ * - "per persoon per nacht", of "Per persoon" met "per nacht": dat is de nachtprijs per persoon (`perNight`).
+ * - "Per persoon" met eenheid "per persoon": het bedrag per persoon klopt, maar of het per nacht is weten we niet.
+ *   Dat tonen we wel ("€ 5 p.p."), maar het telt niet mee in een berekening over nachten.
+ * - Zonder eenheid tonen we niets: dan weten we niet waar het bedrag voor is (onbekend blijft onbekend).
+ */
+export function perPersonPrice(p: PricedPlace): { amount: number; perNight: boolean; extra: Extra } | undefined {
+  if (p.priceEur !== undefined) return undefined;
+  const candidates = (p.priceExtras ?? []).filter((x) => x.label === "Per persoon" && x.amount > 0);
+  // Een bedrag per nacht gaat voor een bedrag "per persoon" zonder nacht
+  const night = candidates.find(perPersonPerNight);
+  if (night) return { amount: night.amount, perNight: true, extra: night };
+  const any = candidates.find((x) => x.unit === "per persoon");
+  return any ? { amount: any.amount, perNight: false, extra: any } : undefined;
+}
+
 export type StopSurcharges = {
   /** Nachtprijs uit "per persoon" (alleen als de plek geen basisprijs heeft) */
   stayFromPerPerson?: number;
@@ -24,11 +43,12 @@ export function stopSurcharges(s: ExtrasStop, persons: number): StopSurcharges {
   const nights = Math.max(0, s.nights);
   const p = Math.max(1, Math.round(persons));
   const out: StopSurcharges = { listed: [] };
+  const pp = perPersonPrice(s.place);
   for (const x of s.place.priceExtras ?? []) {
     if (!(x.amount > 0)) continue;
     if (x.label === "Toeristenbelasting" && x.unit === "per persoon per nacht" && s.place.touristTaxIncluded !== true && s.place.priceEur !== 0) {
       out.touristTax = r2(x.amount * p * nights);
-    } else if (x.label === "Per persoon" && perPersonPerNight(x) && s.place.priceEur === undefined) {
+    } else if (pp?.perNight && x === pp.extra) {
       out.stayFromPerPerson = r2(x.amount * p * nights);
     } else if (x.label !== "Toeristenbelasting") {
       out.listed.push(x);
