@@ -16,6 +16,9 @@ import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
 import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
 import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
+// Supabase edge runtime: werk na het antwoord laten doorlopen
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
+
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
 });
@@ -399,7 +402,12 @@ Deno.serve(async (req) => {
     let result: unknown;
     if (body.action === "osm") result = await runOsm(String(body.region));
     else if (body.action === "parse") result = await runParse(String(body.region), Number(body.places_req), Number(body.points_req));
-    else if (body.action === "scrape") result = await runScrape(Math.min(8, Number(body.n) || 4));
+    else if (body.action === "scrape" && body.background) {
+      // Meteen antwoorden en op de achtergrond doorwerken: pg_net wacht dan niet op de traagste site van de batch, zodat
+      // de workers het tempo bepalen. Fouten komen via apply_scrape in de wachtrij en via log() in app_logs.
+      EdgeRuntime.waitUntil(runScrape(Math.min(8, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (scrape): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "scrape") result = await runScrape(Math.min(8, Number(body.n) || 4));
     else if (body.action === "probe")
       result = await overpass('[out:json][timeout:25];node["tourism"="caravan_site"](52.0,5.0,52.2,5.3);out 3;').then(
         (e) => ({ ok: true, count: e.length }),
