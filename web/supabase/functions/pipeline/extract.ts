@@ -26,7 +26,16 @@ const MONTH_RE = Object.keys(MONTH_ALIASES).sort((a, b) => b.length - a.length).
 
 function toText(html: string): string {
   // "vòòr" (accent grave) als "vóór"; zelfde lengte, dus posities blijven gelijk aan de ruwe tekst
-  return toRawText(html).toLowerCase().replace(/ò/g, "ó");
+  return joinSplit(toRawText(html).toLowerCase().replace(/ò/g, "ó"));
+}
+
+/** Woorden die een paginabouwer in losse letters heeft gehakt ("v ertrek", "v ó ór") weer heel maken. De weggehaalde
+ *  spaties komen erachter, zodat de tekst even lang blijft en citaten uit de ruwe tekst op dezelfde plek staan. */
+export function joinSplit(text: string): string {
+  return text.replace(/\bv ertrek[a-z]*|\bv ?ó ?ó ?r\b|\bu it(?:check|erlijk)[a-z]*/g, (m) => {
+    const joined = m.replace(/ /g, "");
+    return joined + " ".repeat(m.length - joined.length);
+  });
 }
 
 /** Zelfde tekst als toText, maar met hoofdletters, voor letterlijke citaten */
@@ -465,27 +474,33 @@ export function extract(pages: string[], base: URL) {
 const CLOCK = String.raw`(\d{1,2})(?:[:.](\d{2}))?\s*(uur|uhr|u\b|h\b|hrs?\b)?`;
 const TIME_AFTER = new RegExp(
   // Met een verbindingswoord ("vertrek vóór 11:00"), of de tijd direct erna ("vertrek 12 uur", "vertrektijd 11.00 uur")
-  String.raw`^(?:[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|ten laatste|tot|om|tussen|is|from|after|before|until|by|at|ab|bis|um|spätestens|:|\|)|[\s–-]{0,3})\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
+  String.raw`^(?:[^0-9]{0,60}?(?:vanaf|na|voor|vóór|uiterlijk|ten laatste|tot|om|\brond|tussen|is|\btijd|from|after|before|until|by|at|ab|bis|um|spätestens|:|\|)|[\s–-]{0,3})\s*${CLOCK}(?:\s*(?:en|tot|-|–|t/m|und|and)\s*${CLOCK})?`,
 );
 // "uiterlijk 11.00 uur uitchecken", "om 11:00 uur de plaats verlaten" (hoogstens vier woorden ertussen, zoals "op de dag van"; geen leesteken)
 const TIME_BEFORE = new RegExp(String.raw`(?:voor|vóór|uiterlijk|ten laatste|om|before|bis|um)\s*${CLOCK}\s*(?:[a-zà-ÿ]+\s+){0,4}$`);
+// "tot 12:00 uur op de dag van vertrek", "tot 11.00 uur op de vertrekdag"; niet "open van 9.00 tot 12.00 uur voor vertrek"
+const TIME_BEFORE_TOT = new RegExp(String.raw`\btot\s*${CLOCK}\s*op de (?:dag van\s*)?$`);
 const TIME_BEFORE_IN = new RegExp(String.raw`(?:vanaf|na|from|after|ab)\s*${CLOCK}\s*$`);
 const KEY =
-  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekuur|vertrekken|vertrek|uitchecktijd|uitchecken|uit te checken|leeg (?:te )?(?:zijn|maken)|vrij (?:te )?maken|opgeleverd|opleveren|verlaat|laatste dag van (?:uw|je|jullie) verblijf|check-?out|auschecken|abreise|departure|verlaten|verlassen|vrij te zijn|vrij zijn)/g;
+  /(aankomsttijd(?:en)?|aankomst|aankomen|inchecktijd|inchecken|check-?in|anreise|arrival|vertrektijd(?:en)?|vertrekuur|vertrekken|vertrek|uitchecktijd|uitchecken|uitcheckt|uit te checken|leeg (?:te )?(?:zijn|maken)|vrij (?:te )?maken|opgeleverd|opleveren|verlaat|laatste dag van (?:uw|je|jullie) verblijf|check-?out|auschecken|abreise|departure|verlaten|verlassen|vrij te zijn|vrij zijn)/g;
 const ARRIVAL_KEY = /aankom|incheck|check-?in|anreise|arrival/;
 const RENTAL =
-  /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
+  /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|groepsacc?om+odaties?|groepshuis|jamboreehuis|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|receptie|winkel|restaurant|zwembad|snackbar|kantine|slagboom|arrangement(en)?|pakket(ten)?|groepen?)\b/;
 const EXCEPTION =
   /\d+ (werk)?dagen voor (vertrek|aankomst)|weken voor (vertrek|aankomst)|deelnemers|aanbetaling|restbedrag|voldaan|vroege? aankomst|eerder aankomen|vroeg aankomen|laat vertrek|later vertrek|later vertrekken|laat vertrekken|late check-?out|early check-?in|late check-?in|annuler|toeslag|bijbetaling|tegen betaling|datum/;
 // "In overleg" is geen voorwaarde: "vertrek vóór 11:00 of in overleg" is gewoon een vaste tijd met uitzonderingen op verzoek
 const CONDITIONAL = /bij drukte|als het druk|hoogseizoen|in de zomer|tijdens (drukke|vakantie|de zomer)|feestdagen|indien/;
+// Alleen vóór de tijd: "vertrektijd op zondag 12:00" is een voorwaarde, "vertrek voor 11:00 (op zondag tot 13:00)" niet
+const CONDITIONAL_PRE = /op zondag|alleen (tijdens|op|in)|pinksteren|pasen|hemelvaart/;
+// Een vraag ("Ik wil vóór 08:00 vertrekken, kan dat?") is geen regel van de camping
+const QUESTION = /\b(kan dat|kan ik|kunnen (we|wij)|mag ik|mogen (we|wij)|ik wil|(we|wij) willen)\b/;
 const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
 // Specifieker dan "camping": deze tijd gaat over de kampeerplek zelf, niet over de camping in het algemeen
 const PITCH_ONLY = /kampeerpla|kampeerplek|standpla|staanpla|kampeermiddel|camperpla|camperplek/;
 const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
 // Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
 const FREE =
-  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|24 uur per dag (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr|vrije (aankomst-? ?(en|of) ?)?vertrek(tijd(en)?|-? ?(en|of) ?aankomsttijd(en)?)|vrije aankomst- en vertrektijd(en)?|check-?in ?\/ ?check-?out \(?24\/7|24\/7 (in- en )?uit(checken|rijden)|(in- en )?uitchecken (is )?24\/7/g;
+  /geen (vaste |gezette )?(aankomst-? ?(en|of) ?)?vertrektijd(en)?|geen (vaste |gezette )?(aankomst|vertrek|in- en uitcheck|in- en uitrij|check-?in(- en check-?out)?)tijden|hanteren (wij |we )?geen (vaste )?(aankomst- en )?vertrektijden|vrij (aankomen en vertrekken|in- en uitrijden|in en uit rijden)|vertrek (is )?(op elk (gewenst )?(moment|tijdstip)|altijd mogelijk|24 uur per dag)|keine (festen )?(an- und )?abreisezeiten|an- und abreise (ist )?jederzeit|jederzeit (an- und )?abreisen|no (fixed )?(check-?out|departure) times?|(aankomst en vertrek|aankomen en vertrekken) (is |zijn )?(mogelijk )?(24 uur per dag|dag en nacht|altijd|op elk (gewenst )?(moment|tijdstip))|(24 uur per dag|dag en nacht) (aankomst en vertrek|aankomen en vertrekken)|an- und abreise rund um die uhr|vrije (aankomst-? ?(en|of) ?)?vertrek(tijd(en)?|-? ?(en|of) ?aankomsttijd(en)?)|vrije aankomst- en vertrektijd(en)?|check-?in ?\/ ?check-?out \(?24\/7|24\/7 (in- en )?uit(checken|rijden)|(in- en )?uitchecken (is )?24\/7/g;
 // Zwak: "komen en gaan wanneer je wilt" gaat vaak over een seizoensplaats of dagtochtjes. Alleen geldig bij campers
 // en zonder seizoensplaats-context.
 const FREE_WEAK =
@@ -513,6 +528,14 @@ const GATE = new RegExp(
   "g",
 );
 const ACCESS_NOT = /telefo|bellen|receptie|noodnummer|wifi|winkel|bereikbaar per|mail|sanitair|toilet|douche|wasruimte|wasserette|sauna|zwembad|restaurant|bar\b/;
+
+/** Gaat het laatste stuk vóór de tijd over verhuur? "Accommodaties: uiterlijk 10.00 uur. Kampeerplaatsen: uiterlijk
+ *  11.00 uur" gaat bij de tweede tijd over de kampeerplaats, want dat woord staat dichter bij de tijd. */
+function rentalLast(window: string): boolean {
+  const last = (re: RegExp) => Math.max(-1, ...[...window.matchAll(new RegExp(re.source, "g"))].map((x) => x.index!));
+  const r = last(RENTAL);
+  return r >= 0 && r > last(PITCH_ONLY);
+}
 
 type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; pitch?: boolean; camper: boolean; cond: boolean };
 
@@ -571,6 +594,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     let h: string | undefined;
     let m: string | undefined;
     let timeEnd = i + k[0].length;
+    let fromBefore = false;
     let a = TIME_AFTER.exec(ahead);
     // "vertrek 12.07.2026" is een datum, geen tijd
     if (a && /^[./-]\d/.test(ahead.slice(a[0].length))) a = null;
@@ -594,7 +618,8 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     if (a && type === "in" && /(?:uiterlijk|voor|vóór|before|spätestens)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
     // Staat er vlak vóór het woord al een tijd ("vóór 11.30 uur vrij te maken op de vertrekdag, de lodges vóór 10.00"),
     // dan gaat die voor een tijd die pas verderop in de zin komt
-    const before = (type === "out" ? TIME_BEFORE : TIME_BEFORE_IN).exec(text.slice(Math.max(s, i - 50), i));
+    const lead = text.slice(Math.max(s, i - 50), i);
+    const before = type === "out" ? TIME_BEFORE.exec(lead) ?? TIME_BEFORE_TOT.exec(lead) : TIME_BEFORE_IN.exec(lead);
     const beforeIsArrival = type === "out" && ARRIVAL_KEY.test(text.slice(Math.max(s, i - 120), i));
     if (a && before && (before[2] || before[3]) && !beforeIsArrival && a[0].search(/\d/) > 12) a = null;
     if (a && (a[2] || a[3])) {
@@ -604,14 +629,26 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       timeEnd = i + k[0].length + a[0].length;
     } else if (!h) {
       // "uiterlijk 11.00 uur uitchecken", "vanaf 13.00 uur inchecken"
-      if (before && (before[2] || before[3])) [h, m] = [before[1], before[2]];
+      if (before && (before[2] || before[3])) {
+        [h, m] = [before[1], before[2]];
+        fromBefore = true;
+      }
     }
     if (!h) continue;
+    if (timeEnd <= e && (QUESTION.test(text.slice(s, e)) || text[e] === "?")) continue;
     // Verhuur alleen in de aanloop tot en met de tijd en vlak erna ("vertrek voor 10:00 (chalets)"), niet verderop in de
-    // zin: "de plaats vóór 11.30 uur vrij te maken op de vertrekdag, de lodges vóór 10.00 uur" gaat over de plaats
-    if (RENTAL.test(text.slice(Math.max(s, i - 60), Math.min(e, timeEnd + 20)))) continue;
+    // zin: "de plaats vóór 11.30 uur vrij te maken op de vertrekdag, de lodges vóór 10.00 uur" gaat over de plaats. Een
+    // uitzondering erna ("vertrek voor 12.00 uur (bij safaritenten 11:00)") gaat niet over de kampeerplaats
+    // Alleen als er na het verhuurwoord een eigen tijd volgt; "vertrek voor 10:00 bij de chalets" gaat wél over de chalets.
+    // (Staat de tijd vóór het woord, dan ook de aanloop daarvan: "voor het jamboreehuis geldt: … tot 11.00 uur op de vertrekdag")
+    const tail = text.slice(timeEnd, Math.min(e, timeEnd + 20));
+    const aside = /^\W*(?:bij|behalve|uitgezonderd|voor (?:de|het))\b([^0-9]{0,40})\d/.exec(text.slice(timeEnd, Math.min(e, timeEnd + 60)));
+    const otherTime = !!aside && RENTAL.test(aside[1]) && !/kampeer|camper|standpla|staanpla/.test(aside[1]);
+    if (rentalLast(text.slice(Math.max(s, i - (fromBefore ? 110 : 60)), timeEnd)) || (RENTAL.test(tail) && !otherTime)) continue;
     const hour = Number(h);
-    if (Number(m ?? 0) > 59 || (type === "out" ? hour < 7 || hour > 14 : hour < 7 || hour > 22)) continue;
+    // 15:00 alleen als heel uur ("uitchecken 15:00 uur"); later is vrijwel altijd een openingstijd
+    const late = type === "out" && hour === 15 && Number(m ?? 0) === 0;
+    if (Number(m ?? 0) > 59 || (type === "out" ? hour < 7 || (hour > 14 && !late) : hour < 7 || hour > 22)) continue;
     hits.push({
       type,
       time: asClock(h, m),
@@ -619,7 +656,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       strong: PITCH_CONTEXT.test(local),
       pitch: PITCH_ONLY.test(text.slice(Math.max(s, i - 150), Math.min(e, i + 90))),
       camper: CAMPER.test(local),
-      cond: CONDITIONAL.test(local),
+      cond: CONDITIONAL.test(local) || CONDITIONAL_PRE.test(text.slice(Math.max(s, i - 60), timeEnd)),
     });
   }
 
@@ -628,7 +665,8 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     return firm.find((x) => x.camper) ?? firm.find((x) => x.pitch) ?? firm.find((x) => x.strong) ?? firm[0];
   };
   let out = pick("out");
-  const arrive = pick("in");
+  // Een aankomsttijd gelijk aan de vertrektijd is meestal dezelfde tijd twee keer gelezen: die laten we weg
+  const arrive = ((x) => (x && out && x.time === out.time ? undefined : x))(pick("in"));
   // Geen losse vertrektijd gevonden? Dan een tijd die direct bij de kampeerplek hoort, vlak na een vertrekwoord, ook
   // over een vraag heen ("Hoe laat moet ik uitchecken? Voor kampeerplekken is dat 11:00 uur, voor de glampingtent 10:00")
   if (!out)
@@ -675,7 +713,8 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
   if (per24 === undefined)
     for (const p of text.matchAll(PER24_PRICE)) {
       const near = text.slice(Math.max(0, p.index! - 150), p.index! + 120);
-      if (!CAMPER.test(near) || RENTAL.test(near)) continue;
+      // Een tarief voor de trailerhelling of een boot zegt niets over de camperplaats
+      if (!CAMPER.test(near) || RENTAL.test(near) || /trailer|helling|boten?\b|sloep/.test(near)) continue;
       per24 = p.index!;
       break;
     }

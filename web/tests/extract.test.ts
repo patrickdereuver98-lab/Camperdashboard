@@ -266,3 +266,70 @@ test("seizoen: 'gesloten van 1 november tot 19 maart' is geen openingsseizoen", 
   assert.equal(page("<p>Openingstijden: gesloten van 1 november tot 19 maart.</p>").season, undefined);
   assert.equal(page("<p>De camping is geopend van 20 maart tot 31 oktober.</p>").season, "20 maart – 31 oktober");
 });
+
+// Datareview 18 oktober: gemiste en foute vertrektijden uit de live bronzinnen
+const out = (html: string) => {
+  const r = page(html);
+  return r.departure === "vast" ? `vast ${r.checkout_until}` : (r.departure as string | undefined);
+};
+
+test("datareview: woorden in losse letters ('v ertrek', 'v ó ór')", () => {
+  assert.equal(out("<p>Aankomst vanaf 14.00 en v ertrek voor 11.00</p>"), "vast 11:00");
+  assert.equal(out("<p>Aankomst na 15:00 en vertrek v ó ór 11:00</p>"), "vast 11:00");
+  assert.equal(out("<p>Bij vol geboekte camping: aankomst vanaf 14:00uur en v ertrektijden 12:00uur</p>"), "vast 12:00");
+});
+
+test("datareview: 'tot 12:00 uur op de dag van vertrek', 'rond 11.00u', 'vertrek tijd 12:00'", () => {
+  assert.equal(out("<p>Passantenplaatsen zijn beschikbaar vanaf 14:00 uur op de dag van aankomst tot 12:00 uur op de dag van vertrek</p>"), "vast 12:00");
+  assert.equal(out("<p>Aankomst is vanaf 14.00u, wij vragen u op de dag van vertrek rond 11.00u de kampeerplaats weer te verlaten</p>"), "vast 11:00");
+  assert.equal(out("<p>De aankomst tijd voor kamperen is 13:00 uur en vertrek tijd 12:00 uur</p>"), "vast 12:00");
+  assert.equal(out("<p>Inchecken vanaf 15.00 uur, uitchecken rond 11.00 uur</p>"), "vast 11:00");
+});
+
+test("datareview: 15:00 als heel uur mag, later niet", () => {
+  assert.equal(out("<p>Inchecken vanaf 12:00 uur, uitchecken 15:00 uur</p>"), "vast 15:00");
+  assert.equal(out("<p>Inchecken kan vanaf 12:00, graag willen we dat u uitcheckt voor 15:00</p>"), "vast 15:00");
+  assert.equal(out("<p>Uitchecken voor 15:30 uur</p>"), undefined);
+});
+
+test("datareview: een uitzondering voor safaritenten na de tijd telt niet als verhuur", () => {
+  assert.equal(out("<p>Aankomst is tussen 14.00 uur en 19.00 uur en vertrek is voor 12.00 uur (bij safaritenten is dit 11:00 uur)</p>"), "vast 12:00");
+  assert.equal(out("<p>Vertrek voor 10:00 uur (chalets)</p>"), undefined);
+  assert.equal(out("<p>Accommodaties en safaritenten: uiterlijk om 10.00 uur. Kampeerplaatsen: uiterlijk om 11.00 uur vertrekken</p>"), "vast 11:00");
+});
+
+test("datareview: een vraag uit de FAQ is geen vertrektijd", () => {
+  assert.equal(out("<p>Ik wil vóór 08:00 uur vertrekken, kan dat?</p>"), undefined);
+  assert.equal(out("<p>Ik wil vóór 08.00 vertrekken, kan dat? Voor kampeerders is aankomst vanaf 12:00 uur en vertrek voor 11:00 uur</p>"), "vast 11:00");
+  // Kopje als vraag, antwoord in de volgende zin
+  assert.equal(out("<h3>Hoe laat moet ik uitchecken?</h3><p>Voor kampeerplekken is dat 11:00 uur.</p>"), "vast 11:00");
+});
+
+test("datareview: voorwaarde vóór de tijd maakt hem voorwaardelijk, erna niet", () => {
+  assert.equal(out("<p>Tijdens drukke weekenden (Pinksteren, Pasen en Hemelvaart) is het vertrek voor 12:00 uur</p>"), undefined);
+  assert.equal(out("<p>Uitchecken: vóór 10:00 uur (op zondag tot 13:00 uur)</p>"), "vast 10:00");
+});
+
+test("datareview: 'dag en nacht aankomen en vertrekken' is vrij", () => {
+  assert.equal(out("<p>Bij ons kunt u met de camper dag en nacht aankomen en vertrekken</p>"), "vrij");
+});
+
+test("datareview: per 24 uur van een trailerhelling telt niet", () => {
+  assert.equal(out("<p>Camperplaats en trailerhelling: € 10 per 24 uur voor de trailerhelling</p>"), undefined);
+  assert.equal(out("<p>Camperplaats: € 10 per 24 uur</p>"), "per24");
+});
+
+test("datareview: aankomsttijd gelijk aan vertrektijd wordt niet overgenomen", () => {
+  const r = page("<p>Wisseltijd: vertrek voor 14:00 uur, aankomst vanaf 14:00 uur</p>");
+  assert.equal(r.checkout_until, "14:00");
+  assert.equal(r.checkin_from, undefined);
+});
+
+test("codereview: verhuurtijd vóór het verhuurwoord, 'openingstijd' en 'open van … tot'", () => {
+  assert.equal(out("<p>Vertrek voor 10:00 uur bij de chalets, kampeerplaatsen vertrekken voor 11:00 uur</p>"), "vast 11:00");
+  assert.equal(out("<p>Vertrek voor 10:00 uur voor de chalets.</p>"), undefined);
+  assert.equal(out("<p>Uitchecken voor 10:00 uur bij de huurtenten</p>"), undefined);
+  assert.equal(out("<p>Vertrek is mogelijk tijdens openingstijd 9:00 uur</p>"), undefined);
+  assert.equal(out("<p>Open van 9.00 tot 12.00 uur voor vertrek en aankomst</p>"), undefined);
+  assert.equal(out("<p>De plaatsen zijn beschikbaar tot 11.00 uur op de vertrekdag</p>"), "vast 11:00");
+});

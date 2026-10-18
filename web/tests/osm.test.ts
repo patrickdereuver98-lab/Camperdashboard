@@ -129,3 +129,12 @@ test("mapOsm: fee=no zonder charge betekent gratis", () => {
   assert.equal("price_eur" in mapOsm(el({ tourism: "caravan_site", fee: "yes" }))!, false);
   assert.equal(mapOsm(el({ tourism: "caravan_site", fee: "yes", charge: "12.50 EUR" }))!.price_eur, 12.5);
 });
+
+test("check_out na 14:00 is een openingstijd, geen vertrektijd (datareview 18 oktober)", () => {
+  const a = mapOsm(el({ tourism: "caravan_site", check_out: "11:00" })) as Record<string, unknown>;
+  assert.equal(a.departure, "vast");
+  assert.equal(a.checkout_until, "11:00");
+  const b = mapOsm(el({ tourism: "caravan_site", check_out: "22:00" })) as Record<string, unknown>;
+  assert.equal(b.departure, undefined);
+  assert.equal(b.checkout_until, undefined);
+});
