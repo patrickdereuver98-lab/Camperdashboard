@@ -23,6 +23,10 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
   auth: { persistSession: false },
 });
 
+// Versie van de extractor. Vond een oudere versie een kernveld dat deze niet meer vindt, dan wist apply_scrape het: zo
+// verdwijnen fouten van een oude parser na een volledige run. Ophogen bij elke wijziging in extract.ts.
+const PARSER = "37";
+
 const UA = "VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)";
 const OVERPASS = [
   "https://overpass-api.de/api/interpreter",
@@ -389,6 +393,7 @@ async function scrapeOne(place: { id: string; website: string }) {
   }
   // Haperende site: apply_scrape wist dan niets wat deze keer ontbreekt
   if (failed.length) data._pages_failed = failed.length;
+  data._parser = PARSER;
   return data;
 }
 
