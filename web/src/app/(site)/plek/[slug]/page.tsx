@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
 import { cardPrice, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
-import { directionsUrl } from "@/lib/geo";
+import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
@@ -249,9 +249,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <Icon name="globe" size={19} />
             </a>
           )}
-          <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest">
+          <NavigateButton to={place} name={place.name} className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep">
             <Icon name="route" size={18} /> Route
-          </a>
+          </NavigateButton>
         </div>
       </div>
     </article>
@@ -320,7 +320,8 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
  */
 function Decision({ place }: { place: Place }) {
   const kind = departureKind(place);
-  const free = kind === "vrij";
+  // Groen alleen na bevestiging; een kandidaat staat wel op Zonder vertrektijd maar met uitleg
+  const free = kind === "vrij" && place.departureCheck === "bevestigd";
   const late = kind === "uitslapers";
   // Groen alleen als een mens het heeft bevestigd (kernbelofte); anders zeggen we eerlijk wat we wel en niet weten
   const claimed = place.departure === "vrij" || place.departure === "per24";

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { closeEnough, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
+import { editDistance, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
 import { usePlaces, useTowns } from "@/lib/store";
 import { track } from "@/lib/track";
 import { PROVINCES, type Town } from "@/lib/types";
@@ -72,14 +72,15 @@ export function DestinationSearch({
       for (const p of ["Zeeland", "Gelderland", "Friesland", "Limburg"]) out.push({ type: "province", label: p });
       return out;
     }
-    // Overeenkomst: exact (0), begint met (1), bevat (2), bijna goed gespeld (3)
+    // Overeenkomst: exact (0), begint met (1), bevat (2), bijna goed gespeld (3 plus 0,1 per tikfout), zodat
+    // "Giethorn" bij Giethoorn (1 fout) uitkomt en niet bij een grotere plaats met 2 fouten
     const rankOf = (name: string) => {
       const n = normalize(name);
       if (n === q) return 0;
       if (n.startsWith(q)) return 1;
       if (q.length > 2 && n.includes(q)) return 2;
-      if (q.length >= 5 && closeEnough(q, n, q.length >= 8 ? 2 : 1)) return 3;
-      return -1;
+      const d = q.length >= 5 ? editDistance(q, n, q.length >= 8 ? 2 : 1) : Infinity;
+      return Number.isFinite(d) ? 3 + d / 10 : -1;
     };
     const nearbyCount = (c: { lat: number; lng: number }, r = 25) => (places ?? []).filter((p) => distanceKm(c, p) <= r).length;
 

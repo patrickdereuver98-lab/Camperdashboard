@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, ViewTransition } from "react";
 import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format";
-import { coarse, directionsUrl, formatKm, type LatLng } from "@/lib/geo";
+import { coarse, formatKm, type LatLng } from "@/lib/geo";
+import { NavigateButton } from "@/components/navigate";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
 import type { Photo, Review } from "@/lib/types";
@@ -28,9 +29,14 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
   if (!visible.length)
     return (
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
-        <div className="flex h-20 items-center justify-center gap-2 bg-sunken text-sm text-muted sm:h-28 sm:rounded-xl" role="img" aria-label={`Nog geen foto van ${name}`}>
+        <div
+          // Waren er foto's maar laadde geen enkele, dan blijft het vak even groot: anders springt de pagina omhoog
+          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-xl ${photos.length ? "aspect-[16/9] sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
+          role="img"
+          aria-label={`Nog geen foto van ${name}`}
+        >
           <Sign name={KIND_SIGN[kind ?? "camperplaats"] ?? "camper"} size={24} state="unknown" />
-          Nog geen foto van deze plek
+          {photos.length ? "De foto kon niet worden geladen" : "Nog geen foto van deze plek"}
         </div>
       </ViewTransition>
     );
@@ -156,15 +162,9 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
             {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}
           </button>
         )}
-        <a
-          href={directionsUrl(to)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => track("outbound", { soort: "route", naar: name })}
-          className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest"
-        >
+        <NavigateButton to={to} name={name} className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest">
           <Icon name="route" size={18} /> Open in navigatie
-        </a>
+        </NavigateButton>
       </div>
     </div>
   );

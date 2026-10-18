@@ -90,6 +90,7 @@ export function PlaceMap({
   route,
   user,
   cluster = true,
+  onShowList,
   className = "",
 }: {
   places: MapPlace[];
@@ -105,6 +106,8 @@ export function PlaceMap({
   route?: [number, number][] | null;
   user?: LatLng | null;
   cluster?: boolean;
+  /** Knop "Toon lijst" bij een kaartfout (alleen waar een lijst naast de kaart bestaat) */
+  onShowList?: () => void;
   className?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
@@ -113,6 +116,7 @@ export function PlaceMap({
   const userMarker = useRef<{ remove(): void } | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const latest = useRef({ places, onSelect, onViewportChange, cluster });
   useEffect(() => {
     latest.current = { places, onSelect, onViewportChange, cluster };
@@ -271,8 +275,8 @@ export function PlaceMap({
       mapRef.current = null;
       setReady(false);
     };
-    // De kaart wordt één keer opgebouwd; updates lopen via de effecten hieronder.
-  }, []);
+    // De kaart wordt één keer opgebouwd (opnieuw na "Opnieuw proberen"); updates lopen via de effecten hieronder.
+  }, [attempt]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -346,8 +350,25 @@ export function PlaceMap({
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
       {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-muted">Kaart laden…</div>}
       {failed && (
-        <div className="absolute inset-0 grid place-items-center p-6 text-center text-muted">
-          De kaart kon niet worden geladen. Controleer je verbinding.
+        <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-ink-2">
+          <p>De kaart kon niet worden geladen. Controleer je verbinding.</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setFailed(false);
+                setAttempt((a) => a + 1);
+              }}
+              className="min-h-11 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep"
+            >
+              Opnieuw proberen
+            </button>
+            {onShowList && (
+              <button type="button" onClick={onShowList} className="min-h-11 rounded-lg border border-line bg-surface px-4 font-semibold text-ink">
+                Toon lijst
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

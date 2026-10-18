@@ -28,7 +28,7 @@
 | Database | Supabase Postgres 17, project `qkrmthrhwmmmwswmfgwc` ("vrijstaan"), regio **eu-central-1 (Frankfurt)** |
 | API | Supabase REST (PostgREST) met de publishable key in de browser; alle schrijfacties via `SECURITY DEFINER`-functies (RPC) |
 | Pushmeldingen | Supabase Edge Function `push` (Deno, `web-push`), aangeroepen door de database via `pg_net` met dezelfde `x-pipeline-key`; maakt zelf de VAPID-sleutels aan |
-| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key` |
+| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `ai.ts` (AI-lezer, optioneel), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
 | Taken | `pg_cron` + `pg_net` in de database (zie Architectuur) |
 | Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en `cacheLife("minutes")`, terugval op de snapshot |
 
@@ -70,7 +70,7 @@ Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/route, 
    │  REST + RPC (publishable key, Row Level Security)
    ▼
 Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (OSM)        [elke 3 min: volgende provincie]
-   │                              └──────► Edge Function "pipeline"          [elke 15 s: 8 websites]
+   │                              └──────► Edge Function "pipeline"          [elke 15 s: 10 × 8 websites, achtergrond]
    │                                         ├─ leest websites (robots.txt)
    │                                         └─ schrijft via apply_scrape / ingest_osm
    └── Beheer (/admin) via Supabase Auth + is_admin()
@@ -83,7 +83,7 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `osm-regions` | elke 3 min | Volgende provincie ophalen die ouder is dan 7 dagen (twee Overpass-verzoeken via `pg_net`) |
 | `osm-collect` | elke minuut | Antwoorden ophalen; bij succes de functie `parse` aanroepen, bij fout later opnieuw via een andere server |
 | `osm-staging` | elke minuut | 300 rijen uit `osm_staging` verwerken met `ingest_osm` |
-| `scrape` | elke 15 s | 8 websites lezen zolang er werk in `private.scrape_queue` staat |
+| `scrape`, `scrape-2` … `scrape-10` | elke 15 s | Tien workers, elk 8 websites op de achtergrond (`EdgeRuntime.waitUntil`), zolang er werk in `private.scrape_queue` staat |
 | `scrape-enqueue` | elk half uur | Nieuwe plekken met een website inplannen |
 | `scrape-refresh` | elk half uur (:07 en :37) | De 10 plekken die het langst en minstens 30 dagen niet gelezen zijn opnieuw inplannen |
 | `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd in de SQL-editor (bevat ook tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log) |

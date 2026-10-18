@@ -9,9 +9,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/?bron=app",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
     background_color: "#f5f0e6",
-    theme_color: "#2d5a43",
+    // Gelijk aan de lichte kleur van de header (themeColor in layout.tsx), zodat de app-balk niet groen afsteekt
+    theme_color: "#fffcf6",
     lang: "nl",
     dir: "ltr",
     categories: ["travel", "navigation", "lifestyle"],

@@ -20,7 +20,7 @@
 |---|---|---|---|
 | Start | `/` | Zoekkaart (bestemming + vertrekkeuze → `/zoeken`, `/zonder-vertrektijd` of `/uitslapers`), drie vertrekkaarten, populaire bestemmingen, uitgelichte plekken, voorzieningen (nu open, stroom, lozen, honden), uitleg in drie stappen | Statistieken, alle plekken (voor de bestemmingsfoto's), uitgelichte samenvattingen |
 | Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`) |
-| Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, alleen vertrekregel vrij of per 24 uur **die door beheer of de eigenaar is bevestigd** (Beheer → Vertrektijden). Niet bevestigd of met voorwaarde staat bij Overige | Idem |
+| Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, vertrekregel vrij of per 24 uur. **Bevestigd** door beheer of de eigenaar (Beheer → Vertrektijden) staat bovenaan in groen; nog niet bevestigd staat daaronder met het label "Geen vaste tijd, nog niet bevestigd" (besluit 16 oktober 2026). Met voorwaarde of afgewezen staat bij Overige | Idem |
 | Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
 | Overige plekken | `/overige-plekken` | Zelfde zoekscherm, vertrek vóór 12:00 of onbekend, met keuze: 11:00 tot 12:00 / vóór 11:00 / onbekend | Idem |
 | Filterscherm | sheet op `/zoeken` | Vertrekken, voorzieningen, prijs, soort, lengte, overig, met live teller | Samenvattingen |
