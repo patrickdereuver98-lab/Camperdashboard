@@ -79,7 +79,7 @@
 | `status_locked` | boolean | ja | `false` | handmatig vastgezet; trigger verandert de status dan niet |
 | `geom` | geometry(Point, 4326) | | gegenereerd | uit `lng`/`lat`; GIST-indexen voor `places_in_bbox` en de dubbelen-zoektocht |
 | `merged_into` | uuid | | | samengevoegd in deze plek; de oude slug stuurt door (`place_redirect`) |
-| `sources` | jsonb | ja | `{}` | `osm`, `website` (tijdstip), `website_fields`, `beheer` (velden die beheer invulde), `duplicate_of`, `website_error` (`at`, `error`: website na drie pogingen niet te lezen; verdwijnt bij de volgende geslaagde scrape), `website_parser` (versie van de extractor bij de laatste scrape; een nieuwe versie wist kernvelden die ze niet meer vindt) |
+| `sources` | jsonb | ja | `{}` | `osm`, `website` (tijdstip), `website_fields`, `beheer` (velden die beheer invulde), `duplicate_of`, `website_error` (`at`, `error`: website na drie pogingen niet te lezen; verdwijnt bij de volgende geslaagde scrape), `pdok` (`at`, `afstand`, `velden`: adres aangevuld via PDOK, ook vastgelegd als er niets binnen 75 m lag), `website_parser` (versie van de extractor bij de laatste scrape; een nieuwe versie wist kernvelden die ze niet meer vindt) |
 | `last_scraped_at`, `verified_at`, `created_at`, `updated_at` | timestamptz | | | `verified_at`: laatste scrape waarin de website iets over de plek zei |
 
 Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, trigram op `name`.
