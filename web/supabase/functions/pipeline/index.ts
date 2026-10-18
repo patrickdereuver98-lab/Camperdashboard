@@ -355,18 +355,31 @@ async function scrapeOne(place: { id: string; website: string }) {
 }
 
 /** Diagnose (alleen lezen): welke pagina's kiest de scraper en welke zinnen over vertrekken staan erop */
-async function inspect(website: string) {
+// Diagnose per veld: zinnen rond deze woorden, om te zien welke formuleringen de extractor mist
+const INSPECT_TERMS: Record<string, RegExp> = {
+  lengte: /lengte|meter lang|\d ?m(eter)?\b.{0,20}(camper|lang)|max(imaal|\.)? ?\d/gi,
+  plekken: /\d{1,3} (camper|kampeer|stand|staan|plaats|plek)/gi,
+  honden: /hond|huisdier/gi,
+  water: /water/gi,
+  reserveren: /reserve|boek/gi,
+  seizoen: /seizoen|geopend|jaarrond|hele jaar|gesloten/gi,
+  prijs: /€|euro|tarie|prijs/gi,
+};
+
+async function inspect(website: string, field?: string) {
   const c = await collectPages(website);
   const pdfTexts = await Promise.all(c.pdfs.map((href) => fetchPdf(new URL(href)).catch(() => null)));
   const pages = [c.html, ...c.subs.filter((x): x is string => !!x), ...pdfTexts.filter((x): x is string => !!x)];
   const text = pages.join(" ").replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-  const snippets = [...text.matchAll(/[^.]{0,90}(vertrek|uitcheck|check-?out|abreise|per 24 uur|24 uur)[^.]{0,90}/gi)].slice(0, 8).map((m) => m[0].trim());
+  const term = field && INSPECT_TERMS[field] ? INSPECT_TERMS[field].source : "vertrek|uitcheck|check-?out|abreise|per 24 uur|24 uur";
+  const snippets = [...text.matchAll(new RegExp(`[^.]{0,90}(${term})[^.]{0,90}`, "gi"))].slice(0, 8).map((m) => m[0].trim());
   const data = extract(pages, c.home) as Record<string, unknown>;
   const viaAi = data.departure === undefined ? await aiDeparture(pages) : null;
   return {
     links: c.links, viaSitemap: c.viaSitemap, picked: c.picked, fetched: c.subs.map((x) => !!x),
     departure: data.departure ?? viaAi?.departure ?? null, checkout: data.checkout_until ?? viaAi?.checkout_until ?? null,
     viaAi: !!viaAi, aiAvailable: !!ai, pdfs: c.pdfs, snippets,
+    ...(field ? { fields: Object.fromEntries(Object.entries(data).filter(([k]) => !["description", "photos", "times_note"].includes(k))) } : {}),
   };
 }
 
@@ -413,7 +426,7 @@ Deno.serve(async (req) => {
         (e) => ({ ok: true, count: e.length }),
         (e) => ({ ok: false, error: String(e) }),
       );
-    else if (body.action === "inspect") result = await inspect(String(body.url));
+    else if (body.action === "inspect") result = await inspect(String(body.url), body.field ? String(body.field) : undefined);
     else if (body.action === "verify")
       result = await Promise.all(
         (body.items as Finding[]).slice(0, 25).map((f) => verifyFinding(f).catch((e) => ({ id: f.id, ok: false, reason: String(e).slice(0, 120) }))),
