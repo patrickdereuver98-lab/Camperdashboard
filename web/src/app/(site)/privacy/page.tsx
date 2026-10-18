@@ -111,6 +111,12 @@ const ROWS: string[][] = [
     "Gerechtvaardigd belang, op jouw verzoek (art. 6 lid 1 sub f)",
     "Niet opgeslagen in onze database",
   ],
+  [
+    "Zoeken op adres, postcode of plaats",
+    "Wat je in het zoekveld typt",
+    "Gerechtvaardigd belang, op jouw verzoek (art. 6 lid 1 sub f)",
+    "Niet opgeslagen in onze database; de server onthoudt het antwoord van PDOK een paar uur",
+  ],
 ];
 
 function Table({ head, rows }: { head: string[]; rows: string[][] }) {
@@ -162,7 +168,7 @@ export default function PrivacyPage() {
     <ProsePage
       title="Privacyverklaring"
       intro="We verwerken zo weinig persoonsgegevens als we kunnen. Hier lees je welke, waarom, op welke grondslag en hoe lang."
-      updated="11 oktober 2026"
+      updated="18 oktober 2026"
     >
       <Section title="Wie zijn wij">
         <p>
@@ -245,6 +251,11 @@ export default function PrivacyPage() {
           (de rijtijd bij een afgerond punt) een paar dagen in een technische cache. Daarin staat niets wat naar jou te
           herleiden is. De knop &quot;Open in navigatie&quot; opent Google Maps. Daar gelden de privacyregels van Google.
         </p>
+        <p>
+          Zoek je op een adres, postcode of plaats, dan stuurt onze server wat je typt naar de Locatieserver van PDOK
+          (Kadaster, de Nederlandse overheid). Alleen de zoekterm gaat mee: geen IP-adres en geen andere gegevens over jou.
+          Je browser praat zelf niet met PDOK. Werkt PDOK even niet, dan zoeken we in onze eigen lijst met plaatsen.
+        </p>
       </Section>
 
       <Section title="De kaart, lettertypes en foto's">
@@ -313,6 +324,10 @@ export default function PrivacyPage() {
           <li>
             <strong>OpenRouteService</strong> (HeiGIT gGmbH) of <strong>FOSSGIS e.V.</strong> krijgen coördinaten als je een
             rijtijd laat berekenen.
+          </li>
+          <li>
+            <strong>PDOK</strong> (Kadaster) krijgt via onze server de zoekterm als je op een adres, postcode of plaats
+            zoekt, zonder je IP-adres.
           </li>
           <li>
             <strong>OpenFreeMap</strong>, <strong>wsrv.nl</strong>, <strong>Wikimedia</strong> en de website van een plek
