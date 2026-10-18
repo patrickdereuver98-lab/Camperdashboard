@@ -22,3 +22,5 @@ Werkwijze:
   react-best-practices en web-design-guidelines) zijn naslag; bij een conflict gaan de stijlgids en `vrijstaan-stijl`
   voor (zie `.claude/skills/BRONNEN.md`).
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.
+- Edge functions (Supabase) uitrollen mag altijd zonder eerst toestemming te vragen (besluit Patrick, 18 oktober 2026);
+  de toestemming staat in `.claude/settings.json`. Test eerst (`npm test`), en vermeld de nieuwe versie in het implementatieplan.
