@@ -132,6 +132,31 @@ async function allowed(url: URL): Promise<boolean> {
   return !robotsCache.get(url.host)!.some((p) => url.pathname.startsWith(p));
 }
 
+/**
+ * Subpagina's van één site: hoogstens 3 tegelijk, en bij een fout (geen 404) na een korte pauze nog één poging.
+ * Tot 11 verzoeken tegelijk naar dezelfde server werd door veel kleine sites en hostingpartijen geblokkeerd, waardoor
+ * alleen de homepage binnenkwam en de pagina met de vertrektijd ontbrak.
+ */
+async function fetchPages(hrefs: string[]): Promise<(string | null)[]> {
+  const out: (string | null)[] = new Array(hrefs.length).fill(null);
+  let next = 0;
+  const worker = async () => {
+    while (next < hrefs.length) {
+      const i = next++;
+      const url = new URL(hrefs[i]);
+      try {
+        out[i] = await fetchPage(url);
+      } catch (e) {
+        if (/HTTP 4(04|10)/.test(String(e))) continue;
+        await new Promise((r) => setTimeout(r, 800));
+        out[i] = await fetchPage(url).catch(() => null);
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  return out;
+}
+
 async function fetchPage(url: URL, accept: "html" | "xml" = "html", timeout = 9000): Promise<string | null> {
   if (!/^https?:$/.test(url.protocol)) return null;
   if (!(await allowed(url))) return null;
@@ -234,11 +259,11 @@ async function collectPages(website: string) {
       const url = new URL(path, home).href;
       if (!picked.includes(url)) picked.push(url);
     }
-  const subs = await Promise.all(picked.map((href) => fetchPage(new URL(href)).catch(() => null)));
+  const subs = await fetchPages(picked);
   const read = subs.filter((x): x is string => !!x);
   // Tweede laag: vanaf de FAQ en huisregels de links die naar aankomst en vertrek wijzen
   const deeper = deeperLinks([html, ...read], home, [home.href, ...picked]);
-  const more = await Promise.all(deeper.map((href) => fetchPage(new URL(href)).catch(() => null)));
+  const more = await fetchPages(deeper);
   // PDF's met het reglement of de tarieven: alleen de adressen; lezen gebeurt pas als de pagina's niets opleveren
   const pdfs = [...new Set([html, ...read].flatMap((h) => pdfLinks(h, home)))].slice(0, 2);
   return { home, html, links: links.length, picked: [...picked, ...deeper], pdfs, viaSitemap, subs: [...subs, ...more] };
