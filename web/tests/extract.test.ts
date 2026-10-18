@@ -362,3 +362,8 @@ test("prijs: 'Campingplaats 2 pers (excl. toeristenbelasting) € 22,50' en 'toe
   // een toeslag blijft een toeslag
   assert.equal(page("<p>Toeristenbelasting (excl. btw) € 1,50 per persoon</p>").price_eur, undefined);
 });
+
+test("prijs: 'Late check out kampeerplek kosten €12,50' is een toeslag", () => {
+  assert.equal(page("<p>Late check out kampeerplek kosten €12,50. Late check out voor de accommodaties €20</p>").price_eur, undefined);
+  assert.equal(page("<p>Kampeerplek (klein/groot) € 6,- of 9,- per dag</p>").price_eur, 6);
+});

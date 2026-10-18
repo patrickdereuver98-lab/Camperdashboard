@@ -27,7 +27,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 // Versie van de extractor. Vond een oudere versie een kernveld dat deze niet meer vindt, dan wist apply_scrape het: zo
 // verdwijnen fouten van een oude parser na een volledige run. Ophogen bij elke wijziging in extract.ts.
-const PARSER = "38";
+const PARSER = "39";
 
 const UA = "VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)";
 const OVERPASS = [
