@@ -201,9 +201,10 @@ async function fetchPdf(url: URL): Promise<string | null> {
 /** De startpagina, met terugval (zie homeCandidates); bij een time-out één keer opnieuw met meer tijd */
 async function fetchHome(website: string): Promise<{ home: URL; html: string }> {
   let first: unknown;
-  for (const href of homeCandidates(website)) {
+  for (const [n, href] of homeCandidates(website).entries()) {
     const url = new URL(href);
-    for (const timeout of [9000, 15000]) {
+    // Alleen het eigen adres krijgt een tweede, langere poging; de terugvaladressen één korte
+    for (const timeout of n === 0 ? [9000, 15000] : [7000]) {
       try {
         const html = await fetchPage(url, "html", timeout);
         if (html) return { home: url, html };
@@ -372,7 +373,11 @@ async function runScrape(n: number) {
   const results = await Promise.all(
     (batch ?? []).map(async (p: { id: string; website: string }) => {
       try {
-        const data = await scrapeOne(p);
+        // Eén trage of dode site mag de batch niet ophouden (pg_net wacht op de traagste aanroep)
+        const data = await Promise.race([
+          scrapeOne(p),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Site te traag (45 s)")), 45_000)),
+        ]);
         await db.rpc("apply_scrape", { p_id: p.id, p_data: data });
         return { id: p.id, ok: true, fields: data.fields };
       } catch (e) {
