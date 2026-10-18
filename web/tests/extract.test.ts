@@ -190,3 +190,23 @@ test("'De overnachting is per 24 uur' en 'tarieven per 24 uur' zijn per24 (zonde
   assert.equal(page("<p>De overnachting is per 24 uur. Vertrek voor 12:00 uur.</p>").departure, "vast");
   assert.equal(page("<p>Chalet: de overnachting is per 24 uur.</p>").departure, undefined);
 });
+
+test("vijfde steekproef (vertrek na 13:00): kopje 'aankomst en vertrek', 'na het uitchecken', 'vertrek na'", () => {
+  assert.equal(page("<p>Aankomst en vertrek Kampeerders zijn van harte welkom tussen 14:00 uur en de sluitingstijd van de receptie.</p>").checkout_until, undefined);
+  assert.equal(page("<p>Uitchecken voor 11:00 uur. U mag na het uitchecken nog tot 14:00 uur gebruik maken van al onze faciliteiten.</p>").checkout_until, "11:00");
+  assert.equal(page("<p>Aankomst vanaf 15.00 u. Vertrek na 14.00 u.</p>").checkout_until, undefined);
+  assert.equal(page("<p>Aankomst- en vertrektijden: aankomst vanaf 14:00 uur, vertrek voor 11:00 uur.</p>").checkout_until, "11:00");
+  assert.equal(page("<p>Aankomst- en vertrektijden: aankomst vanaf 14:00 uur, vertrek voor 11:00 uur.</p>").checkin_from, "14:00");
+});
+
+test("'vertrek na 12 uur € 10' (toeslag) is vertrektijd 12:00; 'na 08.00 en voor 12:00' is 12:00", () => {
+  assert.equal(page("<p>Vertrek na 12:00 uur € 10,00</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Bij vertrek na 12.00 uur wordt er een halve dag extra in rekening gebracht.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Vertrekt u na 12.00 uur, dan wordt er een extra nacht in rekening gebracht.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Vertrek na 08.00 uur en voor 12:00 uur. Aankomst na 13:00 uur en voor 17:30 uur.</p>").checkout_until, "12:00");
+});
+
+test("'vanaf 14:00 uur inchecken en uitchecken is om 12:00 uur' is geen kopje", () => {
+  assert.equal(page("<p>Als je een kampeerplek hebt gereserveerd, kun je vanaf 14:00 uur inchecken en uitchecken is om 12:00 uur.</p>").checkout_until, "12:00");
+  assert.equal(page("<p>Bij vertrek na 12:00 ( In overleg )</p>").checkout_until, "12:00");
+});

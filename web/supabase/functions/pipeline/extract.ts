@@ -532,6 +532,15 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     const local = text.slice(Math.max(s, i - 60), Math.min(e, i + 90));
     if (EXCEPTION.test(local)) continue;
     const type = ARRIVAL_KEY.test(k[0]) ? "in" : "out";
+    // Kopje "aankomst en vertrek" / "aankomst- en vertrektijden": dat woord zelf zegt niet welke tijd erbij hoort; de
+    // tijden staan erna met hun eigen woord. En "na het uitchecken" gaat over daarna, niet over de vertrektijd.
+    const pre = text.slice(Math.max(s, i - 14), i);
+    const post = text.slice(i + k[0].length, i + k[0].length + 16);
+    // (maar niet "vanaf 14:00 uur inchecken en uitchecken is om 12:00": daar hoort de tijd al bij het aankomstwoord)
+    const timedBefore = /\d(?:[:.]\d{2})?\s*(?:uur|u)?\s*(aankomst|aankomen|inchecken|check-?in)\S*\s*(en|&|\/)?\s*$/.test(text.slice(Math.max(s, i - 40), i));
+    if (type === "out" && !timedBefore && /(aankomst|aankomen|inchecken|check-?in)(-?\s*(en|&|\/)\s*|-)$/.test(pre)) continue;
+    if (type === "in" && /^(-?\s*(en|&|\/)\s*|-)(vertrek|uitcheck|check-?out)/.test(post)) continue;
+    if (type === "out" && /\bna (het )?$/.test(pre)) continue;
     // Vooruit kijken tot de eerstvolgende tijd, maar niet voorbij een sleutelwoord van het andere soort. Is de "zin" een
     // kort kopje ("Uitchecken" boven "Tot 11:00 uur"), dan ook de volgende zin
     const end = e - s < 30 && e < text.length ? sentenceBounds(text, e + 1)[1] : e;
@@ -546,8 +555,20 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     if (a && /^[./-]\d/.test(ahead.slice(a[0].length))) a = null;
     // "tussen 23:00 en 7:00" is een nachtregel, geen vertrektijd
     if (a && a[4] && Number(a[4]) < Number(a[1])) continue;
-    // "vanaf 14:00" is nooit een vertrektijd ("…verlaten. Vanaf 14:00 uur kunt u inchecken"); "vanaf 8:00 tot 12:00" wel de eindtijd
-    if (a && type === "out" && !a[4] && /(?:vanaf|from|after|ab)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
+    // "vertrek na 12 uur € 10" of "…wordt een extra nacht gerekend": dan is 12:00 wél de vertrektijd (later kost geld)
+    const lateFee = !!a && /\b(?:na|after)\s*\d/.test(a[0]) &&
+      /€|euro|extra|in rekening|toeslag|dagtarief|halve dag|nacht|meegerekend|berekend|in overleg/.test(ahead.slice(a[0].length, a[0].length + 70));
+    // "na 08.00 uur en voor 12:00 uur": de "voor"-tijd
+    if (a && type === "out" && !a[4] && !lateFee && /\b(?:na|after)\s*\d/.test(a[0])) {
+      const deadline = new RegExp(String.raw`^[^0-9]{0,25}?(?:voor|vóór|uiterlijk|tot|before|until)\s*${CLOCK}`).exec(ahead.slice(a[0].length));
+      if (deadline && (deadline[2] || deadline[3])) {
+        [h, m] = [deadline[1], deadline[2]];
+        timeEnd = i + k[0].length + a[0].length + deadline[0].length;
+      }
+      a = null;
+    }
+    // "vanaf 14:00" of "na 14:00" (zonder toeslag) is nooit een vertrektijd; "vanaf 8:00 tot 12:00" wel de eindtijd
+    if (a && type === "out" && !a[4] && !lateFee && /(?:vanaf|na|from|after|ab)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
     // "inchecken en uiterlijk 11.00 uur uitchecken": "uiterlijk" of "voor" hoort niet bij een aankomsttijd
     if (a && type === "in" && /(?:uiterlijk|voor|vóór|before|spätestens)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:uur|uhr|u\b|h\b)?\s*$/.test(a[0].replace(/\s*(?:en|tot|-|–|t\/m|und|and)\s*\d.*$/, ""))) a = null;
     // Staat er vlak vóór het woord al een tijd ("vóór 11.30 uur vrij te maken op de vertrekdag, de lodges vóór 10.00"),
@@ -560,7 +581,7 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       if (type === "out" && a[4] && (a[5] || a[6])) [h, m] = [a[4], a[5]];
       else [h, m] = [a[1], a[2]];
       timeEnd = i + k[0].length + a[0].length;
-    } else {
+    } else if (!h) {
       // "uiterlijk 11.00 uur uitchecken", "vanaf 13.00 uur inchecken"
       if (before && (before[2] || before[3])) [h, m] = [before[1], before[2]];
     }
