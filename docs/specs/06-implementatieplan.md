@@ -33,6 +33,8 @@
 | ✅ OSM-toelating, naam-fallback, strikte booleans | Agent | Opdracht Patrick, besluit B2 | `osm.ts` + tests | Toelating zoals voorheen (caravan_site, motorhome=yes/designated, campings zonder motorhome=no); booleans alleen uit een vaste lijst waarden | — |
 | ~~Strikte OSM-query live zetten~~ | — | Besluit B2 (16 oktober 2026): nee | Migratie verwijderd | — | — |
 | ✅ Optionele bezoekersaccounts + synchronisatie Mijn reis | Agent | Opdracht Patrick | `/inloggen`, `/account`, `user_trips` | E2E groen | — |
+| ✅ Inloggen met een code uit de mail (naast de link) | Agent | Opdracht Patrick | `/inloggen`, `verifyOtp` | E2E groen | — |
+| ⬜ Mailsjablonen met `{{ .Token }}` (Magic Link en Confirm signup) | Patrick | Handleiding stap 4 | Supabase-instellingen | Mail toont een code | SMTP |
 | ⬜ OAuth-sleutels Google, Apple, Facebook + SMTP | Patrick | Handleiding stap 4 | Supabase-instellingen | Inloggen met elke dienst werkt | Vercel-adres |
 | 🔄 `delete_my_account` met tweestaps-bevestiging | Agent + Patrick | Akkoord Patrick (12 okt) | UI klaar; SQL onderaan `migrations/20261012_user_accounts.sql` | Live na uitvoeren van de SQL (de MCP-bevestiging verliep) | — |
 | ✅ Foto-upload door bezoekers met moderatie en trust-score | Agent | Opdracht Patrick | Storage, `place_photos`, `/admin/fotos` | Foto verschijnt na goedkeuring; geen EXIF | Accounts |

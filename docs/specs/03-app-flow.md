@@ -35,7 +35,7 @@
 | Veelgestelde vragen | `/veelgestelde-vragen` | Antwoorden zoeken | `faq` |
 | Over ons, Reviews en ranking, Privacy, Cookies, Voorwaarden, Disclaimer, Toegankelijkheid | eigen routes | Uitleg en juridische informatie | `src/lib/company.ts`, statistieken |
 | Niet gevonden | elke onbekende route | "Verkeerd afgeslagen" met terugweg | — |
-| Inloggen | `/inloggen?next=<pad>` | Google, Apple, Facebook of inloglink per mail; daarna terug naar `next` | Supabase Auth |
+| Inloggen | `/inloggen?next=<pad>` | Google, Apple, Facebook of e-mail: je krijgt een mail met een code (invullen op dezelfde pagina) en een link; daarna terug naar `next`. Met e-mail maak je bij de eerste keer meteen een account aan | Supabase Auth |
 | Inlog-terugkomst | `/auth/callback` | Code inwisselen, door naar `next`; bij een fout een begrijpelijke melding | Supabase Auth |
 | Reisstatistieken | `/mijn-reis/statistieken` | Kerncijfers (km langs je stops, nachten, gemiddelde nachtprijs over bekende prijzen, aandeel nachten zonder stroom over bekende nachten) en staafdiagrammen (nachten per stroomsituatie, uitgaven per soort) met tabelweergave. Onbekend blijft onbekend | Mijn reis, uitgaven, `/api/route` |
 | Mijn camper | `/mijn-camper` | Maten, brandstof en verbruik invullen (werkt zonder account). Lengte zet bij zoeken het lengtefilter vanzelf aan (chip "Mijn camper"; wegtikken → `lengte=0`, blijft uit). Verbruik vult Mijn reis. Ingelogd: papieren uploaden, openen, weghalen | localStorage, `user_vehicles`, Storage `vehicle-docs` |
