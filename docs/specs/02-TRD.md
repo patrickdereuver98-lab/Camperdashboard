@@ -1,7 +1,7 @@
 # 2. Technical Requirements Document (TRD)
 
 > Doel: technische keuzes expliciet maken, zodat niemand (mens of AI) hoeft te gokken.
-> Bijgewerkt: 11 oktober 2026.
+> Bijgewerkt: 18 oktober 2026.
 
 ## Platforms
 
@@ -56,6 +56,7 @@
 | Websites van plekken | Prijzen, toeslagen, seizoen, voorzieningen, vertrektijden | `robots.txt` gerespecteerd, max. 7 pagina's per site, 9 s timeout, eigen user-agent `VrijStaanBot/1.0` | n.v.t. |
 | OpenRouteService (HeiGIT, Heidelberg) | Rijtijden en routes | Gratis sleutel met quotum | `ORS_API_KEY` (optioneel, nog niet ingesteld) |
 | routing.openstreetmap.de (FOSSGIS) | Rijtijden zonder ORS-sleutel | Publieke dienst, eerlijk gebruik | Geen sleutel |
+| PDOK Locatieserver (Kadaster) | Zoekvak "waar": adressen, postcodes, woonplaatsen en gemeenten (`suggest`, `lookup` op `api.pdok.nl/bzk/locatieserver/search/v3_1`) | Gratis overheidsdienst, eerlijk gebruik; 4 s time-out, cache per zoekterm (`cacheLife("hours")`, lookup `"days"`), 120 verzoeken per minuut per IP op `/api/locatie` | Geen sleutel. Alleen onze server praat met PDOK (`/api/locatie`), zonder IP of andere gegevens van de bezoeker; staat in de privacyverklaring. Bij een fout of offline build: de eigen lijst `nl_towns` |
 | OpenFreeMap | Kaarttegels | Gratis, geen sleutel | Geen; IP van bezoeker gaat naar hun server (staat in privacyverklaring) |
 | Google Maps | "Open in navigatie" (uitgaande link) | n.v.t. | Geen |
 | GitHub Actions | Dagelijkse ping tegen pauzeren (`.github/workflows/keepalive.yml`) | Gratis | Repository |
@@ -66,7 +67,7 @@
 Bezoeker (telefoon)
    │  HTTPS
    ▼
-Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/route, /api/distances)
+Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/locatie → PDOK, /api/route, /api/distances)
    │  REST + RPC (publishable key, Row Level Security)
    ▼
 Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (OSM)        [elke 3 min: volgende provincie]
