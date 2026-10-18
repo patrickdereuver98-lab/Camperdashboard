@@ -99,7 +99,7 @@ jobs:
 
       - name: Bewaren (30 dagen)
         if: steps.gate.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vrijstaan-backup-${{ env.STAMP }}
           path: vrijstaan-*.dump.gpg
