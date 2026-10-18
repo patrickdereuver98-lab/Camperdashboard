@@ -188,7 +188,7 @@ Automatische taken (pg_cron in Supabase):
 | Taak | Wanneer |
 |---|---|
 | `osm-regions` / `osm-collect` / `osm-staging` | Elke paar minuten; elke provincie wordt eens per 7 dagen ververst |
-| `scrape`, `scrape-2` … `scrape-10` | Tien workers, elk elke 15 seconden een batch van 6 websites op de achtergrond (`"background": true`: de functie antwoordt meteen, zodat pg_net niet op trage sites wacht; tot 240 per minuut), zolang er werk in de wachtrij staat (`skip locked`: nooit twee keer dezelfde plek) |
+| `scrape`, `scrape-2` … `scrape-10` | Tien workers, elk elke 15 seconden een batch van 8 websites op de achtergrond (`"background": true`: de functie antwoordt meteen, zodat pg_net niet op trage sites wacht; gemeten ±340 per minuut, een volledige run duurt ±10 minuten), zolang er werk in de wachtrij staat (`skip locked`: nooit twee keer dezelfde plek) |
 | `scrape-enqueue` | Elk half uur: nieuwe plekken met een website worden ingepland |
 | `scrape-refresh` | Elk half uur de 10 plekken die het langst (minstens 30 dagen) niet gelezen zijn; zo is elke website eens per maand opnieuw aan de beurt |
 
