@@ -18,6 +18,31 @@ Besluiten van 16 oktober: B2 nee (toelating uit OSM blijft zoals die was), B3 ge
 Wat nog openstaat, staat in [`plan.md`](../plan.md): §3 voor Patrick (B5 tot B8, B10, B11, B13), §4 voor de
 polishronde. Dit bord blijft hieronder staan als verslag van hoe het samenvoegen is gegaan.
 
+## 0b. Dataplan: bronnenlaag (18 oktober 2026, nacht)
+
+Patrick heeft een dataplan goedgekeurd om naast OSM en de eigen websites ook gemeentes, directories, fora en reviews
+te gebruiken (plan: Claude-doc "VrijStaan – Projectplan data-scraping camperplaatsen NL"). Fase 0 staat op branch
+`data/fase-0-bronnen` (PR naar `acceptatie`):
+
+- **Bronnenlaag** in een eigen schema `bron` (migratie `20261018233000_bronnen_en_claims.sql`): bronnenregister,
+  opgehaalde documenten, kandidaten, claims met letterlijk citaat, één beslisregel, werkitems met lease.
+  **Nog niet live**: `apply_migration` vraagt goedkeuring van Patrick.
+- **MCP-server** `vrijstaan-bronnen` (edge function `bronnen-mcp`), nog niet uitgerold.
+- **Regels:** [`bronnenbeleid.md`](bronnenbeleid.md). Twee losse vermeldingen uit reviews of fora gelden als
+  bevestigd (besluit Patrick); geen e-mail naar eigenaren (besluit Patrick).
+- **Startcijfers:** [`nulmeting-2026-10-18.md`](nulmeting-2026-10-18.md). Alle 3.605 plekken komen nu uit OSM.
+
+**Afspraken met de andere sessies**
+
+| Sessie | Raakvlak | Afspraak |
+|---|---|---|
+| Pipeline en datareview (`functions/pipeline`, `apply_scrape`, stap 1 tot 5) | Beide verzamelen vertrekregels | De bronnenlaag schrijft niets in `places`. Overnemen (W4.1) gebeurt pas na afstemming; `sources.beheer` en de eigen website blijven voorgaan. De `verify`-ronde van datareview stap 3 blijft bij de pipeline-sessie; de bronnenlaag doet nieuwe bronnen (stap 6 "opschalen" van de datareview) |
+| Zoekvak PDOK (PR #38) | Geocoderen van kandidaten | Hergebruiken via `lib/pdok.ts`, niet dupliceren |
+| Kernbelofte (`departure_check`) | Bevestigen | Claims maken geen bevestiging; dat blijft beheer of eigenaar |
+
+**Meedoen als sessie:** lees `bronnenbeleid.md`, pak werk met `select public.bron_lease_work('<jouw-naam>')` (of de
+MCP-tool `volgend_werk`) en lever via `bron_store_document` en `bron_submit_claims`. Zet je naam hieronder in §6.
+
 ## 1. Stand van zaken (ochtend 16 oktober)
 
 `main` staat nog op 12 oktober (`c68d087`). Sindsdien zijn zes agents parallel bezig geweest. Niets daarvan is
@@ -140,6 +165,8 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 | Overpass-ruis in `app_logs` (110 per week) | audit A6 | Audit-agent (#9) | Alleen `functions/pipeline/index.ts`; #4 en #5 raken die niet | ⬜ wacht op akkoord (live deploy) |
 | Tikdoelen ≥ 44 px in de lijst op `/doe-mee` | audit B3 | Agent van #10 of #5 (beide wijzigen `doe-mee/help-list.tsx`) | De sessie "Repository redesign" schreef het bestand en wil het oppakken als #10 en #5 het niet doen; dan pas na stap 3 | ⬜ |
 | Testtabellen `private.probe*` weg | specs open punt 10 | Patrick (SQL-editor) | Verwijderen vraagt bevestiging | ⬜ |
+| Dataplan Fase 0: bronnenlaag, bronnenbeleid, nulmeting, MCP-server | Dataplan (18 okt) | Sessie dataplan | Nieuw werk; raakt alleen nieuwe bestanden en schema `bron` | 🔄 branch `data/fase-0-bronnen`; migratie wacht op goedkeuring Patrick |
+| Dataplan Fase 1: ontdekken per provincie (48 werkitems in `bron.work_items`) | Dataplan | Elke sessie die wil, via `bron_lease_work` | Leases voorkomen dubbel werk | ⬜ na Fase 0 live |
 | Snapshot verversen naar 1.536 plekken | audit A5, #10 S5 en 0.5, #11 D3 | Sessie kernbelofte | `web/scripts/refresh-snapshot.mjs` en een wekelijkse workflow `snapshot.yml` (PR `data/snapshot` → `acceptatie`) | 🔄 PR #12 |
 
 ## 7. Werkafspraken voor alle agents

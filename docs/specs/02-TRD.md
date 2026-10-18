@@ -57,6 +57,8 @@
 | OpenRouteService (HeiGIT, Heidelberg) | Rijtijden en routes | Gratis sleutel met quotum | `ORS_API_KEY` (optioneel, nog niet ingesteld) |
 | routing.openstreetmap.de (FOSSGIS) | Rijtijden zonder ORS-sleutel | Publieke dienst, eerlijk gebruik | Geen sleutel |
 | PDOK Locatieserver (Kadaster) | Zoekvak "waar": adressen, postcodes, woonplaatsen en gemeenten (`suggest`, `lookup` op `api.pdok.nl/bzk/locatieserver/search/v3_1`) | Gratis overheidsdienst, eerlijk gebruik; 4 s time-out, cache per zoekterm (`cacheLife("hours")`, lookup `"days"`), 120 verzoeken per minuut per IP op `/api/locatie` | Geen sleutel. Alleen onze server praat met PDOK (`/api/locatie`), zonder IP of andere gegevens van de bezoeker; staat in de privacyverklaring. Bij een fout of offline build: de eigen lijst `nl_towns` |
+| Openbare bronnen: gemeentesites, directories (Campercontact, park4night, ACSI, ANWB, Camping.info), fora, reviewsites | Tweede bron voor bestaan en feiten van plekken (dataplan, [bronnenbeleid](../bronnenbeleid.md)) | `robots.txt` gerespecteerd, wachttijd per host 5–20 s (`bron.sources.min_delay_s`), 15 s timeout, max. 2 MB per pagina, alleen openbare hostnamen, user-agent `VrijStaanBot/1.0`; geen inlogpagina's; Facebook, Instagram en Google Maps geblokkeerd | n.v.t. |
+| MCP-server `vrijstaan-bronnen` (edge function `bronnen-mcp`) | Gedeelde ingang voor sessies die bronnen lezen: werk pakken, pagina's ophalen, claims en kandidaten insturen | Zonder JWT; eigen sleutel `BRONNEN_MCP_KEY` (edge-secret), vergelijking in constante tijd | Account van Patrick |
 | OpenFreeMap | Kaarttegels | Gratis, geen sleutel | Geen; IP van bezoeker gaat naar hun server (staat in privacyverklaring) |
 | Google Maps | "Open in navigatie" (uitgaande link) | n.v.t. | Geen |
 | GitHub Actions | Dagelijkse ping tegen pauzeren (`.github/workflows/keepalive.yml`) | Gratis | Repository |
@@ -74,7 +76,10 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
    │                              └──────► Edge Function "pipeline"          [elke 15 s: 10 × 8 websites, achtergrond]
    │                                         ├─ leest websites (robots.txt)
    │                                         └─ schrijft via apply_scrape / ingest_osm
-   └── Beheer (/admin) via Supabase Auth + is_admin()
+   ├── Beheer (/admin) via Supabase Auth + is_admin()
+   └── Schema bron (bronnenlaag) ◄── Edge Function "bronnen-mcp" ◄── sessies via MCP
+                                       ├─ haalt openbare pagina's op (robots.txt, wachttijd per host)
+                                       └─ schrijft via bron_store_document / bron_submit_claims (citaat gecontroleerd)
 ```
 
 **Cron-taken in de database:**
@@ -87,6 +92,7 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `scrape`, `scrape-2` … `scrape-10` | elke 15 s | Tien workers, elk 8 websites op de achtergrond (`EdgeRuntime.waitUntil`), zolang er werk in `private.scrape_queue` staat |
 | `scrape-enqueue` | elk half uur | Nieuwe plekken met een website inplannen |
 | `scrape-refresh` | elk half uur (:07 en :37) | De 10 plekken die het langst en minstens 30 dagen niet gelezen zijn opnieuw inplannen |
+| `bron-opschonen` | dagelijks 04:43 | Opgehaalde tekst ouder dan 30 dagen terugbrengen tot de citaten; oude wachttijden en vergeten leases opruimen |
 | `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd in de SQL-editor (bevat ook tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log) |
 
 **Volgorde van gezag bij gegevens:** beheer (`sources.beheer`) > eigen website (`sources.website_fields`) > OSM.
