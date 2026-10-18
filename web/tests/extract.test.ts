@@ -210,3 +210,49 @@ test("'vanaf 14:00 uur inchecken en uitchecken is om 12:00 uur' is geen kopje", 
   assert.equal(page("<p>Als je een kampeerplek hebt gereserveerd, kun je vanaf 14:00 uur inchecken en uitchecken is om 12:00 uur.</p>").checkout_until, "12:00");
   assert.equal(page("<p>Bij vertrek na 12:00 ( In overleg )</p>").checkout_until, "12:00");
 });
+
+test("veldensteekproef: honden uit de tarieflijst, 'mits aangelijnd', maximaal 1 hond; 'geen honden' gaat voor", () => {
+  assert.equal(page("<p>Kampeerplaats € 9,50 Elektriciteit € 2,00 Persoon € 4,50 Hond € 1,00</p>").dogs, true);
+  assert.equal(page("<p>Huisdier: € 1,50 Per overnachting</p>").dogs, true);
+  assert.equal(page("<p>€ 2,00 per hond</p>").dogs, true);
+  assert.equal(page("<p>Hond Gratis Auto Gratis</p>").dogs, true);
+  assert.equal(page("<p>Ja, huisdieren zijn -mits aangelijnd- op het terrein toegestaan.</p>").dogs, true);
+  assert.equal(page("<p>Maximaal 1 hond per plaats.</p>").dogs, true);
+  assert.equal(page("<p>Honden &amp; gezinnen welkom</p>").dogs, true);
+  assert.equal(page("<p>Geen honden toegestaan. Extra persoon € 4,50.</p>").dogs, false);
+});
+
+test("veldensteekproef: water op de plaats, watertap, water inbegrepen", () => {
+  assert.equal(page("<p>Water op de plaats of binnen 50 meter.</p>").water, true);
+  assert.equal(page("<p>Comfortplaats met prive watertap.</p>").water, true);
+  assert.equal(page("<p>Electra Inbegrepen in de prijs. Water inbegrepen in de prijs.</p>").water, true);
+  assert.equal(page("<p>Ontdek het gebied vanaf het water.</p>").water, undefined);
+});
+
+test("veldensteekproef: reserveren", () => {
+  assert.equal(page("<p>Reserveer je plek!</p>").reservation, true);
+  assert.equal(page("<p>Zoek &amp; Boek</p>").reservation, true);
+  assert.equal(page("<p>Reserveren kan telefonisch, via WhatsApp of via e-mail.</p>").reservation, true);
+  assert.equal(page("<p>Wilt u een plek reserveren? Dat kan maar is niet noodzakelijk.</p>").reservation, false);
+});
+
+test("veldensteekproef: aantal plekken als losse teller en 'kampeerplekken'", () => {
+  assert.equal(page("<div>25</div><div>Kampeerplaatsen</div><div>5</div><div>Speeltoestellen</div>").capacity, 25);
+  assert.equal(page("<p>Een rustige camping met 10 kampeerplekken.</p>").capacity, 10);
+});
+
+test("veldensteekproef: seizoen met weekdag en jaartal", () => {
+  const r = page("<p>Wij zijn geopend! De camping is geopend van woensdag 25 maart 2026 tot donderdag 15 oktober 2026.</p>");
+  assert.equal(r.season, "25 maart – 15 oktober");
+  assert.equal(r.open_all_year, false);
+});
+
+test("veldensteekproef: prijzen in tarieftabellen", () => {
+  assert.equal(
+    page("<p>Tarieven minicamping Caravan/tent/camper, inclusief 2 personen, 1 auto, elec (6 amp), wifi, warm water voor douche, en afwas, gebruik koelkast en diepvries, per nacht: Hoogseizoen € 26,50 Voor– en naseizoen* € 23,50</p>").price_eur,
+    26.5,
+  );
+  assert.equal(page("<p>Per persoon per nacht € 6,90 Per caravan per nacht € 12,50</p>").price_eur, 12.5);
+  assert.equal(page("<p>Een overnachting op de camperplaats kost 7,50 euro.</p>").price_eur, 7.5);
+  assert.equal(page("<p>Extra auto per nacht € 2,00</p>").price_eur, undefined);
+});

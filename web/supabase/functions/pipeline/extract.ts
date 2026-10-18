@@ -21,6 +21,7 @@ const MONTH_ALIASES: Record<string, number> = {
   nov: 10, november: 10,
   dec: 11, december: 11, dezember: 11,
 };
+const WEEKDAY = "(?:maan|dins|woens|donder|vrij|zater|zon)dag";
 const MONTH_RE = Object.keys(MONTH_ALIASES).sort((a, b) => b.length - a.length).join("|");
 
 function toText(html: string): string {
@@ -178,9 +179,15 @@ export function extract(pages: string[], base: URL) {
   const out: Record<string, unknown> = {};
 
   // ── JSON-LD ──────────────────────────────────────────────────────────────
-  for (const item of jsonLd(pages[0])) {
+  // Homepage: alle soorten bedrijf of plek. Subpagina's (contact, tarieven): alleen de camping of het bedrijf zelf,
+  // niet een losse accommodatie of hotelkamer die daar beschreven staat.
+  const ld = [
+    ...jsonLd(pages[0]).map((item) => ({ item, home: true })),
+    ...pages.slice(1).flatMap((p) => jsonLd(p).map((item) => ({ item, home: false }))),
+  ];
+  for (const { item, home } of ld) {
     const type = String(item["@type"] ?? "");
-    if (!/Campground|Lodging|LocalBusiness|Tourist|Organization|Place|RVPark|Hotel/i.test(type)) continue;
+    if (!(home ? /Campground|Lodging|LocalBusiness|Tourist|Organization|Place|RVPark|Hotel/i : /Campground|RVPark|LocalBusiness|Organization/i).test(type)) continue;
     if (typeof item.telephone === "string") out.phone ??= item.telephone;
     if (typeof item.email === "string") out.email ??= item.email.replace(/^mailto:/, "");
     const img = Array.isArray(item.image) ? item.image[0] : item.image;
@@ -251,22 +258,31 @@ export function extract(pages: string[], base: URL) {
     new RegExp(`(?:camperplaats|camperplek|campertarief|camper|kampeerplaats|standplaats|staanplaats|stellplatz)[^€.]{0,40}€\\s?${AMOUNT}`, "g"),
     new RegExp(`(?:overnachting|overnachten|nachttarief|tarief per nacht|prijs per nacht|kosten per nacht|camperstandplaats)[^€.]{0,30}€\\s?${AMOUNT}`, "g"),
     // Eenheid vóór het bedrag: "tent, caravan of camper, 2 personen, per nacht* € 22,00"
-    new RegExp(`(?:camper|caravan|kampeerplaats|standplaats|staanplaats)[^€.]{0,70}per (?:nacht|dag)\\*?\\s*€\\s?${AMOUNT}`, "g"),
+    // ook met wat er inbegrepen is en een seizoen ertussen: "camper, inclusief 2 personen, …, per nacht: hoogseizoen € 26,50"
+    new RegExp(`(?:camper|caravan|kampeerplaats|standplaats|staanplaats)[^€.]{0,160}per (?:nacht|dag)\\*?:?\\s*(?:[a-z–/ -]{0,30}?)?€\\s?${AMOUNT}`, "g"),
+    // "per caravan per nacht € 18,50"
+    new RegExp(`per (?:camper|caravan|kampeerplaats|standplaats|staanplaats|camperplaats|kampeermiddel)(?: per (?:nacht|dag|overnachting))?\\s*:?\\s*€\\s?${AMOUNT}`, "g"),
+    // "een overnachting kost 7,50 euro"
+    new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*€\\s?${AMOUNT}`, "g"),
+    new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*${AMOUNT}\\s*euro`, "g"),
   ])
     for (const m of text.matchAll(re)) {
       // Geen weekprijzen, prijzen per persoon/uur/kWh of losse toeslagen
       const after = text.slice(m.index! + m[0].length, m.index! + m[0].length + 30);
-      if (/week|maand|seizoen|jaar|monat|saison|month|year/.test(m[0])) continue;
+      // Prijzen per week, maand of seizoen (seizoenplaatsen) tellen niet; "hoogseizoen € 26,50 per nacht" wel
+      if (/(?:per|p\.?|\/|pro)\s*(?:week|maand|seizoen|jaar|monat|saison|month|year)|(?:week|maand|seizoens?|jaar)(?:prijs|tarief|plaats|plaatsen)|seizoensplaats|jaarplaats|monat|month|year/.test(m[0])) continue;
       if (/^\s*(?:euro\s*)?(?:per|p\.?|\/|pro)\s*(?:persoon|pers|p\.?p|person|uur|hour|stunde|kwh|week|maand|hond|dog|kind)/.test(after)) continue;
-      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test(m[0])) continue;
+      // Wat er inbegrepen is ("inclusief 2 personen, 1 auto, elektra, douche") is geen toeslag
+      const included = /\b(?:incl\.?|inclusief|inkl\.?)[^€]{0,160}/g;
+      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test(m[0].replace(included, " "))) continue;
       // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
       const before = text.slice(Math.max(0, m.index! - 50), m.index!);
       const sentence = before.slice(before.lastIndexOf(".") + 1);
-      if (SURCHARGE.test(sentence + m[0])) continue;
+      if (SURCHARGE.test((sentence + m[0]).replace(included, " "))) continue;
       prices.push({ amount: money(m[1]), pitch: PITCH.test(sentence + m[0]) });
     }
   // schema.org priceRange alleen als er expliciet een nachtprijs staat ("€ 22 per nacht")
-  for (const item of jsonLd(pages[0])) {
+  for (const { item } of ld) {
     const range = typeof item.priceRange === "string" ? item.priceRange.toLowerCase() : "";
     const m = /€\s?(\d{1,2}(?:[.,]\d{2})?)\s*(?:,-\s*)?(?:per|p\.?|\/)\s*(?:nacht|night)/.exec(range);
     if (m) prices.push({ amount: money(m[1]), pitch: true });
@@ -309,7 +325,7 @@ export function extract(pages: string[], base: URL) {
     "water",
     flag(
       text,
-      /(drinkwater|water (tappen|innemen|bijvullen|vullen|tanken)|watertappunt|waterpunt|tappunt|waterkraan|watervoorziening|water en stroom|stroom en water|water \| ja|water: ja|vers water|schoon water|frischwasser|fresh water|water supply)/,
+      /(drinkwater|water (tappen|innemen|bijvullen|vullen|tanken)|watertappunt|waterpunt|tappunt|waterkraan|watervoorziening|water en stroom|stroom en water|water \| ja|water: ja|vers water|schoon water|frischwasser|fresh water|water supply|water op (de|elke|iedere|uw|je) (plaats|plek|kampeerplaats|staanplaats)|watertap|water(aansluiting|aftappunt|tappunten)|stromend water|kraanwater|water (is )?(inbegrepen|inclusief)|gebruik van (koud )?water)/,
       /geen (drink)?water(punt|voorziening)?\b|kein (frisch)?wasser/,
     ),
   );
@@ -336,18 +352,18 @@ export function extract(pages: string[], base: URL) {
     "dogs",
     flag(
       text,
-      /(honden (zijn |is )?(van harte |ook )?(welkom|toegestaan|aangelijnd)|hond(en)? (is |zijn )?(mag|mogen|welkom|toegestaan)|huisdieren (zijn )?(welkom|toegestaan)|hond(en)?vriendelijk|hunde (sind )?(erlaubt|willkommen)|dogs (are )?(welcome|allowed)|pets (are )?(welcome|allowed)|(honden|huisdieren|hond)\s*[:|]\s*(ja|toegestaan|welkom|mag)|honden mogen mee|hond mag mee)/,
+      /(honden (zijn |is )?(van harte |ook )?(welkom|toegestaan|aangelijnd)|hond(en)? (is |zijn )?(mag|mogen|welkom|toegestaan)|huisdieren (zijn )?(welkom|toegestaan)|hond(en)?vriendelijk|hunde (sind )?(erlaubt|willkommen)|dogs (are )?(welcome|allowed)|pets (are )?(welcome|allowed)|(honden|huisdieren|hond)\s*[:|]\s*(ja|toegestaan|welkom|mag)|honden mogen mee|hond mag mee|huisdieren zijn [^.]{0,45}toegestaan|honden (en|&) [a-z]+ (zijn )?welkom|maximaal \d+ (hond|honden|huisdier|huisdieren)\b|(?:^|[\s|:(])(hond|honden|huisdier|huisdieren|hond of kat|per hond|per huisdier)\s*:?\s*(per (nacht|overnachting|dag)\s*)?(€|eur\b|\d{1,2}[,.]\d{2}\b|gratis)|€\s?\d{1,2}(?:[,.]\d{2})?\s*(?:,-\s*)?(per (nacht|dag|overnachting)\s*)?per (hond|huisdier))/,
       /(geen (honden|huisdieren)|honden (zijn )?niet (toegestaan|welkom)|huisdieren (zijn )?niet (toegestaan|welkom)|verboden voor honden|hundeverbot|keine hunde|no dogs|no pets|(honden|huisdieren)\s*[:|]\s*(nee|niet toegestaan|verboden))/,
     ),
   );
 
   // ── Aantal plekken ───────────────────────────────────────────────────────
   const cap =
-    /(\d{1,3})\s*(?:ruime\s*|verharde\s*|grote\s*)?(?:camper(?:plaatsen|plekken|staanplaatsen)|plaatsen voor campers|plekken voor (?:campers|kampeerauto'?s)|stellpl(?:ä|a)tze)/.exec(text) ??
-    /(\d{1,3})\s*(?:ruime\s*|toeristische\s*|grote\s*)?(?:kampeerplaatsen|standplaatsen|staanplaatsen|toeristische plaatsen)/.exec(text);
+    /(\d{1,3})\s*(?:\.\s*)?(?:ruime\s*|verharde\s*|grote\s*)?(?:camper(?:plaatsen|plekken|staanplaatsen)|plaatsen voor campers|plekken voor (?:campers|kampeerauto'?s)|stellpl(?:ä|a)tze)/.exec(text) ??
+    /(\d{1,3})\s*(?:\.\s*)?(?:ruime\s*|toeristische\s*|grote\s*)?(?:kampeerplaatsen|kampeerplekken|standplaatsen|staanplaatsen|staanplekken|toeristische plaatsen)/.exec(text);
   const room = /(?:ruimte|plaats|plek|plekken|plaatsen) voor (?:maximaal |max\.? |ca\.? )?(\d{1,3}) (?:campers|kampeerauto'?s|motorhomes|wohnmobile)/.exec(text);
   const n = Number((cap ?? room)?.[1]);
-  if (n > 0 && n <= 600) out.capacity = n;
+  if (n > 1 && n <= 600) out.capacity = n;
 
   const len = /max(?:imaal|imale|\.)?\s*(?:lengte\s*)?(?:van\s*)?(?:de camper\s*)?(\d{1,2}(?:[.,]\d)?)\s*(?:m|meter)\b/.exec(text);
   if (len) {
@@ -368,7 +384,8 @@ export function extract(pages: string[], base: URL) {
   const allYear =
     /(het )?(hele|gehele) jaar (door )?(geopend|open)|(geopend|open) (het )?(hele|gehele) jaar|jaarrond (geopend|open)|365 dagen (per|per het) jaar|ganzjährig (geöffnet)?|open all year|year-round/g;
   const ranged = new RegExp(
-    `(?:geopend|open|seizoen|kampeerseizoen|openingsperiode|openingstijden|saison|season)[^.]{0,25}?(?:van(?:af)?\\s+)?(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\.?\\s*(?:t/m|tot en met|tot|-|–|bis|to|until)\\s*(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\b`,
+    // "geopend van woensdag 25 maart 2026 tot donderdag 15 oktober 2026": weekdag en jaartal mogen erbij staan
+    `(?:geopend|open|seizoen|kampeerseizoen|openingsperiode|openingstijden|saison|season)[^.]{0,25}?(?:van(?:af)?\\s+)?(?:${WEEKDAY}\\s+)?(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\.?(?:\\s+\\d{4})?\\s*(?:t/m|tot en met|tot|-|–|bis|to|until)\\s*(?:${WEEKDAY}\\s+)?(?:(\\d{1,2})\\s+)?(${MONTH_RE})\\b`,
     "g",
   );
   // Numeriek: "01-04 t/m 31-10"
@@ -426,8 +443,8 @@ export function extract(pages: string[], base: URL) {
   // ── Reserveren ───────────────────────────────────────────────────────────
   const res = flag(
     text,
-    /(reserveer (nu|direct|online)|reserveren (is )?(mogelijk|gewenst|verplicht|aanbevolen|noodzakelijk)|online (boeken|reserveren)|boek (nu|direct)|reservierung (möglich|erforderlich)|book (now|online))/,
-    /(reserveren (is )?niet (mogelijk|nodig)|geen reservering(en)?|wie het eerst komt|keine reservierung|no reservations?)/,
+    /(reserveer (nu|direct|online)|reserveren (is )?(mogelijk|gewenst|verplicht|aanbevolen|noodzakelijk)|online (boeken|reserveren)|boek (nu|direct)|reservierung (möglich|erforderlich)|book (now|online)|reserveer (je|uw|jouw) (plek|plaats|kampeerplaats|camperplaats|staanplaats|camperplek)|zoek (&|en) boek|boek (je|uw|jouw) (plek|plaats|kampeerplaats|vakantie|verblijf)|reserveren kan (telefonisch|via|online|per)|(je|u) kunt (online |telefonisch )?reserveren)/,
+    /(reserveren (is )?niet (mogelijk|nodig|noodzakelijk|verplicht)|kan maar is niet noodzakelijk|geen reservering(en)?|wie het eerst komt|keine reservierung|no reservations?)/,
   );
   if (res !== undefined) out.reservation = res;
 
