@@ -3,7 +3,18 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { authErrorMessage, PROVIDERS, signInWithEmail, signInWithProvider, safeNext, useSession, type OAuthProvider } from "@/lib/auth";
+import {
+  authErrorMessage,
+  cleanCode,
+  codeErrorMessage,
+  PROVIDERS,
+  signInWithEmail,
+  signInWithProvider,
+  safeNext,
+  useSession,
+  verifyEmailCode,
+  type OAuthProvider,
+} from "@/lib/auth";
 import { Icon } from "@/components/icons";
 import { field } from "../contact/contact-form";
 
@@ -33,9 +44,10 @@ export function LoginForm() {
   const router = useRouter();
   const next = safeNext(params.get("next"));
   const { session } = useSession();
-  const [busy, setBusy] = useState<OAuthProvider | "email" | null>(null);
+  const [busy, setBusy] = useState<OAuthProvider | "email" | "code" | null>(null);
   const [err, setErr] = useState<string | null>(params.get("fout") ? authErrorMessage(params.get("fout")!) : null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
   // Al ingelogd: meteen door
   useEffect(() => {
@@ -68,19 +80,89 @@ export function LoginForm() {
     }
   }
 
+  async function verify(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!sentTo || code.length < 6) return;
+    setBusy("code");
+    setErr(null);
+    try {
+      await verifyEmailCode(sentTo, code);
+      router.replace(next);
+    } catch (e) {
+      setErr(codeErrorMessage((e as Error).message));
+      setBusy(null);
+    }
+  }
+
+  async function resend() {
+    if (!sentTo) return;
+    setBusy("email");
+    setErr(null);
+    try {
+      await signInWithEmail(sentTo, next);
+      setCode("");
+    } catch (e) {
+      setErr(authErrorMessage((e as Error).message));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (sentTo)
     return (
-      <div role="status" className="mt-8 rounded-2xl bg-forest-tint p-6">
-        <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
-          <Icon name="mail" size={24} /> Check je mail
-        </p>
-        <p className="mt-2 text-ink-2">
-          We hebben een inloglink gestuurd naar <strong>{sentTo}</strong>. Open de link op dit apparaat om in te loggen.
-          Geen mail? Kijk ook in je spammap.
-        </p>
-        <button onClick={() => setSentTo(null)} className="mt-4 font-semibold text-forest underline">
-          Ander e-mailadres gebruiken
-        </button>
+      <div className="mt-8">
+        <div role="status" className="rounded-2xl bg-forest-tint p-6">
+          <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
+            <Icon name="mail" size={24} /> Check je mail
+          </p>
+          <p className="mt-2 text-ink-2">
+            We hebben een inlogcode gestuurd naar <strong>{sentTo}</strong>. Vul de code hieronder in. Je kunt ook op de
+            link in de mail tikken. Geen mail? Kijk ook in je spammap.
+          </p>
+        </div>
+
+        <form onSubmit={verify} className="mt-6 space-y-3">
+          <label className="block">
+            <span className="mb-1.5 block font-semibold">Code uit de mail</span>
+            <input
+              name="code"
+              value={code}
+              onChange={(e) => setCode(cleanCode(e.target.value))}
+              required
+              autoFocus
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              pattern="[0-9]{6,10}"
+              maxLength={10}
+              className={`${field} text-center font-mono text-2xl tracking-[0.3em]`}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={busy !== null || code.length < 6}
+            className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60"
+          >
+            {busy === "code" ? "Controleren…" : "Inloggen"}
+          </button>
+        </form>
+
+        {err && <p role="alert" className="mt-4 rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
+
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+          <button onClick={resend} disabled={busy !== null} className="min-h-11 font-semibold text-forest underline disabled:opacity-60">
+            {busy === "email" ? "Versturen…" : "Nieuwe code sturen"}
+          </button>
+          <button
+            onClick={() => {
+              setSentTo(null);
+              setCode("");
+              setErr(null);
+            }}
+            className="min-h-11 font-semibold text-forest underline"
+          >
+            Ander e-mailadres gebruiken
+          </button>
+        </div>
       </div>
     );
 
@@ -111,7 +193,7 @@ export function LoginForm() {
           <input name="email" type="email" required autoComplete="email" inputMode="email" className={field} />
         </label>
         <button type="submit" disabled={busy !== null} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
-          {busy === "email" ? "Versturen…" : "Stuur mij een inloglink"}
+          {busy === "email" ? "Versturen…" : "Stuur mij een inlogcode"}
         </button>
       </form>
 

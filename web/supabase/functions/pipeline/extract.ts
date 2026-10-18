@@ -359,8 +359,10 @@ export function extract(pages: string[], base: URL) {
 
   // ── Aantal plekken ───────────────────────────────────────────────────────
   const cap =
-    /(\d{1,3})\s*(?:\.\s*)?(?:ruime\s*|verharde\s*|grote\s*)?(?:camper(?:plaatsen|plekken|staanplaatsen)|plaatsen voor campers|plekken voor (?:campers|kampeerauto'?s)|stellpl(?:ä|a)tze)/.exec(text) ??
-    /(\d{1,3})\s*(?:\.\s*)?(?:ruime\s*|toeristische\s*|grote\s*)?(?:kampeerplaatsen|kampeerplekken|standplaatsen|staanplaatsen|staanplekken|toeristische plaatsen)/.exec(text);
+    /(\d{1,3})\s*(?:ruime\s*|verharde\s*|grote\s*)?(?:camper(?:plaatsen|plekken|staanplaatsen)|plaatsen voor campers|plekken voor (?:campers|kampeerauto'?s)|stellpl(?:ä|a)tze)/.exec(text) ??
+    /(\d{1,3})\s*(?:ruime\s*|toeristische\s*|grote\s*)?(?:kampeerplaatsen|kampeerplekken|standplaatsen|staanplaatsen|staanplekken|toeristische plaatsen)/.exec(text) ??
+    // Teller in losse blokken ("25" boven "Kampeerplaatsen"): getal en woord elk een eigen blok, minstens 10
+    /(?:^|\.)\s*(\d{2,3})\s*\.\s*(?:kampeerplaatsen|kampeerplekken|camperplaatsen|camperplekken|standplaatsen|staanplaatsen)\s*(?:\.|$)/.exec(text);
   const room = /(?:ruimte|plaats|plek|plekken|plaatsen) voor (?:maximaal |max\.? |ca\.? )?(\d{1,3}) (?:campers|kampeerauto'?s|motorhomes|wohnmobile)/.exec(text);
   const n = Number((cap ?? room)?.[1]);
   if (n > 1 && n <= 600) out.capacity = n;
@@ -393,8 +395,10 @@ export function extract(pages: string[], base: URL) {
   type Hit = { index: number; allYear?: true; season?: RegExpExecArray };
   const hits: Hit[] = [];
   for (const m of text.matchAll(allYear)) if (aboutCamping(m.index!, m[0])) hits.push({ index: m.index!, allYear: true });
-  for (const m of text.matchAll(ranged)) if (aboutCamping(m.index!, m[0])) hits.push({ index: m.index!, season: m as RegExpExecArray });
-  for (const m of text.matchAll(numeric)) if (aboutCamping(m.index!, m[0])) hits.push({ index: m.index!, season: m as RegExpExecArray });
+  // "openingstijden: gesloten van 1 november tot 19 maart" is de winterpauze, niet het seizoen
+  const closed = (m: RegExpMatchArray) => /gesloten|dicht|closed|geschlossen|winterstop|winterpauze/.test(m[0]);
+  for (const m of text.matchAll(ranged)) if (aboutCamping(m.index!, m[0]) && !closed(m)) hits.push({ index: m.index!, season: m as RegExpExecArray });
+  for (const m of text.matchAll(numeric)) if (aboutCamping(m.index!, m[0]) && !closed(m)) hits.push({ index: m.index!, season: m as RegExpExecArray });
   hits.sort((a, b) => a.index - b.index);
   for (const hit of hits) {
     if (hit.allYear) {

@@ -65,7 +65,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 - Advertenties, betaalde vermeldingen en tracking van derden
 - Native app in de App Store en Play Store (de webapp is installeerbaar als PWA)
 - ~~Accounts voor bezoekers~~ **Gewijzigd (12 oktober 2026):** een account is optioneel (Google, Apple, Facebook of
-  inloglink) om Mijn reis te synchroniseren en foto's toe te voegen. Zonder account werkt alles zoals voorheen.
+  inlogcode of -link per mail) om Mijn reis te synchroniseren en foto's toe te voegen. Zonder account werkt alles zoals voorheen.
 
 ## User stories
 
