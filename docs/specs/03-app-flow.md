@@ -1,7 +1,7 @@
 # 3. App Flow
 
 > Doel: elk scherm, elk pad en het gevolg van elke tik vastleggen.
-> Bijgewerkt: 12 oktober 2026. Routes verwijzen naar `web/src/app/`.
+> Bijgewerkt: 18 oktober 2026. Routes verwijzen naar `web/src/app/`.
 
 ## Ingangen
 
@@ -19,7 +19,7 @@
 | Scherm | Route | Doel | Benodigde data |
 |---|---|---|---|
 | Start | `/` | Zoekkaart (bestemming + vertrekkeuze → `/zoeken`, `/zonder-vertrektijd` of `/uitslapers`), drie vertrekkaarten, populaire bestemmingen, uitgelichte plekken, voorzieningen (nu open, stroom, lozen, honden), uitleg in drie stappen | Statistieken, alle plekken (voor de bestemmingsfoto's), uitgelichte samenvattingen |
-| Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`) |
+| Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`), adressen en postcodes (`/api/locatie`, PDOK) |
 | Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, vertrekregel vrij of per 24 uur, allemaal in groen en gelijkwaardig: een regel uit een bron (website, AI-lezer met letterlijk citaat, OSM) is genoeg, zonder label "nog niet bevestigd" (besluit eigenaar 18 oktober 2026). Door beheer of de eigenaar bevestigd (Beheer → Vertrektijden) is alleen de tweede sorteersleutel: bij gelijke prijs, afstand of score staat die eerst. Met voorwaarde of afgewezen staat bij Overige | Idem |
 | Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
 | Overige plekken | `/overige-plekken` | Zelfde zoekscherm, vertrek vóór 12:00 of onbekend, met keuze: 11:00 tot 12:00 / vóór 11:00 / onbekend | Idem |
@@ -47,7 +47,7 @@
 
 ## Hoofdroute: vannacht een plek vinden
 
-`Start` → typ plaats of streek (suggesties tijdens typen) → kies bij **Vertrekken** eventueel "Zonder vertrektijd" → **Zoeken** → `Zoeken` (lijst, gesorteerd op Aanbevolen) →
+`Start` → typ plaats, streek, adres of postcode (suggesties tijdens typen) → kies bij **Vertrekken** eventueel "Zonder vertrektijd" → **Zoeken** → `Zoeken` (lijst, gesorteerd op Aanbevolen) →
 tik het tabblad **Zonder vertrektijd** (gaat naar `/zonder-vertrektijd` met dezelfde zoekopdracht) → tik een plek → `Plek` (beslispaneel) →
 **Route** (opent navigatie) of **Bellen** → **succes:** camperaar rijdt naar de plek.
 
@@ -71,7 +71,7 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 
 | Actie | Trigger | Controle | Laden | Succes | Fout | Volgende |
 |---|---|---|---|---|---|---|
-| Zoeken | Zoek-knop of Enter | Plaats, streek, eiland of provincie gevonden (vergeeft typfouten en aliassen) | Kaarten als skelet | Resultaten met titel "n plekken in <plaats>" | "Geen plaats, streek of plek gevonden" onder het zoekveld | `Zoeken` |
+| Zoeken | Zoek-knop of Enter | Plaats, streek, eiland of provincie uit de eigen lijst (vergeeft typfouten en aliassen), anders adres, postcode, woonplaats of gemeente van PDOK | Kaarten als skelet; "Adres opzoeken…" als PDOK nog moet antwoorden | Resultaten met titel "n plekken in <plaats>" | "Geen plaats, adres of plek gevonden" onder het zoekveld | `Zoeken` |
 | Filter toepassen | **Toon n plekken** in de sheet | Knop uit bij 0 resultaten, met voorstel welke filter weg kan | Live teller | Chips boven de lijst, filters in de URL | — | `Zoeken` |
 | Lijst/kaart wisselen | **Kaart** / **Lijst** in de rij met Filters en Sorteren (telefoon en tablet) | — | "Kaart laden…" | Kaart met clusters | "De kaart kon niet worden geladen" + **Toon lijst** | `Zoeken` |
 | Locatie gebruiken | **Gebruik mijn locatie** | Browsertoestemming | "Locatie bepalen…" | Lijst; rijtijden volgen | Geweigerd: uitleg + verwijzing naar zoeken; onbekend: "Probeer opnieuw" | `Dichtbij` |
@@ -82,6 +82,24 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 | Fout melden | **Versturen** in de sheet | Onderwerp en toelichting (min. 5 tekens) verplicht; e-mail geldig als ingevuld; honeypotveld | Knop uit | "Bedankt voor je melding" | Foutmelding in de sheet | Zelfde scherm |
 | Melding (DSA) | **Melding versturen** | Reden, URL, toelichting, naam, e-mail, verklaring te goeder trouw | Knop uit | Bevestiging met persoonlijke link | Foutmelding | `/support/<token>` |
 | Cookiekeuze | **Statistieken toestaan**, **Alleen noodzakelijk** of **Zelf instellen** | — | — | Banner weg, keuze opgeslagen en gelogd | — | Zelfde scherm |
+
+## Zoekvak "waar"
+
+Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijltjestoetsen, Enter en Escape).
+
+- Leeg veld: **Dichtbij mijn locatie** en vier provincies.
+- Tijdens typen, in deze volgorde: Dichtbij, provincies, streken en eilanden, woonplaatsen uit de eigen lijst
+  (`nl_towns` plus plaatsen van plekken, alleen met plekken binnen 25 km), daarna na 250 ms stilte maximaal 6 adressen,
+  postcodes, gemeenten en woonplaatsen van PDOK die er nog niet staan (met "n plekken binnen 25 km"), en plekken op naam.
+- De browser vraagt PDOK nooit zelf: `/api/locatie?q=` (2 tot 80 tekens, alleen letters, cijfers en . , ' - /) gaat via
+  onze server. Antwoordt PDOK niet binnen 4 s of met een fout, dan geeft de route woonplaatsen uit `nl_towns`
+  (`bron: "lokaal"`) en toont het zoekvak alleen de eigen lijst. De site werkt dus ook als PDOK plat ligt.
+- Kies je een adres, postcode, woonplaats of gemeente van PDOK: `waar` wordt de weergavenaam (bij een woonplaats of
+  gemeente alleen de naam), `lat` en `lng` het middelpunt, straal blijft zoals hij was (standaard 25 km). Zonder
+  coördinaat in de suggestie vraagt het zoekvak die op via `/api/locatie?id=`.
+- Enter zonder keuze: de eerste suggestie uit de eigen lijst, anders de eerste van PDOK (zo nodig eerst opgevraagd),
+  anders "Geen plaats, adres of plek gevonden".
+- Statistieken (alleen met toestemming) krijgen bij een adres of postcode alleen de soort ("adres"), nooit het adres.
 
 ## Navigatieregels
 
@@ -100,7 +118,7 @@ Snelle variant: `Start` → **Plekken dichtbij** → `Dichtbij` (locatie toestaa
 | Toestand | Wat de gebruiker ziet |
 |---|---|
 | Geen resultaten | "Geen plekken met deze keuzes" + voorstellen met aantallen ("Zonder 'Stroom': 22 plekken", "Binnen 50 km") |
-| Onbekende plaats in de URL | Hoort "niet gevonden" te tonen; nu nog "680 plekken in xyzqqq" (bekende fout, fase B) |
+| Onbekende plaats in de URL | `waar` zonder `lat`/`lng` of provincie: kop "in Nederland" met de melding dat de plaats onbekend is (open punt 9) |
 | Locatie geweigerd | Rode uitleg met hoe je het toestaat, en verwijzing naar zoeken op plaats |
 | Offline | Bewaarde reis en eerder bekeken pagina's werken; in Mijn reis de melding "Geen verbinding. Je ziet de gegevens van je reis zoals ze de vorige keer zijn bewaard." |
 | Rijtijden niet beschikbaar | Afstand hemelsbreed, met uitleg |
