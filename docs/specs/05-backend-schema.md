@@ -131,16 +131,16 @@ overnemen is taak W4.1 van het dataplan.
 
 | Tabel | Velden (verplicht met *) | Regels |
 |---|---|---|
-| `bron.sources` | id* (slug), name*, domain (uniek), kind* (`open_data`, `overheid`, `eigen_site`, `eigenaar`, `directory`, `forum`, `reviews`, `api`), tier* (1–5), status* (`toegestaan`, `alleen_aanwijzing`, `te_beoordelen`, `geblokkeerd`), robots_ok, robots_checked_at, min_delay_s* (1–3600), terms_note, auto_registered*, reviewed_at | Onbekende domeinen worden bij het eerste gebruik geregistreerd met tier 3–5; tier 1 alleen voor `gemeente…`/`provincie…`/`overheid`-domeinen, tier 2 alleen voor het domein uit `places.website` |
+| `bron.sources` | id* (slug), name*, domain (uniek), kind* (`open_data`, `overheid`, `eigen_site`, `eigenaar`, `directory`, `forum`, `reviews`, `api`), tier* (1–5), status* (`toegestaan`, `alleen_aanwijzing`, `te_beoordelen`, `geblokkeerd`), robots_ok, robots_checked_at, min_delay_s* (1–3600), terms_note, auto_registered*, reviewed_at | Onbekende domeinen worden bij het eerste gebruik geregistreerd met tier 3–5; tier 1 zet alleen een mens; tier 2 alleen voor het domein (bij gedeelde hosts het pad) uit `places.website` van de opgegeven plek; geblokkeerd gaat altijd voor |
 | `bron.host_throttle` | host* (pk), last_fetch_at* | Wachttijd per host |
 | `bron.documents` | id*, source_id*, url*, place_id, fetched_at*, fetched_by* (`server`, `agent`), http_status, content_hash*, published_on, extract* (1–60.000), submitted_by* | Uniek op (url, content_hash); na 30 dagen alleen de citaten (`bron.prune`) |
 | `bron.candidates` | id*, source_id*, document_id, external_ref, name*, lat/lng (binnen Nederland, samen of geen van beide), town, province, website, phone, kind_hint, matched_place_id, match_score, match_reason, status* (`nieuw`, `gekoppeld`, `nieuwe_plek`, `afgewezen`, `dubbel`), submitted_by* | Uniek op (source_id, external_ref); gekoppeld bij dezelfde website, ≤ 60 m, ≤ 150 m met naam ≥ 30% gelijk, of naam ≥ 60% gelijk binnen 400 m |
-| `bron.claims` | id*, place_id of candidate_id*, field*, value* (jsonb, gecontroleerd door `bron.check_value`), document_id*, evidence* (3–500, moet letterlijk in het document staan), mention_ref, observed_on, method* (`regel`, `agent`, `mens`), status* (`open`, `afgewezen`, `ingehaald`), submitted_by* | Uniek op (plek, kandidaat, veld, document, vermelding, waarde) |
+| `bron.claims` | id*, place_id of candidate_id* (één van beide), field*, value* (jsonb, gecontroleerd door `bron.check_value`), document_id*, evidence* (≥ 15 genormaliseerde tekens, letterlijk in het document, met het getal of de tijd van de waarde; bij een eigen-site-document alleen voor die plek; bij tier 4–5 een datum verplicht), mention_ref, observed_on, method* (`regel`, `agent`, `mens`), status* (`open`, `afgewezen`, `ingehaald`), submitted_by* | Uniek op (plek, kandidaat, veld, document, vermelding, waarde) |
 | `bron.work_items` | id*, kind*, scope* (jsonb), instructions, priority*, status* (`open`, `bezig`, `klaar`, `mislukt`, `geblokkeerd`), leased_by, lease_until, attempts*, result, note | Uniek op (kind, scope); lease van een uur, vrij na een dag |
 
 **Beslisregel** (`bron.decisions`, per plek en veld, alleen vermeldingen van de laatste 24 maanden en bronnen die
 niet geblokkeerd zijn): tier 1 of 2 is genoeg; tier 3 tot 5 vraagt twee losse vermeldingen met dezelfde waarde
-(besluit 18 oktober 2026). Een nieuwere vermelding met een andere waarde maakt er een `conflict` van. Steunt het
+(besluit 18 oktober 2026); los betekent een ander document of vermeldingsnummer én een ander citaat. Een nieuwere vermelding met een andere waarde maakt er een `conflict` van. Steunt het
 besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`. Eén vermelding uit tier 3–5 is
 `onvoldoende`. `bron.preview_changes` zet het besluit naast de huidige waarde in `places`.
 

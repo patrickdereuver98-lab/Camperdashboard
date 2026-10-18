@@ -11,6 +11,10 @@
 -- pipeline-sessie. De tabellen staan in het schema `bron`, dat niet via de API openstaat; alles loopt via functies.
 -- Alleen toevoegingen; bestaande tabellen en functies blijven gelijk.
 
+create extension if not exists pg_trgm with schema extensions;
+create extension if not exists unaccent with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create schema if not exists bron;
 revoke all on schema bron from public, anon, authenticated;
 grant usage on schema bron to service_role;
@@ -215,9 +219,53 @@ begin
   return null;
 end $$;
 
--- Tier voor een domein: geregistreerd domein, eigen site van de plek, of overheidsdomein. De rest valt op het
--- opgegeven soort (directory 3, forum 4, reviews 5); een sessie kan zichzelf zo nooit tier 1 of 2 geven.
-create or replace function bron.source_for(p_host text, p_kind text, p_place uuid)
+-- Staat het getal of de tijd van de claim ook echt in het citaat? (een citaat moet de waarde onderbouwen)
+create or replace function bron.value_in_evidence(p_field text, p_value jsonb, p_evidence text)
+ returns boolean
+ language plpgsql
+ stable
+ set search_path to ''
+as $$
+declare
+  ev text := ' ' || bron.norm(p_evidence) || ' ';
+  v text := p_value #>> '{}';
+  n numeric;
+  h integer;
+begin
+  if p_field in ('checkout_until', 'checkin_from') then
+    h := split_part(v, ':', 1)::integer;
+    -- 11:00 staat er als "11:00", "11.00", "11 uur", "11u", "elf uur" niet: getallen moeten als cijfers staan
+    return ev ~ ('[^0-9]0?' || h || '([.:h][0-9]{2}|[ .]?u(ur)?\M|[^0-9:.,])');
+  elsif p_field = 'access_hours' then
+    return ev ~ ('[^0-9]0?' || split_part(split_part(v, '–', 1), ':', 1)::integer || '[^0-9]')
+       and ev ~ ('[^0-9]0?' || split_part(split_part(v, '–', 2), ':', 1)::integer || '[^0-9]');
+  elsif p_field in ('price_eur', 'max_stay_nights', 'capacity', 'max_length_m') then
+    n := v::numeric;
+    return ev ~ ('[^0-9]' || trunc(n)::text || '([^0-9]|$)');
+  end if;
+  return true;
+end $$;
+
+-- Sleutel om websites te vergelijken: de host, en bij gedeelde hosts (Facebook, Wix, Google) ook het eerste padstuk.
+create or replace function bron.site_key(p_url text)
+ returns text
+ language sql
+ immutable
+ set search_path to ''
+as $$
+  select case
+           when h is null then null
+           when h ~ '(^|\.)(facebook\.com|instagram\.com|wixsite\.com|business\.site|google\.com|google\.nl|jimdo\.com|jimdofree\.com|webnode\.nl|campercontact\.com|park4night\.com)$'
+             then h || '/' || lower(split_part(substring(p_url from '^https?://[^/]+/([^?#]*)'), '/', 1))
+           else h
+         end
+    from (select lower(regexp_replace(substring(p_url from '^https?://([^/:?#]+)'), '^www\.', '')) as h) x
+$$;
+
+-- Bron voor een adres: geblokkeerd gaat altijd voor, dan de eigen site van de opgegeven plek, dan het register.
+-- Een nieuw domein krijgt de tier van het opgegeven soort (directory 3, forum 4, reviews 5): een sessie kan
+-- zichzelf zo nooit tier 1 of 2 geven. Tier 1 voor een overheidsdomein zet een mens.
+create or replace function bron.source_for(p_host text, p_kind text, p_place uuid, p_url text default null)
  returns text
  language plpgsql
  security definer
@@ -226,32 +274,50 @@ as $$
 declare
   h text := lower(regexp_replace(p_host, '^www\.', ''));
   s text;
-  site_host text;
+  st text;
+  site_key text;
+  url_key text := bron.site_key(coalesce(p_url, 'https://' || p_host || '/'));
   k text;
+  new_id text;
 begin
-  select id into s from bron.sources
+  -- 1. Een geblokkeerde bron blijft altijd geblokkeerd, ook als het de website van een plek is (bv. Facebook).
+  select id, status into s, st from bron.sources
    where domain is not null and (h = domain or h like '%.' || domain)
    order by length(domain) desc limit 1;
-  if s is not null then return s; end if;
+  if st = 'geblokkeerd' then return s; end if;
 
+  -- 2. De eigen website van de opgegeven plek gaat vóór het register (volgorde van ophalen mag de tier niet bepalen).
   if p_place is not null then
-    select lower(regexp_replace(substring(website from '^https?://([^/:?#]+)'), '^www\.', '')) into site_host
-      from public.places where id = p_place;
-    if site_host is not null and (h = site_host or h like '%.' || site_host) then return 'eigen-site'; end if;
+    select bron.site_key(website) into site_key from public.places where id = p_place;
+    if site_key is not null
+       and (url_key = site_key or (position('/' in site_key) = 0 and h like '%.' || site_key))
+       and (s is null or (select kind from bron.sources where id = s) not in ('directory', 'reviews', 'open_data', 'overheid')) then
+      return 'eigen-site';
+    end if;
   end if;
 
-  k := case
-         when h ~ '(^|\.)(gemeente[a-z-]*|provincie[a-z-]*|rijksoverheid|overheid)\.nl$' then 'overheid'
-         when p_kind in ('directory', 'forum', 'reviews') then p_kind
-         else 'forum'
-       end;
+  -- 3. Bekende bron.
+  if s is not null then return s; end if;
+
+  -- 4. De website van een bestaande plek nooit als forum registreren: dan moet de plek erbij.
+  if position('/' in url_key) = 0 and exists (select 1 from public.places where bron.site_key(website) = h) then
+    raise exception 'Dit is de website van een plek; geef place_id mee';
+  end if;
+
+  -- 5. Nieuw domein: de tier volgt het opgegeven soort (3 tot 5). Een overheidsnaam geeft geen tier 1; dat zet een
+  --    mens na controle (iedereen kan een domein als "gemeentecamping.nl" registreren).
+  k := case when p_kind in ('directory', 'forum', 'reviews') then p_kind else 'forum' end;
+  new_id := case when length(h) <= 63 then h else left(h, 54) || '-' || left(md5(h), 8) end;
   insert into bron.sources (id, name, domain, kind, tier, status, auto_registered, terms_note)
-  values (left(regexp_replace(h, '[^a-z0-9.-]', '-', 'g'), 63), h, h, k,
-          case k when 'overheid' then 1 when 'directory' then 3 when 'forum' then 4 else 5 end,
-          'toegestaan', true,
-          'Automatisch geregistreerd bij eerste gebruik; coördinator beoordeelt dit domein.')
+  values (new_id, left(h, 120), h, k, case k when 'directory' then 3 when 'forum' then 4 else 5 end, 'toegestaan', true,
+          case when h ~ '(^|\.)(gemeente[a-z-]*|provincie[a-z-]*|rijksoverheid|overheid)\.nl$'
+               then 'Lijkt een overheidsdomein: na controle op kind overheid en tier 1 zetten.'
+               else 'Automatisch geregistreerd bij eerste gebruik; coördinator beoordeelt dit domein.' end)
   on conflict (id) do nothing;
-  return left(regexp_replace(h, '[^a-z0-9.-]', '-', 'g'), 63);
+  if not exists (select 1 from bron.sources where id = new_id and domain = h) then
+    raise exception 'Bron-id % is al in gebruik voor een ander domein', new_id;
+  end if;
+  return new_id;
 end $$;
 
 -- ── Beslisregel ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -271,25 +337,33 @@ as $$
   with c as (
     select cl.id, cl.place_id, cl.field, cl.value,
            coalesce(cl.observed_on, d.published_on, d.fetched_at::date) as obs,
-           s.tier, d.fetched_by, d.url, coalesce(cl.mention_ref, '') as mref
+           s.tier, d.fetched_by = 'server' as srv, d.content_hash, coalesce(cl.mention_ref, '') as mref,
+           bron.norm(cl.evidence) as ev
       from bron.claims cl
       join bron.documents d on d.id = cl.document_id
       join bron.sources s on s.id = d.source_id
      where cl.place_id is not null
        and cl.status = 'open'
-       and s.status in ('toegestaan', 'alleen_aanwijzing')
+       and s.status = 'toegestaan'
        and coalesce(cl.observed_on, d.published_on, d.fetched_at::date) >= (current_date - interval '24 months')::date
        and (p_place is null or cl.place_id = p_place)
   ), g as (
+    -- Een vermelding telt alleen als losse vermelding bij een ander document of vermeldingsnummer én een ander citaat:
+    -- verzonnen nummers of dezelfde pagina onder een ander adres tellen zo niet dubbel.
     select c.place_id, c.field, c.value,
-           count(distinct (c.url, c.mref))::integer as support,
+           least(count(distinct (c.content_hash, c.mref)), count(distinct c.ev))::integer as support,
+           least(count(distinct (c.content_hash, c.mref)) filter (where c.srv),
+                 count(distinct c.ev) filter (where c.srv))::integer as support_srv,
            min(c.tier)::smallint as best_tier,
+           min(c.tier) filter (where c.srv) as best_tier_srv,
            max(c.obs) as newest,
-           bool_and(c.fetched_by = 'agent') as only_agent,
            array_agg(c.id order by c.id) as ids
       from c group by c.place_id, c.field, c.value
   ), e as (
-    select g.*, (g.best_tier <= 2 or g.support >= 2) as eligible from g
+    select g.*,
+           (g.best_tier <= 2 or g.support >= 2) as eligible,
+           (coalesce(g.best_tier_srv, 9) <= 2 or g.support_srv >= 2) as eligible_srv
+      from g
   ), r as (
     select e.*, row_number() over (partition by e.place_id, e.field
                                    order by e.eligible desc, e.newest desc, e.best_tier, e.support desc) as rn
@@ -301,7 +375,8 @@ as $$
            when exists (select 1 from e o
                          where o.place_id = r.place_id and o.field = r.field and o.value <> r.value
                            and (o.newest > r.newest or (o.eligible and o.newest >= r.newest - 90))) then 'conflict'
-           when r.only_agent then 'controle'
+           -- Alleen onderbouwd dankzij tekst die een sessie zelf instuurde: een mens kijkt mee.
+           when not r.eligible_srv then 'controle'
            else 'geaccepteerd'
          end,
          r.support, r.best_tier, r.newest, r.ids,
@@ -344,12 +419,12 @@ declare
 begin
   select * into c from bron.candidates where id = p_id;
   if c.id is null or c.status not in ('nieuw', 'gekoppeld') then return; end if;
-  host := lower(regexp_replace(substring(c.website from '^https?://([^/:?#]+)'), '^www\.', ''));
+  host := bron.site_key(c.website);
 
   if host is not null then
     select p.id into hit from public.places p
      where p.merged_into is null
-       and lower(regexp_replace(substring(p.website from '^https?://([^/:?#]+)'), '^www\.', '')) = host
+       and bron.site_key(p.website) = host
        and (c.lat is null or extensions.st_dwithin(p.geom::extensions.geography,
               extensions.st_setsrid(extensions.st_makepoint(c.lng, c.lat), 4326)::extensions.geography, 5000))
      order by case when c.lat is null then 0 else extensions.st_distance(p.geom::extensions.geography,
@@ -405,9 +480,12 @@ begin
      and not exists (select 1 from bron.claims c where c.document_id = d.id)
      and not exists (select 1 from bron.candidates k where k.document_id = d.id);
   update bron.documents d
-     set extract = coalesce((select string_agg(distinct c.evidence, E'\n') from bron.claims c where c.document_id = d.id), '(kandidaat)')
+     set extract = left(coalesce((select string_agg(distinct c.evidence, E'\n') from bron.claims c where c.document_id = d.id),
+                                 '(kandidaat)'), 60000),
+         content_hash = 'ingekort:' || d.content_hash
    where d.fetched_at < now() - interval '30 days'
-     and length(d.extract) > 2000;
+     and length(d.extract) > 2000
+     and d.content_hash not like 'ingekort:%';
   delete from bron.host_throttle where last_fetch_at < now() - interval '7 days';
   update bron.work_items set status = 'open', leased_by = null, lease_until = null, updated_at = now()
    where status = 'bezig' and lease_until < now() - interval '1 day';
@@ -449,7 +527,7 @@ declare
   s bron.sources;
 begin
   if host is null then raise exception 'Geen geldig http(s)-adres'; end if;
-  sid := bron.source_for(host, p_kind, p_place);
+  sid := bron.source_for(host, p_kind, p_place, p_url);
   select * into s from bron.sources where id = sid;
   return jsonb_build_object('source_id', s.id, 'kind', s.kind, 'tier', s.tier, 'status', s.status,
                             'robots_ok', s.robots_ok, 'min_delay_s', s.min_delay_s, 'host', lower(host));
@@ -457,16 +535,20 @@ end $$;
 
 -- robots.txt-uitkomst vastleggen. De MCP-server roept dit met false aan als de hele site voor ons dicht is
 -- ("Disallow: /"); dan gaat de bron op geblokkeerd. Een verbod op losse paden weigert alleen dat adres.
-create or replace function public.bron_set_robots(p_source text, p_ok boolean)
+create or replace function public.bron_set_robots(p_source text, p_ok boolean, p_host text default null)
  returns void
  language sql
  security definer
  set search_path to ''
 as $$
+  -- Blokkeren alleen als het domein van de bron zelf dicht is, niet een subdomein (shop.anwb.nl).
   update bron.sources
      set robots_ok = p_ok, robots_checked_at = now(), updated_at = now(),
-         status = case when not p_ok and domain is not null then 'geblokkeerd' else status end
-   where id = p_source and id not in ('eigen-site', 'eigenaar');
+         status = case when not p_ok and domain is not null
+                            and lower(regexp_replace(coalesce(p_host, domain), '^www\.', '')) = domain
+                       then 'geblokkeerd' else status end
+   where id = p_source and id not in ('eigen-site', 'eigenaar')
+     and (p_ok or p_host is null or lower(regexp_replace(p_host, '^www\.', '')) = domain);
 $$;
 
 -- Document opslaan (opgehaald door de server of ingestuurd door een sessie).
@@ -480,16 +562,22 @@ create or replace function public.bron_store_document(p_source text, p_url text,
 as $$
 declare
   st text;
-  hash text := encode(extensions.digest(coalesce(p_text, ''), 'sha256'), 'hex');
+  hash text := encode(extensions.digest(left(coalesce(p_text, ''), 60000), 'sha256'), 'hex');
   doc bigint;
 begin
   select status into st from bron.sources where id = p_source;
   if st is null then raise exception 'Onbekende bron %', p_source; end if;
   if st = 'geblokkeerd' then raise exception 'Bron % is geblokkeerd', p_source; end if;
   if p_published_on > current_date then raise exception 'Publicatiedatum ligt in de toekomst'; end if;
+  if p_source = 'eigen-site' and p_place is null then raise exception 'Een eigen site hoort bij een plek: place_id ontbreekt'; end if;
   insert into bron.documents (source_id, url, place_id, fetched_by, http_status, content_hash, published_on, extract, submitted_by)
   values (p_source, p_url, p_place, p_fetched_by, p_http_status, hash, p_published_on, left(p_text, 60000), left(p_agent, 80))
-  on conflict (url, content_hash) do update set fetched_at = now()
+  on conflict (url, content_hash) do update
+    set fetched_at = now(),
+        -- Een ophaling door de server maakt een eerder ingestuurde tekst betrouwbaar; nooit andersom.
+        fetched_by = case when excluded.fetched_by = 'server' then 'server' else bron.documents.fetched_by end,
+        place_id = coalesce(bron.documents.place_id, excluded.place_id),
+        published_on = coalesce(bron.documents.published_on, excluded.published_on)
   returning id into doc;
   return doc;
 end $$;
@@ -504,6 +592,7 @@ create or replace function public.bron_submit_claims(p_document bigint, p_claims
 as $$
 declare
   doc bron.documents;
+  tier smallint;
   cl jsonb;
   out jsonb := '[]'::jsonb;
   err text;
@@ -511,12 +600,14 @@ declare
 begin
   select * into doc from bron.documents where id = p_document;
   if doc.id is null then raise exception 'Document % bestaat niet', p_document; end if;
+  if doc.content_hash like 'ingekort:%' then raise exception 'Document % is ingekort; haal de pagina opnieuw op', p_document; end if;
+  select s.tier into tier from bron.sources s where s.id = doc.source_id;
   if jsonb_typeof(p_claims) <> 'array' or jsonb_array_length(p_claims) > 100 then
     raise exception 'p_claims is een lijst van hoogstens 100 claims';
   end if;
 
   for cl in select * from jsonb_array_elements(p_claims) loop
-    err := null; new_id := null;
+    err := null; new_id := null; pid := null; cid := null; obs := null;
     begin
       pid := nullif(cl ->> 'place_id', '')::uuid;
       cid := nullif(cl ->> 'candidate_id', '')::bigint;
@@ -525,23 +616,38 @@ begin
       err := 'place_id, candidate_id of observed_on heeft een verkeerd formaat';
     end;
     if err is null and pid is null and cid is null then err := 'place_id of candidate_id ontbreekt'; end if;
+    if err is null and pid is not null and cid is not null then err := 'geef place_id óf candidate_id, niet beide'; end if;
     if err is null and pid is not null and not exists (select 1 from public.places where id = pid) then err := 'plek bestaat niet'; end if;
     if err is null and cid is not null and not exists (select 1 from bron.candidates where id = cid) then err := 'kandidaat bestaat niet'; end if;
+    -- De eigen site van plek A zegt niets over plek B.
+    if err is null and doc.source_id = 'eigen-site' and pid is distinct from doc.place_id then
+      err := 'dit document is de eigen site van een andere plek';
+    end if;
     if err is null then err := bron.check_value(cl ->> 'field', cl -> 'value'); end if;
-    if err is null and length(bron.norm(cl ->> 'evidence')) < 3 then err := 'citaat ontbreekt'; end if;
+    if err is null and length(bron.norm(cl ->> 'evidence')) < 15 then err := 'citaat te kort: geef de hele zin (minstens 15 tekens)'; end if;
     if err is null and position(bron.norm(cl ->> 'evidence') in bron.norm(doc.extract)) = 0 then
       err := 'citaat staat niet letterlijk in het document';
     end if;
+    if err is null and not bron.value_in_evidence(cl ->> 'field', cl -> 'value', cl ->> 'evidence') then
+      err := 'het getal of de tijd staat niet in het citaat';
+    end if;
     if err is null and obs > current_date then err := 'observed_on ligt in de toekomst'; end if;
+    if err is null and tier >= 4 and obs is null and doc.published_on is null then
+      err := 'datum van de vermelding ontbreekt (observed_on): verplicht bij fora en reviews';
+    end if;
     if err is null and coalesce(cl ->> 'method', 'agent') not in ('regel', 'agent') then err := 'method is regel of agent'; end if;
 
     if err is null then
-      insert into bron.claims (place_id, candidate_id, field, value, document_id, evidence, mention_ref, observed_on, method, submitted_by)
-      values (pid, cid, cl ->> 'field', cl -> 'value', p_document, left(cl ->> 'evidence', 500),
-              nullif(left(cl ->> 'mention_ref', 120), ''), obs, coalesce(cl ->> 'method', 'agent'), left(p_agent, 80))
-      on conflict do nothing
-      returning id into new_id;
-      if new_id is null then err := 'staat er al'; end if;
+      begin
+        insert into bron.claims (place_id, candidate_id, field, value, document_id, evidence, mention_ref, observed_on, method, submitted_by)
+        values (pid, cid, cl ->> 'field', cl -> 'value', p_document, left(cl ->> 'evidence', 500),
+                nullif(left(cl ->> 'mention_ref', 120), ''), obs, coalesce(cl ->> 'method', 'agent'), left(p_agent, 80))
+        on conflict do nothing
+        returning id into new_id;
+        if new_id is null then err := 'staat er al'; end if;
+      exception when others then
+        err := 'niet opgeslagen: ' || sqlerrm;
+      end;
     end if;
     out := out || jsonb_build_object('field', cl ->> 'field', 'claim_id', new_id, 'fout', err);
   end loop;
@@ -604,6 +710,7 @@ declare w bron.work_items;
 begin
   select * into w from bron.work_items
    where (status = 'open' or (status = 'bezig' and lease_until < now()))
+     and attempts < 5
      and (p_kinds is null or kind = any (p_kinds))
    order by priority, id
    limit 1
@@ -631,9 +738,9 @@ begin
      set status = p_status, note = left(p_note, 4000), result = p_result, updated_at = now(),
          leased_by = case when p_status = 'open' then null else leased_by end,
          lease_until = null
-   where id = p_id and leased_by = left(p_agent, 80)
+   where id = p_id and leased_by = left(p_agent, 80) and status = 'bezig'
   returning * into w;
-  if w.id is null then raise exception 'Werk % is niet aan % uitgegeven', p_id, p_agent; end if;
+  if w.id is null then raise exception 'Werk % is niet (meer) aan % uitgegeven', p_id, p_agent; end if;
   return to_jsonb(w);
 end $$;
 
@@ -686,14 +793,14 @@ begin
 end $$;
 
 revoke execute on function public.bron_fetch_slot(text, text), public.bron_resolve_source(text, text, uuid),
-  public.bron_set_robots(text, boolean),
+  public.bron_set_robots(text, boolean, text),
   public.bron_store_document(text, text, uuid, text, integer, date, text, text),
   public.bron_submit_claims(bigint, jsonb, text), public.bron_submit_candidates(text, bigint, jsonb, text),
   public.bron_lease_work(text, text[]), public.bron_finish_work(bigint, text, text, text, jsonb),
   public.bron_block_source(text, text, text), public.bron_decisions(uuid), public.bron_overview()
   from public, anon, authenticated;
 grant execute on function public.bron_fetch_slot(text, text), public.bron_resolve_source(text, text, uuid),
-  public.bron_set_robots(text, boolean),
+  public.bron_set_robots(text, boolean, text),
   public.bron_store_document(text, text, uuid, text, integer, date, text, text),
   public.bron_submit_claims(bigint, jsonb, text), public.bron_submit_candidates(text, bigint, jsonb, text),
   public.bron_lease_work(text, text[]), public.bron_finish_work(bigint, text, text, text, jsonb),

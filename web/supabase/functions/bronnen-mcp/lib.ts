@@ -19,6 +19,20 @@ export function publicUrl(raw: string): URL | null {
   return u;
 }
 
+/** Privé-, loopback-, link-local-, CGNAT- of gereserveerd adres? Dan halen we niets op (DNS kan naar binnen wijzen). */
+export function isPrivateIp(ip: string): boolean {
+  const v = ip.toLowerCase().replace(/^\[|\]$/g, "");
+  const m = /^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(v);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19));
+  }
+  if (!v.includes(":")) return true; // geen geldig adres: niet vertrouwen
+  return v === "::" || v === "::1" || /^f[cd]/.test(v) || /^fe[89ab]/.test(v) || /^ff/.test(v) || v.startsWith("64:ff9b:") ||
+    v.startsWith("2001:db8:");
+}
+
 type Rule = { allow: boolean; path: string };
 
 /**
@@ -93,10 +107,47 @@ export function decodeEntities(s: string): string {
 }
 
 /** HTML naar leesbare platte tekst: blokken op eigen regels, tabelcellen met " | ", geen scripts of menu-ruis. */
+/** Blokken als <script>…</script> weghalen in één keer door de tekst (geen regex die terugloopt op grote pagina's). */
+export function stripBlocks(html: string, tags: string[]): string {
+  const low = html.toLowerCase();
+  // Eerstvolgende echte opening van `t` vanaf `from` ("<head" telt niet in "<header").
+  const find = (t: string, from: number) => {
+    let j = low.indexOf("<" + t, from);
+    while (j >= 0 && t !== "!--" && /[a-z0-9-]/.test(low[j + t.length + 1] ?? "")) j = low.indexOf("<" + t, j + 1);
+    return j;
+  };
+  const pos = new Map(tags.map((t) => [t, find(t, 0)]));
+  let out = "";
+  let i = 0;
+  while (i < html.length) {
+    let next = -1;
+    let tag = "";
+    for (const t of tags) {
+      let j = pos.get(t)!;
+      if (j >= 0 && j < i) {
+        j = find(t, i);
+        pos.set(t, j);
+      }
+      if (j >= 0 && (next < 0 || j < next)) {
+        next = j;
+        tag = t;
+      }
+    }
+    if (next < 0) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, next) + " ";
+    const end = tag === "!--" ? low.indexOf("-->", next + 4) : low.indexOf("</" + tag, next);
+    if (end < 0) break; // niet gesloten: de rest weggooien
+    const close = low.indexOf(">", end);
+    i = close < 0 ? html.length : close + 1;
+  }
+  return out;
+}
+
 export function htmlToText(html: string): string {
-  let s = html
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/<(script|style|noscript|svg|template|iframe|head)\b[\s\S]*?<\/\1>/gi, " ")
+  let s = stripBlocks(html, ["!--", "script", "style", "noscript", "svg", "template", "iframe", "head"])
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(td|th)>/gi, " | ")
     .replace(/<\/?(p|div|li|ul|ol|tr|table|h[1-6]|section|article|header|footer|nav|aside|main|dt|dd|dl|blockquote|pre|form|fieldset|figure|figcaption|summary|details)\b[^>]*>/gi, "\n")

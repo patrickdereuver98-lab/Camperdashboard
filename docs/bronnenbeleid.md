@@ -32,14 +32,22 @@ laatste 24 maanden.
 | 4 | Fora en openbare community | Twee losse vermeldingen met dezelfde waarde |
 | 5 | Reviews | Twee losse vermeldingen met dezelfde waarde |
 
-- **Twee losse vermeldingen** (besluit 18 oktober 2026): twee verschillende reviews, posts of sites. Twee reviews op
-  één pagina tellen als twee als ze elk een eigen `mention_ref` hebben.
+- **Twee losse vermeldingen** (besluit 18 oktober 2026): twee verschillende reviews, posts of sites, elk met een
+  eigen citaat. Twee reviews op één pagina tellen als twee als ze elk een eigen `mention_ref` én een ander citaat
+  hebben; dezelfde pagina onder een ander adres telt één keer.
+- **Het citaat onderbouwt de waarde:** minstens 15 tekens, en bij tijden, bedragen en aantallen staat het getal in
+  het citaat zelf.
+- **Datum verplicht bij fora en reviews:** zonder `observed_on` (of een datum van de pagina) wordt de claim geweigerd,
+  zodat een oude post niet als nieuw telt.
+- **De eigen site van plek A zegt niets over plek B:** claims uit een eigen-site-document gelden alleen voor die plek.
 - **Tegenspraak:** zegt een nieuwere vermelding iets anders, dan wordt het een conflict en beslist een mens.
 - **Controle:** steunt een besluit alleen op tekst die een sessie zelf instuurde (`tekst_insturen`), dan kijkt een mens
   mee. Pagina's die de server zelf ophaalt, zijn tegen de echte pagina gecontroleerd.
 - **Een sessie kan zichzelf geen tier 1 of 2 geven.** Een onbekend domein krijgt de tier van het soort dat de sessie
-  opgeeft (3, 4 of 5). Alleen domeinen met "gemeente", "provincie" of "overheid" in de naam worden automatisch tier 1.
-  Een gemeente met een ander domein (zoals `assen.nl`) zet een mens in `bron.sources` op tier 1.
+  opgeeft (3, 4 of 5). Ook een domein met "gemeente" in de naam wordt niet automatisch tier 1, want iedereen kan zo'n
+  domein registreren; de server zet er een notitie bij en een mens zet echte overheidsdomeinen in `bron.sources` op
+  `kind = 'overheid'`, tier 1. Tier 2 krijgt alleen het domein (bij Facebook, Wix en dergelijke: het pad) uit
+  `places.website` van de opgegeven plek.
 - **De vertrekregel blijft het kernfeit.** De bevestiging op de site (`departure_check`) blijft bij beheer en de
   eigenaar; claims maken kandidaten, geen bevestiging.
 
@@ -49,8 +57,11 @@ laatste 24 maanden.
 - Wachttijd per host uit `bron.sources.min_delay_s`: 5 s voor eigen sites, 15 s voor directories, 20 s voor fora.
   De MCP-server dwingt dit af (`bron_fetch_slot`).
 - `robots.txt` volgens RFC 9309: de groep voor VrijStaanBot gaat voor, anders `*`. Is robots.txt onbereikbaar (5xx),
-  dan wachten we. Sluit een site alle bots uit, dan gaat de bron op geblokkeerd.
-- Alleen openbare http(s)-adressen; geen IP-adressen of interne namen.
+  dan wachten we. Sluit een site alle bots uit, dan gaat de bron op geblokkeerd (bij een subdomein
+  alleen dat subdomein).
+- Alleen openbare http(s)-adressen; geen IP-adressen of interne namen, en de hostnaam moet via DNS naar een openbaar
+  adres wijzen. Een doorverwijzing naar een andere site volgt de server niet: die site heeft een eigen bron, tier,
+  `robots.txt` en wachttijd.
 - Bij 403, 429, een captcha of een inlogmuur: stoppen en de bron melden met `bron_blokkeren`. Openzetten doet een mens.
 - Opgehaalde tekst blijft 30 dagen staan; daarna bewaren we alleen de citaten (`bron.prune`, cron `bron-opschonen`).
 

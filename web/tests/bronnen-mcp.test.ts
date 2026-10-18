@@ -2,7 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  cleanSearch, filterLines, htmlToText, parseRobots, publicUrl, robotsAllows, robotsBlocksAll, safeEqual,
+  cleanSearch, filterLines, htmlToText, isPrivateIp, parseRobots, publicUrl, robotsAllows, robotsBlocksAll, safeEqual,
+  stripBlocks,
 } from "../supabase/functions/bronnen-mcp/lib.ts";
 
 test("publicUrl: alleen openbare http(s)-hostnamen", () => {
@@ -63,4 +64,22 @@ test("safeEqual en cleanSearch", () => {
   assert.equal(safeEqual("abc", "abcd"), false);
   assert.equal(safeEqual("", "x"), false);
   assert.equal(cleanSearch("Assen,name.eq.x)(%*"), "Assen name.eq.x");
+});
+
+test("isPrivateIp: interne, loopback-, link-local- en CGNAT-adressen", () => {
+  for (const ip of ["10.1.2.3", "127.0.0.1", "169.254.169.254", "172.20.0.1", "192.168.1.1", "100.64.0.1", "0.0.0.0",
+    "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1", "64:ff9b::7f00:1", "onzin"]) assert.equal(isPrivateIp(ip), true, ip);
+  for (const ip of ["185.199.108.133", "8.8.8.8", "172.32.0.1", "100.128.0.1", "2a00:1450:4001:80b::200e"]) {
+    assert.equal(isPrivateIp(ip), false, ip);
+  }
+});
+
+test("stripBlocks: haalt scripts weg, laat <header> staan, ook bij een niet gesloten script", () => {
+  assert.equal(stripBlocks("a<header>b</header><script>x</script>c", ["head", "script"]), "a<header>b</header> c");
+  assert.equal(stripBlocks("a<!--x-->b<head><title>t</title></head>c", ["!--", "head"]), "a b c");
+  assert.equal(stripBlocks("tekst<script>nooit gesloten " + "x".repeat(10), ["script"]), "tekst ");
+  const big = "<p>woord</p>".repeat(20000) + "<script>" + "<script".repeat(5000);
+  const t0 = Date.now();
+  stripBlocks(big, ["script", "style"]);
+  assert.ok(Date.now() - t0 < 1000, "lineair, ook bij veel niet gesloten tags");
 });

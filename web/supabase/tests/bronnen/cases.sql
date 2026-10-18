@@ -11,12 +11,13 @@ begin execute q; return 'geen fout'; exception when others then return 'fout'; e
 
 insert into public.places (id, slug, name, town, website, lat, lng, departure) values
  ('00000000-0000-0000-0000-000000000001','camper-a','Camperplaats De Brink','Assen','https://www.camper-a.nl/',53.0,6.56, null),
- ('00000000-0000-0000-0000-000000000002','camper-b','Jachthaven Zuid','Emmen',null,52.78,6.9,'vast');
+ ('00000000-0000-0000-0000-000000000002','camper-b','Jachthaven Zuid','Emmen',null,52.78,6.9,'vast'),
+ ('00000000-0000-0000-0000-000000000003','camper-c','Hoeve Wix','Zwolle','https://www.wixsite.com/hoeve',52.5,6.1,null);
 
 -- Bronnen
 select pg_temp.eq('eigen site herkend', public.bron_resolve_source('https://camper-a.nl/tarieven', null, '00000000-0000-0000-0000-000000000001') ->> 'source_id', 'eigen-site');
 select pg_temp.eq('onbekend forum = tier 4', public.bron_resolve_source('https://forum.kampeer.org/t/1', 'forum', null) ->> 'tier', '4');
-select pg_temp.eq('gemeente = tier 1', public.bron_resolve_source('https://www.gemeente-assen.nl/x', 'directory', null) ->> 'tier', '1');
+select pg_temp.eq('overheidsnaam geeft geen automatische tier 1', public.bron_resolve_source('https://www.gemeentecamping.nl/x', 'directory', null) ->> 'tier', '3');
 select pg_temp.eq('eigen_site zonder plek geeft geen tier 2', public.bron_resolve_source('https://sneaky.nl/x', 'eigen_site', null) ->> 'tier', '4');
 select pg_temp.eq('facebook geblokkeerd', public.bron_resolve_source('https://m.facebook.com/groups/1', 'forum', null) ->> 'status', 'geblokkeerd');
 select pg_temp.eq('document van geblokkeerde bron geweigerd', pg_temp.err($q$select public.bron_store_document('facebook','https://facebook.com/x',null,'server',200,null,'tekst','t')$q$), 'fout');
@@ -88,6 +89,62 @@ select pg_temp.eq('eerste verzoek mag meteen', public.bron_fetch_slot('camper-a.
 select pg_temp.eq('tweede verzoek moet wachten', (public.bron_fetch_slot('camper-a.nl','eigen-site') > 0)::text, 'true');
 select public.bron_set_robots('campercontact', false);
 select pg_temp.eq('robots dicht blokkeert bron', (select status from bron.sources where id = 'campercontact'), 'geblokkeerd');
+
+
+-- ── Bevindingen uit de review ─────────────────────────────────────────────────────────────────────────────────
+
+-- Eigen site van plek A zegt niets over plek B
+select pg_temp.eq('eigen site van andere plek geweigerd', public.bron_submit_claims(1, '[{"place_id":"00000000-0000-0000-0000-000000000002","field":"price_eur","value":15,"evidence":"Prijs € 15,00 per nacht"}]'::jsonb,'test')->0->>'fout', 'dit document is de eigen site van een andere plek');
+
+-- Citaat moet lang genoeg zijn en de waarde bevatten
+select public.bron_store_document('eigen-site','https://camper-a.nl/prijs','00000000-0000-0000-0000-000000000001','server',200,null,E'Overnachten kost € 15,00 per camper per nacht.\nVrij staan.','test');
+select pg_temp.eq('te kort citaat geweigerd', public.bron_submit_claims((select max(id) from bron.documents), '[{"place_id":"00000000-0000-0000-0000-000000000001","field":"access_24h","value":true,"evidence":"Vrij staan."}]'::jsonb,'test')->0->>'fout', 'citaat te kort: geef de hele zin (minstens 15 tekens)');
+select pg_temp.eq('bedrag moet in citaat staan', public.bron_submit_claims((select max(id) from bron.documents), '[{"place_id":"00000000-0000-0000-0000-000000000001","field":"price_eur","value":20,"evidence":"Overnachten kost € 15,00 per camper"}]'::jsonb,'test')->0->>'fout', 'het getal of de tijd staat niet in het citaat');
+select pg_temp.eq('juist bedrag in citaat', public.bron_submit_claims((select max(id) from bron.documents), '[{"place_id":"00000000-0000-0000-0000-000000000001","field":"price_eur","value":15,"evidence":"Overnachten kost € 15,00 per camper"}]'::jsonb,'test')->0->>'fout', null);
+
+-- Forum zonder datum
+select public.bron_store_document('forum.kampeer.org','https://forum.kampeer.org/t/2',null,'server',200,null,E'Bij Hoeve Wix kun je blijven zolang je wilt, echt geen vertrektijd.','test');
+select pg_temp.eq('forumclaim zonder datum geweigerd', public.bron_submit_claims((select max(id) from bron.documents), '[{"place_id":"00000000-0000-0000-0000-000000000003","field":"departure","value":"vrij","evidence":"kun je blijven zolang je wilt"}]'::jsonb,'test')->0->>'fout', 'datum van de vermelding ontbreekt (observed_on): verplicht bij fora en reviews');
+
+-- Verzonnen vermeldingsnummers en dezelfde pagina onder een ander adres tellen niet dubbel
+select public.bron_submit_claims((select max(id) from bron.documents), '[
+ {"place_id":"00000000-0000-0000-0000-000000000003","field":"departure","value":"vrij","evidence":"kun je blijven zolang je wilt","mention_ref":"a","observed_on":"2026-09-01"},
+ {"place_id":"00000000-0000-0000-0000-000000000003","field":"departure","value":"vrij","evidence":"kun je blijven zolang je wilt","mention_ref":"b","observed_on":"2026-09-01"}]'::jsonb,'test');
+select public.bron_store_document('forum.kampeer.org','https://forum.kampeer.org/t/2?pagina=1',null,'server',200,'2026-09-01',E'Bij Hoeve Wix kun je blijven zolang je wilt, echt geen vertrektijd.','test');
+select public.bron_submit_claims((select max(id) from bron.documents), '[{"place_id":"00000000-0000-0000-0000-000000000003","field":"departure","value":"vrij","evidence":"kun je blijven zolang je wilt","observed_on":"2026-09-01"}]'::jsonb,'test');
+select pg_temp.eq('zelfde citaat telt één keer', (select besluit from bron.decisions('00000000-0000-0000-0000-000000000003') where field = 'departure'), 'onvoldoende');
+
+-- Eén echte en één zelf ingestuurde vermelding = controle
+select public.bron_resolve_source('https://reviews.voorbeeld.nl/hoeve', 'reviews', null);
+select public.bron_store_document('reviews.voorbeeld.nl','https://reviews.voorbeeld.nl/hoeve',null,'agent',null,'2026-09-10',E'Review 3: geen vertrektijd, je vertrekt wanneer je wilt.','test');
+select public.bron_submit_claims((select max(id) from bron.documents), '[{"place_id":"00000000-0000-0000-0000-000000000003","field":"departure","value":"vrij","evidence":"geen vertrektijd, je vertrekt wanneer je wilt","observed_on":"2026-09-10"}]'::jsonb,'test');
+select pg_temp.eq('half ingestuurd = controle', (select besluit from bron.decisions('00000000-0000-0000-0000-000000000003') where field = 'departure'), 'controle');
+
+-- Gedeelde host: alleen het eigen pad is de eigen site
+select pg_temp.eq('ander pad op gedeelde host is geen eigen site', public.bron_resolve_source('https://www.wixsite.com/ander/tarieven', 'forum', '00000000-0000-0000-0000-000000000003') ->> 'source_id', 'wixsite.com');
+select pg_temp.eq('eigen pad op gedeelde host is eigen site', public.bron_resolve_source('https://www.wixsite.com/hoeve/tarieven', null, '00000000-0000-0000-0000-000000000003') ->> 'source_id', 'eigen-site');
+
+-- Eerder als forum geregistreerd, later website van een plek: eigen site wint
+select public.bron_resolve_source('https://mijnhoeve.nl/', 'forum', null);
+update public.places set website = 'https://mijnhoeve.nl/' where slug = 'camper-b';
+select pg_temp.eq('eigen site wint van eerdere registratie', public.bron_resolve_source('https://mijnhoeve.nl/prijzen', null, '00000000-0000-0000-0000-000000000002') ->> 'source_id', 'eigen-site');
+select pg_temp.eq('website van een plek zonder place_id geweigerd', pg_temp.err($q$select public.bron_resolve_source('https://camper-a.nl/x', 'forum', null)$q$), 'fout');
+
+-- Subdomein dicht blokkeert niet de hele bron
+select public.bron_set_robots('anwb', false, 'shop.anwb.nl');
+select pg_temp.eq('subdomein blokkeert bron niet', (select status from bron.sources where id = 'anwb'), 'toegestaan');
+
+-- Na opschonen: claims op het oude document geweigerd, opnieuw ophalen geeft een nieuw document
+update bron.documents set fetched_at = now() - interval '40 days', extract = extract || repeat(E'\nopvulling', 300) where id = 1;
+select bron.prune();
+select pg_temp.eq('opgeschoond document ingekort', (select (content_hash like 'ingekort:%')::text from bron.documents where id = 1), 'true');
+select pg_temp.eq('claim op ingekort document geweigerd', pg_temp.err($q$select public.bron_submit_claims(1,'[]','t')$q$), 'fout');
+select pg_temp.eq('opnieuw ophalen geeft nieuw document', (public.bron_store_document('eigen-site','https://camper-a.nl/tarieven','00000000-0000-0000-0000-000000000001','server',200,null,E'Tarieven 2027 nieuw','test') > 1)::text, 'true');
+
+-- Afgerond werk is niet opnieuw af te ronden; na 5 pogingen geen lease meer
+select pg_temp.eq('klaar werk niet opnieuw zetten', pg_temp.err($q$select public.bron_finish_work(1,'agent-a','open')$q$), 'fout');
+update bron.work_items set attempts = 5, status = 'open' where id = 2;
+select pg_temp.eq('na 5 pogingen geen lease', (select coalesce(public.bron_lease_work('agent-c', array['ontdek_gemeenten'])->>'id', '-') <> '2')::text, 'true');
 
 -- Rechten
 select set_config('request.jwt.claims', '{"role":"authenticated"}', false);
