@@ -21,7 +21,9 @@ Supabase-URL en de publieke sleutel staan als standaardwaarde in `web/src/lib/en
 ## 2. Lokaal draaien (5 minuten)
 
 1. Installeer [Node.js 22 LTS](https://nodejs.org) (versie 20.9 of hoger).
-2. Open een terminal in de map van de repo en voer uit:
+2. Open een terminal in de map van de repo en voer uit: `node start.mjs`. Dat installeert de pakketten als dat
+   nodig is, start de server en opent de browser. In VS Code kan het ook via *Terminal → Run Build Task*
+   (Ctrl+Shift+B). Liever met de hand:
 
    ```bash
    cd web
@@ -49,6 +51,19 @@ Productieversie lokaal testen: `npm run build` en daarna `npm start`.
    | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | alleen als je een ander Supabase-project gebruikt |
 
 5. Klik **Deploy**. Na ±3 minuten staat de site online. Elke push naar `main` zet automatisch een nieuwe versie live.
+
+**Werkwijze met acceptatie.** Push nooit direct naar `main`:
+
+1. Werk op een eigen branch en open een PR naar `acceptatie`. GitHub draait dan de controle (lint, typecheck, build).
+2. Na het mergen zet Vercel `acceptatie` automatisch als preview online, op een vast adres
+   (Vercel → project → **Deployments**, filter op branch `acceptatie`; het adres eindigt op `-git-acceptatie-….vercel.app`).
+   Test daar op je telefoon.
+3. Klopt alles, open dan een PR van `acceptatie` naar `main`. Na het mergen gaat het live.
+4. Databasewijzigingen staan als bestand in `web/supabase/migrations/`. Zet ze pas op live als de PR is goedgekeurd,
+   vóórdat je de code merget die ze nodig heeft. De preview gebruikt dezelfde live database.
+
+Instellen (eenmalig): GitHub → **Settings → Branches → Add rule** voor `main`: "Require a pull request" en "Require
+status checks" met de CI-job uit `.github/workflows/ci.yml`.
 6. Eigen domein: in Vercel **Settings → Domains** het domein toevoegen en de DNS-records volgen.
 
 > De site werkt ook op elk ander platform dat Node.js draait (`npm run build && npm start`, poort 3000).
@@ -61,9 +76,29 @@ In het [Supabase-dashboard](https://supabase.com/dashboard/project/qkrmthrhwmmmw
 
 1. **Authentication → URL Configuration**
    - *Site URL*: je domein, bijv. `https://vrijstaan.nl`
-   - *Redirect URLs*: voeg toe `https://vrijstaan.nl/admin` en `http://localhost:3000/admin`
+   - *Redirect URLs*: voeg toe `https://vrijstaan.nl/admin`, `https://vrijstaan.nl/auth/callback`,
+     `http://localhost:3000/admin` en `http://localhost:3000/auth/callback`
 2. **Authentication → Emails → SMTP Settings** (aanbevolen): koppel een eigen mailprovider
    (bijv. Resend, Postmark of Brevo). De ingebouwde mail van Supabase verstuurt maar een paar mails per uur.
+
+### Inloggen voor bezoekers (Google, Apple, Facebook, inloglink)
+
+Bezoekers loggen in op `/inloggen`. De inloglink per e-mail werkt meteen (wel eigen SMTP instellen, zie hierboven:
+de ingebouwde mail haalt een drukke lancering niet). De drie diensten zet je aan in **Authentication → Sign In /
+Providers**. Bij elke dienst vul je als *redirect/callback URL* in:
+`https://qkrmthrhwmmmwswmfgwc.supabase.co/auth/v1/callback`
+
+| Dienst | Waar maak je de sleutels | Wat vul je in bij Supabase |
+|---|---|---|
+| Google | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth client ID (type *Web application*) | Client ID en Client Secret |
+| Apple | [Apple Developer](https://developer.apple.com/account/resources/identifiers) → Services ID met *Sign in with Apple* + een Key | Services ID, Team ID, Key ID en de .p8-sleutel |
+| Facebook | [Meta for Developers](https://developers.facebook.com/apps) → app met *Facebook Login*, alleen `email` en `public_profile` | App ID en App Secret |
+
+Staat een dienst nog niet aan, dan krijgt de bezoeker een nette melding en kan die met e-mail inloggen.
+Zet bij Facebook de app op **Live** vóór de lancering, anders kunnen alleen testers inloggen.
+
+Veiligheid: alleen een **bevestigd** e-mailadres uit `private.admin_invites` wordt beheerder. Gewone accounts
+zien in `/admin` alleen "Geen beheertoegang".
 
 ### Je beheeraccount aanmaken
 
@@ -90,7 +125,9 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 | **Plekken** | Zoeken, filteren, elke plek bewerken. Ja/Nee/Onbekend per voorziening. Status handmatig vastzetten. Wat je hier invult wordt nooit door de pipeline overschreven |
 | **Support** | Berichten van het contactformulier. Antwoorden, interne notities, status en prioriteit, standaardantwoorden. De klant leest het antwoord via een persoonlijke link (knop "Mail de klant") |
 | **Inzendingen** | Nieuwe plekken, correcties en eigenaarsclaims van bezoekers. Controleer ze en verwerk ze in Plekken |
+| **Dubbelen** | Kaart en lijst van plekken die binnen 50/150/500 m van elkaar liggen, met een zekerheid (afstand + gelijkende naam). Kies per paar welke plek blijft, of selecteer alle "hoog" en voeg ze in één keer samen. Lege velden worden aangevuld, reviews en foto's verhuizen mee en de oude link stuurt permanent door. "Geen dubbel" verbergt een paar voorgoed |
 | **Reviews** | Reviews goedkeuren, afwijzen of verwijderen. Alleen goedgekeurde reviews zijn zichtbaar |
+| **Foto's** | Foto's van bezoekers goedkeuren of afwijzen, met per inzender hoeveel foto's eerder zijn goedgekeurd/afgewezen. Na 3 goedgekeurde en 0 afgewezen foto's (en een account van minstens een dag oud) is iemand "vertrouwd" en gaan diens foto's automatisch online. Aanpassen: `update site_settings set value = '{"auto_approve_min_approved": 5, "min_account_age_days": 7}' where key = 'trust';` |
 | **FAQ** | Vragen toevoegen, bewerken, verbergen en ordenen. Verschijnt op `/veelgestelde-vragen` |
 | **Logs** | Systeemfouten, alle wijzigingen door beheerders (auditlog), data-imports en cookietoestemmingen |
 | **Statistieken** | Bezoeken per dag, populaire pagina's, zoekopdrachten en plekken (alleen bezoekers die toestemming gaven) |
@@ -105,10 +142,26 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
 
 1. **OpenStreetMap** (wekelijks, per provincie): alle campings, camperplaatsen en camperparkeerplaatsen met
    naam, ligging, contact en voorzieningen zoals ze op de kaart staan, plus losse loos- en waterpunten.
-2. **Website van de plek** (continu, ±14 sites per minuut): de scraper leest de homepage en maximaal zes
-   relevante subpagina's (tarieven, faciliteiten, info) en haalt alleen letterlijk genoemde feiten op:
-   prijs per nacht, voorzieningen, aantal plekken, maximale lengte, seizoen, honden, reserveren, foto's.
+2. **Website van de plek** (continu, ±30 sites per minuut): de scraper leest de homepage en tot 10 subpagina's,
+   gekozen op adres én linktekst, vertrekpagina's eerst (aankomst en vertrek, huisregels, reglement, FAQ). Heeft de
+   homepage geen bruikbare links (menu in JavaScript), dan gebruikt hij de sitemap of probeert hij vaste adressen
+   (`/huisregels`, `/faq` …). Vanaf de FAQ en huisregels volgt hij nog één laag links over aankomst en vertrek.
+   `www.` en zonder `www.` gelden als dezelfde site. Vindt hij geen vertrektijd, dan leest hij PDF's met het reglement
+   of de tarieven, en als laatste de gestructureerde gegevens (`checkoutTime`) van de camping. Alleen letterlijk
+   genoemde feiten: prijs per nacht, voorzieningen, aantal plekken, maximale lengte, seizoen, honden, reserveren, foto's.
    Ontkenningen ("geen honden") gaan altijd voor. `robots.txt` wordt gerespecteerd.
+   **AI-lezer** (alleen met het geheim `ANTHROPIC_API_KEY` in Supabase → Edge Functions → Secrets; model via `AI_MODEL`,
+   standaard `claude-opus-5-5`): vinden de vaste regels geen vertrektijd maar staat er wel iets over vertrekken, dan
+   leest een taalmodel die passages. Het antwoord telt alleen als de geciteerde zin letterlijk op de pagina staat en de
+   tijd of "geen vaste tijd" erin staat. De bronzin begint dan met "AI-lezer:".
+   **Diagnose:** `select private.call_pipeline('{"action":"inspect","url":"https://…"}')` en daarna het antwoord in
+   `net._http_response`: gekozen pagina's, PDF's en de zinnen over vertrekken. Schrijft niets.
+   **Zoekagenten** (handmatige ronde, bijvoorbeeld vanuit Claude Code): agents zoeken per plek op het web (eigen site,
+   gidsen, reviews, fora) en leveren een letterlijke zin met de bron-URL. Die gaan naar
+   `{"action":"verify","items":[{"id","url","departure","checkout","quote"}]}` (hoogstens 25 per aanroep). De pipeline
+   haalt de URL zelf op en neemt alleen over wat letterlijk op de pagina staat. Staat het op de eigen website, dan wordt
+   het een kandidaat zoals bij de scraper (bronzin eindigt met "(bron: …)"). Staat het elders, dan komt het als
+   correctie in Beheer → Inzendingen, met citaat en bron: een gids of review is een aanwijzing, geen feit.
 3. **Volgorde van gezag**: wat jij in beheer invult > de eigen website (voor prijs en seizoen) > OpenStreetMap.
    Komt een waarde van een website en staat die er bij een volgende controle niet meer, dan wordt hij gewist.
 4. **Vertrektijden (de kern)**: de scraper leest ook aankomst- en vertrektijden, slagboomtijden en "per 24 uur".
@@ -135,8 +188,9 @@ Automatische taken (pg_cron in Supabase):
 | Taak | Wanneer |
 |---|---|
 | `osm-regions` / `osm-collect` / `osm-staging` | Elke paar minuten; elke provincie wordt eens per 7 dagen ververst |
-| `scrape` | Elke 15 seconden een batch van 8 websites, zolang er werk in de wachtrij staat |
+| `scrape`, `scrape-2` … `scrape-10` | Tien workers, elk elke 15 seconden een batch van 8 websites op de achtergrond (`"background": true`: de functie antwoordt meteen, zodat pg_net niet op trage sites wacht; gemeten ±340 per minuut, een volledige run duurt ±10 minuten), zolang er werk in de wachtrij staat (`skip locked`: nooit twee keer dezelfde plek) |
 | `scrape-enqueue` | Elk half uur: nieuwe plekken met een website worden ingepland |
+| `scrape-refresh` | Elk half uur de 10 plekken die het langst (minstens 30 dagen) niet gelezen zijn; zo is elke website eens per maand opnieuw aan de beurt |
 
 Rijtijden en afstanden zijn echt berekend over de weg, via OpenRouteService (met `ORS_API_KEY`) of de
 openbare OSRM-server van de OpenStreetMap-gemeenschap.
@@ -147,11 +201,28 @@ openbare OSRM-server van de OpenStreetMap-gemeenschap.
 
 - [ ] Domein koppelen en `NEXT_PUBLIC_SITE_URL` instellen (stap 3)
 - [ ] Site URL en redirect-URL's in Supabase Auth (stap 4) en eigen SMTP
+- [ ] Google, Apple en Facebook aanzetten in Supabase Auth (stap 4) en Facebook-app op Live
 - [ ] Beheeraccount aanmaken (stap 4)
 - [ ] In **Instellingen** het echte contactadres invullen (nu staat er `hallo@vrijstaan.nl`)
 - [ ] Bedrijfsgegevens (naam, adres, KvK, btw) invullen in `web/src/lib/company.ts` (privacy, voorwaarden en
       disclaimer gebruiken die automatisch) en de teksten laten nalezen door een jurist
 - [ ] Optioneel: OpenRouteService-sleutel voor eigen rijtijden-quotum
+
+### Drukte op de eerste dag (verbindingen en caching)
+
+De website opent zelf **geen** databaseverbindingen: alle data loopt via de Supabase REST-API (PostgREST), die
+een eigen pool van verbindingen beheert. Bij veel bezoekers houden drie lagen de database rustig:
+
+1. **Next.js-cache** (`"use cache"` in `web/src/lib/places.ts`): de lijst met plekken wordt hoogstens eens per
+   paar minuten opgehaald, ongeacht het aantal bezoekers. Detailpagina's halen alleen hun eigen plek op.
+2. **CDN-cache van Vercel** (`s-maxage` op `/api/places` en `/api/towns`): de kaart- en zoekdata komt van de edge.
+3. **Vangnet**: bij een 429/5xx probeert de site het één keer opnieuw en valt daarna terug op de snapshot.
+
+Heb je ooit een directe Postgres-verbinding nodig (scripts, migraties, eigen server-code), gebruik dan de
+**Supavisor-pooler in transaction mode (poort 6543)**, nooit `db.<ref>.supabase.co:5432`. Het gratis project heeft
+maar 60 verbindingen. Zie `web/.env.example` voor het formaat.
+
+- [ ] Vóór de lancering in Supabase → Reports controleren dat het aantal verbindingen ruim onder de 60 blijft
 
 ---
 

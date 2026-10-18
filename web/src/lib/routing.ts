@@ -25,7 +25,8 @@ export interface MatrixResult {
   provider: "openrouteservice" | "osrm";
 }
 
-const round = (p: Point): Point => [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5];
+// Op 4 decimalen (ongeveer 10 m): genoeg voor een rijtijd, en de cache krijgt niet bij elke meter een nieuwe sleutel
+const round = (p: Point): Point => [Math.round(p[0] * 1e4) / 1e4, Math.round(p[1] * 1e4) / 1e4];
 
 export function parsePoints(raw: string | null, max: number): Point[] | null {
   if (!raw) return null;
@@ -80,7 +81,8 @@ async function osrmRoute(points: Point[]): Promise<RouteResult> {
 /** Gecachet per unieke combinatie van punten (wegen veranderen zelden). */
 export async function getRoute(key: string): Promise<RouteResult> {
   "use cache";
-  cacheLife("weeks");
+  // "days": de privacyverklaring belooft dat een rijtijd maar een paar dagen bewaard blijft
+  cacheLife("days");
   const points = key.split(";").map((s) => s.split(",").map(Number) as Point);
   const ors = process.env.ORS_API_KEY;
   if (ors) {

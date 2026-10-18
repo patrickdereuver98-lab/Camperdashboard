@@ -1,0 +1,34 @@
+# Ververst de offline snapshot (web/src/data/snapshot.json) elke week uit de live database en zet de wijziging als
+# PR naar acceptatie. Leest alleen openbare gegevens, met de publieke sleutel die ook in de website zit.
+name: Snapshot verversen
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: acceptatie
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Snapshot ophalen
+        working-directory: web
+        run: node scripts/refresh-snapshot.mjs
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          base: acceptatie
+          branch: data/snapshot
+          commit-message: "Data: snapshot ververst uit de live database"
+          title: "Data: snapshot ververst"
+          body: "Automatisch ververst uit de openbare REST-API (alleen gepubliceerde plekken). Controleer het aantal plekken in de CI-log."
+          add-paths: web/src/data/snapshot.json

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { closeEnough, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
+import { editDistance, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
 import { usePlaces, useTowns } from "@/lib/store";
 import { track } from "@/lib/track";
 import { PROVINCES, type Town } from "@/lib/types";
@@ -72,14 +72,15 @@ export function DestinationSearch({
       for (const p of ["Zeeland", "Gelderland", "Friesland", "Limburg"]) out.push({ type: "province", label: p });
       return out;
     }
-    // Overeenkomst: exact (0), begint met (1), bevat (2), bijna goed gespeld (3)
+    // Overeenkomst: exact (0), begint met (1), bevat (2), bijna goed gespeld (3 plus 0,1 per tikfout), zodat
+    // "Giethorn" bij Giethoorn (1 fout) uitkomt en niet bij een grotere plaats met 2 fouten
     const rankOf = (name: string) => {
       const n = normalize(name);
       if (n === q) return 0;
       if (n.startsWith(q)) return 1;
       if (q.length > 2 && n.includes(q)) return 2;
-      if (q.length >= 5 && closeEnough(q, n, q.length >= 8 ? 2 : 1)) return 3;
-      return -1;
+      const d = q.length >= 5 ? editDistance(q, n, q.length >= 8 ? 2 : 1) : Infinity;
+      return Number.isFinite(d) ? 3 + d / 10 : -1;
     };
     const nearbyCount = (c: { lat: number; lng: number }, r = 25) => (places ?? []).filter((p) => distanceKm(c, p) <= r).length;
 
@@ -185,7 +186,7 @@ export function DestinationSearch({
     <ul
       id={listId}
       role="listbox"
-      className="absolute inset-x-0 top-full z-30 mt-2 max-h-[min(60vh,420px)] overflow-auto rounded-xl border border-line bg-surface py-1 text-ink shadow-lift"
+      className="absolute inset-x-0 top-full z-30 mt-2 max-h-[min(60vh,420px)] overflow-auto rounded-lg border border-line bg-surface py-1 text-ink shadow-lift"
     >
       {options.map((o, i) => (
         <li
@@ -224,18 +225,18 @@ export function DestinationSearch({
           if (open && options[active]) pick(options[active]);
           else submit();
         }}
-        className={hero ? "flex flex-col gap-3 lg:flex-row lg:items-end" : "flex items-center gap-2"}
+        className={hero ? "flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-end" : "flex items-center gap-2"}
       >
         <div className="relative min-w-0 flex-1">
           <label htmlFor={`${id}-q`} className={hero ? "mb-1.5 block text-sm font-semibold text-ink-2" : "sr-only"}>
             Waar wil je staan?
           </label>
           <div
-            className={`flex min-w-0 items-center gap-2 rounded-xl text-ink ring-2 ring-line transition-shadow focus-within:ring-forest ${
-              hero ? "h-14 bg-paper px-4 shadow-[inset_0_1px_3px_rgb(0_0_0/0.06)]" : "h-12 bg-surface px-3"
+            className={`flex min-w-0 items-center gap-2 rounded-lg text-ink ring-1 ring-line transition-shadow focus-within:ring-2 focus-within:ring-forest ${
+              hero ? "h-12 bg-paper px-4 sm:h-14" : "h-11 bg-surface px-3 sm:h-12"
             }`}
           >
-            <Icon name="search" size={hero ? 22 : 20} className="shrink-0 text-muted" />
+            <Icon name="search" size={hero ? 22 : 18} className="shrink-0 text-muted" />
             <input
               ref={inputRef}
               id={`${id}-q`}
@@ -247,7 +248,7 @@ export function DestinationSearch({
               autoComplete="off"
               enterKeyHint="search"
               value={text}
-              placeholder={hero ? "Plaats, streek of provincie" : "Plaats, provincie of naam van de plek"}
+              placeholder={hero ? "Plaats, streek of provincie" : "Plaats, provincie of naam"}
               onChange={(e) => {
                 setNotFound(null);
                 setText(e.target.value);
@@ -266,7 +267,7 @@ export function DestinationSearch({
                   setActive((a) => Math.max(0, a - 1));
                 } else if (e.key === "Escape") setOpen(false);
               }}
-              className="h-full min-w-0 flex-1 bg-transparent text-[17px] placeholder:text-muted focus:outline-none"
+              className={`h-full min-w-0 flex-1 bg-transparent placeholder:text-muted focus:outline-none ${hero ? "text-[17px]" : "text-base sm:text-[17px]"}`}
             />
             {text && (
               <button
@@ -289,8 +290,8 @@ export function DestinationSearch({
           type="submit"
           className={`font-semibold transition-colors ${
             hero
-              ? "flex h-14 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-ember px-8 text-lg text-on-ember shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_8px_20px_-8px_var(--ember)] transition-[filter,transform] hover:brightness-105 active:scale-[0.98] lg:w-auto"
-              : "h-12 shrink-0 rounded-xl bg-forest px-5 text-on-forest hover:bg-forest-deep"
+              ? "flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-ember px-8 text-base text-on-ember hover:brightness-105 sm:h-14 lg:w-auto"
+              : "h-11 shrink-0 rounded-lg bg-forest px-4 text-on-forest hover:bg-forest-deep sm:h-12 sm:px-5"
           }`}
         >
           {hero && <Icon name="search" size={20} />}

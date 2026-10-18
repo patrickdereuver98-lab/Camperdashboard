@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { departureKind } from "@/lib/search";
 import { usePlaces } from "@/lib/store";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
+import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 
-const field = "h-12 w-full rounded-xl border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 const PAGE = 20;
 
 /** Gepubliceerde plekken waarvan de vertrektijd nog onbekend is, per provincie, met een snel invulformulier */
@@ -28,7 +29,7 @@ export function HelpList() {
     [places, province],
   );
 
-  if (error) return <p className="mt-4 rounded-2xl bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
+  if (error) return <p className="mt-4 rounded-xl bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
 
   return (
     <div className="mt-4">
@@ -54,7 +55,7 @@ export function HelpList() {
       ) : (
         <>
           <p className="mt-3 text-sm text-muted">{list.length.toLocaleString("nl-NL")} plekken</p>
-          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[1.25rem] bg-surface shadow-low">
+          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low">
             {list.slice(0, shown).map((p) => (
               <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
@@ -71,7 +72,7 @@ export function HelpList() {
                   <button
                     type="button"
                     onClick={() => setPicked(p)}
-                    className="h-11 shrink-0 rounded-xl border-2 border-line px-4 font-semibold text-forest transition-colors hover:border-forest"
+                    className="h-11 shrink-0 rounded-lg border border-line px-4 font-semibold text-forest transition-colors hover:border-forest"
                   >
                     Ik weet het
                   </button>
@@ -80,7 +81,7 @@ export function HelpList() {
             ))}
           </ul>
           {shown < list.length && (
-            <button type="button" onClick={() => setShown((n) => n + PAGE)} className="mt-3 h-12 w-full rounded-xl border-2 border-line font-semibold hover:border-forest">
+            <button type="button" onClick={() => setShown((n) => n + PAGE)} className="mt-3 h-12 w-full rounded-lg border border-line font-semibold hover:border-forest">
               Meer plekken
             </button>
           )}
@@ -100,7 +101,7 @@ export function HelpList() {
 }
 
 function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null; onClose: () => void; onSent: (id: string) => void }) {
-  const [kind, setKind] = useState<"vrij" | "per24" | "vast" | "">("");
+  const [kind, setKind] = useState<DepartureAnswer>("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -108,7 +109,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
     e.preventDefault();
     if (!place) return;
     const f = new FormData(e.currentTarget);
-    if (f.get("website")) return;
+    if (formValue(f, "website")) return;
     if (!kind) return setErr("Kies hoe laat je weg moet.");
     setBusy(true);
     setErr(null);
@@ -119,12 +120,12 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
         onderwerp: "vertrektijd",
         plek: place.name,
         vertrek: kind,
-        vertrek_uiterlijk: kind === "vast" ? f.get("checkout") : null,
-        hoe_weet_je_het: f.get("how"),
-        toelichting: f.get("notes") || null,
+        vertrek_uiterlijk: kind === "vast" ? formValue(f, "checkout") : null,
+        hoe_weet_je_het: formValue(f, "how"),
+        toelichting: formValue(f, "notes") || null,
       },
-      p_contact_name: String(f.get("name") || ""),
-      p_contact_email: String(f.get("email") || ""),
+      p_contact_name: String(formValue(f, "name") || ""),
+      p_contact_email: String(formValue(f, "email") || ""),
     });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
@@ -135,37 +136,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
   return (
     <Sheet open={!!place} onClose={onClose} title={place ? place.name : ""}>
       <form onSubmit={submit} className="space-y-5 pb-4">
-        <div role="radiogroup" aria-labelledby="dm-vertrek">
-          <span id="dm-vertrek" className="mb-1.5 block font-semibold">
-            Hoe laat moet je hier weg?
-          </span>
-          <div className="grid gap-2">
-            {(
-              [
-                ["vrij", "Geen vaste tijd, je vertrekt wanneer je wilt"],
-                ["per24", "24 uur na aankomst"],
-                ["vast", "Op een vaste tijd"],
-              ] as const
-            ).map(([v, l]) => (
-              <button
-                key={v}
-                type="button"
-                role="radio"
-                aria-checked={kind === v}
-                onClick={() => setKind(v)}
-                className="min-h-12 rounded-xl border-2 border-line px-4 py-2 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-          {kind === "vast" && (
-            <label className="mt-3 block">
-              <span className="mb-1.5 block font-semibold">Uiterlijk weg om</span>
-              <input name="checkout" type="time" step={900} defaultValue="11:00" required className={`${field} max-w-40`} />
-            </label>
-          )}
-        </div>
+        <DepartureRadios id="dm-vertrek" label="Hoe laat moet je hier weg?" value={kind} onChange={setKind} fieldClass={field} />
         <label className="block">
           <span className="mb-1.5 block font-semibold">Hoe weet je dit?</span>
           <select name="how" className={field} defaultValue="zelf gestaan">
@@ -196,7 +167,7 @@ function DepartureForm({ place, onClose, onSent }: { place: PlaceSummary | null;
             {err}
           </p>
         )}
-        <button type="submit" disabled={busy} className="h-12 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+        <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
           {busy ? "Versturen…" : "Versturen"}
         </button>
       </form>

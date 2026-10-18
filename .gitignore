@@ -2,5 +2,7 @@
 .env.*
 .DS_Store
 Thumbs.db
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .idea/
+.claude/settings.local.json

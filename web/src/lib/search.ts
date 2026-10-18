@@ -25,15 +25,28 @@ export const LATE_CHECKOUT = "12:00";
 export const ROOMY_CHECKOUT = "11:00";
 
 /**
- * Groep per plek: zonder vertrektijd, uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
+ * Groep per plek: zonder vertrektijd (bevestigd of nog te bevestigen), uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
  * Verdeling okt. 2026 (gepubliceerd, vaste tijd): ±350 uitslapers, ±310 ruim, ±60 vroeg.
  */
 export type DepartureKind = "vrij" | "uitslapers" | "ruim" | "vroeg" | "onbekend";
 /** Filter: een groep, of "overig" (ruim + vroeg + onbekend) */
 export type DepartureGroup = DepartureKind | "overig";
 
-export function departureKind(p: Pick<PlaceSummary, "departure" | "checkoutUntil">): DepartureKind {
-  if (p.departure === "vrij" || p.departure === "per24") return "vrij";
+/** Wat we per plek over vertrekken weten */
+export type DepartureFacts = Pick<PlaceSummary, "departure" | "checkoutUntil" | "departureCheck">;
+
+/**
+ * "Geen vaste vertrektijd" volgens de bron, maar nog niet door een mens bevestigd (of met een voorwaarde).
+ * Kandidaten staan wel op Zonder vertrektijd, onder de bevestigde plekken en met het label "nog niet bevestigd"
+ * (besluit 16 oktober 2026). "Met voorwaarde" en "klopt niet" staan bij Overige.
+ */
+export function departureUnconfirmed(p: DepartureFacts): boolean {
+  return (p.departure === "vrij" || p.departure === "per24") && p.departureCheck !== "bevestigd";
+}
+
+export function departureKind(p: DepartureFacts): DepartureKind {
+  if (p.departure === "vrij" || p.departure === "per24")
+    return p.departureCheck === "voorwaardelijk" || p.departureCheck === "afgewezen" ? "onbekend" : "vrij";
   if (p.departure === "vast" && p.checkoutUntil) {
     if (p.checkoutUntil >= LATE_CHECKOUT) return "uitslapers";
     return p.checkoutUntil >= ROOMY_CHECKOUT ? "ruim" : "vroeg";
@@ -43,7 +56,7 @@ export function departureKind(p: Pick<PlaceSummary, "departure" | "checkoutUntil
 
 const OTHER: DepartureKind[] = ["ruim", "vroeg", "onbekend"];
 
-export function inDepartureGroup(p: Pick<PlaceSummary, "departure" | "checkoutUntil">, g: DepartureGroup): boolean {
+export function inDepartureGroup(p: DepartureFacts, g: DepartureGroup): boolean {
   const k = departureKind(p);
   return g === "overig" ? OTHER.includes(k) : k === g;
 }
@@ -75,6 +88,8 @@ export interface Filters {
   /** Bij een prijsfilter ook plekken tonen waarvan de prijs onbekend is */
   priceUnknown: boolean;
   minLength?: number;
+  /** Lengtefilter bewust uitgezet (`lengte=0`): dan zet het camperprofiel het niet automatisch aan */
+  lengthOff?: boolean;
   /** Vertrekgroep; bepaalt ook op welke pagina je zit (zie DEPARTURE_PAGES) */
   departure?: DepartureGroup;
   openNow: boolean;
@@ -114,6 +129,7 @@ export function parseFilters(p: Params): Filters {
     maxPrice: num("maxprijs"),
     priceUnknown: p.get("onbekend") === "1",
     minLength: num("lengte"),
+    lengthOff: p.get("lengte") === "0" || undefined,
     departure: parseDeparture(p.get("vertrek")) ?? (p.get("vrij") === "1" ? "vrij" : undefined),
     openNow: p.get("open") === "1",
     minScore: num("score"),
@@ -143,6 +159,7 @@ export function filtersToQuery(f: Filters): string {
   if (f.maxPrice) p.set("maxprijs", String(f.maxPrice));
   if (f.priceUnknown && (f.free || f.maxPrice)) p.set("onbekend", "1");
   if (f.minLength) p.set("lengte", String(f.minLength));
+  else if (f.lengthOff) p.set("lengte", "0");
   if (f.departure && OTHER.includes(f.departure as DepartureKind)) p.set("vertrek", f.departure);
   if (f.openNow) p.set("open", "1");
   if (f.minScore) p.set("score", String(f.minScore));
@@ -180,7 +197,12 @@ export function refinementCount(f: Filters): number {
 const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 /** Is de plek op `date` open volgens het seizoen? `undefined` = onbekend. */
-export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): boolean | undefined {
+/** De huidige datum en tijd in Nederland, als lokale Date (de server draait in UTC) */
+export function nowInNL(): Date {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }));
+}
+
+export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = nowInNL()): boolean | undefined {
   if (p.openAllYear) return true;
   if (!p.season) return undefined;
   const m = /(?:(\d{1,2}) )?([a-z]+) – (?:(\d{1,2}) )?([a-z]+)/.exec(p.season.toLowerCase());
@@ -196,7 +218,7 @@ export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date =
 const MONTH_SHORT = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 /** Korte status voor kaarten: alleen als het seizoen bekend is */
-export function openStatus(p: Pick<PlaceSummary, "openAllYear" | "season">, date = new Date()): { open: boolean; label: string } | undefined {
+export function openStatus(p: Pick<PlaceSummary, "openAllYear" | "season">, date = nowInNL()): { open: boolean; label: string } | undefined {
   if (p.openAllYear) return { open: true, label: "Hele jaar open" };
   const open = isOpenOn(p, date);
   if (open === undefined || !p.season) return undefined;
@@ -219,7 +241,9 @@ export interface Result {
 function recommendScore(p: PlaceSummary): number {
   const rating = p.ratingAvg ? (p.ratingAvg / 10) * Math.min(1, p.ratingCount / 5) : 0;
   const kind = departureKind(p);
-  return p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0) + (kind === "vrij" ? 0.3 : kind === "uitslapers" ? 0.15 : 0);
+  // Bevestigd "geen vaste vertrektijd" staat altijd boven een kandidaat (+10)
+  const confirmed = kind === "vrij" && p.departureCheck === "bevestigd" ? 10 : 0;
+  return confirmed + p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0) + (kind === "vrij" ? 0.3 : kind === "uitslapers" ? 0.15 : 0);
 }
 
 export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
@@ -275,7 +299,7 @@ export function relaxations(places: PlaceSummary[], f: Filters): { label: string
     ...(f.free ? [{ label: "Tot € 10 per nacht", next: { ...f, free: false, maxPrice: 10 } }] : []),
     ...(f.free || f.maxPrice ? [{ label: "Ook met onbekende prijs", next: { ...f, priceUnknown: true } }] : []),
     ...(f.maxPrice ? [{ label: "Zonder prijsgrens", next: { ...f, maxPrice: undefined } }] : []),
-    ...(f.minLength ? [{ label: "Zonder lengtefilter", next: { ...f, minLength: undefined } }] : []),
+    ...(f.minLength ? [{ label: "Zonder lengtefilter", next: { ...f, minLength: undefined, lengthOff: true } }] : []),
     ...(f.departure === "vrij" ? [{ label: "Bekijk uitslapers", next: { ...f, departure: "uitslapers" as const } }] : []),
     ...(f.departure ? [{ label: "Alle vertrektijden", next: { ...f, departure: undefined } }] : []),
     ...(f.openNow ? [{ label: "Ook gesloten plekken", next: { ...f, openNow: false } }] : []),
@@ -320,8 +344,9 @@ export function searchForm(q: string): string {
 }
 
 /** Levenshtein-afstand, afgekapt: alleen interessant of het ≤ max is */
-export function closeEnough(a: string, b: string, max = 2): boolean {
-  if (Math.abs(a.length - b.length) > max) return false;
+/** Aantal tikfouten tussen twee woorden (Levenshtein); Infinity zodra het meer dan `max` wordt */
+export function editDistance(a: string, b: string, max = 2): number {
+  if (Math.abs(a.length - b.length) > max) return Infinity;
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
     const cur = [i];
@@ -330,8 +355,12 @@ export function closeEnough(a: string, b: string, max = 2): boolean {
       cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
       rowMin = Math.min(rowMin, cur[j]);
     }
-    if (rowMin > max) return false;
+    if (rowMin > max) return Infinity;
     prev = cur;
   }
-  return prev[b.length] <= max;
+  return prev[b.length] <= max ? prev[b.length] : Infinity;
+}
+
+export function closeEnough(a: string, b: string, max = 2): boolean {
+  return editDistance(a, b, max) <= max;
 }

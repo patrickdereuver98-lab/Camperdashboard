@@ -26,8 +26,9 @@ export function scoreLabel(n: number) {
   return n.toFixed(1).replace(".", ",");
 }
 
-const dateFmt = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", year: "numeric" });
-const monthFmt = new Intl.DateTimeFormat("nl-NL", { month: "long", year: "numeric" });
+// Altijd Nederlandse tijd: de server draait in UTC, dus rond middernacht zou een andere dag verschijnen
+const dateFmt = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
+const monthFmt = new Intl.DateTimeFormat("nl-NL", { month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 
 export function formatDate(iso: string) {
   return dateFmt.format(new Date(iso));
@@ -53,10 +54,15 @@ export function websiteLabel(url: string) {
   return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 }
 
-type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string };
+type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string; departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen" };
 
 /** Korte vertrekregel voor kaarten en kerngegevens; undefined = onbekend */
 export function departureShort(p: Departure): string | undefined {
+  if (p.departure === "vrij" || p.departure === "per24") {
+    if (p.departureCheck === "afgewezen") return undefined;
+    if (p.departureCheck === "voorwaardelijk") return "Meestal geen vaste vertrektijd";
+    if (p.departureCheck !== "bevestigd") return "Geen vaste tijd, nog niet bevestigd";
+  }
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";
   if (p.departure === "vast") return p.checkoutUntil ? `Vertrek uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";

@@ -79,7 +79,7 @@ export function Sheet({
             role="dialog"
             aria-modal="true"
             aria-labelledby={id}
-            className="relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-surface shadow-float sm:max-w-lg sm:rounded-3xl"
+            className="relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-surface shadow-float sm:max-w-lg sm:rounded-2xl"
             initial={reduce ? { opacity: 0 } : { y: "100%" }}
             animate={reduce ? { opacity: 1 } : { y: 0 }}
             exit={reduce ? { opacity: 0 } : { y: "100%" }}

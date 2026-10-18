@@ -1,0 +1,107 @@
+# Wekelijkse back-up van de database, met een echte hersteltest.
+#
+# Het gratis Supabase-plan maakt geen back-ups die je zelf kunt terugzetten. Deze workflow:
+#   1. maakt een dump van de schema's public en private (plekken, reviews, inzendingen, tickets, instellingen);
+#   2. zet die dump terug in een lege Postgres met PostGIS en vergelijkt per tabel het aantal rijen;
+#   3. bewaart de dump 30 dagen als artifact, versleuteld (de repository is openbaar en de dump bevat e-mailadressen).
+#
+# Nodig (Settings → Secrets and variables → Actions → Secrets):
+#   SUPABASE_DB_URL     verbindingsadres uit Supabase → Connect → Session pooler (met wachtwoord)
+#   BACKUP_PASSPHRASE   lange willekeurige zin; bewaar hem ook buiten GitHub, zonder kun je de dump niet openen
+# Terugzetten: zie docs/draaiboek.md, "Database terugzetten".
+name: Back-up
+
+on:
+  schedule:
+    - cron: "41 2 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: postgres:17
+    services:
+      restore:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      RESTORE_URL: postgresql://postgres:test@restore:5432/postgres
+      TABLES: places reviews submissions tickets ticket_messages faq site_settings admins app_logs consent_log
+    steps:
+      - name: Geheimen aanwezig?
+        id: gate
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::SUPABASE_DB_URL of BACKUP_PASSPHRASE ontbreekt; er is geen back-up gemaakt. Zie docs/draaiboek.md."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dump maken
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          stamp=$(date -u +%Y-%m-%d)
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges \
+            --schema=public --schema=private --file="vrijstaan-$stamp.dump"
+          ls -lh "vrijstaan-$stamp.dump"
+          for t in $TABLES; do
+            n=$(psql "$SUPABASE_DB_URL" -tAc "select count(*) from public.$t" 2>/dev/null || echo "-")
+            echo "$t $n" >> bron.txt
+          done
+          cat bron.txt
+
+      - name: Hersteltest in een lege database
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          # Wat Supabase zelf levert, minimaal nagebootst: rollen, schema's en extensies waar tabellen en policies op leunen
+          psql "$RESTORE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin; create role authenticated nologin; create role service_role nologin;
+          create schema extensions; create schema auth;
+          create extension postgis schema extensions; create extension pgcrypto schema extensions;
+          create extension pg_trgm schema extensions; create extension unaccent schema extensions;
+          create extension "uuid-ossp" schema extensions;
+          create table auth.users (id uuid primary key, email text);
+          create function auth.uid() returns uuid language sql stable as 'select null::uuid';
+          create function auth.role() returns text language sql stable as 'select null::text';
+          create function auth.jwt() returns jsonb language sql stable as 'select null::jsonb';
+          alter database postgres set search_path = "$user", public, extensions;
+          SQL
+          # Fouten bij functies die naar cron, net of vault verwijzen zijn verwacht; de rijen tellen
+          pg_restore --dbname="$RESTORE_URL" --no-owner --no-privileges "vrijstaan-$STAMP.dump" 2> restore-fouten.txt || true
+          echo "Meldingen bij terugzetten: $(grep -c 'error' restore-fouten.txt || true)"
+          grep 'error' restore-fouten.txt | head -20 || true
+          fail=0
+          while read -r t n; do
+            m=$(psql "$RESTORE_URL" -tAc "select count(*) from public.$t" 2>/dev/null || echo "-")
+            echo "$t: bron $n, teruggezet $m"
+            [ "$n" = "$m" ] || fail=1
+          done < bron.txt
+          test "$fail" = 0 || { echo "::error::De teruggezette database wijkt af van de bron"; exit 1; }
+
+      - name: Versleutelen
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          apt-get update -qq && apt-get install -y -qq gnupg > /dev/null
+          echo "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --output "vrijstaan-$STAMP.dump.gpg" "vrijstaan-$STAMP.dump"
+          rm "vrijstaan-$STAMP.dump"
+
+      - name: Bewaren (30 dagen)
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vrijstaan-backup-${{ env.STAMP }}
+          path: vrijstaan-*.dump.gpg
+          retention-days: 30
+          if-no-files-found: error

@@ -8,7 +8,7 @@ import { Sheet } from "./sheet";
 import { Sign } from "./sign";
 
 /** Knop met uitleg van de icoontjes op kaarten en plekpagina's */
-export function Legend({ className = "" }: { className?: string }) {
+export function Legend({ className = "", label = "Wat betekenen de icoontjes?" }: { className?: string; label?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -17,7 +17,7 @@ export function Legend({ className = "" }: { className?: string }) {
         onClick={() => setOpen(true)}
         className={`inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-forest hover:underline ${className}`}
       >
-        <Icon name="info" size={17} /> Wat betekenen de icoontjes?
+        <Icon name="info" size={17} /> {label}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title="Wat betekenen de icoontjes?">
         <div className="space-y-7 pb-2">
@@ -55,11 +55,11 @@ export function Legend({ className = "" }: { className?: string }) {
             <h3 className="font-semibold">Vertrektijd</h3>
             <ul className="mt-3 space-y-3">
               <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <DepartureChip place={{ departure: "vrij" }} />
+                <DepartureChip place={{ departure: "vrij", departureCheck: "bevestigd" }} />
                 <span className="text-ink-2">vertrekken wanneer je wilt</span>
               </li>
               <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <DepartureChip place={{ departure: "per24" }} />
+                <DepartureChip place={{ departure: "per24", departureCheck: "bevestigd" }} />
                 <span className="text-ink-2">je betaalt per 24 uur vanaf aankomst</span>
               </li>
               <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -71,7 +71,10 @@ export function Legend({ className = "" }: { className?: string }) {
                 <span className="text-ink-2">grijs: vóór 12:00 weg</span>
               </li>
             </ul>
-            <p className="mt-3 text-sm text-muted">Staat er niets, dan weten we de vertrektijd nog niet.</p>
+            <p className="mt-3 text-sm text-muted">
+              Groen staat er alleen als we het hebben gecontroleerd bij de plek zelf. Staat er niets, dan weten we de
+              vertrektijd nog niet.
+            </p>
           </section>
 
           <section>

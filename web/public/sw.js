@@ -1,6 +1,9 @@
 // VrijStaan service worker: app-shell offline, eerder bekeken pagina's en kaarttegels uit de cache.
-const VERSION = "vs-2";
+// Ophogen leegt alle caches van de vorige versie. Gebouwde bestanden staan in een eigen, begrensde cache
+// (STATIC), zodat de chunks van oude deploys er vanzelf uit vallen.
+const VERSION = "vs-4";
 const SHELL = `${VERSION}-shell`;
+const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 const TILES = `${VERSION}-tiles`;
 const DATA = `${VERSION}-data`;
@@ -25,6 +28,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Opruimen kost een rondgang langs alle sleutels: doe dat niet bij elke tegel of chunk
+let puts = 0;
+const trimSometimes = (name, max) => {
+  if (++puts % 50 === 0) trim(name, max);
+};
+
 async function trim(name, max) {
   const cache = await caches.open(name);
   const keys = await cache.keys();
@@ -45,7 +54,7 @@ self.addEventListener("fetch", (event) => {
         const res = await fetch(req);
         if (res.ok) {
           cache.put(req, res.clone());
-          trim(TILES, 1500);
+          trimSometimes(TILES, 1500);
         }
         return res;
       }),
@@ -80,16 +89,22 @@ self.addEventListener("fetch", (event) => {
   // Gebouwde bestanden zijn onveranderlijk
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
-      caches.open(SHELL).then(async (cache) => {
+      caches.open(STATIC).then(async (cache) => {
         const hit = await cache.match(req);
         if (hit) return hit;
         const res = await fetch(req);
-        if (res.ok) cache.put(req, res.clone());
+        if (res.ok) {
+          cache.put(req, res.clone());
+          trimSometimes(STATIC, 400);
+        }
         return res;
       }),
     );
     return;
   }
+
+  // Supportpagina's nooit bewaren: het token in het adres geeft toegang tot het ticket
+  if (url.pathname.startsWith("/support/")) return;
 
   // Pagina's: netwerk eerst, bij geen verbinding de laatst bekeken versie
   if (req.mode === "navigate") {
@@ -108,4 +123,34 @@ self.addEventListener("fetch", (event) => {
         ),
     );
   }
+});
+
+// Pushmeldingen (bijvoorbeeld "Camperplaats X is nu rustig"). Alleen voor wie een plek volgt.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "VrijStaan", body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "VrijStaan", {
+      body: data.body || "",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => w.url === url);
+      if (open) return open.focus();
+      return self.clients.openWindow(url);
+    }),
+  );
 });
