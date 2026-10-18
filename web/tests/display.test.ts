@@ -188,3 +188,19 @@ test("W7: prijs volgt dezelfde regel als de kaart", () => {
   assert.equal(fact({ priceExtras: pp("per nacht") }, "prijs"), true);
   assert.equal(fact({ priceEur: 0 }, "prijs"), true);
 });
+
+// ── Na review (react-reviewer) ──────────────────────────────────────────────
+
+test("een prijs per nacht gaat voor 'per persoon' zonder nacht, ook als die eerst staat", () => {
+  const r = perPersonPrice({ priceExtras: [{ label: "Per persoon", amount: 4, unit: "per persoon" }, { label: "Per persoon", amount: 6, unit: "per nacht" }] });
+  assert.equal(r?.amount, 6);
+  assert.equal(r?.perNight, true);
+});
+
+test("een onleesbare vertrektijd tonen we als vaste vertrektijd zonder tijd, net als departureKind", () => {
+  const p = { departure: "vast" as const, checkoutUntil: "na de lunch" };
+  assert.equal(departureShort(p), "Vaste vertrektijd");
+  assert.equal(departureLong(p), "Vaste vertrektijd");
+  assert.equal(departureKind(p), "onbekend");
+  assert.equal(departureShort({ departure: "vast", checkoutUntil: "10:30" }), "Vertrek uiterlijk 10:30");
+});

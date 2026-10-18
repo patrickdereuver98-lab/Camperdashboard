@@ -56,6 +56,15 @@ export function websiteLabel(url: string) {
   return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 }
 
+/** "11:30" of "9.00" als minuten na middernacht; undefined als het geen geldige tijd is */
+export function timeToMinutes(t?: string): number | undefined {
+  const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(t ?? "");
+  if (!m) return undefined;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  return h <= 24 && min < 60 ? h * 60 + min : undefined;
+}
+
 type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string; departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen" };
 
 /** Korte vertrekregel voor kaarten, kaartpopup en kerngegevens; undefined = onbekend. "Per 24 uur" blijft altijd staan. */
@@ -68,7 +77,8 @@ export function departureShort(p: Departure): string | undefined {
   }
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";
-  if (p.departure === "vast") return p.checkoutUntil ? `Vertrek uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
+  // Een tijd die we niet kunnen lezen tonen we niet; zo komt de tekst overeen met departureKind
+  if (p.departure === "vast") return timeToMinutes(p.checkoutUntil) !== undefined ? `Vertrek uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
   return undefined;
 }
 
@@ -81,7 +91,7 @@ export function departureLong(p: Departure): string {
   if (claimed && p.departureCheck !== "bevestigd") return per24 ? "Per 24 uur, nog niet bevestigd" : "Nog niet bevestigd";
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (per24) return "Geen vaste tijd, je betaalt per 24 uur";
-  return p.checkoutUntil ? `Uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
+  return timeToMinutes(p.checkoutUntil) !== undefined ? `Uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
 }
 
 /** "Toeristenbelasting € 1,35 per persoon per nacht" */

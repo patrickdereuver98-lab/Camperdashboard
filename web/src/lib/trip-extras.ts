@@ -15,12 +15,12 @@ type PricedPlace = { priceEur?: number; priceExtras?: Extra[] };
  */
 export function perPersonPrice(p: PricedPlace): { amount: number; perNight: boolean; extra: Extra } | undefined {
   if (p.priceEur !== undefined) return undefined;
-  for (const x of p.priceExtras ?? []) {
-    if (x.label !== "Per persoon" || !(x.amount > 0)) continue;
-    if (perPersonPerNight(x)) return { amount: x.amount, perNight: true, extra: x };
-    if (x.unit === "per persoon") return { amount: x.amount, perNight: false, extra: x };
-  }
-  return undefined;
+  const candidates = (p.priceExtras ?? []).filter((x) => x.label === "Per persoon" && x.amount > 0);
+  // Een bedrag per nacht gaat voor een bedrag "per persoon" zonder nacht
+  const night = candidates.find(perPersonPerNight);
+  if (night) return { amount: night.amount, perNight: true, extra: night };
+  const any = candidates.find((x) => x.unit === "per persoon");
+  return any ? { amount: any.amount, perNight: false, extra: any } : undefined;
 }
 
 export type StopSurcharges = {

@@ -136,6 +136,7 @@ export default function Duplicates() {
           <div className="h-[420px] overflow-hidden rounded-2xl lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)]">
             <PlaceMap
               places={mapPlaces}
+              departures={false}
               highlight={focus}
               cluster={false}
               fitKey={meters + ":" + pairs.length}

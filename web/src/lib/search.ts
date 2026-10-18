@@ -1,5 +1,8 @@
 import { distanceKm, type LatLng } from "./geo";
+import { timeToMinutes } from "./format";
 import { perPersonPrice } from "./trip-extras";
+
+export { timeToMinutes };
 import type { PlaceKind, PlaceSummary } from "./types";
 
 // ── Filters ─────────────────────────────────────────────────────────────────
@@ -43,15 +46,6 @@ export type DepartureFacts = Pick<PlaceSummary, "departure" | "checkoutUntil" | 
  */
 export function departureUnconfirmed(p: DepartureFacts): boolean {
   return (p.departure === "vrij" || p.departure === "per24") && p.departureCheck !== "bevestigd";
-}
-
-/** "11:30" of "9.00" als minuten na middernacht; undefined als het geen geldige tijd is */
-export function timeToMinutes(t?: string): number | undefined {
-  const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(t ?? "");
-  if (!m) return undefined;
-  const h = Number(m[1]);
-  const min = Number(m[2]);
-  return h <= 24 && min < 60 ? h * 60 + min : undefined;
 }
 
 const LATE_MIN = timeToMinutes(LATE_CHECKOUT)!;

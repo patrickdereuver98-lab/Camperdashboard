@@ -56,7 +56,7 @@ function tint(map: MlMap, dark: boolean) {
 
 type PopupProps = { slug: string; name: string; town: string; price: string; departure: string; image: string };
 
-function popupNode(p: PopupProps) {
+function popupNode(p: PopupProps, departures: boolean) {
   const a = document.createElement("a");
   a.href = `/plek/${p.slug}`;
   a.style.cssText = "display:block;width:240px;color:var(--ink);text-decoration:none";
@@ -77,14 +77,17 @@ function popupNode(p: PopupProps) {
   const meta = document.createElement("div");
   meta.textContent = p.price ? `${p.town}, ${p.price}` : p.town;
   meta.style.cssText = "margin-top:4px;font-size:14px;color:var(--muted)";
-  // Vertrekken is het kernfeit: altijd een regel, ook als we het niet weten
+  // Vertrekken is het kernfeit: een regel, ook als we het niet weten. Alleen waar de kaart vertrekgegevens heeft
+  // (niet in beheer, waar de plekken zonder die velden komen).
   const dep = document.createElement("div");
-  dep.textContent = p.departure || "Vertrektijd onbekend";
-  dep.style.cssText = `margin-top:4px;font-size:14px;font-weight:600;color:${p.departure ? "var(--ink)" : "var(--muted)"}`;
+  if (departures) {
+    dep.textContent = p.departure || "Vertrektijd onbekend";
+    dep.style.cssText = `margin-top:4px;font-size:14px;font-weight:600;color:${p.departure ? "var(--ink)" : "var(--muted)"}`;
+  }
   const cta = document.createElement("div");
   cta.textContent = "Bekijk plek";
   cta.style.cssText = "margin-top:8px;font-weight:700;color:var(--forest);font-size:14px;text-decoration:underline";
-  body.append(name, meta, dep, cta);
+  body.append(...(departures ? [name, meta, dep, cta] : [name, meta, cta]));
   a.append(body);
   return a;
 }
@@ -99,6 +102,7 @@ export function PlaceMap({
   route,
   user,
   cluster = true,
+  departures = true,
   onShowList,
   className = "",
 }: {
@@ -115,6 +119,8 @@ export function PlaceMap({
   route?: [number, number][] | null;
   user?: LatLng | null;
   cluster?: boolean;
+  /** Vertrekregel in de popup; uit waar de plekken geen vertrekgegevens meekrijgen (beheer) */
+  departures?: boolean;
   /** Knop "Toon lijst" bij een kaartfout (alleen waar een lijst naast de kaart bestaat) */
   onShowList?: () => void;
   className?: string;
@@ -126,9 +132,9 @@ export function PlaceMap({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const latest = useRef({ places, onSelect, onViewportChange, cluster });
+  const latest = useRef({ places, onSelect, onViewportChange, cluster, departures });
   useEffect(() => {
-    latest.current = { places, onSelect, onViewportChange, cluster };
+    latest.current = { places, onSelect, onViewportChange, cluster, departures };
   });
 
   // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
@@ -257,7 +263,7 @@ export function PlaceMap({
           popupRef.current?.remove();
           popupRef.current = new maplibregl.Popup({ offset: 14, maxWidth: "260px" })
             .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
-            .setDOMContent(popupNode(props))
+            .setDOMContent(popupNode(props, latest.current.departures))
             .addTo(map);
         });
         const reportViewport = () => {
