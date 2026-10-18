@@ -256,3 +256,13 @@ test("veldensteekproef: prijzen in tarieftabellen", () => {
   assert.equal(page("<p>Een overnachting op de camperplaats kost 7,50 euro.</p>").price_eur, 7.5);
   assert.equal(page("<p>Extra auto per nacht € 2,00</p>").price_eur, undefined);
 });
+
+test("teller in losse blokken alleen als het echt een teller is (geen menunummer)", () => {
+  assert.equal(page("<ul><li>2</li><li>Kampeerplaatsen</li></ul><p>Onze camping heeft 241 kampeerplaatsen.</p>").capacity, 241);
+  assert.equal(page("<div>1</div><div>Kampeerplaatsen</div>").capacity, undefined);
+});
+
+test("seizoen: 'gesloten van 1 november tot 19 maart' is geen openingsseizoen", () => {
+  assert.equal(page("<p>Openingstijden: gesloten van 1 november tot 19 maart.</p>").season, undefined);
+  assert.equal(page("<p>De camping is geopend van 20 maart tot 31 oktober.</p>").season, "20 maart – 31 oktober");
+});
