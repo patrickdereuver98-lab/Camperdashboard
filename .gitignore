@@ -6,3 +6,6 @@ Thumbs.db
 !.vscode/tasks.json
 .idea/
 .claude/settings.local.json
+
+# Tijdelijke worktrees van agents
+.claude/worktrees/
