@@ -53,8 +53,9 @@ export interface Place {
   departure?: "vrij" | "per24" | "vast";
   checkoutUntil?: string;
   /**
-   * Menselijke controle van de vertrekregel. Alleen "bevestigd" (door beheer of eigenaar, hoogstens een jaar oud)
-   * zet een plek op Zonder vertrektijd; "voorwaardelijk" = soms toch een tijd (bv. bij drukte).
+   * Controle van de vertrekregel door beheer of eigenaar. Een regel uit een bron is genoeg voor Zonder vertrektijd
+   * (besluit 18 oktober 2026); "bevestigd" sorteert alleen eerder. "voorwaardelijk" = soms toch een tijd (bv. bij
+   * drukte), "afgewezen" = klopt niet; beide staan bij Overige.
    */
   departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen";
   departureCheckedAt?: string;

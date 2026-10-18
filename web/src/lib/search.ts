@@ -29,7 +29,7 @@ export const LATE_CHECKOUT = "12:00";
 export const ROOMY_CHECKOUT = "11:00";
 
 /**
- * Groep per plek: zonder vertrektijd (bevestigd of nog te bevestigen), uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
+ * Groep per plek: zonder vertrektijd (vrij of per 24 uur, niet afgewezen), uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
  * Verdeling okt. 2026 (gepubliceerd, vaste tijd): ±350 uitslapers, ±310 ruim, ±60 vroeg.
  */
 export type DepartureKind = "vrij" | "uitslapers" | "ruim" | "vroeg" | "onbekend";
@@ -38,15 +38,6 @@ export type DepartureGroup = DepartureKind | "overig";
 
 /** Wat we per plek over vertrekken weten */
 export type DepartureFacts = Pick<PlaceSummary, "departure" | "checkoutUntil" | "departureCheck">;
-
-/**
- * "Geen vaste vertrektijd" volgens de bron, maar nog niet door een mens bevestigd (of met een voorwaarde).
- * Kandidaten staan wel op Zonder vertrektijd, onder de bevestigde plekken en met het label "nog niet bevestigd"
- * (besluit 16 oktober 2026). "Met voorwaarde" en "klopt niet" staan bij Overige.
- */
-export function departureUnconfirmed(p: DepartureFacts): boolean {
-  return (p.departure === "vrij" || p.departure === "per24") && p.departureCheck !== "bevestigd";
-}
 
 const LATE_MIN = timeToMinutes(LATE_CHECKOUT)!;
 const ROOMY_MIN = timeToMinutes(ROOMY_CHECKOUT)!;
@@ -270,7 +261,7 @@ export interface Result {
 function recommendScore(p: PlaceSummary): number {
   const rating = p.ratingAvg ? (p.ratingAvg / 10) * Math.min(1, p.ratingCount / 5) : 0;
   const kind = departureKind(p);
-  // Bevestigd "geen vaste vertrektijd" staat altijd boven een kandidaat (+10)
+  // Door beheer bevestigd staat boven een regel die alleen uit de bron komt (+10); zichtbaar verschil is er niet meer
   const confirmed = departureConfirmed(p) ? 10 : 0;
   return confirmed + p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0) + (kind === "vrij" ? 0.3 : kind === "uitslapers" ? 0.15 : 0);
 }

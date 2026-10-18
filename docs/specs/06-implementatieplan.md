@@ -109,7 +109,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | 🔄 Zoekagenten: web zoeken (eigen site, gidsen, reviews, fora) voor plekken zonder vertrektijd; actie `verify` neemt alleen letterlijke zinnen over, andere bronnen als inzending | Agent | Verzoek Patrick | Actie `verify` (pipeline v25) | Eerste ronde (17 okt): 170 van 736 plekken bekeken, 18 vondsten, 10 als kandidaat, 2 als inzending, 6 geweigerd. Vervolgronde in kleinere batches | Scraper |
 | ✅ Websites eens per 30 dagen opnieuw lezen | Agent | Besluit B12 | Cron `scrape-refresh`, `private.enqueue_stale_scrape` | Geen website ouder dan ±31 dagen | Scraper |
 | 🔄 Acceptatieomgeving: branch `acceptatie`, PR's eerst daarheen, Vercel-preview | Agent + Patrick | `plan.md` E5 | Branch + CI; Vercel en branch protection door Patrick | Niets gaat meer direct naar `main` | CI |
-| 🔄 Kernbelofte 100% zeker: bevestiging door mens vóór Zonder vertrektijd | Agent | `plan.md` K1–K3 | Migratie `20261015120000_vertrektijd_bevestiging.sql` (live sinds 16 oktober), Beheer → Vertrektijden | Eerste ronde gecontroleerd | Beheeraccount |
+| 🔄 Kernbelofte 100% zeker: bevestiging door mens vóór Zonder vertrektijd. Bijgesteld 18 okt (eigenaar): een bron is genoeg voor de weergave, geen label "nog niet bevestigd" meer; bevestigen in beheer blijft voor de controle en sortering | Agent | `plan.md` K1–K3 | Migratie `20261015120000_vertrektijd_bevestiging.sql` (live sinds 16 oktober), Beheer → Vertrektijden | Eerste ronde gecontroleerd | Beheeraccount |
 
 ## Mijlpaal 6: release ⬜
 

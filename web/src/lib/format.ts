@@ -67,13 +67,16 @@ export function timeToMinutes(t?: string): number | undefined {
 
 type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string; departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen" };
 
-/** Korte vertrekregel voor kaarten, kaartpopup en kerngegevens; undefined = onbekend. "Per 24 uur" blijft altijd staan. */
+/**
+ * Korte vertrekregel voor kaarten, kaartpopup en kerngegevens; undefined = onbekend. Een regel uit een bron (website,
+ * AI-lezer met letterlijk citaat, OSM) is genoeg (besluit eigenaar 18 oktober 2026); alleen een door beheer
+ * afgewezen regel tonen we niet.
+ */
 export function departureShort(p: Departure): string | undefined {
   if (p.departure === "vrij" || p.departure === "per24") {
     const per24 = p.departure === "per24";
     if (p.departureCheck === "afgewezen") return undefined;
     if (p.departureCheck === "voorwaardelijk") return per24 ? "Meestal per 24 uur" : "Meestal geen vaste vertrektijd";
-    if (p.departureCheck !== "bevestigd") return per24 ? "Per 24 uur, nog niet bevestigd" : "Geen vaste tijd, nog niet bevestigd";
   }
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (p.departure === "per24") return "Per 24 uur, geen vaste tijd";
@@ -88,7 +91,6 @@ export function departureLong(p: Departure): string {
   const per24 = p.departure === "per24";
   if (!p.departure || (claimed && p.departureCheck === "afgewezen")) return "Onbekend";
   if (claimed && p.departureCheck === "voorwaardelijk") return per24 ? "Meestal per 24 uur" : "Meestal geen vaste tijd";
-  if (claimed && p.departureCheck !== "bevestigd") return per24 ? "Per 24 uur, nog niet bevestigd" : "Nog niet bevestigd";
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (per24) return "Geen vaste tijd, je betaalt per 24 uur";
   return timeToMinutes(p.checkoutUntil) !== undefined ? `Uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";

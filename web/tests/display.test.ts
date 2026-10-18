@@ -89,17 +89,14 @@ test("W3: het label 'per 24 uur' verdwijnt niet bij een niet-bevestigde plek", (
   assert.match(departureLong({ departure: "per24" }), /per 24 uur/i);
   assert.match(departureLong({ departure: "per24", departureCheck: "voorwaardelijk" }), /per 24 uur/i);
   assert.match(departureLong({ departure: "per24", departureCheck: "bevestigd" }), /per 24 uur/i);
-  // Nog niet bevestigd blijft zichtbaar
-  assert.match(departureShort({ departure: "per24" })!, /nog niet bevestigd/);
-  assert.match(departureLong({ departure: "per24" }), /nog niet bevestigd/);
 });
 
 test("W3: afgewezen en onbekend blijven onbekend; vrij ongewijzigd", () => {
   assert.equal(departureShort({ departure: "per24", departureCheck: "afgewezen" }), undefined);
   assert.equal(departureLong({ departure: "per24", departureCheck: "afgewezen" }), "Onbekend");
   assert.equal(departureLong({}), "Onbekend");
-  assert.equal(departureShort({ departure: "vrij" }), "Geen vaste tijd, nog niet bevestigd");
-  assert.equal(departureLong({ departure: "vrij" }), "Nog niet bevestigd");
+  assert.equal(departureShort({ departure: "vrij" }), "Geen vaste vertrektijd");
+  assert.equal(departureLong({ departure: "vrij" }), "Geen vaste vertrektijd");
   assert.equal(departureLong({ departure: "vast", checkoutUntil: "11:00" }), "Uiterlijk 11:00");
 });
 
@@ -203,4 +200,23 @@ test("een onleesbare vertrektijd tonen we als vaste vertrektijd zonder tijd, net
   assert.equal(departureLong(p), "Vaste vertrektijd");
   assert.equal(departureKind(p), "onbekend");
   assert.equal(departureShort({ departure: "vast", checkoutUntil: "10:30" }), "Vertrek uiterlijk 10:30");
+});
+
+// ── Besluit eigenaar 18 oktober 2026: een bron is genoeg bevestiging ────────
+
+test("geen label 'nog niet bevestigd' meer: een regel uit de bron ziet eruit als een bevestigde", () => {
+  for (const departure of ["vrij", "per24"] as const) {
+    assert.equal(departureShort({ departure }), departureShort({ departure, departureCheck: "bevestigd" }));
+    assert.equal(departureLong({ departure }), departureLong({ departure, departureCheck: "bevestigd" }));
+    assert.doesNotMatch(`${departureShort({ departure })} ${departureLong({ departure })}`, /bevestigd/i);
+  }
+  assert.equal(departureShort({ departure: "per24" }), "Per 24 uur, geen vaste tijd");
+});
+
+test("afgewezen blijft onbekend; voorwaardelijk houdt zijn eigen regel", () => {
+  assert.equal(departureShort({ departure: "vrij", departureCheck: "afgewezen" }), undefined);
+  assert.equal(departureLong({ departure: "per24", departureCheck: "afgewezen" }), "Onbekend");
+  assert.equal(departureShort({ departure: "vrij", departureCheck: "voorwaardelijk" }), "Meestal geen vaste vertrektijd");
+  assert.equal(departureKind({ departure: "vrij" }), "vrij");
+  assert.equal(departureKind({ departure: "vrij", departureCheck: "voorwaardelijk" }), "onbekend");
 });

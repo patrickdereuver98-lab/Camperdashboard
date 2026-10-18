@@ -303,23 +303,17 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
  */
 function Decision({ place }: { place: Place }) {
   const kind = departureKind(place);
-  // Groen alleen na bevestiging; een kandidaat staat wel op Zonder vertrektijd maar met uitleg
-  const free = kind === "vrij" && place.departureCheck === "bevestigd";
+  // Groen bij geen vaste vertrektijd: een bron is genoeg (besluit eigenaar 18 oktober 2026). Met voorwaarde of
+  // afgewezen door beheer is het geen "vrij" meer.
+  const free = kind === "vrij";
   const late = kind === "uitslapers";
-  // Groen alleen als een mens het heeft bevestigd (kernbelofte); anders zeggen we eerlijk wat we wel en niet weten
   const claimed = place.departure === "vrij" || place.departure === "per24";
   const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
-  // "Per 24 uur" blijft ook staan als het nog niet bevestigd is
   const departure = departureLong(place);
-  const per24 = place.departure === "per24";
   const note =
     claimed && place.departureCheck === "voorwaardelijk"
       ? "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na."
-      : claimed && known && !free
-        ? per24
-          ? "Volgens de website betaal je per 24 uur en is er geen vaste vertrektijd. Dat hebben we nog niet bij de plek zelf gecontroleerd."
-          : "Volgens de website is er geen vaste vertrektijd. Dat hebben we nog niet bij de plek zelf gecontroleerd."
-        : free && place.departureCheckedAt
+      : free && place.departureCheck === "bevestigd" && place.departureCheckedAt
           ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
           : undefined;
   const times = [
