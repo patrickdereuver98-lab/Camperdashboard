@@ -333,3 +333,25 @@ test("codereview: verhuurtijd vóór het verhuurwoord, 'openingstijd' en 'open v
   assert.equal(out("<p>Open van 9.00 tot 12.00 uur voor vertrek en aankomst</p>"), undefined);
   assert.equal(out("<p>De plaatsen zijn beschikbaar tot 11.00 uur op de vertrekdag</p>"), "vast 11:00");
 });
+
+test("run v36: steekproef op nieuwe vertrektijden", () => {
+  // tarief van de trailerhelling, ook in de hoofdregel voor per 24 uur
+  assert.equal(out("<p>Camperplaats. Parkeren bij gebruik trailerhelling (minimum tarief per 24 uur) € 5,00</p>"), undefined);
+  // bijzin met een voorwaarde
+  assert.equal(out("<p>Kom je aan na 22.00 uur of vertrek je voor 8.00 uur, dan dien je de auto te parkeren buiten het kampeerterrein</p>"), undefined);
+  assert.equal(out("<p>Hier kan men gebruik van maken wanneer men vanaf 17.00u arriveert en voor 10.00u de volgende ochtend weer uitcheckt</p>"), undefined);
+  // recreatiewoning en huurders
+  assert.equal(out("<p>Indien het een recreatiewoning betreft geldt het tarief per overnachting tot 10.00 uur op de dag van vertrek</p>"), undefined);
+  assert.equal(out("<p>Huurders kunnen het terrein gebruiken van 14.00 uur op de aankomstdag tot 13.00 uur op de dag van vertrek</p>"), undefined);
+  // tijd vóór het verhuurwoord zonder haakjes hoort bij de accommodaties (de tweede tijd in de zin pakken we nog niet: liever leeg dan fout)
+  assert.equal(out("<p>Vertrek graag voor 10:00 uur bij de accommodaties en voor 11:00 uur bij de kampeerplaatsen</p>"), undefined);
+  // huuraccommodatie vroeg in een lange zin
+  assert.equal(out("<p>Voor de huuraccommodaties van De Schatberg, Eurocamp en Roan geldt dat je vanaf 16:00 uur kunt inchecken en om 10:00 uiterlijk dient uit te checken</p>"), undefined);
+  // laat vertrek tegen betaling of als keuze
+  assert.equal(out("<p>Vertrek tussen 13.00 - 15.00 uur (in voor- en naseizoen) € 12,50</p>"), undefined);
+  assert.equal(out("<p>Dan kun je kiezen uit vertrek om 15:00 uur of 20:00 uur</p>"), undefined);
+  // zondagen
+  assert.equal(out("<p>Uitchecken: zondagen voor 15.00 uur, op andere dagen voor 11.00 uur</p>"), undefined);
+  // alleen aankomsttijden is geen vrij vertrek
+  assert.equal(out("<p>Geen vaste aankomsttijden, geen verplichtingen voor de camper</p>"), undefined);
+});
