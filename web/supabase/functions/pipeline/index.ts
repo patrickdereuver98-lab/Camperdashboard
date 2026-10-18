@@ -6,12 +6,14 @@
 //   { "action": "scrape", "n": 6 }          → volgende batch websites
 //   { "action": "enqueue" }                 → plekken met website in de scrape-wachtrij
 //   { "action": "inspect", "url": "…" }     → diagnose: gekozen pagina's en vertrekzinnen (schrijft niets)
+//   { "action": "adres", "n": 40 }          → straat en postcode aanvullen via PDOK (pdok.ts)
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
+import { addressFrom, reverseUrl } from "./pdok.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
 import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
 import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
@@ -426,6 +428,34 @@ async function inspect(website: string, field?: string) {
   };
 }
 
+/** Straat en postcode aanvullen via PDOK voor plekken zonder adres (zie pdok.ts); ook "niets gevonden" wordt vastgelegd */
+async function runAdres(n: number) {
+  const { data: batch, error } = await db.rpc("next_pdok_batch", { p_limit: n });
+  if (error) throw error;
+  const results = await Promise.all(
+    (batch ?? []).map(async (p: { id: string; lat: number; lng: number }) => {
+      try {
+        const res = await fetch(reverseUrl(p.lat, p.lng), { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(10_000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const a = addressFrom((await res.json()).response?.docs?.[0]);
+        const { error } = await db.rpc("apply_pdok", {
+          p_id: p.id,
+          p_street: a?.street ?? null,
+          p_postcode: a?.postcode ?? null,
+          p_afstand: a?.afstand ?? null,
+        });
+        if (error) throw new Error(`apply_pdok: ${error.message}`);
+        return { id: p.id, found: !!a };
+      } catch (e) {
+        // Niet vastgelegd, dus de volgende ronde probeert het opnieuw
+        await log("warn", `PDOK-adres ${p.id}: ${e}`);
+        return { id: p.id, error: String(e).slice(0, 120) };
+      }
+    }),
+  );
+  return { processed: results.length, found: results.filter((r) => "found" in r && r.found).length };
+}
+
 async function runScrape(n: number) {
   const { data: batch, error } = await db.rpc("next_scrape_batch", { p_limit: n });
   if (error) throw error;
@@ -467,6 +497,10 @@ Deno.serve(async (req) => {
       EdgeRuntime.waitUntil(runScrape(Math.min(8, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (scrape): ${e}`)));
       return Response.json({ started: true }, { status: 202 });
     } else if (body.action === "scrape") result = await runScrape(Math.min(8, Number(body.n) || 4));
+    else if (body.action === "adres" && body.background) {
+      EdgeRuntime.waitUntil(runAdres(Math.min(50, Number(body.n) || 20)).catch((e) => log("error", `Pipeline-fout (adres): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "adres") result = await runAdres(Math.min(50, Number(body.n) || 20));
     else if (body.action === "probe")
       result = await overpass('[out:json][timeout:25];node["tourism"="caravan_site"](52.0,5.0,52.2,5.3);out 3;').then(
         (e) => ({ ok: true, count: e.length }),
