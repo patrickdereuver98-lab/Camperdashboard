@@ -10,11 +10,14 @@
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
-import { extract } from "./extract.ts";
+import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
 import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
-import { decodeHtml, deeperLinks, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+
+// Supabase edge runtime: werk na het antwoord laten doorlopen
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -129,13 +132,13 @@ async function allowed(url: URL): Promise<boolean> {
   return !robotsCache.get(url.host)!.some((p) => url.pathname.startsWith(p));
 }
 
-async function fetchPage(url: URL, accept: "html" | "xml" = "html"): Promise<string | null> {
+async function fetchPage(url: URL, accept: "html" | "xml" = "html", timeout = 9000): Promise<string | null> {
   if (!/^https?:$/.test(url.protocol)) return null;
   if (!(await allowed(url))) return null;
   const res = await fetch(url, {
     headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "nl,en;q=0.5" },
     redirect: "follow",
-    signal: AbortSignal.timeout(9000),
+    signal: AbortSignal.timeout(timeout),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
@@ -198,10 +201,29 @@ async function fetchPdf(url: URL): Promise<string | null> {
   return t.trim() ? `<html><body><p>${t}</p></body></html>` : null;
 }
 
+/** De startpagina, met terugval (zie homeCandidates); bij een time-out één keer opnieuw met meer tijd */
+async function fetchHome(website: string): Promise<{ home: URL; html: string }> {
+  let first: unknown;
+  for (const [n, href] of homeCandidates(website).entries()) {
+    const url = new URL(href);
+    // Alleen het eigen adres krijgt een tweede, langere poging; de terugvaladressen één korte
+    for (const timeout of n === 0 ? [9000, 15000] : [7000]) {
+      try {
+        const html = await fetchPage(url, "html", timeout);
+        if (html) return { home: url, html };
+        first ??= new Error("Geen HTML of geblokkeerd door robots.txt");
+        break;
+      } catch (e) {
+        first ??= e;
+        if (!(e instanceof DOMException && e.name === "TimeoutError")) break;
+      }
+    }
+  }
+  throw first;
+}
+
 async function collectPages(website: string) {
-  const home = new URL(website);
-  const html = await fetchPage(home);
-  if (!html) throw new Error("Geen HTML of geblokkeerd door robots.txt");
+  const { home, html } = await fetchHome(website);
   const links = extractLinks(html, home);
   let picked = rankLinks(links, home);
   // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij, en anders vaste adressen proberen
@@ -240,16 +262,6 @@ const pageText = (pages: string[]) =>
 // website wordt het een kandidaat (zoals de scraper); van een andere bron (gids, review, forum) alleen een inzending
 // voor Beheer, want daar is het een aanwijzing, geen feit.
 type Finding = { id: string; url: string; departure: AiAnswer["departure"]; checkout: string | null; quote: string | null };
-
-const ENTITIES: Record<string, string> = { nbsp: " ", amp: "&", quot: '"', apos: "'", lt: "<", gt: ">" };
-const ACCENTS: Record<string, string> = { acute: "\u0301", grave: "\u0300", uml: "\u0308", circ: "\u0302", tilde: "\u0303" };
-/** &oacute; &#243; &#xf3; → ó, zodat de zin van de agent ("vóór 11.00 uur") te vergelijken is met de pagina */
-const decodeEntities = (s: string) =>
-  s
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-    .replace(/&([a-z])(acute|grave|uml|circ|tilde);/gi, (_, c, a) => (c + ACCENTS[a.toLowerCase()]).normalize("NFC"))
-    .replace(/&([a-z]+);/gi, (m, n) => ENTITIES[n.toLowerCase()] ?? m);
 
 async function verifyFinding(f: Finding) {
   const url = new URL(f.url);
@@ -343,18 +355,31 @@ async function scrapeOne(place: { id: string; website: string }) {
 }
 
 /** Diagnose (alleen lezen): welke pagina's kiest de scraper en welke zinnen over vertrekken staan erop */
-async function inspect(website: string) {
+// Diagnose per veld: zinnen rond deze woorden, om te zien welke formuleringen de extractor mist
+const INSPECT_TERMS: Record<string, RegExp> = {
+  lengte: /lengte|meter lang|\d ?m(eter)?\b.{0,20}(camper|lang)|max(imaal|\.)? ?\d/gi,
+  plekken: /\d{1,3} (camper|kampeer|stand|staan|plaats|plek)/gi,
+  honden: /hond|huisdier/gi,
+  water: /water/gi,
+  reserveren: /reserve|boek/gi,
+  seizoen: /seizoen|geopend|jaarrond|hele jaar|gesloten/gi,
+  prijs: /€|euro|tarie|prijs/gi,
+};
+
+async function inspect(website: string, field?: string) {
   const c = await collectPages(website);
   const pdfTexts = await Promise.all(c.pdfs.map((href) => fetchPdf(new URL(href)).catch(() => null)));
   const pages = [c.html, ...c.subs.filter((x): x is string => !!x), ...pdfTexts.filter((x): x is string => !!x)];
   const text = pages.join(" ").replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-  const snippets = [...text.matchAll(/[^.]{0,90}(vertrek|uitcheck|check-?out|abreise|per 24 uur|24 uur)[^.]{0,90}/gi)].slice(0, 8).map((m) => m[0].trim());
+  const term = field && INSPECT_TERMS[field] ? INSPECT_TERMS[field].source : "vertrek|uitcheck|check-?out|abreise|per 24 uur|24 uur";
+  const snippets = [...text.matchAll(new RegExp(`[^.]{0,90}(${term})[^.]{0,90}`, "gi"))].slice(0, 8).map((m) => m[0].trim());
   const data = extract(pages, c.home) as Record<string, unknown>;
   const viaAi = data.departure === undefined ? await aiDeparture(pages) : null;
   return {
     links: c.links, viaSitemap: c.viaSitemap, picked: c.picked, fetched: c.subs.map((x) => !!x),
     departure: data.departure ?? viaAi?.departure ?? null, checkout: data.checkout_until ?? viaAi?.checkout_until ?? null,
     viaAi: !!viaAi, aiAvailable: !!ai, pdfs: c.pdfs, snippets,
+    ...(field ? { fields: Object.fromEntries(Object.entries(data).filter(([k]) => !["description", "photos", "times_note"].includes(k))) } : {}),
   };
 }
 
@@ -364,7 +389,11 @@ async function runScrape(n: number) {
   const results = await Promise.all(
     (batch ?? []).map(async (p: { id: string; website: string }) => {
       try {
-        const data = await scrapeOne(p);
+        // Eén trage of dode site mag de batch niet ophouden (pg_net wacht op de traagste aanroep)
+        const data = await Promise.race([
+          scrapeOne(p),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Site te traag (45 s)")), 45_000)),
+        ]);
         await db.rpc("apply_scrape", { p_id: p.id, p_data: data });
         return { id: p.id, ok: true, fields: data.fields };
       } catch (e) {
@@ -386,13 +415,18 @@ Deno.serve(async (req) => {
     let result: unknown;
     if (body.action === "osm") result = await runOsm(String(body.region));
     else if (body.action === "parse") result = await runParse(String(body.region), Number(body.places_req), Number(body.points_req));
-    else if (body.action === "scrape") result = await runScrape(Math.min(8, Number(body.n) || 4));
+    else if (body.action === "scrape" && body.background) {
+      // Meteen antwoorden en op de achtergrond doorwerken: pg_net wacht dan niet op de traagste site van de batch, zodat
+      // de workers het tempo bepalen. Fouten komen via apply_scrape in de wachtrij en via log() in app_logs.
+      EdgeRuntime.waitUntil(runScrape(Math.min(8, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (scrape): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "scrape") result = await runScrape(Math.min(8, Number(body.n) || 4));
     else if (body.action === "probe")
       result = await overpass('[out:json][timeout:25];node["tourism"="caravan_site"](52.0,5.0,52.2,5.3);out 3;').then(
         (e) => ({ ok: true, count: e.length }),
         (e) => ({ ok: false, error: String(e) }),
       );
-    else if (body.action === "inspect") result = await inspect(String(body.url));
+    else if (body.action === "inspect") result = await inspect(String(body.url), body.field ? String(body.field) : undefined);
     else if (body.action === "verify")
       result = await Promise.all(
         (body.items as Finding[]).slice(0, 25).map((f) => verifyFinding(f).catch((e) => ({ id: f.id, ok: false, reason: String(e).slice(0, 120) }))),

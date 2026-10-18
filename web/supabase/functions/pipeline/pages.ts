@@ -158,3 +158,25 @@ export function decodeHtml(bytes: Uint8Array, contentType: string): string {
     return new TextDecoder().decode(bytes);
   }
 }
+
+/**
+ * Adressen om de startpagina te proberen, in volgorde. Verhuisde pagina (404) met één niveau diep adres
+ * ("/minicamping"): dan de hoofdpagina van het domein; bij dieper adressen niet, want daar staan vaak meerdere
+ * locaties onder één domein en dan zou een tijd van een andere plek worden overgenomen. Bij een certificaat- of
+ * verbindingsfout ook de variant met/zonder www en daarna http.
+ */
+export function homeCandidates(website: string): string[] {
+  const u = new URL(website);
+  const out = [u.href];
+  const depth = u.pathname.split("/").filter(Boolean).length;
+  if (depth === 1) out.push(u.origin + "/");
+  const other = new URL(u.href);
+  other.hostname = u.hostname.startsWith("www.") ? u.hostname.slice(4) : `www.${u.hostname}`;
+  out.push(other.href);
+  if (u.protocol === "https:") {
+    const http = new URL(u.href);
+    http.protocol = "http:";
+    out.push(http.href);
+  }
+  return [...new Set(out)];
+}

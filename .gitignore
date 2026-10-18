@@ -5,3 +5,4 @@ Thumbs.db
 .vscode/*
 !.vscode/tasks.json
 .idea/
+.claude/settings.local.json
