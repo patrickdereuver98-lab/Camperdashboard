@@ -1,4 +1,4 @@
-// PDOK-adressen: alleen een volledig adres vlak bij de plek, anders niets.
+// PDOK-adressen (pipeline): alleen een volledig adres vlak bij de plek, anders niets.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { addressFrom, reverseUrl } from "../supabase/functions/pipeline/pdok";
