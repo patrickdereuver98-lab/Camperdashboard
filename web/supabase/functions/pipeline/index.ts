@@ -14,8 +14,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
-import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
-import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
+import { verify, type QuoteAnswer } from "./quote.ts";
 import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
@@ -283,10 +282,6 @@ async function collectPages(website: string) {
   return { home, html, links: links.length, picked: [...picked, ...deeper], pdfs, viaSitemap, subs: [...subs, ...more], failed };
 }
 
-// AI-lezer (alleen met het geheim ANTHROPIC_API_KEY; model via AI_MODEL, standaard claude-opus-5-5)
-const ai = Deno.env.get("ANTHROPIC_API_KEY") ? new Anthropic() : null;
-const AI_MODEL = Deno.env.get("AI_MODEL") ?? "claude-opus-5-5";
-
 const pageText = (pages: string[]) =>
   pages
     .join(" ")
@@ -297,10 +292,10 @@ const pageText = (pages: string[]) =>
     .replace(/\s+/g, " ");
 
 // Zoekagenten (handmatige multi-agentronde): een agent levert per plek een letterlijke zin en de bron-URL. We halen die
-// URL hier zelf op en nemen het alleen over als de zin er echt staat (zelfde controle als de AI-lezer). Van de eigen
+// URL hier zelf op en nemen het alleen over als de zin er echt staat (zie quote.ts). Van de eigen
 // website wordt het een kandidaat (zoals de scraper); van een andere bron (gids, review, forum) alleen een inzending
 // voor Beheer, want daar is het een aanwijzing, geen feit.
-type Finding = { id: string; url: string; departure: AiAnswer["departure"]; checkout: string | null; quote: string | null };
+type Finding = { id: string; url: string; departure: QuoteAnswer["departure"]; checkout: string | null; quote: string | null };
 
 async function verifyFinding(f: Finding) {
   const url = new URL(f.url);
@@ -310,7 +305,7 @@ async function verifyFinding(f: Finding) {
   if (!fields) return { id: f.id, ok: false, reason: "zin niet letterlijk op de pagina of zonder tijd" };
   const { data: place } = await db.from("places").select("website, departure, sources").eq("id", f.id).single();
   if (!place) return { id: f.id, ok: false, reason: "plek onbekend" };
-  const quote = String(fields.times_note).replace(/^AI-lezer: /, "");
+  const quote = String(fields.times_note);
   let own = false;
   try {
     own = !!place.website && sameSite(new URL(place.website).host, url.host);
@@ -347,30 +342,6 @@ async function verifyFinding(f: Finding) {
   return { id: f.id, ok: true, applied: "inzending" };
 }
 
-/** Vraag het taalmodel naar de vertrektijd; alleen een controleerbaar, letterlijk onderbouwd antwoord telt */
-async function aiDeparture(pages: string[]): Promise<Record<string, unknown> | null> {
-  if (!ai) return null;
-  const text = pageText(pages);
-  if (!needsAi(text)) return null;
-  try {
-    const r = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      system: SYSTEM,
-      output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
-      messages: [{ role: "user", content: passages(text) }],
-    });
-    if (r.stop_reason !== "end_turn") return null;
-    const t = r.content.find((b): b is Anthropic.TextBlock => b.type === "text");
-    if (!t) return null;
-    return verify(JSON.parse(t.text) as AiAnswer, text);
-  } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) await new Promise((res) => setTimeout(res, 2000));
-    else if (!(e instanceof Anthropic.APIError)) await log("warn", `AI-lezer: ${e}`);
-    return null;
-  }
-}
-
 async function scrapeOne(place: { id: string; website: string }) {
   const { home, html, subs, pdfs, failed } = await collectPages(place.website);
   const pages = [html];
@@ -383,14 +354,6 @@ async function scrapeOne(place: { id: string; website: string }) {
     if (extra.length) {
       pages.push(...extra);
       data = extract(pages, home) as typeof data;
-    }
-  }
-  // Vaste regels vonden niets: dan de AI-lezer, met controle op een letterlijke zin
-  if (data.departure === undefined) {
-    const found = await aiDeparture(pages);
-    if (found) {
-      Object.assign(data, found, { departure_source: "ai" });
-      data.fields = [...new Set([...(data.fields ?? []), ...Object.keys(found)])];
     }
   }
   // Haperende site: apply_scrape wist dan niets wat deze keer ontbreekt
@@ -419,11 +382,9 @@ async function inspect(website: string, field?: string) {
   const term = field && INSPECT_TERMS[field] ? INSPECT_TERMS[field].source : "vertrek|uitcheck|check-?out|abreise|per 24 uur|24 uur";
   const snippets = [...text.matchAll(new RegExp(`[^.]{0,90}(${term})[^.]{0,90}`, "gi"))].slice(0, 8).map((m) => m[0].trim());
   const data = extract(pages, c.home) as Record<string, unknown>;
-  const viaAi = data.departure === undefined ? await aiDeparture(pages) : null;
   return {
     links: c.links, viaSitemap: c.viaSitemap, picked: c.picked, fetched: c.subs.map((x) => !!x),
-    departure: data.departure ?? viaAi?.departure ?? null, checkout: data.checkout_until ?? viaAi?.checkout_until ?? null,
-    viaAi: !!viaAi, aiAvailable: !!ai, pdfs: c.pdfs, snippets,
+    departure: data.departure ?? null, checkout: data.checkout_until ?? null, pdfs: c.pdfs, snippets,
     ...(field ? { fields: Object.fromEntries(Object.entries(data).filter(([k]) => !["description", "photos", "times_note"].includes(k))) } : {}),
   };
 }

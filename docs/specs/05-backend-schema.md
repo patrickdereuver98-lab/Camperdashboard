@@ -72,6 +72,7 @@
 | `access_24h` | boolean | | | |
 | `times_note` | text | | | letterlijke zin(nen) van de bron, of "Volgens OpenStreetMap" |
 | `website`, `phone`, `email` | text | | | |
+| `operator` | text | | | Beheerder uit OSM (gemeente, ondernemer); telt als contact voor publicatie (besluit 19 oktober 2026) |
 | `image_url`, `image_credit`, `photos` | text, text, jsonb | | `[]` | foto's: `[{url, credit, permission?, license?, source?}]` |
 | `rating_avg`, `rating_count` | numeric, integer | | `0` | bijgewerkt bij goedgekeurde reviews |
 | `completeness` | numeric | ja | `0` | gewogen score 0–1, berekend door trigger |
@@ -176,7 +177,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 - CHECK-constraints zoals in de tabellen hierboven (kind, surface, departure, status, scores, lengtes, e-mailformaat).
 - `checkout_until` en `checkin_from` in `uu:mm`.
 - **Publicatie** (trigger `places_before_write`): een plek wordt `published` als
-  1. er een website of telefoonnummer is, én
+  1. er een website, telefoonnummer, e-mailadres of beheerder (OSM `operator`) is (besluit eigenaar 19 oktober 2026), én
   2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs, én
   3. `completeness` ≥ `site_settings.publish_threshold` (nu 0,45).
   Gewichten (20 punten): vertrekregel 4, seizoen 3, prijs 2, stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1,
