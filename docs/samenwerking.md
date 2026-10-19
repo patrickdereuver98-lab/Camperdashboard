@@ -167,6 +167,7 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 | Testtabellen `private.probe*` weg | specs open punt 10 | Patrick (SQL-editor) | Verwijderen vraagt bevestiging | ⬜ |
 | Dataplan Fase 0: bronnenlaag, bronnenbeleid, nulmeting, MCP-server | Dataplan (18 okt) | Sessie dataplan | Nieuw werk; raakt alleen nieuwe bestanden en schema `bron` | 🔄 branch `data/fase-0-bronnen`; migratie wacht op goedkeuring Patrick |
 | Dataplan Fase 1: ontdekken per provincie (48 werkitems in `bron.work_items`) | Dataplan | Elke sessie die wil, via `bron_lease_work` | Leases voorkomen dubbel werk | ⬜ na Fase 0 live |
+| Startlijst Friesland, Noord-Holland, Drenthe: 69 bronnen, 67 geopend (`docs/data/fase1-startlijst-2026-10-19.json`). Vertrekregel letterlijk gevonden bij 2 plekken (beide vast: Torentjeshoek 11.00, Ykema 10.30); geen enkele bevestigde plek zonder vertrektijd in deze drie provincies. Gemeentelijke verordeningen (Emmen, Coevorden, Dijk en Waard) noemen een etmaal voor de belasting, geen vertrektijd | Dataplan | Sessie dataplan | Invoeren via de MCP-server na Fase 0 | 🔄 lijst klaar, invoer wacht op Fase 0 |
 | Snapshot verversen naar 1.536 plekken | audit A5, #10 S5 en 0.5, #11 D3 | Sessie kernbelofte | `web/scripts/refresh-snapshot.mjs` en een wekelijkse workflow `snapshot.yml` (PR `data/snapshot` → `acceptatie`) | 🔄 PR #12 |
 
 ## 7. Werkafspraken voor alle agents
