@@ -355,3 +355,20 @@ test("run v36: steekproef op nieuwe vertrektijden", () => {
   // alleen aankomsttijden is geen vrij vertrek
   assert.equal(out("<p>Geen vaste aankomsttijden, geen verplichtingen voor de camper</p>"), undefined);
 });
+
+test("prijs: 'Campingplaats 2 pers (excl. toeristenbelasting) € 22,50' en 'toeristenplaats'", () => {
+  assert.equal(page("<p>Campingplaats 2 pers** (excl. toeristenbelasting) € 22,50 Extra volwassene € 4,00 Huisdier € 2,50</p>").price_eur, 22.5);
+  assert.equal(page("<p>Toeristenplaats met stroom € 26,50</p>").price_eur, 26.5);
+  // een toeslag blijft een toeslag
+  assert.equal(page("<p>Toeristenbelasting (excl. btw) € 1,50 per persoon</p>").price_eur, undefined);
+});
+
+test("prijs: 'Late check out kampeerplek kosten €12,50' is een toeslag", () => {
+  assert.equal(page("<p>Late check out kampeerplek kosten €12,50. Late check out voor de accommodaties €20</p>").price_eur, undefined);
+  assert.equal(page("<p>Kampeerplek (klein/groot) € 6,- of 9,- per dag</p>").price_eur, 6);
+});
+
+test("aantal plekken: 2 is te weinig om op te vertrouwen (boeking of groep), 3 of meer wel", () => {
+  assert.equal(page("<p>Per boeking maximaal 2 kampeerplaatsen.</p>").capacity, undefined);
+  assert.equal(page("<p>Wij hebben 3 kampeerplaatsen.</p>").capacity, 3);
+});

@@ -91,7 +91,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
   leest, dan blijft de vertrekregel **leeg**.
 - Gegeven de pagina "Zonder vertrektijd", wanneer ik zoek, dan zie ik alleen plekken met vertrekregel vrij of per
   24 uur; op "Uitslapers" alleen vaste vertrektijden van 12:00 of later; op "Overige" de rest. Via de tabbladen ga ik
-  met dezelfde zoekopdracht naar een andere pagina. Een vertrekregel uit een bron (website, AI-lezer met letterlijk
+  met dezelfde zoekopdracht naar een andere pagina. Een vertrekregel uit een bron (website, zoekagent met letterlijk
   citaat, OpenStreetMap) is genoeg: die staat er in groen, zonder label "nog niet bevestigd". Alleen een regel die
   beheer heeft afgewezen of met een voorwaarde heeft gemarkeerd staat bij "Overige" (besluit eigenaar, 18 oktober 2026).
 - Gegeven een tarieflijst met "Kampeerplaats € 24,50" en "Extra volwassene € 5,00", wanneer de scraper leest, dan is

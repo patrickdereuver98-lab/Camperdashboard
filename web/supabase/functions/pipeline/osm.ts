@@ -244,6 +244,8 @@ export function mapOsm(e: Record<string, unknown>) {
     website: url(t.website ?? t["contact:website"] ?? t.url),
     phone: t.phone ?? t["contact:phone"],
     email: t.email ?? t["contact:email"],
+    // Beheerder (gemeente, ondernemer, vereniging): telt als contact voor plekken zonder website of telefoon
+    operator: t.operator?.trim() || undefined,
     ...season(t.opening_hours),
     ...times(t),
     ...image(t),

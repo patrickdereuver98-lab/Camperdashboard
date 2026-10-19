@@ -138,3 +138,9 @@ test("check_out na 14:00 is een openingstijd, geen vertrektijd (datareview 18 ok
   assert.equal(b.departure, undefined);
   assert.equal(b.checkout_until, undefined);
 });
+
+test("beheerder (operator) gaat mee als contact", () => {
+  const a = mapOsm(el({ tourism: "caravan_site", operator: " Gemeente Leek " })) as Record<string, unknown>;
+  assert.equal(a.operator, "Gemeente Leek");
+  assert.equal((mapOsm(el({ tourism: "caravan_site" })) as Record<string, unknown>).operator, undefined);
+});

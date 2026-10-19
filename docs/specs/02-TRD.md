@@ -28,7 +28,7 @@
 | Database | Supabase Postgres 17, project `qkrmthrhwmmmwswmfgwc` ("vrijstaan"), regio **eu-central-1 (Frankfurt)** |
 | API | Supabase REST (PostgREST) met de publishable key in de browser; alle schrijfacties via `SECURITY DEFINER`-functies (RPC) |
 | Pushmeldingen | Supabase Edge Function `push` (Deno, `web-push`), aangeroepen door de database via `pg_net` met dezelfde `x-pipeline-key`; maakt zelf de VAPID-sleutels aan |
-| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `ai.ts` (AI-lezer, optioneel), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
+| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `quote.ts` (citaatcontrole voor de zoekagenten; de AI-lezer is geschrapt op 19 oktober 2026), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
 | Taken | `pg_cron` + `pg_net` in de database (zie Architectuur) |
 | Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en `cacheLife("minutes")`, terugval op de snapshot |
 
