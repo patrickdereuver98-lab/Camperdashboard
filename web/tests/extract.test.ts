@@ -367,3 +367,8 @@ test("prijs: 'Late check out kampeerplek kosten €12,50' is een toeslag", () =>
   assert.equal(page("<p>Late check out kampeerplek kosten €12,50. Late check out voor de accommodaties €20</p>").price_eur, undefined);
   assert.equal(page("<p>Kampeerplek (klein/groot) € 6,- of 9,- per dag</p>").price_eur, 6);
 });
+
+test("aantal plekken: 2 is te weinig om op te vertrouwen (boeking of groep), 3 of meer wel", () => {
+  assert.equal(page("<p>Per boeking maximaal 2 kampeerplaatsen.</p>").capacity, undefined);
+  assert.equal(page("<p>Wij hebben 3 kampeerplaatsen.</p>").capacity, 3);
+});

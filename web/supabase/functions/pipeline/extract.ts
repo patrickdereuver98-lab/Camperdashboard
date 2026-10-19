@@ -375,7 +375,8 @@ export function extract(pages: string[], base: URL) {
     /(?:^|\.)\s*(\d{2,3})\s*\.\s*(?:kampeerplaatsen|kampeerplekken|camperplaatsen|camperplekken|standplaatsen|staanplaatsen)\s*(?:\.|$)/.exec(text);
   const room = /(?:ruimte|plaats|plek|plekken|plaatsen) voor (?:maximaal |max\.? |ca\.? )?(\d{1,3}) (?:campers|kampeerauto'?s|motorhomes|wohnmobile)/.exec(text);
   const n = Number((cap ?? room)?.[1]);
-  if (n > 1 && n <= 600) out.capacity = n;
+  // Minstens 3: "2 kampeerplaatsen" op een campingsite gaat bijna altijd over een boeking of een groep, niet over het terrein
+  if (n >= 3 && n <= 600) out.capacity = n;
 
   const len = /max(?:imaal|imale|\.)?\s*(?:lengte\s*)?(?:van\s*)?(?:de camper\s*)?(\d{1,2}(?:[.,]\d)?)\s*(?:m|meter)\b/.exec(text);
   if (len) {
