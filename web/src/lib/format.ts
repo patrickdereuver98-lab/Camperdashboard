@@ -69,7 +69,7 @@ type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string
 
 /**
  * Korte vertrekregel voor kaarten, kaartpopup en kerngegevens; undefined = onbekend. Een regel uit een bron (website,
- * AI-lezer met letterlijk citaat, OSM) is genoeg (besluit eigenaar 18 oktober 2026); alleen een door beheer
+ * zoekagent met letterlijk citaat, OSM) is genoeg (besluit eigenaar 18 oktober 2026); alleen een door beheer
  * afgewezen regel tonen we niet.
  */
 export function departureShort(p: Departure): string | undefined {
