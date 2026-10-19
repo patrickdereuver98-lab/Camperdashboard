@@ -32,8 +32,8 @@ oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md`
 
 - **Data mag nooit verzonnen worden.** Alleen wat letterlijk in een bron staat; anders blijft het veld leeg en toont de
   site "Onbekend".
-- **Vertrektijd is het belangrijkste feit.** De bronzin bewaren we in beheer; op de site staat per pagina alleen
-  "Laatste update: datum". Prijs is belangrijk, maar geen faalpunt.
+- **Vertrektijd is het belangrijkste feit.** De bronzin bewaren we in beheer en staat op de plekpagina klein onder de
+  vertrekregel (besluit 19 oktober 2026); verder staat per pagina alleen "Laatste update: datum". Prijs is belangrijk, maar geen faalpunt.
 - **Teksten klinken menselijk**: zie `.claude/skills/vrijstaan-stijl/SKILL.md` (geen gedachtestreepjes, geen
   hoofdletterlabels, geen verkooppraat).
 - **Prijzen zo transparant mogelijk**: basisprijs plus alle losse toeslagen zoals de website ze noemt.
@@ -79,7 +79,7 @@ oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md`
 | 33 | Websites worden maar één keer gelezen (`enqueue_scrape(true)` plant alleen plekken zonder `last_scraped_at`), terwijl de handleiding een "volgende controle" belooft | HANDLEIDING §6, pipeline | **Opgelost (16 oktober 2026):** cron `scrape-refresh` leest elke website eens per 30 dagen opnieuw (`migrations/20261016200000_opnieuw_lezen.sql`). Nummer 33: 12 tot en met 32 zijn uitgedeeld op het samenwerkingsbord (PR #9, §5) |
 | 34 | Kernbelofte (#12) zette niet-bevestigde plekken bij Overige; live was er nog geen enkele bevestiging, dus Zonder vertrektijd zou leeg zijn | App Flow, `search.ts` | **Gewijzigd (16 oktober 2026, eigenaar):** kandidaten staan op Zonder vertrektijd onder de bevestigde plekken, met het label "nog niet bevestigd"; groen alleen na bevestiging. **Gewijzigd (18 oktober 2026, eigenaar):** een bron is genoeg bevestiging; geen label meer. Vrij en per 24 uur uit website, AI-lezer of OSM staan in groen op Zonder vertrektijd; alleen afgewezen is onbekend en voorwaardelijk staat bij Overige |
 | 35 | Agents en skills uit Everything Claude Code gaan uit van Engels, Conventional Commits en eigen documenten (CODEMAP) | CLAUDE.md, stijlgids | **Besloten (18 oktober 2026):** naslag; CLAUDE.md, `docs/specs/` en de stijlgids gaan voor (zie `.claude/skills/BRONNEN.md`) |
-| 36 | PRD en spelregels: bronzin alleen in beheer; de plekpagina toont "Volgens de website…" met de zin, en `timesNote` gaat naar de browser | PRD, UI/UX Brief, plekpagina | Besluit Patrick ([datareview](../review-data-2026-10-18.md), besluit 1) |
+| 36 | PRD en spelregels: bronzin alleen in beheer; de plekpagina toont "Volgens de website…" met de zin, en `timesNote` gaat naar de browser | PRD, UI/UX Brief, plekpagina | **Besloten (19 oktober 2026, eigenaar):** mag blijven, klein. De plekpagina toont de bronzin in 14 px, gedempt, onder de vertrekregel ("Bron: “…” (website)"); PRD, UI/UX Brief en spelregel bijgewerkt |
 | 37 | PRD noemt 1.509 gepubliceerde plekken; live zijn het er 1.924 (18 oktober 2026) | PRD | PRD bijwerken bij de volgende herziening |
 | 38 | Standaarddrempel als de instelling ontbreekt: 0,7 in de trigger `places_before_write`, 0,8 in `private.publish_threshold()`; `apply-threshold` telt de verplichte velden niet mee | Backend Schema | Overal `publish_threshold()` en `place_meets_must_haves` (datareview stap 5) |
 | 39 | Backend Schema noemt de soort `parkeerplaats`, maar alle 15 staan op concept | Backend Schema | Bekijken bij de dekkingsronde; geen wijziging nodig zolang ze niet aan de eisen voldoen |
