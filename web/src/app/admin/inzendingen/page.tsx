@@ -51,6 +51,22 @@ export default function Submissions() {
   );
 }
 
+type Change = { was: string | null; nieuw: string | null };
+
+/** Eigenaarsformulier: per veld de oude en de nieuwe waarde */
+function Changes({ changes }: { changes: Record<string, Change> }) {
+  return Object.entries(changes).map(([k, c]) => (
+    <div key={k} className="contents">
+      <dt className="font-semibold text-muted">{k}</dt>
+      <dd className="break-words whitespace-pre-line">
+        {c.was !== null && <span className="text-muted line-through">{c.was}</span>}
+        {c.was !== null && " "}
+        {c.nieuw === null ? <em>leeggemaakt</em> : <strong>{c.nieuw}</strong>}
+      </dd>
+    </div>
+  ));
+}
+
 function Item({ s, onChange }: { s: Submission; onChange: () => void }) {
   const [note, setNote] = useState(s.admin_note ?? "");
   const [err, setErr] = useState<string | null>(null);
@@ -71,12 +87,16 @@ function Item({ s, onChange }: { s: Submission; onChange: () => void }) {
         )}
       </div>
       <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1 text-sm">
-        {Object.entries(s.payload).filter(([, v]) => v !== null && v !== "").map(([k, v]) => (
-          <div key={k} className="contents">
-            <dt className="font-semibold text-muted">{k}</dt>
-            <dd className="break-words whitespace-pre-line">{typeof v === "object" ? JSON.stringify(v) : String(v)}</dd>
-          </div>
-        ))}
+        {Object.entries(s.payload).filter(([, v]) => v !== null && v !== "").map(([k, v]) =>
+          k === "wijzigingen" && v && typeof v === "object" ? (
+            <Changes key={k} changes={v as Record<string, Change>} />
+          ) : (
+            <div key={k} className="contents">
+              <dt className="font-semibold text-muted">{k}</dt>
+              <dd className="break-words whitespace-pre-line">{typeof v === "object" ? JSON.stringify(v) : String(v)}</dd>
+            </div>
+          ),
+        )}
       </dl>
       {(s.contact_name || s.contact_email) && (
         <p className="text-sm">

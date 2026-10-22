@@ -16,6 +16,8 @@ import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-
 import { PlaceMap } from "@/components/place-map";
 import { Legend } from "@/components/legend";
 import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
+import { OwnerUpdate } from "./owner-update";
+import { ownerValues } from "@/lib/owner-update";
 import { PhotoUpload } from "./photo-upload";
 import { CrowdStatusCard } from "./crowd-status";
 
@@ -291,7 +293,10 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
           <p className="mt-1">Nog onbekend: {missing.join(", ")}. Weet jij dit? Laat het weten, dan vullen we het aan.</p>
         )}
         {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het weten, dan passen we het aan.</p>}
-        <ReportProblem placeId={place.id} placeName={place.name} />
+        <div className="mt-1 flex flex-wrap gap-x-5">
+          <ReportProblem placeId={place.id} placeName={place.name} />
+          <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
+        </div>
       </div>
     </>
   );
