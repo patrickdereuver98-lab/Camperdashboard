@@ -75,7 +75,7 @@ Besluit 18 oktober 2026:
 
 - **Volledig:** de vertrekregel is bekend. Een prijs is het streven (doel 90%) maar geen eis; zonder prijs staat er
   "Prijs onbekend".
-- **Onvolledig:** de plek haalt de huidige drempel (contact plus 2 van 4 kernfeiten), maar de vertrekregel is
+- **Onvolledig:** de plek haalt de huidige drempel (contact plus 2 van 4 kernfeiten; contact is website, telefoon, e-mail of beheerder uit OSM), maar de vertrekregel is
   onbekend. Zo'n plek blijft zichtbaar, grijs en met de vraag om de vertrektijd door te geven.
 - Plekken onder de drempel blijven verborgen en worden aangevuld door de scraper en de zoekagenten.
 
@@ -100,7 +100,7 @@ Besluit 18 oktober 2026: alle bruikbare informatie wordt gebruikt, ook reviews e
 |---|---|---|
 | Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend); de letterlijke bronzin staat in beheer, op de site alleen "Laatste update: datum" | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
 | Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (11:00 tot 12:00 "ruim", vóór 11:00 "vroeg", of onbekend, met keuze daartussen), met tabbladen boven de resultaten en chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
-| Groene vertrekregel uit een bron (website, AI-lezer met letterlijk citaat, OpenStreetMap); beheer kan afwijzen of een voorwaarde markeren | Zekerheid op de belangrijkste pagina | Must |
+| Groene vertrekregel uit een bron (website, zoekagent met letterlijk citaat, OpenStreetMap); beheer kan afwijzen of een voorwaarde markeren | Zekerheid op de belangrijkste pagina | Must |
 | Prijs met "vanaf", hoogste tarief en losse toeslagen | Geen verrassingen bij aankomst | Must |
 | Zoeken op plaats, streek of eiland, vergeeft typfouten | Snel vinden | Must |
 | Lijst en kaart, filters in de URL | Overzicht en deelbare zoekopdrachten | Must |
