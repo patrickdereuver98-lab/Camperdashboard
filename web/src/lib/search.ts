@@ -222,6 +222,16 @@ export function nowInNL(): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }));
 }
 
+/**
+ * Kun je hier vandaag zeker niet meer aankomen? Alleen als de laatste aankomsttijd bekend is en voorbij is, en de plek
+ * niet dag en nacht open is. Onbekend telt niet als dicht (Dichtbij verbergt alleen wat zeker niet meer kan).
+ */
+export function arrivalClosed(p: Pick<PlaceSummary, "checkinUntil" | "access24h">, now = nowInNL()): boolean {
+  if (!p.checkinUntil || p.access24h) return false;
+  const [h, m] = p.checkinUntil.split(":").map(Number);
+  return now.getHours() * 60 + now.getMinutes() > h * 60 + m;
+}
+
 export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = nowInNL()): boolean | undefined {
   if (p.openAllYear) return true;
   if (!p.season) return undefined;

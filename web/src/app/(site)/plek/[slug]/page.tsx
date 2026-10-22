@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
-import { cardPrice, departureLong, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
+import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
 import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
@@ -96,7 +96,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   };
 
   const price = cardPrice(place);
-  const reserveLabel = place.reservation ? "Reserveren via de website" : "Naar de website";
+  const rule = reservationRuleOf(place);
+  const reserveLabel = rule === "verplicht" || rule === "mogelijk" ? "Reserveren via de website" : "Naar de website";
 
   return (
     <article className="pb-24 md:pb-8">
@@ -320,10 +321,11 @@ function Decision({ place }: { place: Place }) {
           ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
           : undefined;
   const times = [
-    place.checkinFrom && `Aankomst vanaf ${place.checkinFrom}`,
+    arrivalText(place),
     place.accessHours && `Slagboom of poort open ${place.accessHours}`,
     place.access24h && !place.accessHours && "24 uur per dag toegankelijk",
     place.maxStayNights && `Maximaal ${pluralize(place.maxStayNights, "nacht", "nachten")}`,
+    reservationRuleOf(place) && RESERVATION_TEXT[reservationRuleOf(place)!],
   ].filter(Boolean) as string[];
   const price = cardPrice(place);
   const extras = place.priceExtras ?? [];
@@ -447,7 +449,6 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   const rows: { label: string; value: React.ReactNode }[] = [];
   const unknown: string[] = [];
   const add = (label: string, value: React.ReactNode | undefined, missing: string) => (value === undefined ? unknown.push(missing) : rows.push({ label, value }));
-  add("Reserveren", place.reservation === undefined ? undefined : place.reservation ? "Ja" : "Niet nodig", "reserveren");
   add("Aantal plekken", place.capacity ? String(place.capacity) : undefined, "aantal plekken");
   add("Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : undefined, "ondergrond");
   add("Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : undefined, "maximaal verblijf");

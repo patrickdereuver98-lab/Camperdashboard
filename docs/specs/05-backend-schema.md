@@ -68,6 +68,8 @@
 | `departure_check` | text | | | menselijke controle: `bevestigd`, `voorwaardelijk`, `afgewezen`; `null` = nog niet gecontroleerd. `null` en `bevestigd` staan allebei op Zonder vertrektijd zonder zichtbaar verschil (een bron is genoeg, besluit 18 oktober 2026); `bevestigd` sorteert alleen eerder bij gelijke stand; `voorwaardelijk` en `afgewezen` staan bij Overige. Wordt automatisch leeg als `departure`, `checkout_until` of `times_note` verandert, en na een jaar (cron `departure-recheck`) |
 | `departure_checked_at`, `departure_checked_by` | timestamptz, text | | | wanneer en door wie (`beheer`, `eigenaar`); te zetten via RPC `check_departure` (alleen beheer) |
 | `checkout_until`, `checkin_from` | text | | | formaat `uu:mm` |
+| `checkin_until` | text | | | laatste aankomsttijd, `uu:mm` (scraper vanaf parser 41) |
+| `reservation_rule` | text | | | `verplicht`, `mogelijk` of `niet_nodig`; leeg = onbekend. Het oude ja/nee-veld `reservation` blijft als terugval |
 | `access_hours` | text | | | slagboom of poort, bv. `07:30–23:00` |
 | `access_24h` | boolean | | | |
 | `times_note` | text | | | letterlijke zin(nen) van de bron, of "Volgens OpenStreetMap" |
@@ -175,7 +177,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 ## Datavalidatie en bedrijfsregels
 
 - CHECK-constraints zoals in de tabellen hierboven (kind, surface, departure, status, scores, lengtes, e-mailformaat).
-- `checkout_until` en `checkin_from` in `uu:mm`.
+- `checkout_until`, `checkin_from` en `checkin_until` in `uu:mm`; `reservation_rule` alleen `verplicht`, `mogelijk` of `niet_nodig`.
 - **Publicatie** (trigger `places_before_write`): een plek wordt `published` als
   1. er een website, telefoonnummer, e-mailadres of beheerder (OSM `operator`) is (besluit eigenaar 19 oktober 2026), én
   2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs, én
