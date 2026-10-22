@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, ViewTransition } from "react";
 import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format";
 import { coarse, formatKm, type LatLng } from "@/lib/geo";
@@ -12,6 +13,8 @@ import { PlacePhoto } from "@/components/place-ui";
 import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
 import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
+import { authErrorMessage, cleanCode, codeErrorMessage, signInWithEmail, useSession, verifyEmailCode } from "@/lib/auth";
+import { clearDraft, loadDraft, saveDraft, type ReviewDraft } from "@/lib/review-draft";
 
 // ── Fotogalerij met vegen ───────────────────────────────────────────────────
 
@@ -263,29 +266,74 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
 
 const input = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
 
-export function WriteReview({ placeId, placeName }: { placeId: string; placeName: string }) {
+export function WriteReview({ placeId, placeName, slug }: { placeId: string; placeName: string; slug: string }) {
+  const { session } = useSession();
+  const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [departure, setDeparture] = useState<DepartureAnswer>("");
+  // Concept uit de browser: de beginwaarden van de velden. `formKey` laat het formulier ze opnieuw inlezen.
+  const [draft, setDraft] = useState<ReviewDraft | null>(null);
+  const [formKey, setFormKey] = useState(0);
+  // Zonder account: eerst een code per mail, dan versturen
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const back = `/plek/${slug}#review`;
 
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    if (formValue(form, "website")) return; // honeypot
-    if (!scores.rating) {
-      setErr("Geef een totaalcijfer.");
-      return;
+  function openSheet() {
+    const d = loadDraft(placeId);
+    if (d) {
+      setDraft(d);
+      setScores(d.scores);
+      setDeparture(d.departure);
+      setFormKey((k) => k + 1);
     }
-    setBusy(true);
-    setErr(null);
+    setOpen(true);
+  }
+
+  // Terug na inloggen (via /inloggen of de link in de mail): de sheet gaat vanzelf open, met het concept
+  useEffect(() => {
+    const check = () => {
+      if (location.hash === "#review") openSheet();
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeId]);
+
+  function persist() {
+    const form = formRef.current;
+    if (!form) return;
+    const f = new FormData(form);
+    const s = (name: string) => String(formValue(f, name) ?? "");
+    saveDraft(placeId, {
+      scores,
+      departure,
+      checkout: s("checkout"),
+      title: s("title"),
+      body: s("body"),
+      month: s("month"),
+      vehicle: s("vehicle"),
+      name: s("name"),
+    });
+  }
+
+  // Cijfers en vertrektijd zijn knoppen, geen velden: ook die meteen bewaren
+  useEffect(() => {
+    if (open && !done) persist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scores, departure]);
+
+  async function sendReview(form: FormData) {
+    const sb = supabase();
     const month = String(formValue(form, "month") || "");
-    const { error } = await supabase().rpc("submit_review", {
+    const { error } = await sb.rpc("submit_review", {
       p_place_id: placeId,
       p_author_name: String(formValue(form, "name")),
-      p_author_email: String(formValue(form, "email") || ""),
       p_rating: scores.rating,
       p_score_location: scores.location ?? null,
       p_score_quiet: scores.quiet ?? null,
@@ -296,9 +344,11 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
       p_vehicle: String(formValue(form, "vehicle") || "") || null,
       p_visited_month: month ? `${month}-01` : null,
     });
-    if (!error && departure) {
+    if (error) throw error;
+    if (departure) {
       // De vertrektijd gaat als inzending naar beheer, net als bij Doe mee. Een fout hier houdt de review niet tegen.
-      await supabase().rpc("submit_place", {
+      const email = (await sb.auth.getSession()).data.session?.user.email ?? "";
+      await sb.rpc("submit_place", {
         p_kind: "correctie",
         p_place_id: placeId,
         p_payload: {
@@ -309,17 +359,81 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
           hoe_weet_je_het: "zelf gestaan (review)",
         },
         p_contact_name: String(formValue(form, "name") || ""),
-        p_contact_email: String(formValue(form, "email") || ""),
+        p_contact_email: email,
       });
     }
-    setBusy(false);
-    if (error) setErr(errorMessage(error));
-    else setDone(true);
+    clearDraft(placeId);
+    setDone(true);
   }
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    if (formValue(form, "website")) return; // honeypot
+    if (!scores.rating) {
+      setErr("Geef een totaalcijfer.");
+      return;
+    }
+    persist();
+    setBusy(true);
+    setErr(null);
+    if (!session && !sentTo) {
+      // Stap 1 zonder account: code mailen. De link in dezelfde mail brengt je terug naar dit formulier.
+      const address = String(formValue(form, "email") || "").trim();
+      try {
+        await signInWithEmail(address, back);
+        setSentTo(address);
+      } catch (e) {
+        setErr(authErrorMessage((e as Error).message));
+      }
+      setBusy(false);
+      return;
+    }
+    if (!session && sentTo) {
+      // Stap 2: met de code ben je ingelogd en is je e-mailadres bevestigd
+      try {
+        await verifyEmailCode(sentTo, code);
+      } catch (e) {
+        setErr(codeErrorMessage((e as Error).message));
+        setBusy(false);
+        return;
+      }
+    }
+    try {
+      await sendReview(form);
+    } catch (e) {
+      setErr(errorMessage(e));
+    }
+    setBusy(false);
+  }
+
+  async function resend() {
+    if (!sentTo) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await signInWithEmail(sentTo, back);
+      setCode("");
+    } catch (e) {
+      setErr(authErrorMessage((e as Error).message));
+    }
+    setBusy(false);
+  }
+
+  const meta = (session?.user.user_metadata ?? {}) as { full_name?: string; name?: string };
+  const accountName = meta.full_name || meta.name || "";
+  const defaultName = draft?.name || accountName;
+
+  // De sessie komt soms pas binnen als het formulier al open staat: dan alsnog de naam van het account invullen
+  useEffect(() => {
+    const field = formRef.current?.elements.namedItem("name");
+    if (open && accountName && field instanceof HTMLInputElement && !field.value) field.value = accountName;
+  }, [open, accountName, formKey]);
+  const label = session ? "Review versturen" : sentTo ? "Bevestigen en versturen" : "Stuur mij een code";
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-12 items-center gap-2 rounded-lg bg-forest px-5 font-semibold text-on-forest">
+      <button type="button" onClick={openSheet} className="flex h-12 items-center gap-2 rounded-lg bg-forest px-5 font-semibold text-on-forest">
         <Icon name="edit" size={19} /> Schrijf een review
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt!" : `Review voor ${placeName}`}>
@@ -331,7 +445,7 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
             </button>
           </div>
         ) : (
-          <form onSubmit={submit} className="space-y-5 pb-4">
+          <form key={formKey} ref={formRef} onSubmit={submit} onChange={persist} className="space-y-5 pb-4" data-testid="review-form">
             <ScorePicker label="Totaalcijfer" required value={scores.rating} onChange={(n) => setScores((s) => ({ ...s, rating: n }))} />
             <details className="rounded-lg bg-sunken p-4">
               <summary className="cursor-pointer font-semibold">Cijfers per onderdeel (optioneel)</summary>
@@ -344,13 +458,22 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
             </details>
             <label className="block">
               <span className="mb-1.5 block font-semibold">Titel (optioneel)</span>
-              <input name="title" maxLength={120} className={input} />
+              <input name="title" maxLength={120} defaultValue={draft?.title} className={input} />
             </label>
             <label className="block">
               <span className="mb-1.5 block font-semibold">
                 Je ervaring <span className="text-alert">*</span>
               </span>
-              <textarea name="body" required minLength={20} maxLength={3000} rows={5} className={`${input} h-auto py-2`} placeholder="Wat moeten andere camperaars weten?" />
+              <textarea
+                name="body"
+                required
+                minLength={20}
+                maxLength={3000}
+                rows={5}
+                defaultValue={draft?.body}
+                className={`${input} h-auto py-2`}
+                placeholder="Wat moeten andere camperaars weten?"
+              />
             </label>
             <DepartureRadios
               id="review-vertrek"
@@ -358,15 +481,16 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
               value={departure}
               onChange={setDeparture}
               fieldClass={input}
+              checkoutDefault={draft?.checkout || undefined}
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block font-semibold">Wanneer was je er?</span>
-                <input name="month" type="month" className={input} />
+                <input name="month" type="month" defaultValue={draft?.month} className={input} />
               </label>
               <label className="block">
                 <span className="mb-1.5 block font-semibold">Voertuig</span>
-                <select name="vehicle" className={input} defaultValue="">
+                <select name="vehicle" className={input} defaultValue={draft?.vehicle ?? ""}>
                   <option value="">Zeg ik liever niet</option>
                   <option value="camper">Camper</option>
                   <option value="buscamper">Buscamper</option>
@@ -379,18 +503,81 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
               <span className="mb-1.5 block font-semibold">
                 Je naam <span className="text-alert">*</span>
               </span>
-              <input name="name" required minLength={2} maxLength={60} autoComplete="given-name" className={input} />
+              <input name="name" required minLength={2} maxLength={60} defaultValue={defaultName} autoComplete="given-name" className={input} />
               <span className="mt-1 block text-sm text-muted">Wordt bij je review getoond.</span>
             </label>
-            <label className="block">
-              <span className="mb-1.5 block font-semibold">E-mail (optioneel)</span>
-              <input name="email" type="email" autoComplete="email" className={input} />
-              <span className="mt-1 block text-sm text-muted">Alleen voor vragen over je review. Niet zichtbaar.</span>
-            </label>
+
+            {session ? (
+              <p className="text-sm text-muted" data-testid="review-account">
+                Je verstuurt deze review vanuit je account{session.user.email ? ` (${session.user.email})` : ""}. Je e-mailadres is niet zichtbaar.
+              </p>
+            ) : sentTo ? (
+              <div className="rounded-xl bg-forest-tint p-4" role="status">
+                <p className="font-semibold text-forest">Check je mail</p>
+                <p className="mt-1 text-ink-2">
+                  We hebben een code gestuurd naar <strong>{sentTo}</strong>. Vul hem hieronder in, dan versturen we je review. Geen
+                  mail? Kijk ook in je spammap.
+                </p>
+                <label className="mt-3 block">
+                  <span className="mb-1.5 block font-semibold">Code uit de mail</span>
+                  <input
+                    name="code"
+                    value={code}
+                    onChange={(e) => setCode(cleanCode(e.target.value))}
+                    required
+                    autoFocus
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    pattern="[0-9]{6,10}"
+                    maxLength={10}
+                    className={`${input} text-center font-mono text-xl tracking-[0.3em]`}
+                  />
+                </label>
+                <div className="mt-2 flex flex-wrap gap-x-6">
+                  <button type="button" onClick={resend} disabled={busy} className="min-h-11 font-semibold text-forest underline disabled:opacity-60">
+                    Nieuwe code sturen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSentTo(null);
+                      setCode("");
+                      setErr(null);
+                    }}
+                    className="min-h-11 font-semibold text-forest underline"
+                  >
+                    Ander e-mailadres gebruiken
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl bg-sunken p-4" data-testid="review-confirm">
+                <label className="block">
+                  <span className="mb-1.5 block font-semibold">
+                    Je e-mailadres <span className="text-alert">*</span>
+                  </span>
+                  <input name="email" type="email" required autoComplete="email" inputMode="email" className={input} />
+                </label>
+                <p className="mt-2 text-sm text-ink-2">
+                  We mailen je een code. Daarmee bevestig je je e-mailadres en ben je ook ingelogd. Je adres is nooit zichtbaar.
+                </p>
+                <p className="mt-2 text-sm">
+                  <Link href={`/inloggen?next=${encodeURIComponent(back)}`} onClick={persist} className="font-semibold text-forest underline">
+                    Liever inloggen met Google, Apple of Facebook
+                  </Link>
+                  <span className="text-muted">. Wat je al schreef, blijft bewaard.</span>
+                </p>
+              </div>
+            )}
+
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
             {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-            <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
-              {busy ? "Versturen…" : "Review versturen"}
+            <button
+              type="submit"
+              disabled={busy || (!session && !!sentTo && code.length < 6)}
+              className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60"
+            >
+              {busy ? "Versturen…" : label}
             </button>
           </form>
         )}

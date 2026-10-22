@@ -15,12 +15,15 @@ export function DepartureRadios({
   value,
   onChange,
   fieldClass,
+  checkoutDefault = "11:00",
 }: {
   id: string;
   label: string;
   value: DepartureAnswer;
   onChange: (v: DepartureAnswer) => void;
   fieldClass: string;
+  /** Beginwaarde van het tijdveld, bijvoorbeeld uit een bewaard concept */
+  checkoutDefault?: string;
 }) {
   return (
     <div role="radiogroup" aria-labelledby={id}>
@@ -45,7 +48,7 @@ export function DepartureRadios({
       {value === "vast" && (
         <label className="mt-3 block">
           <span className="mb-1.5 block font-semibold">Uiterlijk weg om</span>
-          <input name="checkout" type="time" step={900} defaultValue="11:00" required className={`${fieldClass} max-w-40`} />
+          <input name="checkout" type="time" step={900} defaultValue={checkoutDefault} required className={`${fieldClass} max-w-40`} />
         </label>
       )}
     </div>
