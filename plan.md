@@ -22,7 +22,7 @@ Status: ✅ klaar op `main` · 🟢 gebouwd en samengevoegd in `acceptatie` (PR 
 | CI/CD | 🟢 | CI in PR #10 (lint, typecheck, 15 tests, offline build); Playwright in PR #4. Uitrol via Vercel draait al |
 | Unit-tests | 🟢 | PR #10 (`web/tests/`, extractor en zoeken) en PR #4 (17 testbestanden) |
 | Smoke- en regressietests | 🟢 / ⬜ | Playwright-basis in PR #4. Zes kernflows als e2e (E4) open |
-| SEO en vindbaarheid (sitemap, robots.txt, gestructureerde data) | ✅ / ⬜ | Sitemap, robots en JSON-LD op `main`. Resultaten op zoek- en vertrekpagina's alleen in de browser (B4/P-SSR) |
+| SEO en vindbaarheid (sitemap, robots.txt, gestructureerde data) | ✅ / 🔄 | Sitemap, robots en JSON-LD op `main`. Landingspagina's per provincie, plaats en vertrekgroep met server-side lijst op `claude/seo-paginas` (22 okt). Het zoekscherm zelf blijft in de browser (B4) |
 | Alerting | 🟢 | #13: `monitor.yml` (site, database, aantal plekken), GitHub mailt bij een fout |
 | Performance monitoring | ⬜ | Lighthouse-budget in CI (E4). Nu LCP 4 tot 6,6 s door de cookiebanner; banner is verkleind in PR #10 |
 | Analytics | ✅ | Eigen statistieken, alleen met toestemming, zonder cookies of derden |
@@ -149,7 +149,7 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 | P11 | Navigatiekeuze: Apple Maps, Google Maps, Waze, coördinaten | S | 🟢 polishronde |
 | P12 | Offline-basis: `/offline`-pagina, bewaarde plekken automatisch in de cache, melding "nieuwe versie" | M | ⬜ |
 | P13 | WCAG 2.1 AA afronden en de toegankelijkheidsverklaring laten kloppen (open punt 28) | M | 🔄 verklaring klopt nu met de site (polishronde); rest open |
-| B4 | Eerste 20 resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | M | ⬜ na #5 |
+| B4 | Eerste 20 resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | M | 🔄 Landingspagina's (provincie, plaats, vertrekgroep per provincie) tonen hun lijst server-side; het zoekscherm zelf nog niet |
 | 1.x | Kleine dingen uit fase 1 van PR #11 die #10 niet deed: kaartfout met knoppen "Toon lijst" en "Opnieuw", `theme_color` gelijk aan de viewport, verborgen lege rijen ("Maximaal verblijf") | S | 🔄 kaartfout met knoppen en theme_color klaar (polishronde) |
 
 ### 4e. Code-opschoning

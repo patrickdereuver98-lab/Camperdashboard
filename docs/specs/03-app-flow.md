@@ -1,13 +1,21 @@
 # 3. App Flow
 
 > Doel: elk scherm, elk pad en het gevolg van elke tik vastleggen.
-> Bijgewerkt: 18 oktober 2026. Routes verwijzen naar `web/src/app/`.
+> Bijgewerkt: 22 oktober 2026. Routes verwijzen naar `web/src/app/`.
 
 ## Ingangen
 
 - Zoekmachine of gedeelde link naar een plek: `/plek/<slug>`
 - Startpagina `/` (direct of vanaf het beginscherm als geïnstalleerde PWA)
-- Provinciepagina's `/camperplaatsen/<provincie>` (SEO)
+- Landingspagina's voor zoekmachines (SEO, sinds 22 oktober 2026; regels in `web/src/lib/seo-pages.ts`):
+  - Provincie: `/camperplaatsen/<provincie>` (alle 12)
+  - Plaats of Waddeneiland: `/camperplaatsen/<provincie>/<plaats>` (bv. `/camperplaatsen/noord-holland/texel`,
+    `/camperplaatsen/zeeland/middelburg`). Een eiland hoort bij een plek op ligging (rechthoek om het eiland), een
+    plaats op de plaatsnaam van de plek
+  - Vertrekgroep per provincie: `/zonder-vertrektijd/<provincie>` en `/uitslapers/<provincie>`
+  - Drempel: pas vanaf 3 gepubliceerde plekken een indexeerbare pagina met plek in de sitemap. Daaronder bestaat de
+    pagina wel (links blijven werken als het aantal even zakt), met `noindex, follow`. Een plaats zonder plekken of
+    een onbekende provincie geeft "Niet gevonden"
 - Gedeelde zoekopdracht: `/zoeken?...`, `/zonder-vertrektijd?...`, `/uitslapers?...` of `/overige-plekken?...` (alle
   filters staan in de URL)
 - Gedeelde reis: `/mijn-reis?r=<code>`
@@ -23,6 +31,9 @@
 | Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, vertrekregel vrij of per 24 uur, allemaal in groen en gelijkwaardig: een regel uit een bron (website, zoekagent met letterlijk citaat, OSM) is genoeg, zonder label "nog niet bevestigd" (besluit eigenaar 18 oktober 2026). Door beheer of de eigenaar bevestigd (Beheer → Vertrektijden) is alleen de tweede sorteersleutel: bij gelijke prijs, afstand of score staat die eerst. Met voorwaarde of afgewezen staat bij Overige | Idem |
 | Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
 | Overige plekken | `/overige-plekken` | Zelfde zoekscherm, vertrek vóór 12:00 of onbekend, met keuze: 11:00 tot 12:00 / vóór 11:00 / onbekend | Idem |
+| Provincie | `/camperplaatsen/<provincie>` | Landingspagina: inleiding uit de cijfers (aantal, gratis, zonder vertrektijd, uitslapers, vertrektijd onbekend, gemiddelde nachtprijs zonder toeslagen) → **Bekijk op de kaart** (`/zoeken?provincie=…&kaart=1`), knoppen naar de vertrekgroep-pagina's van de provincie en Gratis plekken → 24 plekken (meest complete gegevens eerst) met link naar alle plekken in het zoekscherm → eilanden → plaatsnamen (met ≥ 3 plekken naar de plaatspagina, anders het zoekscherm rond die plaats). Lijst staat in de HTML (server-side) | Samenvattingen |
+| Plaats of eiland | `/camperplaatsen/<provincie>/<plaats>` | Kruimelpad Start › provincie › plaats → inleiding uit de cijfers → **Bekijk op de kaart** (zoekscherm rond de plaats of het eiland) en, als er plekken zonder bekende vertrektijd zijn, **Weet jij een vertrektijd?** (`/doe-mee`) → alle plekken (max. 40) → plaatsen op het eiland → meer in de provincie (provincie, vertrekgroepen, andere plaatsen) | Samenvattingen |
+| Vertrekgroep per provincie | `/zonder-vertrektijd/<provincie>`, `/uitslapers/<provincie>` | Kruimelpad Start › Zonder vertrektijd (of Voor uitslapers) › provincie → inleiding → **Bekijk op de kaart** en **Filters en sorteren** (het zoekscherm `/zonder-vertrektijd?provincie=…`) → plekken uit die groep (max. 40) → plaatsen met zulke plekken → verder zoeken (provincie, andere groep, dezelfde groep in andere provincies met ≥ 3 plekken) | Samenvattingen |
 | Filterscherm | sheet op `/zoeken` | Vertrekken, voorzieningen, prijs, soort, lengte, overig, met live teller | Samenvattingen |
 | Plek | `/plek/<slug>` | Beslissen: vertrek, open, prijs en extra kosten, voorzieningen, contact, route, reviews | Volledige plek, reviews, plekken in de buurt |
 | Dichtbij | `/dichtbij` | Plekken rond je locatie op rijtijd; met een lengte in Mijn camper vallen te kleine plekken weg (chip "Mijn camper" zet dat uit), net als bij Zoeken | Locatie (toestemming), samenvattingen, `/api/distances` |
@@ -106,7 +117,9 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 - **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
   vaste actiebalk met prijs, hartje, bellen, website en **Route**.
 - **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden). Op `/plek/*` een terugknop.
-- **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en de provinciepagina's.
+- **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
+- **Kruimelpad op de plekpagina**: Zoeken › provincie (naar `/camperplaatsen/<provincie>`) › plek; onder "In de buurt"
+  links naar alle camperplaatsen in de provincie en, op een Waddeneiland, op dat eiland.
 - **Footer**: over VrijStaan, juridisch, Cookie-instellingen, Meld inhoud.
 - **Deep links `/zoeken`**: `waar`, `lat`, `lng`, `straal`, `provincie`, `v` (voorzieningen: stroom, water, lozen,
   toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`ruim`, `vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),
