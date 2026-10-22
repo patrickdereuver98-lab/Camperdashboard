@@ -41,7 +41,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 
 | Functie | Voordeel voor de gebruiker | Prioriteit |
 |---|---|---|
-| Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend); de letterlijke bronzin staat in beheer, op de site alleen "Laatste update: datum" | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
+| Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend); de letterlijke bronzin staat in beheer en op de plekpagina klein onder de vertrekregel ("Bron: “…” (website)", besluit eigenaar 19 oktober 2026); verder per pagina "Laatste update: datum" | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
 | Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (11:00 tot 12:00 "ruim", vóór 11:00 "vroeg", of onbekend, met keuze daartussen), met tabbladen boven de resultaten en chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
 | Prijs met "vanaf", hoogste tarief en losse toeslagen | Geen verrassingen bij aankomst | Must |
 | Zoeken op plaats, streek of eiland, vergeeft typfouten | Snel vinden | Must |
@@ -108,7 +108,7 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 
 1. ~~Hoe streng met vertrektijden?~~ **Besloten (11 oktober 2026):** aparte pagina's "Zonder vertrektijd",
    "Uitslapers" (vertrek 12:00 of later) en "Overige". Aangevuld 11 oktober: binnen Overige onderscheid tussen
-   "ruim" (11:00 tot 12:00, de norm) en "vroeg" (vóór 11:00, ongebruikelijk). Bronzinnen niet meer op de site.
+   "ruim" (11:00 tot 12:00, de norm) en "vroeg" (vóór 11:00, ongebruikelijk). Bronzinnen niet meer op de site; **gewijzigd (19 oktober 2026, eigenaar):** de bronzin van de vertrektijd mag op de plekpagina blijven, klein.
 2. ~~Definitieve publicatiedrempel~~ **Besloten:** 0,45 (1.509 plekken), omdat het aantal plekken voorgaat.
 3. ~~Websitefoto's~~ **Besloten (11 oktober 2026):** overal aan, met bronvermelding en verwijdering op verzoek via
    Meld inhoud. Uit te zetten in beheer (`website_photos`).
