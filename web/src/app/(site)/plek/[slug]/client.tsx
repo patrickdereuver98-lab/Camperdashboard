@@ -46,6 +46,9 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
         ref={track_}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
         className="no-scrollbar flex aspect-[16/9] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-xl"
+        // Scrollbaar vak: met Tab bereikbaar, dan bladeren met de pijltjes (WCAG 2.1.1)
+        tabIndex={0}
+        role="region"
         aria-roledescription="carrousel"
         aria-label={`Foto's van ${name}`}
       >

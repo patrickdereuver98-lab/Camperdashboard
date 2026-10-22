@@ -92,10 +92,16 @@ async function houseRules(page: Page, scope = "body") {
       // Link over de hele kaart (after:absolute inset-0): de kaart is het tikdoel
       const after = getComputedStyle(el, "::after");
       if (el.matches("a") && after.position === "absolute" && after.content !== "none") continue;
+      // Links in de regel met de kaartbronvermelding: lopende tekst (WCAG 2.5.5: "inline"), zie docs/stijlgids.md §4
+      if (el.matches(".maplibregl-ctrl-attrib-inner a")) continue;
       // Een vinkje, rondje of keuzelijst in een label: het label is het tikdoel
       const hit = el.matches("input[type=checkbox], input[type=radio], select") ? (el.closest("label") ?? el) : el;
       const r = hit.getBoundingClientRect();
-      if (Math.round(r.height) < 44 || Math.round(r.width) < 44) out.push(`tikdoel ${Math.round(r.width)}×${Math.round(r.height)}: ${label(el)}`);
+      // Een onzichtbare rand (::after, absolute) vergroot het tikvlak, zoals bij het "i"-knopje van de kaart
+      const grow = after.position === "absolute" && after.content !== "none";
+      const w = Math.max(r.width, grow ? parseFloat(after.width) || 0 : 0);
+      const h = Math.max(r.height, grow ? parseFloat(after.height) || 0 : 0);
+      if (Math.round(h) < 44 || Math.round(w) < 44) out.push(`tikdoel ${Math.round(w)}×${Math.round(h)}: ${label(el)}`);
     }
     return out;
   }, scope);
