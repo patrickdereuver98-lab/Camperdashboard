@@ -96,6 +96,31 @@ export function departureLong(p: Departure): string {
   return timeToMinutes(p.checkoutUntil) !== undefined ? `Uiterlijk ${p.checkoutUntil}` : "Vaste vertrektijd";
 }
 
+/**
+ * De bronzin onder de vertrektijd op de plekpagina, klein en gedempt (besluit eigenaar 19 oktober 2026):
+ * "Bron: “…” (website)". Geeft undefined als er geen bronzin is. Het citaat blijft letterlijk; we halen alleen
+ * de technische voorvoegsels ("AI-lezer: ", "(bron: url)") weg.
+ */
+export function timesSourceLine(note?: string): string | undefined {
+  let q = note?.replace(/\s+/g, " ").trim();
+  if (!q) return undefined;
+  if (/^volgens openstreetmap/i.test(q)) return "Bron: OpenStreetMap";
+  q = q.replace(/^AI-lezer:\s*/i, "");
+  let source = "website";
+  const m = /\s*\(bron: (https?:\/\/[^\s)]+)\)$/i.exec(q);
+  if (m) {
+    q = q.slice(0, m.index).trim();
+    try {
+      source = new URL(m[1]).hostname.replace(/^www\./, "");
+    } catch {
+      // onleesbare url: dan blijft het "website"
+    }
+  }
+  if (/^volgens de gegevens op de website/i.test(q)) return `Bron: gegevens op de ${source}`;
+  if (!q) return `Bron: ${source}`;
+  return `Bron: “${q}” (${source})`;
+}
+
 /** "Toeristenbelasting € 1,35 per persoon per nacht" */
 export function extraLabel(x: { label: string; amount: number; unit?: string }): string {
   return `${eur(x.amount)}${x.unit ? ` ${x.unit}` : ""}`;
