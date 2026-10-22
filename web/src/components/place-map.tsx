@@ -5,6 +5,7 @@ import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { Bbox } from "@/lib/bbox";
 import type { LatLng } from "@/lib/geo";
 import { departureShort, markerPrice } from "@/lib/format";
+import { isIncomplete } from "@/lib/place-status";
 import type { PlaceSummary } from "@/lib/types";
 
 const NL_BOUNDS: [[number, number], [number, number]] = [
@@ -17,7 +18,8 @@ const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 type MapPlace = Pick<PlaceSummary, "slug" | "name" | "lat" | "lng" | "town" | "priceEur" | "priceFrom" | "imageUrl"> &
   Partial<Pick<PlaceSummary, "priceExtras" | "departure" | "checkoutUntil" | "departureCheck">>;
 
-function toGeoJSON(places: MapPlace[]) {
+/** `departures`: de plekken hebben vertrekgegevens (in beheer niet; dan is niets "onvolledig") */
+function toGeoJSON(places: MapPlace[], departures: boolean) {
   return {
     type: "FeatureCollection" as const,
     features: places.map((p) => ({
@@ -31,6 +33,8 @@ function toGeoJSON(places: MapPlace[]) {
         price: markerPrice(p),
         // Vertrekregel zoals op de kaart in de lijst; leeg = onbekend
         departure: departureShort(p) ?? "",
+        // Onvolledig (geen vertrekregel): grijze stip, onder de gekleurde plekken
+        incomplete: departures && isIncomplete(p),
         image: p.imageUrl ?? "",
       },
     })),
@@ -154,6 +158,8 @@ export function PlaceMap({
       const forest = dark ? "#3f7a5a" : "#2d5a43";
       const lake = dark ? "#82bcc8" : "#2f6f7e";
       const surface = css.getPropertyValue("--surface").trim() || "#fffcf6";
+      // Grijs voor onvolledige plekken: de token --muted (contrast met de kaartgrond minstens 5:1)
+      const muted = css.getPropertyValue("--muted").trim() || (dark ? "#9aa39b" : "#5c665e");
       const ink = css.getPropertyValue("--ink").trim() || "#1f2b24";
 
       map = new maplibregl.Map({
@@ -174,7 +180,7 @@ export function PlaceMap({
         tint(map, dark);
         map.addSource("places", {
           type: "geojson",
-          data: toGeoJSON(latest.current.places),
+          data: toGeoJSON(latest.current.places, latest.current.departures),
           cluster: latest.current.cluster,
           clusterRadius: 46,
           clusterMaxZoom: 10,
@@ -219,8 +225,9 @@ export function PlaceMap({
           type: "circle",
           source: "places",
           filter: ["!", ["has", "point_count"]],
+          layout: { "circle-sort-key": ["case", ["get", "incomplete"], 0, 1] },
           paint: {
-            "circle-color": ["case", ["get", "free"], ember, forest],
+            "circle-color": ["case", ["get", "incomplete"], muted, ["get", "free"], ember, forest],
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 6, 13, 9],
             "circle-stroke-width": 2.5,
             "circle-stroke-color": surface,
@@ -296,8 +303,8 @@ export function PlaceMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
-    (map.getSource("places") as GeoJSONSource | undefined)?.setData(toGeoJSON(places));
-  }, [places, ready]);
+    (map.getSource("places") as GeoJSONSource | undefined)?.setData(toGeoJSON(places, departures));
+  }, [places, departures, ready]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -5,6 +5,8 @@ import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "
 import { departureKind, searchHref } from "@/lib/search";
 import { cardPrice, departureLong, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
+import { isIncomplete, lastChecked } from "@/lib/place-status";
+import { GiveDepartureButton } from "@/components/departure-form";
 import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
@@ -15,7 +17,7 @@ import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
 import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Legend } from "@/components/legend";
-import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
+import { Gallery, OutdatedNote, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 import { PhotoUpload } from "./photo-upload";
 import { CrowdStatusCard } from "./crowd-status";
 
@@ -96,6 +98,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   };
 
   const price = cardPrice(place);
+  // Laatste controle (website of vertrekcontrole); zonder die datum de laatste wijziging, maar dan geen "verouderd"
+  const lastUpdate = lastChecked(place) ?? place.updatedAt;
   const reserveLabel = place.reservation ? "Reserveren via de website" : "Naar de website";
 
   return (
@@ -137,8 +141,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
               <OpenChip place={place} />
               {place.ratingCount > 0 && <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />}
-              {(place.verifiedAt ?? place.updatedAt) && (
-                <span className="text-sm text-muted">Laatste update: {formatDate((place.verifiedAt ?? place.updatedAt)!)}</span>
+              {lastUpdate && (
+                <span className="text-sm text-muted">
+                  Laatste update: {formatDate(lastUpdate)}
+                  <OutdatedNote verifiedAt={place.verifiedAt} departureCheckedAt={place.departureCheckedAt} />
+                </span>
               )}
             </div>
           </div>
@@ -310,6 +317,7 @@ function Decision({ place }: { place: Place }) {
   const claimed = place.departure === "vrij" || place.departure === "per24";
   const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
   const departure = departureLong(place);
+  const incomplete = isIncomplete(place);
   // De letterlijke bronzin mag blijven, maar klein (besluit eigenaar 19 oktober 2026). Alleen als de vertrekregel
   // ook getoond wordt; bij "Onbekend" zou het citaat het tegenspreken.
   const source = known ? timesSourceLine(place.timesNote) : undefined;
@@ -367,7 +375,18 @@ function Decision({ place }: { place: Place }) {
           {source && <dd className="mt-1 pl-10 text-sm leading-snug text-muted break-words">{source}</dd>}
           {note && <dd className="mt-1 pl-10 text-sm text-ink-2">{note}</dd>}
           {times.length > 0 && <dd className="mt-1 pl-10 text-sm text-ink-2">{times.join(". ")}.</dd>}
-          {!known && (
+          {incomplete && (
+            <dd className="mt-2 pl-10">
+              <p className="text-sm text-ink-2">
+                We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten
+                andere camperaars hoe laat ze weg moeten.
+              </p>
+              <div className="mt-2">
+                <GiveDepartureButton placeId={place.id} placeName={place.name} />
+              </div>
+            </dd>
+          )}
+          {!known && !incomplete && (
             <dd className="mt-1 pl-10 text-sm text-ink-2">
               Bel even voor je gaat.
               <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd?" />

@@ -70,10 +70,19 @@ export function Legend({ className = "", label = "Wat betekenen de icoontjes?" }
                 <DepartureChip place={{ departure: "vast", checkoutUntil: "11:00" }} />
                 <span className="text-ink-2">grijs: vóór 12:00 weg</span>
               </li>
+              <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <DepartureChip place={{}} />
+                <span className="text-ink-2">weten we nog niet</span>
+              </li>
+              <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="grid h-6 w-6 place-items-center" aria-hidden="true">
+                  <span className="h-3.5 w-3.5 rounded-full bg-muted ring-2 ring-surface" />
+                </span>
+                <span className="text-ink-2">grijze stip op de kaart: vertrektijd nog onbekend</span>
+              </li>
             </ul>
             <p className="mt-3 text-sm text-muted">
-              Groen staat er alleen als we het hebben gecontroleerd bij de plek zelf. Staat er niets, dan weten we de
-              vertrektijd nog niet.
+              Weet jij de vertrektijd van een grijze plek? Op de pagina van de plek kun je hem doorgeven.
             </p>
           </section>
 
