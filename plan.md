@@ -217,13 +217,13 @@ Tien punten die bij groei het eerst misgaan, nagelopen tegen de code en de live 
 | # | Punt | Status | Stand |
 |---|---|---|---|
 | 1 | Race conditions | ✅ | De scrapewachtrij pakt rijen met `for update skip locked`, dus tien workers lezen nooit dezelfde plek. Formulieren lopen via RPC's met limieten |
-| 2 | N+1-queries | ✅ / ⬜ | Publieke pagina's halen alles in één keer op (`Promise.all`, één dataset). Alleen beheer doet per rij een verzoek: Foto's roept `user_trust` per inzender aan, Dubbelen voegt paren één voor één samen. Klein, alleen voor beheerders; oplossen met één RPC voor een lijst inzenders |
+| 2 | N+1-queries | ✅ / ⬜ | Publieke pagina's halen alles in één keer op (`Promise.all`, één dataset). Alleen beheer doet per rij een verzoek: Foto's roept `user_trust` per inzender aan, Dubbelen voegt paren één voor één samen. Foto's gebruikt nu `user_trust_many` (één verzoek), met terugval per inzender zolang die migratie (`20261022100000_user_trust_lijst.sql`) nog niet live staat: de Supabase-koppeling hangt bij migraties, dus Patrick plakt hem in de SQL-editor |
 | 3 | Foutregistratie | ✅ / ⬜ | Browser- en serverfouten (`onRequestError`) komen in `app_logs` (301 rijen). Open: wekelijkse samenvatting in Beheer (E7) |
 | 4 | Rate limits | ✅ | Limieten per tijdvak op alle publieke RPC's, 30 per minuut op `/api/route` en `/api/distances` |
-| 5 | Achtergrondtaken | 🔄 👤 | 19 cron-taken actief, 0 mislukt in het laatste etmaal. Maar `cron.job_run_details` groeit met ongeveer 58.000 rijen per dag (331.795 nu) en `private.apply_retention` bestaat nog steeds niet: B5 |
+| 5 | Achtergrondtaken | 🔄 👤 | 19 cron-taken actief, 0 mislukt in het laatste etmaal. Maar `cron.job_run_details` groeit met ongeveer 58.000 rijen per dag (331.795 nu) en `private.apply_retention` bestaat nog steeds niet: B5. Patrick gaf op 22 oktober akkoord, maar de Supabase-koppeling loopt vast op de bevestiging bij `delete`; `retention.sql` moet dus via de SQL-editor |
 | 6 | Uitgavenmeldingen | 🟢 👤 | Alles draait gratis, dus geen rekening mogelijk (draaiboek §4). Database 52 van 500 MB; de cron-tabel is daar de snelste groeier |
 | 7 | Terugdraaien | 🟢 | Draaiboek §1 (Vercel: vorige uitrol terugzetten; edge functions: vorige versie) |
-| 8 | Live database | ⬜ | `acceptatie` gebruikt dezelfde database als `main`, en migraties gaan meteen live. Open: E2 (migraties op een lege database in CI) en E8 (nulmeting in `migrations/`) |
+| 8 | Live database | ⬜ | `acceptatie` gebruikt dezelfde database als `main`, en migraties gaan meteen live. Open: E2 (migraties op een lege database in CI). Dat kan pas na E8: `schema.sql` is geen bruikbare nulmeting (tabellen verwijzen naar `places` voordat die bestaat). Een nulmeting vraagt `supabase db dump` met het databasewachtwoord, hetzelfde geheim als B10 |
 | 9 | Webhooks | n.v.t. | VrijStaan ontvangt geen webhooks van buiten (geen betalingen). Push gaat de andere kant op |
 | 10 | Back-ups | ⬜ 👤 | `backup.yml` staat op `main` maar heeft nog nooit gedraaid: de geheimen `SUPABASE_DB_URL` en `BACKUP_PASSPHRASE` ontbreken (B10). Daarna één keer met de hand starten (E9) |
 

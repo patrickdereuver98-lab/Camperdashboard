@@ -109,12 +109,18 @@ function useTrust(userIds: (string | null)[]) {
   useEffect(() => {
     if (!key) return;
     let alive = true;
-    void Promise.all(
-      key.split(",").map(async (id) => {
-        const { data } = await db().rpc("user_trust", { p_user: id });
-        return [id, data as Trust] as const;
-      }),
-    ).then((pairs) => alive && setTrust(Object.fromEntries(pairs.filter(([, t]) => t))));
+    const ids = key.split(",");
+    // Eén verzoek voor alle inzenders; per inzender alleen zolang user_trust_many nog niet live staat
+    void db()
+      .rpc("user_trust_many", { p_users: ids })
+      .then(async ({ data, error }) => {
+        if (!error) return (data ?? {}) as Record<string, Trust>;
+        const pairs = await Promise.all(
+          ids.map(async (id) => [id, (await db().rpc("user_trust", { p_user: id })).data as Trust] as const),
+        );
+        return Object.fromEntries(pairs.filter(([, t]) => t));
+      })
+      .then((t) => alive && setTrust(t));
     return () => {
       alive = false;
     };
