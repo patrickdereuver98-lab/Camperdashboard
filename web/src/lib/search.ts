@@ -129,6 +129,13 @@ export const DEFAULT_FILTERS: Filters = {
 
 type Params = { get(name: string): string | null };
 
+/** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
+export function withPage(f: Filters, page?: DeparturePage): Filters {
+  if (!page) return f;
+  if (page === "overig") return { ...f, departure: f.departure && pageOf(f.departure) === "overig" ? f.departure : "overig" };
+  return { ...f, departure: page };
+}
+
 export function parseFilters(p: Params): Filters {
   const num = (k: string) => {
     const v = Number(p.get(k));

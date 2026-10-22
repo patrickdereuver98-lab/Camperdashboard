@@ -1,7 +1,7 @@
 // Indeling op vertrektijd: de kern van de site (pagina's Zonder vertrektijd, Uitslapers en Overige).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { departureKind, inDepartureGroup, isOpenOn, editDistance } from "../src/lib/search";
+import { departureKind, inDepartureGroup, isOpenOn, editDistance, filtersToQuery, parseFilters, withPage } from "../src/lib/search";
 import { departureShort } from "../src/lib/format";
 
 test("vrij en per 24 uur vallen onder 'vrij', ook als kandidaat; met voorwaarde of afgewezen niet", () => {
@@ -58,4 +58,15 @@ test("spellingsafstand: Giethorn ligt dichter bij Giethoorn dan bij Giethmen", (
   assert.equal(editDistance("giethorn", "giethoorn"), 1);
   assert.equal(editDistance("giethorn", "giethmen"), 2);
   assert.equal(editDistance("giethorn", "amsterdam"), Infinity);
+});
+
+test("server en browser komen met hetzelfde adres op dezelfde zoekopdracht uit (eerste resultaten in de HTML)", () => {
+  const params = new URLSearchParams("provincie=Gelderland&v=water&sort=prijs");
+  const vrij = withPage(parseFilters(params), "vrij");
+  assert.equal(vrij.departure, "vrij");
+  assert.equal(filtersToQuery(vrij), filtersToQuery(withPage(parseFilters(new URLSearchParams(params)), "vrij")));
+  // Op Overige blijft een gekozen subgroep staan; een groep van een andere pagina niet
+  assert.equal(withPage(parseFilters(new URLSearchParams("vertrek=vroeg")), "overig").departure, "vroeg");
+  assert.equal(withPage(parseFilters(new URLSearchParams("vertrek=vrij")), "overig").departure, "overig");
+  assert.equal(withPage(parseFilters(new URLSearchParams("")), undefined).departure, undefined);
 });

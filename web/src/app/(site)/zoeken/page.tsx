@@ -3,14 +3,14 @@ import { Suspense } from "react";
 import { CardSkeleton } from "@/components/place-ui";
 import { formatDate } from "@/lib/format";
 import { getStats } from "@/lib/places";
-import { SearchApp } from "./search-app";
+import { Search } from "./search";
 
 export const metadata: Metadata = {
   title: "Camperplaats zoeken",
   description: "Zoek camperplaatsen op plaats, provincie, vertrektijd, voorzieningen en prijs.",
 };
 
-export default async function SearchPage() {
+export default async function SearchPage({ searchParams }: PageProps<"/zoeken">) {
   const { updatedAt } = await getStats();
   return (
     <Suspense
@@ -22,7 +22,7 @@ export default async function SearchPage() {
         </div>
       }
     >
-      <SearchApp updated={updatedAt ? formatDate(updatedAt) : undefined} />
+      <Search searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
     </Suspense>
   );
 }

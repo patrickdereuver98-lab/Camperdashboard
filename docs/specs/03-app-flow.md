@@ -19,7 +19,7 @@
 | Scherm | Route | Doel | Benodigde data |
 |---|---|---|---|
 | Start | `/` | Zoekkaart (bestemming + vertrekkeuze → `/zoeken`, `/zonder-vertrektijd` of `/uitslapers`), drie vertrekkaarten, populaire bestemmingen, uitgelichte plekken, voorzieningen (nu open, stroom, lozen, honden), uitleg in drie stappen | Statistieken, alle plekken (voor de bestemmingsfoto's), uitgelichte samenvattingen |
-| Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken | Alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`), adressen en postcodes (`/api/locatie`, PDOK) |
+| Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken. De eerste 20 plekken van de zoekopdracht in het adres staan al in de HTML (server); daarna rekent de browser met de hele dataset | Eerste 20 op de server (`getSummaries`), daarna alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`), adressen en postcodes (`/api/locatie`, PDOK) |
 | Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, vertrekregel vrij of per 24 uur, allemaal in groen en gelijkwaardig: een regel uit een bron (website, zoekagent met letterlijk citaat, OSM) is genoeg, zonder label "nog niet bevestigd" (besluit eigenaar 18 oktober 2026). Door beheer of de eigenaar bevestigd (Beheer → Vertrektijden) is alleen de tweede sorteersleutel: bij gelijke prijs, afstand of score staat die eerst. Met voorwaarde of afgewezen staat bij Overige | Idem |
 | Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
 | Overige plekken | `/overige-plekken` | Zelfde zoekscherm, vertrek vóór 12:00 of onbekend, met keuze: 11:00 tot 12:00 / vóór 11:00 / onbekend | Idem |

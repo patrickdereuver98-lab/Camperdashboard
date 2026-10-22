@@ -8,14 +8,15 @@ import {
   applyFilters,
   DEPARTURE_PAGES,
   filtersToQuery,
-  pageOf,
   parseFilters,
   refinementCount,
   relaxations,
   searchHref,
   type DeparturePage,
   type Filters,
+  type Result,
   type SortKey,
+  withPage,
 } from "@/lib/search";
 import { usePlaces, useVehicle, useViewportPlaces } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
@@ -58,21 +59,20 @@ function activeChips(f: Filters & { lengthFromVehicle?: boolean }): { label: str
   return chips;
 }
 
-/** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
-function withPage(f: Filters, page?: DeparturePage): Filters {
-  if (!page) return f;
-  if (page === "overig") return { ...f, departure: f.departure && pageOf(f.departure) === "overig" ? f.departure : "overig" };
-  return { ...f, departure: page };
-}
+/** De eerste plekken van deze zoekopdracht, op de server berekend (zie search.tsx) */
+export type InitialResults = { key: string; results: Result[]; total: number };
 
-export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: string }) {
+export function SearchApp({ page, updated, initial }: { page?: DeparturePage; updated?: string; initial?: InitialResults }) {
   const router = useRouter();
   const params = useSearchParams();
   const [vehicle] = useVehicle();
   const filters = useMemo(() => applyVehicle(withPage(parseFilters(params), page), vehicle), [params, page, vehicle]);
   const key = filtersToQuery(filters);
   const { data: places, error } = usePlaces();
-  const results = useMemo(() => (places ? applyFilters(places, filters) : null), [places, filters]);
+  // Tot de hele dataset er is, tonen we de plekken die de server al meegaf (alleen als het om dezelfde zoekopdracht gaat)
+  const early = !places && initial?.key === key ? initial : undefined;
+  const results = useMemo(() => (places ? applyFilters(places, filters) : (early?.results ?? null)), [places, filters, early]);
+  const total = early ? early.total : results?.length;
   const [hovered, setHovered] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(params.get("kaart") === "1");
@@ -107,7 +107,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
   const unknownPlace = filters.where && !filters.center && !filters.province ? filters.where : undefined;
   const heading = unknownPlace ? "Nederland" : (filters.where ?? filters.province ?? "Nederland");
 
-  const map = results && (
+  const map = places && results && (
     <PlaceMap
       places={mapPlaces}
       fitPlaces={fitPlaces}
@@ -211,8 +211,8 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
 
         <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
           <h1 className="font-display text-lg leading-snug font-semibold sm:text-2xl">
-            <span key={results?.length} className="animate-fade-in inline-block">
-              {results ? pluralize(results.length, "plek", "plekken") : "Plekken laden"}
+            <span key={total} className="animate-fade-in inline-block">
+              {total !== undefined ? pluralize(total, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
             <span>{filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}</span>
           </h1>
@@ -245,7 +245,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
             </div>
           )}
           {results && places && results.length === 0 && <Empty filters={filters} places={places} onChange={update} />}
-          {results && results.length > 0 && <Results key={key} results={results} hovered={hovered} onHover={setHovered} />}
+          {results && results.length > 0 && <Results key={key} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} />}
         </section>
       </div>
 
@@ -364,24 +364,31 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
 
 function Results({
   results,
+  total,
+  fromServer,
   hovered,
   onHover,
 }: {
-  results: ReturnType<typeof applyFilters>;
+  results: Result[];
+  /** Kan groter zijn dan results, zolang alleen de eerste plekken van de server er zijn */
+  total: number;
+  /** Plekken die al in de HTML stonden komen niet opnieuw binnenvliegen (en de eerste foto is meteen zichtbaar) */
+  fromServer: boolean;
   hovered: string | null;
   onHover: (s: string | null) => void;
 }) {
   const [limit, setLimit] = useState(PAGE);
+  const [animate] = useState(!fromServer);
   return (
     <>
       <ul className="mt-2 space-y-2.5 sm:mt-4 sm:space-y-3">
         {results.slice(0, limit).map((r, i) => (
-          <li key={r.place.id} className="enter cv-auto" style={{ ["--i" as string]: i % 24 }}>
-            <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} />
+          <li key={r.place.id} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
+            <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} eager={i < 2} />
           </li>
         ))}
       </ul>
-      {limit < results.length && (
+      {limit < total && (
         <div className="mt-6 text-center">
           <button
             type="button"
@@ -391,7 +398,7 @@ function Results({
             Toon meer plekken
           </button>
           <p className="mt-2 text-sm text-muted">
-            {Math.min(limit, results.length)} van {results.length} getoond
+            {Math.min(limit, results.length)} van {total} getoond
           </p>
         </div>
       )}
