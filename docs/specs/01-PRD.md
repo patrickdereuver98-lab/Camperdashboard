@@ -185,7 +185,7 @@ Could-functies blijven bestaan, maar krijgen geen nieuw werk zolang de kern niet
   zoekagent het vindt, dan krijgt de plek vertrekregel **vrij** (groen) en staan adres, datum en zin in de brondatabase.
 - Gegeven de pagina "Zonder vertrektijd", wanneer ik zoek, dan zie ik alleen plekken met vertrekregel vrij of per
   24 uur; op "Uitslapers" alleen vaste vertrektijden van 12:00 of later; op "Overige" de rest. Via de tabbladen ga ik
-  met dezelfde zoekopdracht naar een andere pagina. Een vertrekregel uit een bron (website, AI-lezer met letterlijk
+  met dezelfde zoekopdracht naar een andere pagina. Een vertrekregel uit een bron (website, zoekagent met letterlijk
   citaat, OpenStreetMap) is genoeg: die staat er in groen, zonder label "nog niet bevestigd". Alleen een regel die
   beheer heeft afgewezen of met een voorwaarde heeft gemarkeerd staat bij "Overige" (besluit eigenaar, 18 oktober 2026).
 - Gegeven een plek zonder vertrekregel die de drempel haalt, wanneer ik de kaart bekijk, dan is de plek grijs en

@@ -1,7 +1,7 @@
 # 2. Technical Requirements Document (TRD)
 
 > Doel: technische keuzes expliciet maken, zodat niemand (mens of AI) hoeft te gokken.
-> Bijgewerkt: 11 oktober 2026.
+> Bijgewerkt: 18 oktober 2026.
 
 ## Platforms
 
@@ -28,7 +28,7 @@
 | Database | Supabase Postgres 17, project `qkrmthrhwmmmwswmfgwc` ("vrijstaan"), regio **eu-central-1 (Frankfurt)** |
 | API | Supabase REST (PostgREST) met de publishable key in de browser; alle schrijfacties via `SECURITY DEFINER`-functies (RPC) |
 | Pushmeldingen | Supabase Edge Function `push` (Deno, `web-push`), aangeroepen door de database via `pg_net` met dezelfde `x-pipeline-key`; maakt zelf de VAPID-sleutels aan |
-| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `ai.ts` (AI-lezer, optioneel), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
+| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `quote.ts` (citaatcontrole voor de zoekagenten; de AI-lezer is geschrapt op 19 oktober 2026), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
 | Taken | `pg_cron` + `pg_net` in de database (zie Architectuur) |
 | Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en `cacheLife("minutes")`, terugval op de snapshot |
 
@@ -56,6 +56,7 @@
 | Websites van plekken | Prijzen, toeslagen, seizoen, voorzieningen, vertrektijden | `robots.txt` gerespecteerd, max. 7 pagina's per site, 9 s timeout, eigen user-agent `VrijStaanBot/1.0` | n.v.t. |
 | OpenRouteService (HeiGIT, Heidelberg) | Rijtijden en routes | Gratis sleutel met quotum | `ORS_API_KEY` (optioneel, nog niet ingesteld) |
 | routing.openstreetmap.de (FOSSGIS) | Rijtijden zonder ORS-sleutel | Publieke dienst, eerlijk gebruik | Geen sleutel |
+| PDOK Locatieserver (Kadaster) | Zoekvak "waar": adressen, postcodes, woonplaatsen en gemeenten (`suggest`, `lookup` op `api.pdok.nl/bzk/locatieserver/search/v3_1`) | Gratis overheidsdienst, eerlijk gebruik; 4 s time-out, cache per zoekterm (`cacheLife("hours")`, lookup `"days"`), 120 verzoeken per minuut per IP op `/api/locatie` | Geen sleutel. Alleen onze server praat met PDOK (`/api/locatie`), zonder IP of andere gegevens van de bezoeker; staat in de privacyverklaring. Bij een fout of offline build: de eigen lijst `nl_towns` |
 | OpenFreeMap | Kaarttegels | Gratis, geen sleutel | Geen; IP van bezoeker gaat naar hun server (staat in privacyverklaring) |
 | Google Maps | "Open in navigatie" (uitgaande link) | n.v.t. | Geen |
 | GitHub Actions | Dagelijkse ping tegen pauzeren (`.github/workflows/keepalive.yml`) | Gratis | Repository |
@@ -66,7 +67,7 @@
 Bezoeker (telefoon)
    │  HTTPS
    ▼
-Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/route, /api/distances)
+Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/locatie → PDOK, /api/route, /api/distances)
    │  REST + RPC (publishable key, Row Level Security)
    ▼
 Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (OSM)        [elke 3 min: volgende provincie]

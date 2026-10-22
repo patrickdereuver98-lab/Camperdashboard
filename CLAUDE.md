@@ -25,5 +25,8 @@ Werkwijze:
   herkomst in `.claude/skills/BRONNEN.md`). Gebruik ze als team (plannen, bouwen, reviewen); bij een conflict gaan
   deze instructies en `docs/specs/` voor.
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.
-- Edge functions (Supabase) uitrollen mag altijd zonder eerst toestemming te vragen (besluit Patrick, 18 oktober 2026);
-  de toestemming staat in `.claude/settings.json`. Test eerst (`npm test`), en vermeld de nieuwe versie in het implementatieplan.
+- Edge functions uitrollen, migraties toepassen (`apply_migration`) en SQL uitvoeren (`execute_sql`) in Supabase mag
+  altijd zonder eerst toestemming te vragen (besluit Patrick, 18 oktober 2026); de toestemming staat in
+  `.claude/settings.json`. Test eerst (`npm test`), leg elke migratie vast in `web/supabase/migrations/`, en vermeld een
+  nieuwe edge-functieversie in het implementatieplan. Ook MCP-servers aansluiten en skills installeren mag zonder
+  vragen (zelfde besluit); noteer wat je toevoegt in `.claude/skills/BRONNEN.md`.

@@ -164,10 +164,7 @@ Daarna maakt die persoon zelf een account aan op `/admin`.
    of de tarieven, en als laatste de gestructureerde gegevens (`checkoutTime`) van de camping. Alleen letterlijk
    genoemde feiten: prijs per nacht, voorzieningen, aantal plekken, maximale lengte, seizoen, honden, reserveren, foto's.
    Ontkenningen ("geen honden") gaan altijd voor. `robots.txt` wordt gerespecteerd.
-   **AI-lezer** (alleen met het geheim `ANTHROPIC_API_KEY` in Supabase → Edge Functions → Secrets; model via `AI_MODEL`,
-   standaard `claude-opus-5-5`): vinden de vaste regels geen vertrektijd maar staat er wel iets over vertrekken, dan
-   leest een taalmodel die passages. Het antwoord telt alleen als de geciteerde zin letterlijk op de pagina staat en de
-   tijd of "geen vaste tijd" erin staat. De bronzin begint dan met "AI-lezer:".
+   Er is geen AI-lezer meer (geschrapt, besluit eigenaar 19 oktober 2026): alleen de vaste regels lezen de pagina's.
    **Diagnose:** `select private.call_pipeline('{"action":"inspect","url":"https://…"}')` en daarna het antwoord in
    `net._http_response`: gekozen pagina's, PDF's en de zinnen over vertrekken. Schrijft niets.
    **Zoekagenten** (handmatige ronde, bijvoorbeeld vanuit Claude Code): agents zoeken per plek op het web (eigen site,
