@@ -71,7 +71,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
                 photo
               )}
               {p.credit && (
-                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-xs text-white">
+                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-sm text-white">
                   Foto: {p.credit}
                 </figcaption>
               )}
@@ -244,7 +244,8 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
         {label}
         {required && <span className="text-alert"> *</span>}
       </legend>
-      <div className="grid grid-cols-10 gap-1">
+      {/* Twee rijen van vijf, zodat elk cijfer een tikdoel van minstens 44 px is */}
+      <div className="grid grid-cols-5 gap-2">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <button
             key={n}
@@ -261,7 +262,7 @@ function ScorePicker({ label, value, onChange, required }: { label: string; valu
   );
 }
 
-const input = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const input = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 export function WriteReview({ placeId, placeName }: { placeId: string; placeName: string }) {
   const [open, setOpen] = useState(false);
@@ -334,7 +335,7 @@ export function WriteReview({ placeId, placeName }: { placeId: string; placeName
           <form onSubmit={submit} className="space-y-5 pb-4">
             <ScorePicker label="Totaalcijfer" required value={scores.rating} onChange={(n) => setScores((s) => ({ ...s, rating: n }))} />
             <details className="rounded-lg bg-sunken p-4">
-              <summary className="cursor-pointer font-semibold">Cijfers per onderdeel (optioneel)</summary>
+              <summary className="-my-2.5 cursor-pointer py-2.5 font-semibold">Cijfers per onderdeel (optioneel)</summary>
               <div className="mt-4 space-y-4">
                 <ScorePicker label="Ligging" value={scores.location} onChange={(n) => setScores((s) => ({ ...s, location: n }))} />
                 <ScorePicker label="Rust" value={scores.quiet} onChange={(n) => setScores((s) => ({ ...s, quiet: n }))} />

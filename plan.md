@@ -45,7 +45,7 @@ Status: ✅ klaar op `main` · 🟢 gebouwd en samengevoegd in `acceptatie` (PR 
 | E-mail (SPF, DKIM, DMARC) | ⬜ 👤 | Uitleg in `docs/draaiboek.md` §5; eerst mailprovider kiezen (B7) |
 | Echte 404-, 500-, lege en laadstaten | ✅ / ⬜ | 404, 500 en lege staten bestaan. Geen `loading.tsx` (P6); kaartfout zonder knoppen (fase 1, punt 8) |
 | Evals, prompt-injectie, terugval model, tokenlimieten | n.v.t. | VrijStaan gebruikt geen taalmodel |
-| Toegankelijkheid | 🔄 | Tikdoelen en focusring deels in PR #10. Open: P13, kaartmarkers ≥ 44 px (P3), verklaring laten kloppen |
+| Toegankelijkheid | ✅ | WCAG 2.1 AA afgerond in P13 (22 oktober 2026): tekst ≥ 14 px, tikdoelen ≥ 44 px, kaartpunten met tikvlak van 44 px, axe-test in licht en donker, verklaring klopt |
 | Privacyverklaring en voorwaarden | ✅ / 👤 | Pagina's staan. Bedrijfsgegevens ontbreken nog (B8); nalezen door een jurist |
 | Cookietoestemming | ✅ | Banner met bewijs van toestemming; compacter in PR #10 |
 | Account en gegevens laten verwijderen | 🟢 👤 | Accounts in PR #4 met verwijderen in twee stappen. `delete_my_account` moet Patrick live zetten (B5) |
@@ -138,7 +138,7 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 | # | Taak | Omvang | Status |
 |---|---|---|---|
 | P1 | Zoeken repareren: "Giethorn" vindt Giethoorn; onbekende plaats geeft "niet gevonden" (open punt 9) | S | 🟢 polishronde |
-| P2 / P3 | Vertrektijd op de kaart (kleur per vertrekgroep), pins ≥ 44 px, gekozen plek als mini-kaart onderaan | M | ⬜ |
+| P2 / P3 | Vertrektijd op de kaart (kleur per vertrekgroep), pins ≥ 44 px, gekozen plek als mini-kaart onderaan | M | 🔄 tikvlak van 44 px rond pins klaar (P13); kleur per vertrekgroep en mini-kaart open |
 | P4 | Zoekkop die bij scrollen inklapt | M | ⬜ na #5 |
 | P5 | Zoekstaat behouden bij terug (kaart, "toon meer", scrollpositie) | S | ⬜ |
 | P6 | `loading.tsx` voor plekpagina, provinciepagina's en start; skelet voor Mijn reis (CLS 0,41) | S | 🟢 plekpagina met skelet, foto-vak verspringt niet meer (CLS 0,167 → 0); Mijn reis al 0 |
@@ -148,7 +148,7 @@ Alleen wat nog **niet** gebouwd is. Omvang: **S** ≤ 1 dag, **M** 2 tot 5 dagen
 | P10 | Laat aankomen: aankomst- en slagboomtijden, "24 uur toegankelijk" | M | ⬜ |
 | P11 | Navigatiekeuze: Apple Maps, Google Maps, Waze, coördinaten | S | 🟢 polishronde |
 | P12 | Offline-basis: `/offline`-pagina, bewaarde plekken automatisch in de cache, melding "nieuwe versie" | M | ⬜ |
-| P13 | WCAG 2.1 AA afronden en de toegankelijkheidsverklaring laten kloppen (open punt 28) | M | 🔄 verklaring klopt nu met de site (polishronde); rest open |
+| P13 | WCAG 2.1 AA afronden en de toegankelijkheidsverklaring laten kloppen (open punt 28) | M | ✅ 22 oktober (branch `claude/wcag-p13`): geen 15 px of `text-xs` meer (uitzondering kaartbronvermelding 12 px), tikdoelen ≥ 44 px ook op de computer, focusring op velden, sheet zonder focussprong, `dl` in het beslisblok, `web/e2e/a11y.spec.ts` met axe. Blijft: kaartpunten niet met toetsenbord te kiezen (lijst als alternatief) |
 | B4 | Eerste 20 resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | M | ⬜ na #5 |
 | 1.x | Kleine dingen uit fase 1 van PR #11 die #10 niet deed: kaartfout met knoppen "Toon lijst" en "Opnieuw", `theme_color` gelijk aan de viewport, verborgen lege rijen ("Maximaal verblijf") | S | 🔄 kaartfout met knoppen en theme_color klaar (polishronde) |
 

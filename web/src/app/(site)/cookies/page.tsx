@@ -26,7 +26,7 @@ export default function CookiePage() {
         <ul className="space-y-2 sm:hidden">
           {ROWS.map((r) => (
             <li key={r[0]} className="!ml-0 !list-none rounded-lg bg-surface p-3 outline-1 outline-line outline">
-              <p className="font-mono text-xs break-all text-ink">{r[0]}</p>
+              <p className="font-mono text-sm break-all text-ink">{r[0]}</p>
               <dl className="mt-1 grid grid-cols-[7rem_1fr] gap-x-2 gap-y-0.5 text-sm">
                 <dt className="text-muted">Soort</dt>
                 <dd>{r[1]}</dd>
@@ -51,7 +51,7 @@ export default function CookiePage() {
               {ROWS.map((r) => (
                 <tr key={r[0]}>
                   {r.map((c, i) => (
-                    <td key={i} className={`px-3 py-2 align-top ${i === 0 ? "font-mono text-xs" : ""}`}>{c}</td>
+                    <td key={i} className={`px-3 py-2 align-top ${i === 0 ? "font-mono text-sm" : ""}`}>{c}</td>
                   ))}
                 </tr>
               ))}

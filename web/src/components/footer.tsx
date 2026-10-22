@@ -47,7 +47,7 @@ export function Footer() {
     <footer className="mt-16 border-t border-line bg-surface">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 md:grid-cols-[1.3fr_repeat(3,1fr)] md:gap-10 md:py-12">
         <div className="col-span-2 md:col-span-1">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/" className="inline-flex h-11 items-center gap-2.5">
             <Logo />
             <span className="font-display text-xl font-semibold text-forest">VrijStaan</span>
           </Link>
@@ -62,7 +62,7 @@ export function Footer() {
             <ul className={`mt-2 ${c.title === "Over VrijStaan" ? "grid grid-cols-2 gap-x-6 md:block" : ""}`}>
               {c.links.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="inline-block py-2.5 text-ink-2 hover:text-forest hover:underline md:py-1.5">
+                  <Link href={l.href} className="inline-block py-2.5 text-ink-2 hover:text-forest hover:underline">
                     {l.label}
                   </Link>
                 </li>
@@ -84,7 +84,7 @@ export function Footer() {
               <li key={p}>
                 <Link
                   href={`/camperplaatsen/${p.toLowerCase()}`}
-                  className="inline-flex h-11 items-center rounded-full bg-sunken px-4 text-sm font-semibold text-ink-2 hover:text-forest md:h-9"
+                  className="inline-flex h-11 items-center rounded-full bg-sunken px-4 text-sm font-semibold text-ink-2 hover:text-forest"
                 >
                   {p}
                 </Link>

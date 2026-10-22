@@ -58,6 +58,11 @@ neutraal en goed leesbaar op kleine schermen; vervangt Fraunces + Inter.
 | Klein | 14 px | 14 px | 400/500 | minimum voor alle tekst |
 | Prijzen en aantallen | | | 600 | `tabular-nums` |
 
+- Alleen deze stappen: 16/17 px voor tekst en bediening (knoppen, chips, tabs), 14 px (`text-sm`) voor bijzaken
+  (toelichting, fotobron, aantallen in een badge). Geen tussenmaten als 15 px, geen `text-xs`.
+- **Eén uitzondering onder 14 px:** de kaartbronvermelding van MapLibre (© OpenStreetMap e.d.) is 12 px. Het is een
+  verplichte vermelding van derden in een uitklapbaar knopje op de kaart; dezelfde vermelding staat op 14 px in de
+  footer. De fotobronvermelding is gewoon 14 px. De test `web/e2e/a11y.spec.ts` bewaakt dit.
 - Hiërarchie maak je met gewicht en kleur, niet met steeds grotere letters.
 - Koppen in zinsvorm ("Over deze plek"), nooit in hoofdletters.
 - `…` in plaats van `...`; laadteksten eindigen op `…` ("Bezig…").
@@ -67,7 +72,11 @@ neutraal en goed leesbaar op kleine schermen; vervangt Fraunces + Inter.
 - Raster van 4 px. Binnen een kaart 12–16 px, tussen kaarten 10–12 px, tussen secties 32 px (telefoon) en 48 px
   (groter scherm). Geen enorme witruimte: dit is een gids.
 - Zijmarge telefoon 12–16 px. Tekstblokken maximaal `max-w-prose`.
-- Header 56 px op de telefoon. Tikdoelen minstens 44 px; visueel mag een knop kleiner ogen zolang het tikvlak klopt.
+- Header 56 px op de telefoon. Tikdoelen minstens 44 × 44 px, op elk scherm (ook op de computer); visueel mag een knop
+  kleiner ogen zolang het tikvlak klopt. Middelen: `h-11`/`min-h-11`, een link met `-my-3 py-3` (rand die de regel niet
+  ophoogt), of een onzichtbaar vlak (`::after` met `inset: -10px`). Kaartpunten krijgen een onzichtbare cirkellaag van
+  22 px straal (`points-hit`, `clusters-hit` in `place-map.tsx`); de zichtbare punten blijven klein.
+- Uitzondering: links midden in een zin (WCAG noemt dat "inline").
 
 ## 6. Hoeken (één schaal, overal)
 
@@ -117,7 +126,8 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 - **Knop primair**: bosgroen vlak, witte tekst, 44 px hoog, 8 px hoek, geen rand, geen schaduw.
 - **Knop secundair**: `surface`, 1 px haarlijn (`border-line`), tekst `ink`.
 - **Tekstlink**: bosgroen, onderstreept met `underline-offset-2`.
-- **Invoerveld**: 44 px, 8 px hoek, 1 px haarlijn, focus = bosgroene ring.
+- **Invoerveld**: 44 px, 8 px hoek, 1 px haarlijn, focus = bosgroene ring (`focus:ring-2 focus:ring-forest`, nooit
+  alleen een andere randkleur).
 - **Plekkaart (rij)**: foto ±⅓ links, rechts: naam, "Soort in plaats", afstand, vertrekbadge + aankomst,
   voorzieningen + prijs onderaan. 12 px hoek, `shadow-low`.
 - **Vertrekbadge**: 6 px hoek, klein klokje, getint vlak (groen/blauw/grijs). Het enige gekleurde element op een kaart.

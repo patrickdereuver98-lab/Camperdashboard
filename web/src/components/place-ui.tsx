@@ -133,7 +133,7 @@ export function CreditedPhoto({ src, alt, credit, className = "" }: { src?: stri
     <>
       <PlacePhoto src={src} alt={alt} className={className} onFail={onFail} />
       {src && credit && !failed && (
-        <span className="absolute top-2 right-2 max-w-[70%] truncate rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">
+        <span className="absolute top-2 right-2 max-w-[70%] truncate rounded-md bg-black/55 px-2 py-0.5 text-sm text-white">
           Foto: {credit}
         </span>
       )}

@@ -105,9 +105,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 
       <div className="mx-auto max-w-6xl sm:px-6 sm:pt-4">
         <nav aria-label="Kruimelpad" className="hidden items-center gap-1 pb-3 text-sm text-muted sm:flex">
-          <Link href="/zoeken" className="hover:text-forest hover:underline">Zoeken</Link>
+          <Link href="/zoeken" className="-my-3 inline-block py-3 hover:text-forest hover:underline">Zoeken</Link>
           <Icon name="chevronRight" size={14} />
-          <Link href={searchHref({ province: place.province, where: place.province })} className="hover:text-forest hover:underline">
+          <Link href={searchHref({ province: place.province, where: place.province })} className="-my-3 inline-block py-3 hover:text-forest hover:underline">
             {place.province}
           </Link>
           <Icon name="chevronRight" size={14} />
@@ -128,9 +128,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}
             </p>
             <h1 className="mt-1 font-display text-[1.625rem] leading-tight font-semibold text-balance sm:text-4xl">{place.name}</h1>
-            <p className="mt-1 text-[0.9375rem] text-ink-2 sm:text-base">
+            <p className="mt-1 text-ink-2">
               {address || place.town}, {place.province}{" "}
-              <a href="#ligging" className="-my-3 inline-block py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
+              <a href="#ligging" className="-mx-1 -my-3 inline-block px-1 py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
                 Kaart
               </a>
             </p>
@@ -351,19 +351,20 @@ function Decision({ place }: { place: Place }) {
     <section aria-labelledby="kort" className="overflow-hidden rounded-xl bg-surface shadow-low">
       <h2 id="kort" className="sr-only">In het kort</h2>
       <dl className="divide-y divide-line">
-        {/* Vertrekken: het kernfeit */}
-        <div className="px-4 py-3">
-          <div className="flex items-center gap-3">
+        {/* Vertrekken: het kernfeit. dt en dd direct in de rij (geldige lijst voor schermlezers); extra regels over de
+            volle breedte */}
+        <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-3 [&>dd~dd]:col-span-2">
+          <dt className="flex items-center gap-3 text-ink-2">
             <Sign name="clock" size={28} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
-            <dt className="text-ink-2">Vertrekken</dt>
-            <dd
-              className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${
-                free ? "text-forest" : late ? "text-lake" : known ? "" : "text-muted"
-              }`}
-            >
-              {departure}
-            </dd>
-          </div>
+            Vertrekken
+          </dt>
+          <dd
+            className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${
+              free ? "text-forest" : late ? "text-lake" : known ? "" : "text-muted"
+            }`}
+          >
+            {departure}
+          </dd>
           {source && <dd className="mt-1 pl-10 text-sm leading-snug text-muted break-words">{source}</dd>}
           {note && <dd className="mt-1 pl-10 text-sm text-ink-2">{note}</dd>}
           {times.length > 0 && <dd className="mt-1 pl-10 text-sm text-ink-2">{times.join(". ")}.</dd>}
@@ -376,12 +377,12 @@ function Decision({ place }: { place: Place }) {
         </div>
 
         {rows.map((r) => (
-          <div key={r.label} className="px-4 py-3">
-            <div className="flex items-center gap-3">
+          <div key={r.label} className="grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-3 [&>dd~dd]:col-span-2">
+            <dt className="flex items-center gap-3 text-ink-2">
               <Sign name={r.sign} size={28} state={r.known ? "on" : "unknown"} />
-              <dt className="text-ink-2">{r.label}</dt>
-              <dd className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${r.known ? "" : "text-muted"}`}>{r.value}</dd>
-            </div>
+              {r.label}
+            </dt>
+            <dd className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${r.known ? "" : "text-muted"}`}>{r.value}</dd>
             {r.sign === "euro" && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0) && (
               <dd className="mt-1 pl-10 text-sm text-ink-2">
                 {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}

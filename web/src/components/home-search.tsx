@@ -24,7 +24,7 @@ export function HomeSearch() {
           <legend id={`${id}-v`} className="mb-1.5 block text-sm font-semibold text-ink-2">
             Vertrekken
           </legend>
-          <div className="grid h-12 grid-cols-[auto_1fr_auto] gap-1 rounded-lg bg-paper p-1 sm:h-14 ring-1 ring-line">
+          <div className="grid h-13 grid-cols-[auto_1fr_auto] gap-1 rounded-lg bg-paper p-1 sm:h-14 ring-1 ring-line">
             {CHOICES.map((c) => {
               const on = departure === c.value;
               return (
@@ -33,7 +33,7 @@ export function HomeSearch() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => setDeparture(c.value)}
-                  className={`relative flex items-center justify-center gap-1.5 rounded-lg px-2 text-[15px] font-semibold whitespace-nowrap transition-colors duration-200 sm:px-3 ${
+                  className={`relative flex items-center justify-center gap-1.5 rounded-lg px-2 font-semibold whitespace-nowrap transition-colors duration-200 sm:px-3 ${
                     on ? "text-on-forest" : "text-ink-2 hover:text-ink"
                   }`}
                 >

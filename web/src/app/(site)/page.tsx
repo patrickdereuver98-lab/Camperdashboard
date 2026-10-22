@@ -77,7 +77,7 @@ export default async function Home() {
         <h1 className="animate-rise font-display text-[1.75rem] leading-[1.1] font-semibold tracking-tight text-ink sm:text-5xl">
           Waar sta je vannacht?
         </h1>
-        <p className="animate-rise mt-1.5 max-w-xl text-[0.9375rem] text-ink-2 [animation-delay:60ms] sm:mt-2 sm:text-lg">
+        <p className="animate-rise mt-1.5 max-w-xl text-ink-2 [animation-delay:60ms] sm:mt-2 sm:text-lg">
           {nf.format(stats.total)} camperplaatsen in Nederland, met vertrektijd en prijs.
         </p>
         <div className="animate-rise mt-4 [animation-delay:120ms] sm:mt-6">
@@ -97,7 +97,7 @@ export default async function Home() {
               <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest-tint text-forest">
                 <Icon name="check" size={16} />
               </span>
-              <span className="text-[15px] leading-snug sm:text-base">{t}</span>
+              <span className="leading-snug sm:text-base">{t}</span>
             </li>
           ))}
         </ul>
@@ -106,7 +106,7 @@ export default async function Home() {
       {/* Hoe wil je staan: de drie vertrekpagina's, als rustige lijst */}
       <section className="mx-auto w-full max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
         <h2 className="font-display text-lg font-semibold sm:text-2xl">Hoe wil je staan?</h2>
-        <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">Voor camperaars is de vertrektijd vaak belangrijker dan de prijs.</p>
+        <p className="mt-0.5 text-ink-2">Voor camperaars is de vertrektijd vaak belangrijker dan de prijs.</p>
         <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {ways.map((w) => (
             <li key={w.title}>
@@ -129,7 +129,7 @@ export default async function Home() {
       {/* Populaire bestemmingen met echte foto's */}
       <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
         <h2 className="font-display text-lg font-semibold sm:text-2xl">Populaire bestemmingen</h2>
-        <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">Hier staan de meeste plekken.</p>
+        <p className="mt-0.5 text-ink-2">Hier staan de meeste plekken.</p>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-12">
           {destinations.map((d, i) => (
             <li key={d.prov} className={i < 2 ? "col-span-2 sm:col-span-1 lg:col-span-6" : "lg:col-span-3"}>
@@ -157,7 +157,7 @@ export default async function Home() {
             <li key={prov}>
               <Link
                 href={`/camperplaatsen/${prov.toLowerCase()}`}
-                className="flex h-11 items-center gap-1.5 rounded-full bg-surface px-3.5 text-[0.9375rem] font-semibold shadow-low transition-shadow hover:shadow-raised"
+                className="flex h-11 items-center gap-1.5 rounded-full bg-surface px-3.5 font-semibold shadow-low transition-shadow hover:shadow-raised"
               >
                 {prov} <span className="font-normal text-muted">{nf.format(stats.byProvince[prov] ?? 0)}</span>
               </Link>
@@ -238,7 +238,7 @@ export default async function Home() {
                   <span className="mr-1.5 text-muted tabular-nums">{i + 1}.</span>
                   {s.title}
                 </h3>
-                <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">{s.text}</p>
+                <p className="mt-0.5 text-ink-2">{s.text}</p>
               </div>
             </li>
           ))}

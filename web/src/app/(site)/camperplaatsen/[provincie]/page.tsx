@@ -37,7 +37,7 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
   return (
     <div className="mx-auto max-w-6xl px-3 pt-6 sm:px-6">
       <nav aria-label="Kruimelpad" className="flex items-center gap-1 text-sm text-muted">
-        <Link href="/" className="-my-3 inline-block py-3 hover:text-forest hover:underline">Start</Link>
+        <Link href="/" className="-mx-2 -my-3 inline-block px-2 py-3 hover:text-forest hover:underline">Start</Link>
         <Icon name="chevronRight" size={14} />
         <span>{prov}</span>
       </nav>

@@ -13,6 +13,7 @@
     "check": "npm run lint && npm run typecheck",
     "build:offline": "VRIJSTAAN_OFFLINE=1 npm run build",
     "test": "node --no-warnings --import ./tests/register.mjs --test \"tests/**/*.test.ts\"",
+    "test:unit": "npm test",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^26.6.5",

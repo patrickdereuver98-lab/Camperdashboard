@@ -96,7 +96,7 @@ export function CookieBanner() {
         </>
       ) : (
         <>
-          <p id="cookie-titel" className="text-[15px] leading-snug text-ink-2">
+          <p id="cookie-titel" className="leading-snug text-ink-2">
             Mogen we tellen hoe de site wordt gebruikt? Zonder IP-adres en zonder cookies van derden.{" "}
             <button type="button" onClick={() => setDetails(true)} className="font-semibold text-forest underline">
               Zelf instellen
@@ -122,7 +122,7 @@ export function CookieSettingsLink({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}
-      className={`inline-block py-2.5 text-left text-ink-2 hover:text-forest hover:underline md:py-1.5 ${className}`}
+      className={`inline-block py-2.5 text-left text-ink-2 hover:text-forest hover:underline ${className}`}
     >
       Cookie-instellingen
     </button>

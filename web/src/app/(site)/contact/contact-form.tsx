@@ -16,7 +16,7 @@ const CATEGORIES = [
   ["overig", "Iets anders"],
 ] as const;
 
-export const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+export const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 export function ContactForm() {
   const params = useSearchParams();
