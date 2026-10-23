@@ -15,7 +15,7 @@ Vercel-preview.
 Besluiten van 16 oktober: B2 nee (toelating uit OSM blijft zoals die was), B3 geen advertenties, B4 en B9 ja
 (werkwijze via `acceptatie`). Websites worden voortaan eens per 30 dagen opnieuw gelezen (cron `scrape-refresh`).
 
-Wat nog openstaat, staat in [`plan.md`](../plan.md): §3 voor Patrick (B5 tot B8, B10, B11, B13), §4 voor de
+Wat nog openstaat, staat in [`plan.md`](../plan.md) en het vorige plan [`archief/plan-2026-10-16.md`](archief/plan-2026-10-16.md): §3 voor Patrick (B5 tot B8, B10, B11, B13), §4 voor de
 polishronde. Dit bord blijft hieronder staan als verslag van hoe het samenvoegen is gegaan.
 
 ## 1. Stand van zaken (ochtend 16 oktober)

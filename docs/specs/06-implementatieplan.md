@@ -1,7 +1,7 @@
 # 6. Implementatieplan
 
 > Doel: een geordende bouwvolgorde met controlepunten, voor mensen en AI-agents.
-> Bijgewerkt: 16 oktober 2026. Het samengevoegde plan voor de afronding staat in [`plan.md`](../../plan.md). Status: ✅ klaar, 🔄 bezig, ⬜ open.
+> Bijgewerkt: 16 oktober 2026. Het plan naar de nieuwe base version (23 oktober 2026) staat in [`plan.md`](../../plan.md); het vorige plan in [`docs/archief/plan-2026-10-16.md`](../archief/plan-2026-10-16.md). Status: ✅ klaar, 🔄 bezig, ⬜ open.
 > Eigenaar: "Patrick" = de eigenaar van VrijStaan; "Agent" = een AI-codeeragent (Claude Code) in deze repository.
 
 ## Mijlpaal 1: projectopzet ✅
