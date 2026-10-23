@@ -1,9 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "mcp__Supabase__deploy_edge_function",
-      "mcp__Supabase__apply_migration",
-      "mcp__Supabase__execute_sql"
+      "mcp__Supabase__*",
+      "mcp__github__*",
+      "mcp__claude-code-remote__*",
+      "WebSearch",
+      "WebFetch",
+      "Bash(git:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "Bash(sleep:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(sed:*)",
+      "Bash(jq:*)"
     ]
   }
 }

@@ -128,6 +128,6 @@ het implementatieplan.
 - Nog open voor Patrick 👤: `web/supabase/retention.sql` uitvoeren (database groeit ~19 MB per dag; de Supabase-tool van
   de agents laat `delete` niet door), de oude `submit_review` droppen (README nummer 55), beheeraccount, mailprovider,
   back-upgeheimen.
-- Herscrape met parser 41 gestart op 23 oktober (3.242 websites), zodat aankomsttijd en reserveren gevuld raken.
+- Herscrape met parser 43 klaar (23 oktober, 3.242 websites): +132 vertrektijden, 203 laatste aankomsttijden, 919 reserveringsregels; 15 verdwenen vertrektijden hersteld uit de baseline. Volgende: ronde 2 (forums, reviews, gidsen) voor de plekken zonder vertrektijd.
 - Scrape-taken samengevoegd tot één (migratie `20261023210000_scrape_een_taak.sql`): een tiende van de logregels.
 - Later, als de aankomsttijden gevuld zijn: zoeklijst B ("Hier kun je nog aankomen") en start B.
