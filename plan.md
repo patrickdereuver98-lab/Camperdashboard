@@ -8,6 +8,8 @@ Het vorige plan (16 oktober) staat in [`docs/archief/plan-2026-10-16.md`](docs/a
 besluiten voor Patrick (§3) en de polishronde (§4 tot en met §6, codes K, P, S, N, E, C, D) blijven daar geldig tot
 ze in deze ronde zijn afgevinkt.
 
+Stand 23 oktober: §2 stap 1 tot en met 9 klaar, alles in PR #54.
+
 Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 
 ---
@@ -82,16 +84,16 @@ plekpagina, WCAG als laatste omdat die bijna alles raakt. Na elke stap `cd web &
 
 | Stap | PR's | Let op | Status |
 |---|---|---|---|
-| 1 | #44, #43, #37 | Alleen docs en kleine updates | ⬜ |
-| 2 | #50 | Zoeken met de eerste 20 plekken op de server | ⬜ |
-| 3 | #52, dan #51, dan #46 | Migratie #52 hernoemen (G1); plekpagina en `place-ui.tsx` samenvoegen: aankomst, totaalprijs en status naast elkaar | ⬜ |
-| 4 | #53, dan #48 | `departure-radios.tsx` uit beide; migratie #48 hernummeren (G1) | ⬜ |
-| 5 | #47 | SEO-pagina's op de nieuwe plekpagina | ⬜ |
-| 6 | #49 | WCAG over alles heen; a11y-e2e opnieuw | ⬜ |
-| 7 | #45 | Alleen de N+1-fix en de migratie (G3) | ⬜ |
-| 8 | Controle | `npm run check && VRIJSTAAN_OFFLINE=1 npm run build`, unit-tests, Playwright (met a11y) | ⬜ |
-| 9 | Live zetten | Migraties #48 en #45 en G2 in Supabase; edge function `pipeline` als #52 een nieuwere versie heeft dan live | ⬜ |
-| 10 | Opruimen | Eén PR naar `acceptatie` die #44 tot en met #53 vervangt; in elke oude PR een regel "opgenomen in …"; sessies laten stoppen | ⬜ |
+| 1 | #44, #43, #37 | Alleen docs en kleine updates | ✅ |
+| 2 | #50 | Zoeken met de eerste 20 plekken op de server | ✅ |
+| 3 | #52, dan #51, dan #46 | Migratie #52 hernoemen (G1); plekpagina en `place-ui.tsx` samenvoegen: aankomst, totaalprijs en status naast elkaar | ✅ |
+| 4 | #53, dan #48 | `departure-radios.tsx` uit beide; migratie #48 hernummeren (G1) | ✅ |
+| 5 | #47 | SEO-pagina's op de nieuwe plekpagina | ✅ |
+| 6 | #49 | WCAG over alles heen; a11y-e2e opnieuw | ✅ plus twee fixes na het samenvoegen: tikdoelen van de SEO-links, `connection()` in `zoeken/search.tsx` |
+| 7 | #45 | Alleen de N+1-fix en de migratie (G3) | ✅ |
+| 8 | Controle | `npm run check && VRIJSTAAN_OFFLINE=1 npm run build`, unit-tests, Playwright (met a11y) | ✅ 226 unit-tests, 192 Playwright-tests |
+| 9 | Live zetten | Migraties #48 en #45 en G2 in Supabase; edge function `pipeline` als #52 een nieuwere versie heeft dan live | ✅ `user_trust_lijst` live, G2 stond al live, pipeline v43 live. #48 pas na de deploy van `main` |
+| 10 | Opruimen | Eén PR naar `acceptatie` die #44 tot en met #53 vervangt; in elke oude PR een regel "opgenomen in …"; sessies laten stoppen | 🔄 PR #54 |
 | 11 | Base version 👤 | Patrick test de Vercel-preview; `acceptatie` naar `main`; tag `v0.2-basis` | ⬜ |
 
 Bij botsingen in de docs houden we beide kanten. Bij een inhoudelijke keuze in de code (twee PR's willen iets anders op
