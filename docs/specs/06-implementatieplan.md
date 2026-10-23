@@ -144,6 +144,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Testplan uitvoeren | Patrick + Agent | Acceptatiecriteria PRD | Testverslag | Alle criteria geslaagd op iPhone en Android | M3–M5 |
 | 🔄 Monitoring | Agent | — | `.github/workflows/monitor.yml` (site, database, aantal plekken, elk uur); nog open: serverfouten naar `app_logs` | Fouten worden binnen een dag gezien | Vercel, variabele `SITE_URL` |
 | 🔄 Back-up met hersteltest | Agent + Patrick | — | `.github/workflows/backup.yml`, wekelijks, versleuteld | Eerste run groen | Geheimen `SUPABASE_DB_URL`, `BACKUP_PASSPHRASE` |
+| 🔄 Reviews alleen met account of code per mail | Agent | PRD open vraag 6 (besluit 18 okt) | Reviewsheet met code per mail of inloggen, concept in de browser; migratie `20261022100000_reviews_met_account.sql` (`submit_review` alleen voor `authenticated` met bevestigd e-mailadres, kolom `reviews.user_id`, FAQ); teksten Reviews en ranking, privacy, account | Migratie live toegepast samen met de deploy (nog niet gedaan); review met code per mail getest op de telefoon | Supabase Auth: eigen SMTP (mail met code) |
 | ✅ Terugdraaien | Agent | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/draaiboek.md` | Vercel |
 
 ## Voor je verdergaat (bij elke mijlpaal)

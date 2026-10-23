@@ -194,7 +194,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <section aria-labelledby="reviews">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <h2 id="reviews" className="font-display text-xl font-semibold sm:text-2xl">Ervaringen</h2>
-                <WriteReview placeId={place.id} placeName={place.name} />
+                <WriteReview placeId={place.id} placeName={place.name} slug={place.slug} />
               </div>
               {reviews.length > 0 ? (
                 <div className="mt-4 space-y-6">

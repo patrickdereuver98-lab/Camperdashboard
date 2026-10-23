@@ -123,7 +123,7 @@ export function AccountView() {
             <p className="font-semibold text-alert">Weet je het zeker?</p>
             <p className="mt-1 text-ink-2">
               Je account wordt direct en definitief verwijderd, met je reis, je camper, je uitgaven en je papieren. Dit kun je
-              niet ongedaan maken. Reviews zijn niet aan je account gekoppeld en blijven staan.
+              niet ongedaan maken. Je reviews blijven staan, zonder koppeling aan je account.
             </p>
             <label className="mt-3 block">
               <span className="mb-1 block font-semibold">Typ VERWIJDEREN om te bevestigen</span>

@@ -22,6 +22,7 @@ export function DepartureRadios({
   value: DepartureAnswer;
   onChange: (v: DepartureAnswer) => void;
   fieldClass: string;
+  /** Beginwaarde van het tijdveld, bijvoorbeeld uit een bewaard concept */
   checkoutDefault?: string;
 }) {
   return (

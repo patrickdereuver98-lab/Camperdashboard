@@ -744,6 +744,7 @@ export type Database = {
           score_value: number | null
           status: string
           title: string | null
+          user_id: string | null
           vehicle: string | null
           visited_month: string | null
         }
@@ -762,6 +763,7 @@ export type Database = {
           score_value?: number | null
           status?: string
           title?: string | null
+          user_id?: string | null
           vehicle?: string | null
           visited_month?: string | null
         }
@@ -780,6 +782,7 @@ export type Database = {
           score_value?: number | null
           status?: string
           title?: string | null
+          user_id?: string | null
           vehicle?: string | null
           visited_month?: string | null
         }
@@ -1315,7 +1318,6 @@ export type Database = {
       }
       submit_review: {
         Args: {
-          p_author_email: string
           p_author_name: string
           p_body: string
           p_place_id: string
