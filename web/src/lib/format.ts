@@ -147,3 +147,26 @@ export function markerPrice(p: { priceEur?: number; priceFrom?: boolean; priceEx
   if (!price) return "";
   return p.priceFrom && p.priceEur !== undefined ? `${price.value.replace(/^vanaf /, "")}+` : price.value;
 }
+
+/** Aankomst in één regel, alleen wat de bron noemt: "Aankomen tussen 14:00 en 22:00", "Aankomen tot 22:00" */
+export function arrivalText(p: { checkinFrom?: string; checkinUntil?: string }): string | undefined {
+  if (p.checkinFrom && p.checkinUntil) return `Aankomen tussen ${p.checkinFrom} en ${p.checkinUntil}`;
+  if (p.checkinUntil) return `Aankomen tot ${p.checkinUntil}`;
+  if (p.checkinFrom) return `Aankomst vanaf ${p.checkinFrom}`;
+  return undefined;
+}
+
+export type ReservationRule = "verplicht" | "mogelijk" | "niet_nodig";
+
+/** Reserveren als drie keuzes; zonder regel valt het oude ja/nee-veld terug op "mogelijk" of "hoeft niet" */
+export function reservationRuleOf(p: { reservationRule?: ReservationRule; reservation?: boolean }): ReservationRule | undefined {
+  if (p.reservationRule) return p.reservationRule;
+  if (p.reservation === undefined) return undefined;
+  return p.reservation ? "mogelijk" : "niet_nodig";
+}
+
+export const RESERVATION_TEXT: Record<ReservationRule, string> = {
+  verplicht: "Reserveren is verplicht",
+  mogelijk: "Reserveren kan",
+  niet_nodig: "Reserveren hoeft niet",
+};

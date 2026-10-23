@@ -6,7 +6,7 @@ import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/li
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
 import { useMyLocation } from "@/lib/my-location";
-import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
+import { arrivalText, cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
@@ -242,8 +242,9 @@ export function OpenChip({ place, onlyClosed = false }: { place: Pick<PlaceSumma
 }
 
 /** Aankomst of toegang in een paar woorden, alleen wat de bron noemt */
-function arrivalShort(p: Pick<PlaceSummary, "checkinFrom" | "access24h" | "accessHours">): string | undefined {
-  if (p.checkinFrom) return `Aankomst vanaf ${p.checkinFrom}`;
+function arrivalShort(p: Pick<PlaceSummary, "checkinFrom" | "checkinUntil" | "access24h" | "accessHours">): string | undefined {
+  const arrival = arrivalText(p);
+  if (arrival) return arrival;
   if (p.access24h) return "Dag en nacht open";
   if (p.accessHours) return `Poort open ${p.accessHours}`;
   return undefined;

@@ -16,13 +16,13 @@ const PLACE_COLUMNS =
   "tourist_tax_included,power,water,dump_station,toilet,shower,wifi,dogs,capacity,max_length_m,surface,open_all_year," +
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
   "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras," +
-  "departure_check,departure_checked_at,departure_checked_by";
+  "departure_check,departure_checked_at,departure_checked_by,checkin_until,reservation_rule";
 
 /** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten of beschrijvingen */
 const SUMMARY_COLUMNS =
   "id,slug,name,kind,lat,lng,town,province,price_eur,price_note,tourist_tax_included,power,water,dump_station,toilet," +
   "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
-  "completeness,departure,checkout_until,price_extras,departure_check,checkin_from,access_24h,access_hours";
+  "completeness,departure,checkout_until,price_extras,departure_check,checkin_from,checkin_until,access_24h,access_hours";
 
 class SupabaseError extends Error {
   constructor(readonly status: number, body: string) {
@@ -156,7 +156,7 @@ const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
   "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
   "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "departureCheck", "priceExtras", "imageCredit",
-  "checkinFrom", "access24h", "accessHours",
+  "checkinFrom", "checkinUntil", "access24h", "accessHours",
 ];
 
 export function toSummary(p: Place): PlaceSummary {

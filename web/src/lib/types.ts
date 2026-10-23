@@ -48,6 +48,8 @@ export interface Place {
   openAllYear?: boolean;
   season?: string;
   reservation?: boolean;
+  /** Reserveren als drie keuzes, letterlijk van de website; leeg = onbekend */
+  reservationRule?: "verplicht" | "mogelijk" | "niet_nodig";
   maxStayNights?: number;
   /** vrij = geen vaste vertrektijd, per24 = je betaalt per 24 uur, vast = vertrek uiterlijk checkoutUntil */
   departure?: "vrij" | "per24" | "vast";
@@ -61,6 +63,8 @@ export interface Place {
   departureCheckedAt?: string;
   departureCheckedBy?: "beheer" | "eigenaar";
   checkinFrom?: string;
+  /** Laatste aankomsttijd (HH:MM) */
+  checkinUntil?: string;
   /** Toegangstijden van slagboom of poort, bv. "07:30–23:00" */
   accessHours?: string;
   access24h?: boolean;
@@ -116,6 +120,7 @@ export type PlaceSummary = Pick<
   | "completeness"
   | "imageCredit"
   | "checkinFrom"
+  | "checkinUntil"
   | "access24h"
   | "accessHours"
 >;

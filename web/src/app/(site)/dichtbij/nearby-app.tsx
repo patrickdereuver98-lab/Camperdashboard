@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { formatDuration } from "@/lib/format";
-import { applyFilters, confirmedFirst, DEFAULT_FILTERS, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
+import { applyFilters, arrivalClosed, confirmedFirst, DEFAULT_FILTERS, FACILITIES, isOpenOn, nowInNL, type FacilityKey } from "@/lib/search";
 import { usePlaces, useVehicle } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
 import { useMediaQuery } from "@/lib/use-media";
@@ -29,6 +29,8 @@ export function NearbyApp() {
   const [facilities, setFacilities] = useState<FacilityKey[]>([]);
   // Voor "vannacht" standaard aan: verbergt alleen plekken die nu zeker dicht zijn
   const [openNow, setOpenNow] = useState(true);
+  // Ook standaard aan: verbergt alleen plekken waar de laatste aankomsttijd van vandaag al voorbij is
+  const [arriveNow, setArriveNow] = useState(true);
   const [departure, setDeparture] = useState<"vrij" | "uitslapers" | undefined>(undefined);
   // Lengte uit Mijn camper, net als bij Zoeken; met de chip zet je het filter uit
   const [vehicle] = useVehicle();
@@ -66,11 +68,12 @@ export function NearbyApp() {
   const nearest = useMemo(() => {
     if (!places || !pos) return null;
     return applyFilters(places, applyVehicle({ ...DEFAULT_FILTERS, facilities, openNow, departure, lengthOff: lengthOff || undefined }, vehicle))
+      .filter((r) => !arriveNow || !arrivalClosed(r.place, nowInNL()))
       .map((r) => ({ place: r.place, km: distanceKm(pos, r.place) }))
       .filter((r) => r.km < 80)
       .sort((a, b) => a.km - b.km || confirmedFirst(a.place, b.place))
       .slice(0, MAX);
-  }, [places, pos, facilities, openNow, departure, vehicle, lengthOff]);
+  }, [places, pos, facilities, openNow, arriveNow, departure, vehicle, lengthOff]);
 
   useEffect(() => {
     if (!pos || !nearest?.length) return;
@@ -164,6 +167,17 @@ export function NearbyApp() {
               Nu open
             </button>
           </li>
+          <li className="shrink-0">
+            <button
+              type="button"
+              aria-pressed={arriveNow}
+              onClick={() => setArriveNow((o) => !o)}
+              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+            >
+              <Sign name="clock" size={24} state={arriveNow ? "on" : "unknown"} />
+              Nu nog aankomen
+            </button>
+          </li>
           {vehicle.lengthM && (
             <li className="shrink-0">
               <button
@@ -228,6 +242,7 @@ export function NearbyApp() {
                   ? `${list.length} plekken, dichtstbij eerst. Rijtijden lukken nu niet, je ziet de afstand hemelsbreed.`
                   : `${list.length} plekken gevonden. Rijtijden berekenen…`}
           {openNow && list.length > 0 && " Wat nu dicht is, staat er niet bij."}
+          {arriveNow && list.length > 0 && " Ook niet waar je vandaag niet meer kunt aankomen."}
         </p>
         {!places && <CardSkeleton />}
         <ul className="mt-2 space-y-2.5 sm:mt-3 sm:space-y-3">

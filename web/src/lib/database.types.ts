@@ -474,6 +474,7 @@ export type Database = {
           access_hours: string | null
           capacity: number | null
           checkin_from: string | null
+          checkin_until: string | null
           checkout_until: string | null
           completeness: number
           created_at: string
@@ -514,6 +515,7 @@ export type Database = {
           rating_avg: number | null
           rating_count: number
           reservation: boolean | null
+          reservation_rule: string | null
           season: string | null
           shower: boolean | null
           slug: string
@@ -537,6 +539,7 @@ export type Database = {
           access_hours?: string | null
           capacity?: number | null
           checkin_from?: string | null
+          checkin_until?: string | null
           checkout_until?: string | null
           completeness?: number
           created_at?: string
@@ -577,6 +580,7 @@ export type Database = {
           rating_avg?: number | null
           rating_count?: number
           reservation?: boolean | null
+          reservation_rule?: string | null
           season?: string | null
           shower?: boolean | null
           slug: string
@@ -600,6 +604,7 @@ export type Database = {
           access_hours?: string | null
           capacity?: number | null
           checkin_from?: string | null
+          checkin_until?: string | null
           checkout_until?: string | null
           completeness?: number
           created_at?: string
@@ -640,6 +645,7 @@ export type Database = {
           rating_avg?: number | null
           rating_count?: number
           reservation?: boolean | null
+          reservation_rule?: string | null
           season?: string | null
           shower?: boolean | null
           slug?: string
