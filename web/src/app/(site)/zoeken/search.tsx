@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getSummaries } from "@/lib/places";
 import { applyFilters, filtersToQuery, parseFilters, withPage, type DeparturePage } from "@/lib/search";
 import { SearchApp, type InitialResults } from "./search-app";
@@ -20,6 +21,8 @@ export async function Search({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const raw = await searchParams;
+  // applyFilters kijkt naar de datum (seizoen): pas rekenen bij een echt verzoek, niet bij het prerenderen
+  await connection();
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(raw)) for (const x of Array.isArray(v) ? v : v === undefined ? [] : [v]) params.append(k, x);
   const filters = withPage(parseFilters(params), page);

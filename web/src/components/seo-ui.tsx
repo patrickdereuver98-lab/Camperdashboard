@@ -20,7 +20,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: { name: string; path: string }
         {crumbs.map((c, i) =>
           i < crumbs.length - 1 ? (
             <span key={c.path} className="flex items-center gap-1">
-              <Link href={c.path} className="-my-3 inline-block py-3 hover:text-forest hover:underline">
+              <Link href={c.path} className="-mx-2 -my-3 inline-block px-2 py-3 hover:text-forest hover:underline">
                 {c.name}
               </Link>
               <Icon name="chevronRight" size={14} />
@@ -81,7 +81,7 @@ export function PlaceList({ title, places, more }: { title: string; places: Plac
       </ul>
       {more && (
         <p className="mt-4">
-          <Link href={more.href} className="font-semibold text-forest underline underline-offset-2">
+          <Link href={more.href} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
             {more.label}
           </Link>
         </p>

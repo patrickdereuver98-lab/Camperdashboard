@@ -245,11 +245,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         )}
         <p className="mt-6 flex flex-wrap gap-x-5 gap-y-1">
           {island && (
-            <Link href={areaPath(island.province, island.slug)} className="-my-2 inline-block py-2 font-semibold text-forest underline underline-offset-2">
+            <Link href={areaPath(island.province, island.slug)} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
               Alle camperplaatsen op {island.name}
             </Link>
           )}
-          <Link href={provPath} className="-my-2 inline-block py-2 font-semibold text-forest underline underline-offset-2">
+          <Link href={provPath} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
             Alle camperplaatsen in {place.province}
           </Link>
         </p>
