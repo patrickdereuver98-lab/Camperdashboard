@@ -37,6 +37,11 @@
 | `shared_trips` + `shared_trip_members` | Gedeelde reis (samen plannen) en wie meedoet |
 | Storage `vehicle-docs` | Privé-map per account voor papieren van de camper (PDF of foto, max. 5 MB) |
 | `crowd_watches` | Een ingelogde camperaar volgt een plek 24 uur en krijgt één pushmelding als het rustig wordt |
+| `bron.sources` | Bronnenregister: per bron of domein de tier (1 open data/overheid tot 5 reviews) en wat mag ([bronnenbeleid](../bronnenbeleid.md)) |
+| `bron.documents` | Een opgehaalde pagina (platte tekst, max. 60.000 tekens) met bron, adres en datum |
+| `bron.candidates` | Een gevonden plek die nog niet of wel aan een bestaande plek is gekoppeld |
+| `bron.claims` | Eén bewering over één veld van een plek, met letterlijk citaat uit een document |
+| `bron.work_items` | Werkverdeling over sessies (per provincie en soort werk), met lease |
 
 ## Tabellen
 
@@ -121,6 +126,31 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `osm_staging` | id*, kind* (`place`, `point`), row*, created_at*, processed_at | index op onverwerkte rijen |
 | `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
 
+### Bronnenlaag (schema `bron`, dataplan Fase 0)
+
+Migratie `20261018233000_bronnen_en_claims.sql`. Het schema staat niet open via de API: geen enkele rol behalve
+`service_role` mag erin, en alles loopt via de functies hieronder. Niets in deze laag schrijft in `places`;
+overnemen is taak W4.1 van het dataplan.
+
+| Tabel | Velden (verplicht met *) | Regels |
+|---|---|---|
+| `bron.sources` | id* (slug), name*, domain (uniek), kind* (`open_data`, `overheid`, `eigen_site`, `eigenaar`, `directory`, `forum`, `reviews`, `api`), tier* (1–5), status* (`toegestaan`, `alleen_aanwijzing`, `te_beoordelen`, `geblokkeerd`), robots_ok, robots_checked_at, min_delay_s* (1–3600), terms_note, auto_registered*, reviewed_at | Onbekende domeinen worden bij het eerste gebruik geregistreerd met tier 3–5; tier 1 zet alleen een mens; tier 2 alleen voor het domein (bij gedeelde hosts het pad) uit `places.website` van de opgegeven plek; geblokkeerd gaat altijd voor |
+| `bron.host_throttle` | host* (pk), last_fetch_at* | Wachttijd per host |
+| `bron.documents` | id*, source_id*, url*, place_id, fetched_at*, fetched_by* (`server`, `agent`), http_status, content_hash*, published_on, extract* (1–60.000), submitted_by* | Uniek op (url, content_hash); na 30 dagen alleen de citaten (`bron.prune`) |
+| `bron.candidates` | id*, source_id*, document_id, external_ref, name*, lat/lng (binnen Nederland, samen of geen van beide), town, province, website, phone, kind_hint, matched_place_id, match_score, match_reason, status* (`nieuw`, `gekoppeld`, `nieuwe_plek`, `afgewezen`, `dubbel`), submitted_by* | Uniek op (source_id, external_ref); gekoppeld bij dezelfde website, ≤ 60 m, ≤ 150 m met naam ≥ 30% gelijk, of naam ≥ 60% gelijk binnen 400 m |
+| `bron.claims` | id*, place_id of candidate_id* (één van beide), field*, value* (jsonb, gecontroleerd door `bron.check_value`), document_id*, evidence* (≥ 15 genormaliseerde tekens, letterlijk in het document, met het getal of de tijd van de waarde; bij een eigen-site-document alleen voor die plek; bij tier 4–5 een datum verplicht), mention_ref, observed_on, method* (`regel`, `agent`, `mens`), status* (`open`, `afgewezen`, `ingehaald`), submitted_by* | Uniek op (plek, kandidaat, veld, document, vermelding, waarde) |
+| `bron.work_items` | id*, kind*, scope* (jsonb), instructions, priority*, status* (`open`, `bezig`, `klaar`, `mislukt`, `geblokkeerd`), leased_by, lease_until, attempts*, result, note | Uniek op (kind, scope); lease van een uur, vrij na een dag |
+
+**Beslisregel** (`bron.decisions`, per plek en veld, alleen vermeldingen van de laatste 24 maanden en bronnen die
+niet geblokkeerd zijn): tier 1 of 2 is genoeg; tier 3 tot 5 vraagt twee losse vermeldingen met dezelfde waarde
+(besluit 18 oktober 2026); los betekent een ander document of vermeldingsnummer én een ander citaat. Een nieuwere vermelding met een andere waarde maakt er een `conflict` van. Steunt het
+besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`. Eén vermelding uit tier 3–5 is
+`onvoldoende`. `bron.preview_changes` zet het besluit naast de huidige waarde in `places`.
+
+**Functies (alleen `service_role`, voor de MCP-server `bronnen-mcp` en sessies):** `bron_resolve_source`,
+`bron_fetch_slot`, `bron_set_robots`, `bron_store_document`, `bron_submit_claims`, `bron_submit_candidates`,
+`bron_lease_work`, `bron_finish_work`, `bron_block_source`, `bron_decisions`. `bron_overview` mag ook beheer.
+
 ## Relaties
 
 - `places` 1 → n `reviews` (`ON DELETE CASCADE`)
@@ -202,6 +232,8 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `private.rate_counter` | 2 dagen | Idem |
 | `cron.job_run_details` | 7 dagen | Idem |
 | `places` | Zolang relevant; verwijderen op verzoek van de eigenaar | Handmatig |
+| `bron.documents` (tekst) | 30 dagen volledig, daarna alleen de citaten; zonder claims of kandidaten weg | Ja: `bron.prune()`, cron `bron-opschonen` (04:43) |
+| `bron.host_throttle` | 7 dagen | Idem |
 
 **Nog uit te voeren door de eigenaar:** het deel "Bewaartermijnen" van
 `web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` in de SQL-editor (de MCP-tool vraagt bij
