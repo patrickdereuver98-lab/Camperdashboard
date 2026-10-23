@@ -381,6 +381,12 @@ test("wisseltijd: 'AANKOMST/VERTREK 11.00 uur wisselen' is vertrek uiterlijk 11:
   assert.equal(r.checkout_until, "11:00");
 });
 
+test("wisseltijd onder een kopje (de tijd staat in de lijst eronder)", () => {
+  const r = page(`<p><strong>AANKOMST/VERTREK </strong></p><ul><li>11.00 uur &#8217;s morgens wisselen</li><li>uitzonderingen in overleg</li></ul>`);
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "11:00");
+});
+
 test("zonder 'wissel' blijft 'aankomst/vertrek 11.00' onbekend", () => {
   assert.equal(page("<p>Aankomst/vertrek 11.00 uur</p>").departure, undefined);
 });

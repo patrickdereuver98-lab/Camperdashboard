@@ -528,7 +528,7 @@ const PITCH_OUT = new RegExp(
   String.raw`(kampeerpla(?:ats|atsen|tsen)|kampeerplek(?:ken)?|camperpla(?:ats|atsen)|camperplek(?:ken)?|staanpla(?:ats|atsen)|standpla(?:ats|atsen)|camping|kampeermiddel(?:en)?)\b(?:(?:(?!open|geopend|receptie|winkel|bereikbaar)[^.?!0-9]){0,40}?(?:voor|vóór|uiterlijk|om|is dat|:))?\s*(\d{1,2})(?:[:.](\d{2})\s*(?:uur|u\b|h\b)?|\s*(?:uur|u\b|h\b))`,
   "g",
 );
-const CHANGEOVER = new RegExp(String.raw`(?:aankomst|aankomen|inchecken)\s*(?:\/|en|&)\s*(?:vertrek|vertrekken|uitchecken)(?:tijd)?\s*:?\s*${CLOCK}`, "g");
+const CHANGEOVER = new RegExp(String.raw`(?:aankomst|aankomen|inchecken)\s*(?:\/|en|&)\s*(?:vertrek|vertrekken|uitchecken)(?:tijd)?\s*:?\s*(?:\.\s*)?${CLOCK}`, "g");
 const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|verlaat|leeg|auschecken|abreise/g;
 const ARRIVAL_WORD = /aankomst|aankomen|inchecken|check-?in|anreise|beschikbaar vanaf/;
 // "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
@@ -840,7 +840,7 @@ function extraUnit(after: string): string | undefined {
 
 // "aankomen tot 22:00", "inchecken kan tussen 16:00 en 20:00", "aankomst tussen 13.00 - 22.00 uur"
 const LATEST_ARRIVAL = new RegExp(
-  String.raw`\b(?:aankomst(?:tijd(?:en)?)?|aankomen|inchecken|inchecktijd|check-?in|aanmelden)\b([^.!?\d]{0,45}?)\b(tot(?: uiterlijk)?|uiterlijk|tussen)\s*(?:om\s*)?${CLOCK}(?:\s*(?:en|-|–|tot)\s*${CLOCK})?`,
+  String.raw`\b(?:aankomst(?:tijd(?:en)?)?|aankomen|inchecken|inchecktijd|check-?in|aanmelden)\b([^.!?\d]{0,45}?)\b(tot(?: uiterlijk)?|uiterlijk|tussen)\s*(?:om\s*)?${CLOCK}(?:\s*(?:en|-|–|tot)\s*(?:voor|vóór|uiterlijk)?\s*${CLOCK})?`,
   "g",
 );
 // "aankomst vanaf 13:00 uur tot 16:00 uur", "inchecken 15.00 - 17.30 uur": een venster zonder "tot"/"tussen" vooraan
