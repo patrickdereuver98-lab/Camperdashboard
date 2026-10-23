@@ -440,6 +440,15 @@ export function extract(pages: string[], base: URL) {
   // ── Aankomst- en vertrektijden ───────────────────────────────────────────
   const raw = pages.map(toRawText).join(" . ");
   Object.assign(out, arrivalDeparture(text, raw.length === text.length ? raw : text));
+  // Later vertrekken tegen betaling: een toeslag naast de vertrektijd ("Later vertrekken tot 18:00 € 8,00")
+  if (out._late) {
+    const late = out._late as { until?: string; amount: number };
+    const list = (out.price_extras as Extra[] | undefined) ?? [];
+    if (!list.some((x) => x.label.startsWith("Later vertrekken")))
+      list.push({ label: late.until ? `Later vertrekken tot ${late.until}` : "Later vertrekken", amount: late.amount, unit: "eenmalig" });
+    out.price_extras = list;
+    delete out._late;
+  }
   // Niets in de tekst? Boekingssystemen zetten de tijden soms alleen in gestructureerde gegevens (schema.org
   // checkoutTime). Alleen als dat over de camping of camperplaats zelf gaat, niet over een chalet of hotelkamer.
   if (out.departure === undefined) {
@@ -582,10 +591,19 @@ function quote(raw: string, text: string, index: number): string {
   return (from > s ? "… " : "") + q.charAt(0).toUpperCase() + q.slice(1) + (to < e ? " …" : "");
 }
 
+/** Het eerste eurobedrag in een stukje tekst: "€ 8.00", "8,50 euro" */
+function euroAmount(s: string): number | undefined {
+  const m = /(?:€|eur(?:o)?)\s?(\d{1,3}(?:[.,]\d{1,2})?)|(\d{1,3}(?:[.,]\d{1,2})?)\s?(?:€|euro)/.exec(s);
+  const v = m ? Number((m[1] ?? m[2]).replace(",", ".")) : NaN;
+  return v > 0 && v < 200 ? v : undefined;
+}
+
 const asClock = (h: string, m?: string) => `${h.padStart(2, "0")}:${m ?? "00"}`;
 
 export function arrivalDeparture(text: string, raw: string): Record<string, unknown> {
   const hits: TimeHit[] = [];
+  // Later vertrekken tegen betaling ("tussen 12.00 en 18.00 uur € 8 extra"): bij de vertrektijd bewaren als optie
+  const lateOptions = new Map<number, { until?: string; amount?: number }>();
   for (const k of text.matchAll(KEY)) {
     const i = k.index!;
     const [s, e] = sentenceBounds(text, i);
@@ -626,7 +644,13 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       !/seizoen|kiezen|keuze/.test(ahead) && (a[2] || a[3])) {
       [h, m] = [a[1], a[2]];
       timeEnd = i + k[0].length + a[0].length;
+      lateOptions.set(i, { until: asClock(a[4], a[5]), amount: euroAmount(ahead.slice(a[0].length, a[0].length + 70)) });
       a = null;
+    }
+    // "vertrek na 12 uur € 10 extra": 12:00 is de vertrektijd, later kan tegen betaling
+    if (a && lateFee && type === "out") {
+      const amount = euroAmount(ahead.slice(a[0].length, a[0].length + 70));
+      if (amount) lateOptions.set(i, { amount });
     }
     // "na 08.00 uur en voor 12:00 uur": de "voor"-tijd
     if (a && type === "out" && !a[4] && !lateFee && /\b(?:na|after)\s*\d/.test(a[0])) {
@@ -772,6 +796,8 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     res.departure = "vast";
     res.checkout_until = out.time;
     notes.push(quote(raw, text, out.index));
+    const late = lateOptions.get(out.index);
+    if (late?.amount) res._late = late;
   }
   // Tegenstrijdig (wel "geen vertrektijden", maar ook een vaste tijd): niets invullen
   if (arrive && res.departure !== undefined) {

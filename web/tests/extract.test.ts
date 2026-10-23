@@ -404,3 +404,14 @@ test("'iedere 24 uur wordt er een nieuwe nacht in rekening gebracht' is per 24 u
 test("'je kunt maximaal 3 x 24 uur verblijven' is geen per 24 uur", () => {
   assert.equal(page("<p>Je kunt maximaal 3 x 24 uur op de camperplaats verblijven.</p>").departure, undefined);
 });
+
+test("later vertrekken tegen betaling: vertrek 12:00 met de optie tot 18:00 als toeslag", () => {
+  const r = page("<p>Bij vertrek tussen 12.00 uur en 18.00 uur wordt € 8,00 extra in rekening gebracht.</p>");
+  assert.equal(r.checkout_until, "12:00");
+  assert.deepEqual(r.price_extras, [{ label: "Later vertrekken tot 18:00", amount: 8, unit: "eenmalig" }]);
+});
+
+test("vertrek na 12 uur € 10 extra: optie zonder eindtijd", () => {
+  const r = page("<p>Vertrekken voor 12.00 uur. Vertrek na 12 uur € 10 extra.</p>");
+  assert.equal(r.checkout_until, "12:00");
+});

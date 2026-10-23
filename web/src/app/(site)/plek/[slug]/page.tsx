@@ -363,7 +363,10 @@ function Decision({ place }: { place: Place }) {
       : free && place.departureCheck === "bevestigd" && place.departureCheckedAt
           ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
           : undefined;
+  // Later vertrekken tegen betaling hoort bij de vertrektijd, niet tussen de extra kosten
+  const lateOption = place.priceExtras?.find((x) => x.label.startsWith("Later vertrekken"));
   const times = [
+    lateOption && `${lateOption.label} kan voor ${eur(lateOption.amount)}`,
     arrivalText(place),
     place.accessHours && `Slagboom of poort open ${place.accessHours}`,
     place.access24h && !place.accessHours && "24 uur per dag toegankelijk",
@@ -371,7 +374,7 @@ function Decision({ place }: { place: Place }) {
     reservationRuleOf(place) && RESERVATION_TEXT[reservationRuleOf(place)!],
   ].filter(Boolean) as string[];
   const price = cardPrice(place);
-  const extras = place.priceExtras ?? [];
+  const extras = (place.priceExtras ?? []).filter((x) => x !== lateOption);
   const rows: Row[] = [
     {
       sign: "euro",
