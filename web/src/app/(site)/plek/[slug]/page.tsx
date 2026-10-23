@@ -143,9 +143,6 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         </nav>
         <Gallery slug={place.slug} name={place.name} photos={photos} kind={place.kind} town={place.town} />
       </div>
-      <div className="mx-auto min-h-14 max-w-6xl px-4 pt-3 sm:px-6">
-        <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
-      </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         {/* Kop: wat en waar, in één blik */}
@@ -183,6 +180,10 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
             <Decision place={place} />
+            {/* Foto toevoegen staat onder het kernblok: eerst beslissen, dan bijdragen */}
+            <div className="-mt-4 min-h-11">
+              <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
+            </div>
             <CrowdStatusCard placeId={place.id} slug={place.slug} />
 
             {/* Voorzieningen */}
@@ -399,13 +400,14 @@ function Decision({ place }: { place: Place }) {
       <dl className="divide-y divide-line">
         {/* Vertrekken: het kernfeit. dt en dd direct in de rij (geldige lijst voor schermlezers); extra regels over de
             volle breedte */}
-        <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-3 [&>dd~dd]:col-span-2">
+        <div className={`grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-4 [&>dd~dd]:col-span-2 ${known ? (late ? "bg-lake-tint" : "bg-forest-tint") : ""}`}>
           <dt className="flex items-center gap-3 text-ink-2">
             <Sign name="clock" size={28} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
             Vertrekken
           </dt>
+          {/* Het kernfeit van de site: groter dan de andere rijen, ook op de telefoon boven de vouw */}
           <dd
-            className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${
+            className={`ml-auto text-right font-display text-[1.375rem] leading-tight font-semibold sm:text-2xl ${
               free ? "text-forest" : late ? "text-lake" : known ? "" : "text-muted"
             }`}
           >
@@ -444,7 +446,9 @@ function Decision({ place }: { place: Place }) {
               <dd className="mt-1 pl-10 text-sm text-ink-2">
                 <NightTotalLine place={place} />
                 {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}
-                {place.touristTaxIncluded !== undefined && <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>}
+                {place.touristTaxIncluded !== undefined && !onlyTaxOpen(place) && (
+                  <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>
+                )}
                 {extras.length > 0 && (
                   <details className="group mt-1">
                     <summary className="-my-2 flex h-11 cursor-pointer list-none items-center gap-1 font-semibold text-forest [&::-webkit-details-marker]:hidden">
@@ -482,13 +486,23 @@ const OPEN_REASON: Record<string, string> = {
   "of de prijs per persoon erbij komt": "het is niet duidelijk of de prijs per persoon erbij komt",
 };
 
+/** Ontbreekt voor het totaal alleen het bedrag van de toeristenbelasting? Dan zegt één zin genoeg. */
+function onlyTaxOpen(place: Place): boolean {
+  const t = nightTotal(place);
+  return t.total === undefined && t.open.length === 1 && t.open[0] === "toeristenbelasting";
+}
+
 function NightTotalLine({ place }: { place: Place }) {
   const t = nightTotal(place);
   if (t.open.includes("prijs per nacht")) return null;
+  if (onlyTaxOpen(place)) {
+    // Veruit het vaakst: de prijs staat er, alleen het bedrag van de toeristenbelasting niet
+    return <p>Toeristenbelasting komt er {place.touristTaxIncluded === false ? "" : "mogelijk "}bij. De website noemt geen bedrag.</p>;
+  }
   if (t.total === undefined) {
     const why = t.open.map((o) => OPEN_REASON[o] ?? o);
     const list = why.length > 1 ? `${why.slice(0, -1).join(", ")} en ${why.at(-1)}` : why[0];
-    return <p>Geen totaal voor {TOTAL_PERSONS} personen: {list}.</p>;
+    return <p>Een totaal voor {TOTAL_PERSONS} personen geven we nog niet, want {list}.</p>;
   }
   const noPower = !place.priceExtras?.some((x) => x.label === "Stroom");
   return (

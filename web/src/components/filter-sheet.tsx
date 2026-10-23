@@ -1,4 +1,5 @@
 "use client";
+import { pluralize } from "@/lib/format";
 
 import { useMemo, useState } from "react";
 import { applyFilters, DEFAULT_FILTERS, FACILITIES, pageOf, relaxations, type DepartureGroup, type Filters } from "@/lib/search";
@@ -125,7 +126,7 @@ export function FilterSheet({
             disabled={count === 0}
             className="h-12 flex-1 rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60"
           >
-            {count === null ? "Toon plekken" : count === 0 ? "Geen plekken" : `Toon ${count} ${count === 1 ? "plek" : "plekken"}`}
+            {count === null ? "Toon plekken" : count === 0 ? "Geen plekken" : `Toon ${pluralize(count, "plek", "plekken")}`}
           </button>
         </div>
         </>

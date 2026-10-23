@@ -55,7 +55,7 @@ export function CookieBanner() {
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-titel"
-      className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-xl bg-surface p-4 shadow-float md:bottom-6"
+      className={`fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-xl bg-surface shadow-float md:bottom-6 ${details ? "p-4" : "px-3 py-2.5"}`}
     >
       {details ? (
         <>
@@ -96,14 +96,15 @@ export function CookieBanner() {
         </>
       ) : (
         <>
-          <p id="cookie-titel" className="leading-snug text-ink-2">
-            Mogen we tellen hoe de site wordt gebruikt? Zonder IP-adres en zonder cookies van derden.{" "}
-            <button type="button" onClick={() => setDetails(true)} className="font-semibold text-forest underline">
+          {/* Een smalle balk: bij het eerste bezoek blijft de pagina zelf zichtbaar (review 23 oktober 2026) */}
+          <p id="cookie-titel" className="text-[0.9375rem] leading-snug text-ink-2">
+            Mogen we tellen hoe de site wordt gebruikt, zonder cookies van derden?{" "}
+            <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
               Zelf instellen
             </button>
           </p>
           {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-1.5 grid grid-cols-2 gap-2">
             <button type="button" onClick={() => close(true)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
               Toestaan
             </button>

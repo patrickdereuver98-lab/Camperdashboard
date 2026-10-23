@@ -116,6 +116,8 @@ export function timesSourceLine(note?: string): string | undefined {
       // onleesbare url: dan blijft het "website"
     }
   }
+  // Restjes van menu's of opsommingen rond het citaat ("/ Vertrek vóór 11.00 u ·") horen niet bij de zin
+  q = q.replace(/^[\s/|·•\-–—:;,>»]+/, "").replace(/[\s/|·•\-–—:;,<«]+$/, "");
   if (/^volgens de gegevens op de website/i.test(q)) return `Bron: gegevens op de ${source}`;
   if (!q) return `Bron: ${source}`;
   return `Bron: “${q}” (${source})`;

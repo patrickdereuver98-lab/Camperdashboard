@@ -316,6 +316,13 @@ export function PlaceCard({
         <SaveButton slug={place.slug} variant={stack ? "icon" : "plain"} />
       </div>
       <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-2 py-2.5 pr-3 pl-3 sm:p-4"}`}>
+        {/* Wanneer eerst: de vertrekregel is waar je op kiest (review 23 oktober 2026), daarna aankomen */}
+        {(departureShort(place) || isIncomplete(place) || arrival) && (
+          <div className={`min-w-0 space-y-0.5 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
+            <DepartureChip place={place} />
+            {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
+          </div>
+        )}
         {/* Waar: naam, soort en plaats, afstand */}
         <div className={`min-w-0 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
           <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-[1.0625rem] sm:text-xl"}`}>
@@ -329,13 +336,6 @@ export function PlaceCard({
           {distance && <p className="text-sm font-semibold text-forest">{distance}</p>}
         </div>
 
-        {/* Wanneer: vertrekken en aankomen, en alleen een seizoensmelding als het nu dicht is */}
-        {(departureShort(place) || isIncomplete(place) || arrival) && (
-          <div className="min-w-0 space-y-0.5">
-            <DepartureChip place={place} />
-            {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
-          </div>
-        )}
         <OpenChip place={place} onlyClosed={!stack} />
         {place.ratingCount > 0 && <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />}
 

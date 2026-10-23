@@ -53,7 +53,7 @@
 | Mijn account | `/account` | Naam, inlogmanier, aantal plekken in Mijn reis, uitloggen, account verwijderen (tweestaps: knop, dan VERWIJDEREN typen; papieren worden eerst weggehaald; `delete_my_account(p_confirm)` controleert het woord ook) |
 | Samen plannen | kaart in `/mijn-reis`, uitnodiging `/samen/<code>` | Starten maakt een gedeelde reis van je reis; uitnodiging delen; meedoen vervangt je reis (met waarschuwing); wijzigingen realtime bij iedereen; stoppen maakt je los | `shared_trips` (Realtime), RPC's | Sessie, `user_trips` |
 | Drukte | kaart onder prijs op `/plek/<slug>` | Meldingen van de laatste 3 uur ("Druk, volgens 3 camperaars, laatste melding 20 minuten geleden") of "Nog niemand gemeld". Ingelogd: Rustig / Druk / Vol doorgeven; anders inloggen. Bij druk of vol: "Laat het me weten als het hier rustig is" → toestemming voor meldingen → één pushmelding binnen 24 uur (iPhone: alleen vanaf het beginscherm) | `crowd_status`, `report_crowd` |
-| Foto toevoegen | knop onder de foto's op `/plek/<slug>` | Niet ingelogd → `/inloggen`; ingelogd → foto kiezen, verkleinen (zonder EXIF), bijschrift, licentie aanvinken, versturen → "we bekijken je foto" of (vertrouwd) "staat zo online" | Storage `place-photos`, `place_photos` |
+| Foto toevoegen | knop onder het beslisblok op `/plek/<slug>` | Niet ingelogd → `/inloggen`; ingelogd → foto kiezen, verkleinen (zonder EXIF), bijschrift, licentie aanvinken, versturen → "we bekijken je foto" of (vertrouwd) "staat zo online" | Storage `place-photos`, `place_photos` |
 | Beheer | `/admin/*` | Overzicht, Statistieken, Plekken, Dubbelen, Support, Inzendingen, Reviews, Foto's, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
 
 ## Hoofdroute: vannacht een plek vinden

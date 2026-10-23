@@ -93,8 +93,8 @@ plekpagina, WCAG als laatste omdat die bijna alles raakt. Na elke stap `cd web &
 | 7 | #45 | Alleen de N+1-fix en de migratie (G3) | ✅ |
 | 8 | Controle | `npm run check && VRIJSTAAN_OFFLINE=1 npm run build`, unit-tests, Playwright (met a11y) | ✅ 226 unit-tests, 192 Playwright-tests |
 | 9 | Live zetten | Migraties #48 en #45 en G2 in Supabase; edge function `pipeline` als #52 een nieuwere versie heeft dan live | ✅ `user_trust_lijst` live, G2 stond al live, pipeline v43 live. #48 pas na de deploy van `main` |
-| 10 | Opruimen | Eén PR naar `acceptatie` die #44 tot en met #53 vervangt; in elke oude PR een regel "opgenomen in …"; sessies laten stoppen | 🔄 PR #54 |
-| 11 | Base version 👤 | Patrick test de Vercel-preview; `acceptatie` naar `main`; tag `v0.2-basis` | ⬜ |
+| 10 | Opruimen | Eén PR naar `acceptatie` die #44 tot en met #53 vervangt; in elke oude PR een regel "opgenomen in …"; sessies laten stoppen | ✅ #54 en #55 gemerged, #37 en #43 tot en met #53 gesloten, sessies gearchiveerd |
+| 11 | Base version 👤 | Patrick test de Vercel-preview; `acceptatie` naar `main`; tag `v0.2-basis` | ✅ `main` 848536a (23 oktober), reviewmigratie live |
 
 Bij botsingen in de docs houden we beide kanten. Bij een inhoudelijke keuze in de code (twee PR's willen iets anders op
 dezelfde plek) stoppen we en vraagt de agent het aan Patrick. De specs worden bijgewerkt in dezelfde commits
@@ -120,6 +120,12 @@ vaste stijlgids (`docs/stijlgids.md`, skill `vrijstaan-stijl`: zandpapier, bosgr
 Input: de bevindingen uit de gebruikersreview. Twee of drie varianten; Patrick kiest, daarna wordt de keuze een taak in
 het implementatieplan.
 
-## 5. Base version: rapport
+## 5. Base version: rapport en designronde
 
-Volgt na stap 11.
+- Rapport (wat erin zit, cijfers, sterk en zwak, gebruikersreview): https://claude.ai/artifact/2Nos9bWU62qykbAC2hKzvr
+- Designcanvas met varianten: https://claude.ai/artifact/Mu311sSaEa3nn85Uh9LHjc
+- Gebouwd uit de designronde: plekpagina B, zoeklijst A en de tekst van start A (implementatieplan, Mijlpaal 5).
+- Nog open voor Patrick 👤: `web/supabase/retention.sql` uitvoeren (database groeit ~19 MB per dag; de Supabase-tool van
+  de agents laat `delete` niet door), de oude `submit_review` droppen (README nummer 55), beheeraccount, mailprovider,
+  back-upgeheimen.
+- Later, als de aankomsttijden gevuld zijn: zoeklijst B ("Hier kun je nog aankomen") en start B.

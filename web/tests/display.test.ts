@@ -233,5 +233,10 @@ test("bronzin: letterlijk citaat met bron, technische voorvoegsels weg, leeg bli
     "Bron: “Geen vaste vertrektijd.” (campergids.nl)",
   );
   assert.equal(timesSourceLine("Volgens OpenStreetMap"), "Bron: OpenStreetMap");
+  assert.equal(
+    timesSourceLine("/ Vertrek vóór 11.00 u · Aankomst mogelijk vanaf 14.00u ·"),
+    "Bron: “Vertrek vóór 11.00 u · Aankomst mogelijk vanaf 14.00u” (website)",
+  );
+  assert.equal(timesSourceLine("| - Vrij vertrek."), "Bron: “Vrij vertrek.” (website)");
   assert.equal(timesSourceLine("Volgens de gegevens op de website: vertrek uiterlijk 11:00"), "Bron: gegevens op de website");
 });
