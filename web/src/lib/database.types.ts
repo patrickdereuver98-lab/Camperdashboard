@@ -1342,6 +1342,7 @@ export type Database = {
         Returns: undefined
       }
       user_trust: { Args: { p_user?: string }; Returns: Json }
+      user_trust_many: { Args: { p_users: string[] }; Returns: Json }
       watch_place: {
         Args: { p_on?: boolean; p_place_id: string }
         Returns: boolean
