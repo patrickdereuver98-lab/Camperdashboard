@@ -1,7 +1,7 @@
 # 6. Implementatieplan
 
 > Doel: een geordende bouwvolgorde met controlepunten, voor mensen en AI-agents.
-> Bijgewerkt: 16 oktober 2026. Het plan naar de nieuwe base version (23 oktober 2026) staat in [`plan.md`](../../plan.md); het vorige plan in [`docs/archief/plan-2026-10-16.md`](../archief/plan-2026-10-16.md). Status: ✅ klaar, 🔄 bezig, ⬜ open.
+> Bijgewerkt: 23 oktober 2026 (livegang 1 januari 2027, zie PRD). Het plan naar de nieuwe base version staat in [`plan.md`](../../plan.md); het vorige plan in [`docs/archief/plan-2026-10-16.md`](../archief/plan-2026-10-16.md). Status: ✅ klaar, 🔄 bezig, ⬜ open.
 > Eigenaar: "Patrick" = de eigenaar van VrijStaan; "Agent" = een AI-codeeragent (Claude Code) in deze repository.
 
 ## Mijlpaal 1: projectopzet ✅
@@ -126,7 +126,16 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
-| ⬜ Bedrijfsgegevens invullen | Patrick | KvK-gegevens | `web/src/lib/company.ts` | Geen "[… nog invullen]" meer op de site | — |
+| ⬜ Alle plekken zonder vertrektijd vinden, allemaal groen (doel livegang 1 januari 2027) | Agent + Patrick | PRD Databronnen | Zoekagenten over eigen sites, reviews en fora; bevestiging in Beheer → Vertrektijden | Elke plek op Zonder vertrektijd groen; 90% van de gepubliceerde plekken met vertrekregel | README #41 |
+| ⬜ Brondatabase: bron, datum en letterlijke zin per gegeven, terug te vinden in beheer | Agent | PRD Databronnen | Tabel of uitbreiding van `sources`, beheerscherm | Bij elke vertrekregel en prijs is de bron te openen | — |
+| ⬜ Onvolledige plekken grijs met oproep om de vertrektijd door te geven | Agent | PRD, README #42 | Kaart, lijst en plekpagina | Plekken zonder vertrekregel herkenbaar en aan te vullen | — |
+| ⬜ "Mogelijk verouderd" bij gegevens ouder dan 12 maanden | Agent | PRD | Plekpagina | Melding zichtbaar bij oude gegevens | Brondatabase |
+| ⬜ Reviews alleen met account of code per mail | Agent | PRD open vraag 6 | Reviewformulier, RPC | Review zonder bevestiging niet zichtbaar | — |
+| ⬜ Rol support beperken | Agent | PRD Rollen, README #1 | Policies per rol | Support kan geen instellingen, beheerders of verwijderingen | — |
+| ⬜ SEO-pagina's per provincie en plaats, structured data, sitemap | Agent | PRD | Pagina's, JSON-LD, `sitemap.xml` | Pagina's geïndexeerd in Search Console | Domein |
+| ⬜ Domein vrijstaan.nl registreren | Patrick | — | Domein | Domein op naam van Patrick | — |
+| ⬜ Prijzen naar 90% van de gepubliceerde plekken | Agent | PRD | Scraper en zoekagenten | 90% met nachtprijs | — |
+| ⬜ Contactgegevens invullen (hobby, nog geen KvK) | Patrick | Naam, contactadres | `web/src/lib/company.ts` | Geen "[… nog invullen]" meer op de site | — |
 | ⬜ Juridische teksten laten nalezen | Patrick | Pagina's | Akkoord jurist | Aanpassingen verwerkt | Bedrijfsgegevens |
 | ⬜ Supabase Auth: Site URL, redirect-URL's, eigen SMTP | Patrick | Vercel-adres | Instellingen | Inloggen en wachtwoord-reset werken | Vercel |
 | ⬜ Domein koppelen en `NEXT_PUBLIC_SITE_URL` zetten | Patrick | Domein | DNS + Vercel | Site bereikbaar op eigen domein met HTTPS | Vercel |

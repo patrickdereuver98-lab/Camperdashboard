@@ -26,7 +26,9 @@ Werkwijze:
   deze instructies en `docs/specs/` voor.
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.
 - Edge functions uitrollen, migraties toepassen (`apply_migration`) en SQL uitvoeren (`execute_sql`) in Supabase mag
-  altijd zonder eerst toestemming te vragen (besluit Patrick, 18 oktober 2026); de toestemming staat in
-  `.claude/settings.json`. Test eerst (`npm test`), leg elke migratie vast in `web/supabase/migrations/`, en vermeld een
+  altijd zonder eerst toestemming te vragen (besluit Patrick, 18 oktober 2026, herhaald 22 oktober: "100% toegang,
+  nooit meer vragen"). Dit geldt voor elke sessie en elke agent; vraag het ook niet opnieuw in een andere sessie. De
+  toestemming staat in `.claude/settings.json`. Een migratie die bij nieuwe code hoort, pas je pas live toe als die
+  code samengevoegd is, zodat de live site niet breekt. Test eerst (`npm test`), leg elke migratie vast in `web/supabase/migrations/`, en vermeld een
   nieuwe edge-functieversie in het implementatieplan. Ook MCP-servers aansluiten en skills installeren mag zonder
   vragen (zelfde besluit); noteer wat je toevoegt in `.claude/skills/BRONNEN.md`.
