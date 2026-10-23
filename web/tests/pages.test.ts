@@ -1,7 +1,7 @@
 // Welke pagina's de scraper leest: vertrekpagina's eerst, op adres én linktekst, met de sitemap als terugval.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addExtraPages, decodeHtml, deeperLinks, extractLinks, homeCandidates, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
+import { addExtraPages, decodeHtml, emptySite, deeperLinks, extractLinks, homeCandidates, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
 
 const home = new URL("https://camping-dewei.nl/");
 
@@ -132,4 +132,10 @@ test("menulink met een SVG-icoon erin (lange inhoud) wordt niet weggegooid (De B
   const links = extractLinks(html, home);
   assert.equal(links.length, 2);
   assert.ok(rankLinks(links, home)[0].endsWith("/aankomst-en-vertrek-informatie/"), "vertrekpagina gaat voor");
+});
+
+test("lege startpagina (geen links, geen velden) telt als haperende site; één link of één veld niet", () => {
+  assert.equal(emptySite(0, 0), true);
+  assert.equal(emptySite(1, 0), false);
+  assert.equal(emptySite(0, 3), false);
 });

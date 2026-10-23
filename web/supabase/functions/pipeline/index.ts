@@ -15,7 +15,7 @@ import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
-import { addExtraPages, decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -343,7 +343,7 @@ async function verifyFinding(f: Finding) {
 }
 
 async function scrapeOne(place: { id: string; website: string }) {
-  const { home, html, subs, pdfs, failed } = await collectPages(place.website);
+  const { home, html, subs, pdfs, failed, links } = await collectPages(place.website);
   const pages = [html];
   for (const sub of subs) if (sub) pages.push(sub);
   let data = extract(pages, home) as Record<string, unknown> & { fields?: string[] };
@@ -358,6 +358,7 @@ async function scrapeOne(place: { id: string; website: string }) {
   }
   // Haperende site: apply_scrape wist dan niets wat deze keer ontbreekt
   if (failed.length) data._pages_failed = failed.length;
+  else if (emptySite(links, data.fields?.length ?? 0)) data._pages_failed = 1;
   data._parser = PARSER;
   return data;
 }

@@ -219,3 +219,12 @@ export function homeCandidates(website: string): string[] {
   }
   return [...new Set(out)];
 }
+
+/**
+ * Een lege startpagina: geen enkele link en geen enkel veld gevonden (menu en tekst in JavaScript, een foutpagina met
+ * status 200, een tijdelijk lege site). Dat is bijna altijd een haperende site, geen site die alles heeft weggehaald:
+ * apply_scrape mag dan niets wissen. Zonder deze regel verloren 18 plekken in de herscrape van 23 oktober 2026 hun prijs
+ * en raakten ze van gepubliceerd naar concept (Frerichsoord, Aan de Grens, De Brashoeve).
+ */
+export const emptySite = (linkCount: number, fieldCount: number) => linkCount === 0 && fieldCount === 0;
+
