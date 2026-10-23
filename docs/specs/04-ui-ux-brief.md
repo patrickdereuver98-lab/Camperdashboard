@@ -87,13 +87,18 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 
 ## Toegankelijkheid
 
-- Doel: WCAG 2.1 AA (de European Accessibility Act geldt waarschijnlijk niet voor een gratis microbedrijf, maar we
-  houden ons eraan).
+- Doel: WCAG 2.1 AA, lanceervoorwaarde in de PRD (de European Accessibility Act geldt waarschijnlijk niet voor een
+  gratis microbedrijf, maar we houden ons eraan). Afgerond 22 oktober 2026 (P13); `web/e2e/a11y.spec.ts` draait axe
+  (WCAG 2.0/2.1 A en AA) op 13 hoofdpagina's en de filtersheet, in licht en donker, en meet de huisregels hieronder.
 - Contrast minstens 4,5:1 voor tekst in beide thema's.
-- Tikdoelen minstens 44 × 44 px (bekende uitzonderingen: kaartmarkers, scoreknoppen in reviews; staan in fase B).
-- Alles met toetsenbord bereikbaar, zichtbare focusring, labels op alle velden en pictogramknoppen
-  (`aria-label` met de naam van de plek).
-- `prefers-reduced-motion` zet animaties uit (`MotionConfig reducedMotion="user"`).
+- Tekst minstens 14 px (basis 16 px op de telefoon); enige uitzondering de kaartbronvermelding van MapLibre (12 px,
+  stijlgids §4).
+- Tikdoelen minstens 44 × 44 px op elk scherm, ook chips, scoreknoppen in reviews (twee rijen van vijf), links in
+  lijsten en kaartbediening. Kaartpunten: onzichtbaar tikvlak van 44 px rond elk punt en elke groep.
+- Alles met toetsenbord bereikbaar, zichtbare focusring (ook op invoervelden), labels op alle velden en
+  pictogramknoppen (`aria-label` met de naam van de plek). Sheets: focus blijft binnen, Escape sluit, focus terug naar
+  de knop die hem opende. Kaartpunten zijn niet met het toetsenbord te kiezen; de lijst toont dezelfde plekken.
+- `prefers-reduced-motion` zet animaties uit (`MotionConfig reducedMotion="user"`, en in CSS ook zonder vertraging).
 
 ## Interactietoestanden
 

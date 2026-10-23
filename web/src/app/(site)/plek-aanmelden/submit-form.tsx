@@ -8,7 +8,7 @@ import { PROVINCES } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 
-const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 export function SubmitForm() {
   const params = useSearchParams();

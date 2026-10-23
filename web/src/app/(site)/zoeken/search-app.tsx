@@ -133,15 +133,15 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
             <button
               type="button"
               onClick={() => setFiltersOpen(true)}
-              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base sm:hover:border-forest"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 font-semibold sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base sm:hover:border-forest"
             >
               <Icon name="sliders" size={18} />
               Filters
               {count > 0 && (
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-forest px-1 text-xs text-on-forest">{count}</span>
+                <span className="grid h-6 min-w-6 place-items-center rounded-full bg-forest px-1.5 text-sm text-on-forest">{count}</span>
               )}
             </button>
-            <label className="relative flex h-11 min-w-0 flex-1 items-center justify-center text-[0.9375rem] font-semibold has-[select:focus-visible]:rounded-lg has-[select:focus-visible]:outline-[3px] has-[select:focus-visible]:outline-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:pr-9 sm:pl-3 sm:text-base sm:hover:border-forest">
+            <label className="relative flex h-11 min-w-0 flex-1 items-center justify-center font-semibold has-[select:focus-visible]:rounded-lg has-[select:focus-visible]:outline-[3px] has-[select:focus-visible]:outline-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:pr-9 sm:pl-3 sm:text-base sm:hover:border-forest">
               <Icon name="sort" size={17} className="mr-1.5 shrink-0 text-muted" />
               {/* Mobiel staat er alleen "Sorteren" (de keuze past niet); een stip als het niet de standaard is */}
               <span className="sm:hidden">Sorteren</span>
@@ -150,7 +150,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
                 aria-label="Sorteren"
                 value={filters.sort}
                 onChange={(e) => update({ ...filters, sort: e.target.value as SortKey })}
-                className="absolute inset-0 min-w-0 appearance-none truncate bg-transparent opacity-0 focus:outline-none sm:static sm:w-full sm:opacity-100"
+                className="absolute inset-0 min-w-0 appearance-none truncate bg-transparent opacity-0 focus:outline-none sm:static sm:h-full sm:w-full sm:opacity-100"
               >
                 {SORTS.filter((s) => (!s.needsCenter || filters.center) && (s.key !== "score" || hasReviews)).map((s) => (
                   <option key={s.key} value={s.key}>
@@ -168,7 +168,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
                   window.scrollTo({ top: 0 });
                 }}
                 aria-pressed={mapOpen}
-                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold aria-pressed:text-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base"
+                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 font-semibold aria-pressed:text-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base"
               >
                 <Icon name={mapOpen ? "list" : "map"} size={18} />
                 {mapOpen ? "Lijst" : "Kaart"}
@@ -319,7 +319,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
               replace
               scroll={false}
               aria-current={active === t.key ? "page" : undefined}
-              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-lg border-b-[3px] px-2.5 text-[0.9375rem] font-semibold sm:px-3 sm:text-base ${
+              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-lg border-b-[3px] px-2.5 font-semibold sm:px-3 sm:text-base ${
                 active === t.key ? "border-forest text-forest" : "border-transparent text-ink-2 hover:text-forest"
               }`}
             >
@@ -332,7 +332,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
       {page && (
         <div className="pt-3 pb-1">
           <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
-          <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">{INTRO[page]}</p>
+          <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
           {page === "overig" && (
             <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
               {(

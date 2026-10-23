@@ -60,7 +60,7 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
   if (avg) intro.push(`Een nacht kost gemiddeld ${eur(avg)}, zonder toeslagen. Die staan per plek.`);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6">
+    <div className="mx-auto max-w-6xl px-3 pt-6 pb-10 sm:px-6">
       <JsonLd data={itemListLd(SITE_URL, `Camperplaatsen in ${prov}`, shown)} />
       <Breadcrumbs crumbs={[{ name: "Start", path: "/" }, { name: prov, path: `/camperplaatsen/${provinceSlug(prov)}` }]} />
       <PageHead title={`Camperplaatsen in ${prov}`} intro={intro} updated={updatedAt ? formatDate(updatedAt) : undefined} />

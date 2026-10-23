@@ -60,7 +60,7 @@ function TripBadge({ className = "" }: { className?: string }) {
   return (
     <span
       key={stops.length}
-      className={`animate-pop grid h-5 min-w-5 place-items-center rounded-full bg-ember px-1 font-display text-xs font-semibold text-on-ember ${className}`}
+      className={`animate-pop grid h-6 min-w-6 place-items-center rounded-full bg-ember px-1.5 font-display text-sm font-semibold text-on-ember ${className}`}
     >
       {stops.length}
     </span>
@@ -72,12 +72,12 @@ function HeaderView({ pathname }: { pathname: string }) {
   if (pathname.startsWith("/admin")) return null;
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
-      <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 rounded-lg bg-ember px-3 py-2 font-semibold text-on-ember">
+      <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 flex min-h-11 items-center rounded-lg bg-ember px-4 font-semibold text-on-ember">
         Naar de inhoud
       </a>
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
         {pathname.startsWith("/plek/") && <BackButton />}
-        <Link href="/" className="flex items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
+        <Link href="/" className="flex h-11 items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
           <Logo size={30} />
           <span className="font-display text-lg font-semibold tracking-tight text-forest sm:text-xl">VrijStaan</span>
         </Link>

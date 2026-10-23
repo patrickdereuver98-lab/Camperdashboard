@@ -203,7 +203,7 @@ export function TripApp() {
           <button
             type="button"
             onClick={() => trip.replace(optimize(stops, start).map(({ slug, nights: n }) => ({ slug, nights: n })))}
-            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-[0.9375rem] font-semibold hover:border-forest"
+            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest"
           >
             <Icon name="route" size={18} /> Slimste volgorde
           </button>
@@ -217,7 +217,7 @@ export function TripApp() {
                 setTimeout(() => setShared(false), 2500);
               }
             }}
-            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-[0.9375rem] font-semibold hover:border-forest"
+            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest"
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
@@ -292,12 +292,12 @@ export function TripApp() {
                     <div className="flex gap-3">
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
                         <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
-                        <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-forest font-display text-xs font-semibold text-on-forest">
+                        <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">
                           {i + 1}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Link href={`/plek/${s.slug}`} className="block truncate py-0.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
+                        <Link href={`/plek/${s.slug}`} className="-my-2 block truncate py-2.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
                           {s.place.name}
                         </Link>
                         <OpenChip place={s.place} />
@@ -399,7 +399,7 @@ export function TripApp() {
             {routeState === "error" && <p className="mt-2 text-sm text-alert">De routeplanner is even niet bereikbaar; afstanden zijn hemelsbreed.</p>}
 
             <details className="mt-4 rounded-lg bg-sunken p-4">
-              <summary className="cursor-pointer font-semibold">Uitgangspunten aanpassen</summary>
+              <summary className="-my-2.5 cursor-pointer py-2.5 font-semibold">Uitgangspunten aanpassen</summary>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {(
                   [

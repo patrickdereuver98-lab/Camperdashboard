@@ -133,7 +133,7 @@ export function AccountView() {
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}
-                className="h-12 w-full rounded-xl border-2 border-line bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none"
+                className="h-12 w-full rounded-xl border-2 border-line bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none focus:ring-2 focus:ring-alert"
               />
             </label>
             <div className="mt-3 flex gap-3">

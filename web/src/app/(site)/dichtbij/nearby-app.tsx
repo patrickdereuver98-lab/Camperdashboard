@@ -161,7 +161,7 @@ export function NearbyApp() {
               type="button"
               aria-pressed={openNow}
               onClick={() => setOpenNow((o) => !o)}
-              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
             >
               <Sign name="calendar" size={24} state={openNow ? "on" : "unknown"} />
               Nu open
@@ -184,7 +184,7 @@ export function NearbyApp() {
                 type="button"
                 aria-pressed={!lengthOff}
                 onClick={() => setLengthOff((o) => !o)}
-                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
               >
                 <Sign name="length" size={24} state={lengthOff ? "unknown" : "on"} />
                 Mijn camper ({String(vehicle.lengthM).replace(".", ",")} m)
@@ -202,7 +202,7 @@ export function NearbyApp() {
                 type="button"
                 aria-pressed={departure === g}
                 onClick={() => setDeparture((d) => (d === g ? undefined : g))}
-                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
               >
                 <Sign name="clock" size={24} state={departure === g ? "on" : "unknown"} />
                 {label}
@@ -217,7 +217,7 @@ export function NearbyApp() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => setFacilities((x) => (on ? x.filter((k) => k !== f.key) : [...x, f.key]))}
-                  className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                  className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
                 >
                   <Sign name={f.icon as SignName} size={24} state={on ? "on" : "unknown"} />
                   {f.label}
