@@ -15,7 +15,7 @@ import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
-import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, MAX_SUBPAGES, needsSitemap, onePage, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, SMALL_SITE, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -26,7 +26,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 // Versie van de extractor. Vond een oudere versie een kernveld dat deze niet meer vindt, dan wist apply_scrape het: zo
 // verdwijnen fouten van een oude parser na een volledige run. Ophogen bij elke wijziging in extract.ts.
-const PARSER = "41";
+const PARSER = "42";
 
 const UA = "VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)";
 const OVERPASS = [
@@ -263,10 +263,15 @@ async function collectPages(website: string) {
   const { home, html } = await fetchHome(website);
   const links = extractLinks(html, home);
   let picked = rankLinks(links, home);
+  // Kleine site: alle eigen pagina's lezen, ook die zonder herkenbaar trefwoord ("/over", "/?page_id=21")
+  if (links.length && links.length <= SMALL_SITE)
+    for (const l of links) if (picked.length < MAX_SUBPAGES && !picked.includes(l.url)) picked.push(l.url);
+  // Site van één pagina (menu met "#prijzen"): er zijn geen subpagina's, dus ook niet raden
+  const single = onePage(html) && links.length <= 2;
   // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij, en anders vaste adressen proberen
-  const viaSitemap = needsSitemap(picked);
+  const viaSitemap = !single && needsSitemap(picked);
   if (viaSitemap) picked = rankLinks([...links, ...(await sitemapPages(home))], home);
-  if (needsSitemap(picked))
+  if (!single && needsSitemap(picked))
     for (const path of PROBE_PATHS) {
       const url = new URL(path, home).href;
       if (!picked.includes(url)) picked.push(url);

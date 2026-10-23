@@ -1,7 +1,7 @@
 // Welke pagina's de scraper leest: vertrekpagina's eerst, op adres én linktekst, met de sitemap als terugval.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decodeHtml, deeperLinks, extractLinks, homeCandidates, needsSitemap, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
+import { decodeHtml, deeperLinks, extractLinks, homeCandidates, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
 
 const home = new URL("https://camping-dewei.nl/");
 
@@ -79,4 +79,22 @@ test("startpagina: verhuisde subpagina één niveau diep valt terug op het domei
   ]);
   assert.ok(!homeCandidates("https://www.logerenbijdeboswachter.nl/kamperen/dasselaar").includes("https://www.logerenbijdeboswachter.nl/"));
   assert.deepEqual(homeCandidates("https://www.camping.nl/"), ["https://www.camping.nl/", "https://camping.nl/", "http://www.camping.nl/"]);
+});
+
+test("WordPress zonder nette adressen: '/?page_id=21' is een eigen pagina, niet de homepage", () => {
+  const home = new URL("https://www.campingmaereheerd.nl/");
+  const html = `<a href="https://campingmaereheerd.nl/">Home</a><a href="https://campingmaereheerd.nl/?page_id=21">Huisregels</a><a href="https://campingmaereheerd.nl/?page_id=95">Tarieven</a>`;
+  const links = extractLinks(html, home);
+  assert.deepEqual(links.map((l) => l.url).sort(), ["https://campingmaereheerd.nl/?page_id=21", "https://campingmaereheerd.nl/?page_id=95"]);
+  assert.deepEqual(rankLinks(links, home), ["https://campingmaereheerd.nl/?page_id=21", "https://campingmaereheerd.nl/?page_id=95"]);
+});
+
+test("reserveren telt als pagina met tijden en tarieven", () => {
+  const home = new URL("https://www.dereuten.com/");
+  assert.deepEqual(rankLinks(extractLinks(`<a href="/reserveren">Reserveren</a>`, home), home), ["https://www.dereuten.com/reserveren"]);
+});
+
+test("site van één pagina: menu met '#prijzen' herkend", () => {
+  assert.equal(onePage(`<a href="#home">Home</a><a href="#faciliteiten">Faciliteiten</a><a href="#prijzen">Prijzen</a>`), true);
+  assert.equal(onePage(`<a href="/huisregels">Huisregels</a><a href="#top">Naar boven</a>`), false);
 });

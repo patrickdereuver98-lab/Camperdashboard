@@ -13,7 +13,8 @@ export const SUBPAGES: { re: RegExp; max: number }[] = [
   },
   // Algemeen: vaak, maar niet altijd
   { re: /regels|praktisch|praktische|faq|veelgestelde|vragen/i, max: 2 },
-  { re: /tarie|prijs|prijzen|kosten|preise|tarife|prices|rates/i, max: 2 },
+  // Reserveren en boeken: daar staan vaak de tijden en het tarief (steekproef 23 oktober 2026)
+  { re: /tarie|prijs|prijzen|kosten|preise|tarife|prices|rates|reserver|boeken|booking|buchen/i, max: 3 },
   { re: /camper|stellplatz|motorhome|wohnmobil|campers/i, max: 2 },
   { re: /faciliteit|voorzien|ausstattung|facilities|sanitair/i, max: 1 },
   { re: /info|informatie|openingstijden|seizoen/i, max: 1 },
@@ -21,6 +22,9 @@ export const SUBPAGES: { re: RegExp; max: number }[] = [
 ];
 
 export const MAX_SUBPAGES = 10;
+
+/** Een kleine site (weinig eigen pagina's): dan lezen we ze allemaal, ook zonder herkenbaar trefwoord ("/over") */
+export const SMALL_SITE = 8;
 
 /** www.camping.nl en camping.nl zijn dezelfde site */
 export const sameSite = (a: string, b: string) => a.replace(/^www\./, "") === b.replace(/^www\./, "");
@@ -65,6 +69,18 @@ export function deeperLinks(htmls: string[], home: URL, visited: string[], max =
   return out;
 }
 
+/**
+ * Sleutel van een pagina: het pad, en bij WordPress zonder nette adressen ook het pagina-nummer ("/?page_id=21").
+ * Anders vallen al die pagina's samen met de homepage en lezen we ze nooit.
+ */
+export function pageKey(u: URL): string {
+  const id = /[?&]((?:page_id|p|pagina|page)=\d+)/.exec(u.search)?.[1];
+  return u.origin.replace("://www.", "://") + u.pathname + (id ? `?${id}` : "");
+}
+
+/** Een site van één pagina: het menu springt naar stukken van de homepage ("#prijzen"). Dan bestaan er geen subpagina's. */
+export const onePage = (html: string) => (html.match(/<a\s[^>]*href=["']#[a-z][^"']*["']/gi) ?? []).length >= 3;
+
 const SKIP = /\.(pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|mp3)$/i;
 const NOT_CONTENT = /\/(wp-content|wp-json|feed|tag|author|category|cart|winkelwagen|checkout-cart|login|account)\b/i;
 
@@ -87,9 +103,10 @@ export function extractLinks(html: string, home: URL): Link[] {
     } catch {
       continue;
     }
-    if (!/^https?:$/.test(u.protocol) || !sameSite(u.host, home.host) || u.pathname === home.pathname) continue;
+    if (!/^https?:$/.test(u.protocol) || !sameSite(u.host, home.host) || pageKey(u) === pageKey(home)) continue;
     if (SKIP.test(u.pathname) || NOT_CONTENT.test(u.pathname)) continue;
-    const key = u.origin + u.pathname;
+    const id = /[?&]((?:page_id|p|pagina|page)=\d+)/.exec(u.search)?.[1];
+    const key = u.origin + u.pathname + (id ? `?${id}` : "");
     const text = decode(m[2]).slice(0, 80);
     if (!seen.has(key) || (!seen.get(key) && text)) seen.set(key, text);
   }
@@ -117,7 +134,7 @@ export function rankLinks(links: Link[], home: URL, max = MAX_SUBPAGES): string[
     .filter((l) => {
       try {
         const u = new URL(l.url);
-        return sameSite(u.host, home.host) && u.pathname !== home.pathname && !SKIP.test(u.pathname) && !NOT_CONTENT.test(u.pathname);
+        return sameSite(u.host, home.host) && pageKey(u) !== pageKey(home) && !SKIP.test(u.pathname) && !NOT_CONTENT.test(u.pathname);
       } catch {
         return false;
       }
