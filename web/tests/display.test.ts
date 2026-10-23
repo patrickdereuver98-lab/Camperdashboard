@@ -1,7 +1,7 @@
 // Wat de site toont (datareview 18 oktober 2026, stap 4: W2, W3, W5 tot W8).
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { cardPrice, departureLong, departureShort, markerPrice, timesSourceLine } from "../src/lib/format.ts";
+import { cardPrice, departureLong, departureShort, markerPrice } from "../src/lib/format.ts";
 import { perPersonPrice, stopSurcharges } from "../src/lib/trip-extras.ts";
 import { applyFilters, confirmedFirst, DEFAULT_FILTERS, departureKind, priceRank, timeToMinutes } from "../src/lib/search.ts";
 import { knownFacts } from "../src/lib/place-facts.ts";
@@ -221,22 +221,3 @@ test("afgewezen blijft onbekend; voorwaardelijk houdt zijn eigen regel", () => {
   assert.equal(departureKind({ departure: "vrij", departureCheck: "voorwaardelijk" }), "onbekend");
 });
 
-// ── Bronzin klein op de plekpagina (besluit eigenaar 19 oktober 2026) ─────────
-
-test("bronzin: letterlijk citaat met bron, technische voorvoegsels weg, leeg blijft leeg", () => {
-  assert.equal(timesSourceLine(undefined), undefined);
-  assert.equal(timesSourceLine("  "), undefined);
-  assert.equal(timesSourceLine("Vertrek voor 12.00 uur · Slagboom open 07:00-23:00"), "Bron: “Vertrek voor 12.00 uur · Slagboom open 07:00-23:00” (website)");
-  assert.equal(timesSourceLine("AI-lezer: Je kunt vertrekken wanneer je wilt."), "Bron: “Je kunt vertrekken wanneer je wilt.” (website)");
-  assert.equal(
-    timesSourceLine("Geen vaste vertrektijd. (bron: https://www.campergids.nl/plek/1)"),
-    "Bron: “Geen vaste vertrektijd.” (campergids.nl)",
-  );
-  assert.equal(timesSourceLine("Volgens OpenStreetMap"), "Bron: OpenStreetMap");
-  assert.equal(
-    timesSourceLine("/ Vertrek vóór 11.00 u · Aankomst mogelijk vanaf 14.00u ·"),
-    "Bron: “Vertrek vóór 11.00 u · Aankomst mogelijk vanaf 14.00u” (website)",
-  );
-  assert.equal(timesSourceLine("| - Vrij vertrek."), "Bron: “Vrij vertrek.” (website)");
-  assert.equal(timesSourceLine("Volgens de gegevens op de website: vertrek uiterlijk 11:00"), "Bron: gegevens op de website");
-});

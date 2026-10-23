@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
-import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
+import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
 import { isIncomplete, lastChecked } from "@/lib/place-status";
 import { GiveDepartureButton } from "@/components/departure-form";
@@ -356,9 +356,7 @@ function Decision({ place }: { place: Place }) {
   const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
   const departure = departureLong(place);
   const incomplete = isIncomplete(place);
-  // De letterlijke bronzin mag blijven, maar klein (besluit eigenaar 19 oktober 2026). Alleen als de vertrekregel
-  // ook getoond wordt; bij "Onbekend" zou het citaat het tegenspreken.
-  const source = known ? timesSourceLine(place.timesNote) : undefined;
+  // De bronzin staat alleen in beheer, niet op de site (besluit eigenaar 23 oktober 2026)
   const note =
     claimed && place.departureCheck === "voorwaardelijk"
       ? "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na."
@@ -413,7 +411,6 @@ function Decision({ place }: { place: Place }) {
           >
             {departure}
           </dd>
-          {source && <dd className="mt-1 pl-10 text-sm leading-snug text-muted break-words">{source}</dd>}
           {note && <dd className="mt-1 pl-10 text-sm text-ink-2">{note}</dd>}
           {times.length > 0 && <dd className="mt-1 pl-10 text-sm text-ink-2">{times.join(". ")}.</dd>}
           {incomplete && (

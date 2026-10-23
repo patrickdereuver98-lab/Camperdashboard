@@ -32,8 +32,8 @@ oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md`
 
 - **Data mag nooit verzonnen worden.** Alleen wat letterlijk in een bron staat; anders blijft het veld leeg en toont de
   site "Onbekend".
-- **Vertrektijd is het belangrijkste feit.** De bronzin bewaren we in beheer en staat op de plekpagina klein onder de
-  vertrekregel (besluit 19 oktober 2026); verder staat per pagina alleen "Laatste update: datum". Prijs is belangrijk, maar geen faalpunt.
+- **Vertrektijd is het belangrijkste feit.** De bronzin bewaren we alleen in beheer, niet op de site
+  (besluit 23 oktober 2026); verder staat per pagina alleen "Laatste update: datum". Prijs is belangrijk, maar geen faalpunt.
 - **Teksten klinken menselijk**: zie `.claude/skills/vrijstaan-stijl/SKILL.md` (geen gedachtestreepjes, geen
   hoofdletterlabels, geen verkooppraat).
 - **Prijzen zo transparant mogelijk**: basisprijs plus alle losse toeslagen zoals de website ze noemt.
@@ -99,3 +99,4 @@ oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md`
 | 53 | `20261019070000_contact_beheerder.sql` staat in `acceptatie`, maar niet in de live migratielijst (23 oktober 2026) | Backend Schema, live database | **Opgelost (23 oktober 2026):** kolom `operator`, `place_meets_must_haves` en `ingest_osm` staan al live (via SQL gezet, daarom niet in de migratielijst) |
 | 54 | PR #45 is gericht op `main`, de rest van het werk op `acceptatie` | Werkwijze (B9) | **Opgelost (23 oktober 2026):** fix en migratie overgenomen in PR #54; de stand van de tien punten staat als §8 in `docs/archief/plan-2026-10-16.md` |
 | 55 | De oude `submit_review` (met `p_author_email`, voor anoniem) kon niet verwijderd worden: de Supabase-tool van de agents blokkeert `drop function` en `delete` | Backend Schema, live database | Ingetrokken voor `public`, `anon` en `authenticated` (23 oktober 2026); niemand kan hem aanroepen. Patrick: in de SQL-editor `drop function public.submit_review(uuid, text, text, integer, integer, integer, integer, integer, text, text, text, date);` en `web/supabase/retention.sql` uitvoeren |
+| 56 | Besluit 19 oktober (nummer 36): bronzin klein op de plekpagina. Na de designronde vond de eigenaar dat niet nodig | PRD, UI/UX Brief, plekpagina | **Besloten (23 oktober 2026, eigenaar):** de bronzin staat niet meer op de site, alleen in Beheer → Vertrektijden. `timesSourceLine` is weg; nummer 36 vervalt |

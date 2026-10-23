@@ -89,7 +89,7 @@ export default async function Home() {
       <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-3 pt-4 sm:px-6">
         <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
           {[
-            "Bij elke vertrektijd staat waar we hem vandaan hebben",
+            "We vullen niets zelf in: wat we niet weten, staat er als onbekend",
             "Prijzen met toeristenbelasting, stroom en andere bijkomende kosten",
             "Gratis te gebruiken, je hebt geen account nodig",
           ].map((t) => (
