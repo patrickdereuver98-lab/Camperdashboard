@@ -462,6 +462,16 @@ export function extract(pages: string[], base: URL) {
     /(reserveren (is )?niet (mogelijk|nodig|noodzakelijk|verplicht)|kan maar is niet noodzakelijk|geen reservering(en)?|wie het eerst komt|keine reservierung|no reservations?)/,
   );
   if (res !== undefined) out.reservation = res;
+  const rule = reservationRule(text);
+  if (rule) out.reservation_rule = rule;
+
+  // ── Laatste aankomst ─────────────────────────────────────────────────────
+  const latest = latestArrival(text, raw.length === text.length ? raw : text);
+  if (latest.checkin_until && !(out.checkin_from && String(out.checkin_from) >= latest.checkin_until)) {
+    out.checkin_until = latest.checkin_until;
+    const note = String(out.times_note ?? "");
+    if (latest.note && !note.includes(latest.note)) out.times_note = (note ? `${note} · ${latest.note}` : latest.note).slice(0, 420);
+  }
 
   for (const k of Object.keys(out)) if (out[k] === undefined || out[k] === null || out[k] === "") delete out[k];
   out.fields = Object.keys(out).filter((k) => !["photos", "image_credit", "price_note", "times_note"].includes(k));
@@ -802,6 +812,73 @@ function extraUnit(after: string): string | undefined {
   if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*(?:\d+\s*)?(?:liter|l\b)/.test(a)) return /\d+\s*liter/.exec(a) ? `per ${/(\d+)\s*liter/.exec(a)![1]} liter` : "per liter";
   if (/^\s*(?:euro\s*)?(?:per|p\.?|\/)\s*(?:week|maand|jaar|seizoen)/.test(a)) return "skip";
   return undefined;
+}
+
+// ── Laatste aankomst en reserveren (review 3.2) ─────────────────────────────
+
+// "aankomen tot 22:00", "inchecken kan tussen 16:00 en 20:00", "aankomst tussen 13.00 - 22.00 uur"
+const LATEST_ARRIVAL = new RegExp(
+  String.raw`\b(?:aankomst(?:tijd(?:en)?)?|aankomen|inchecken|inchecktijd|check-?in|aanmelden)\b([^.!?\d]{0,45}?)\b(tot(?: uiterlijk)?|uiterlijk|tussen)\s*(?:om\s*)?${CLOCK}(?:\s*(?:en|-|–|tot)\s*${CLOCK})?`,
+  "g",
+);
+// Smaller dan RENTAL: "melden bij de receptie" of "de slagboom" is geen verhuur
+const RENTAL_STAY =
+  /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|trekkershut(ten)?|groepsacc?om+odaties?|groepshuis|groepsterrein|jamboreehuis|recreatiewoning(en)?|vakantiewoning(en)?|huurders?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?)\b/;
+const MORE_WINDOW = new RegExp(String.raw`^\s*(?:uur\s*)?(?:,\s*)?of\s*(?:van|tussen)\s*${CLOCK}\s*(?:en|-|–|tot)\s*${CLOCK}`);
+const WEEKDAYS = /\b(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag)(en|s)?\b|\bweekend/;
+
+/**
+ * De laatste tijd waarop je kunt aankomen, alleen uit een letterlijke zin. Niet bij verhuur, niet als het venster maar
+ * op bepaalde dagen geldt, en niet als "tot …" bij het vertrek hoort ("vanaf 14:00 op de dag van aankomst tot 12:00
+ * op de dag van vertrek"). Meerdere vensters: de laatste tijd telt.
+ */
+export function latestArrival(text: string, raw: string): { checkin_until?: string; note?: string } {
+  let best: { time: string; index: number } | undefined;
+  for (const m of text.matchAll(LATEST_ARRIVAL)) {
+    const gap = m[1];
+    if (/vertrek|uitcheck|vanaf|\bna\b/.test(gap)) continue;
+    const between = m[2] === "tussen";
+    // "tussen" heeft een tweede tijd nodig; "tot" gebruikt de eerste
+    const [h, mm] = between ? [m[6], m[7]] : [m[3], m[4]];
+    if (!h || (!mm && !(between ? m[8] : m[5]))) continue;
+    const hour = Number(h);
+    if (hour < 14 || hour > 23 || Number(mm ?? 0) > 59) continue;
+    const end = m.index! + m[0].length;
+    if (/^\s*(?:uur\s*)?op de dag van vertrek|^[^.]{0,25}\bvertrek/.test(text.slice(end, end + 40))) continue;
+    const [s, e] = sentenceBounds(text, m.index!);
+    const sentence = text.slice(s, e);
+    if (WEEKDAYS.test(sentence) || QUESTION.test(sentence)) continue;
+    if (RENTAL_STAY.test(sentence) && !PITCH_ONLY.test(sentence) && !CAMPER.test(sentence)) continue;
+    let time = asClock(h, mm);
+    // Een tweede venster direct erna: "tussen 14:00 – 17:00 uur of tussen 19:00 – 20:00 uur"
+    const next = MORE_WINDOW.exec(text.slice(end, end + 40));
+    if (next && Number(next[4]) <= 23) time = [time, asClock(next[4], next[5])].sort().at(-1)!;
+    if (!best || time > best.time) best = { time, index: m.index! };
+  }
+  return best ? { checkin_until: best.time, note: quote(raw, text, best.index) } : {};
+}
+
+const RES_REQUIRED =
+  /reserveren (is )?(verplicht|noodzakelijk|vereist)|reservering (is )?(verplicht|vereist|noodzakelijk)|(alleen|uitsluitend) (op|na|met|via) (voorafgaande )?reservering|reservation (is )?required|reservierung (ist )?(erforderlich|notwendig|pflicht)/g;
+const RES_NOT_NEEDED =
+  /reserveren (is )?niet (mogelijk|nodig|noodzakelijk|verplicht)|reserveren kan niet|kan,? maar is niet (nodig|noodzakelijk)|geen reservering(en)?\b|wie het eerst komt|keine reservierung|no reservations?/g;
+const RES_POSSIBLE =
+  /reserveer (nu|direct|online)|reserveren (is )?(mogelijk|gewenst|aanbevolen)|online (boeken|reserveren)|reserveer (je|uw|jouw) (plek|plaats|kampeerplaats|camperplaats|staanplaats|camperplek)|reserveren kan (telefonisch|via|online|per)|(je|u) kunt (online |telefonisch )?reserveren|reservierung möglich/g;
+
+/** Reserveren als drie keuzes. Niet bij verhuur; spreken twee zinnen elkaar tegen, dan onbekend. */
+export function reservationRule(text: string): "verplicht" | "mogelijk" | "niet_nodig" | undefined {
+  const found = (re: RegExp) =>
+    [...text.matchAll(re)].some((m) => {
+      const [s, e] = sentenceBounds(text, m.index!);
+      const sentence = text.slice(s, e);
+      return !(RENTAL_STAY.test(sentence) && !PITCH_ONLY.test(sentence) && !CAMPER.test(sentence));
+    });
+  const required = found(RES_REQUIRED);
+  const notNeeded = found(RES_NOT_NEEDED);
+  if (required && notNeeded) return undefined;
+  if (required) return "verplicht";
+  if (notNeeded) return "niet_nodig";
+  return found(RES_POSSIBLE) ? "mogelijk" : undefined;
 }
 
 export function priceExtras(text: string): Extra[] {

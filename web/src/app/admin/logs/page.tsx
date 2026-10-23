@@ -102,7 +102,7 @@ export default function Logs() {
           {tab === "consent" &&
             (rows as Consent[]).map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5">
-                <span className="font-mono text-xs text-muted">{c.consent_id.slice(0, 8)}</span>
+                <span className="font-mono text-sm text-muted">{c.consent_id.slice(0, 8)}</span>
                 <Badge tone={c.analytics ? "green" : "neutral"}>analytisch {c.analytics ? "ja" : "nee"}</Badge>
                 <Badge tone={c.marketing ? "green" : "neutral"}>marketing {c.marketing ? "ja" : "nee"}</Badge>
                 <span className="text-muted">versie {c.version}</span>
@@ -120,7 +120,7 @@ function Context({ value }: { value: unknown }) {
   return (
     <details className="mt-1">
       <summary className="cursor-pointer text-muted">Details</summary>
-      <pre className="mt-1 overflow-x-auto rounded-lg bg-sunken p-2 text-xs whitespace-pre-wrap">{JSON.stringify(value, null, 2)}</pre>
+      <pre className="mt-1 overflow-x-auto rounded-lg bg-sunken p-2 text-sm whitespace-pre-wrap">{JSON.stringify(value, null, 2)}</pre>
     </details>
   );
 }

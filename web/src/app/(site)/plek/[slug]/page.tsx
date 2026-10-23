@@ -2,20 +2,27 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
-import { departureKind, searchHref } from "@/lib/search";
-import { cardPrice, departureLong, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
+import { departureKind } from "@/lib/search";
+import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
+import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
+import { isIncomplete, lastChecked } from "@/lib/place-status";
+import { GiveDepartureButton } from "@/components/departure-form";
 import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
+import { inBbox } from "@/lib/bbox";
+import { areaPath, breadcrumbLd, ISLANDS, ldJson, provinceSlug } from "@/lib/seo-pages";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
 import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Legend } from "@/components/legend";
-import { Gallery, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
+import { Gallery, OutdatedNote, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
+import { OwnerUpdate } from "./owner-update";
+import { ownerValues } from "@/lib/owner-update";
 import { PhotoUpload } from "./photo-upload";
 import { CrowdStatusCard } from "./crowd-status";
 
@@ -80,34 +87,55 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const address = [place.street, [place.postcode, place.town].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const tel = place.phone?.split(/[;,]/)[0]?.trim();
 
+  const provPath = `/camperplaatsen/${provinceSlug(place.province)}`;
+  const island = ISLANDS.find((i) => i.province === place.province && inBbox(place, i.bbox));
+
+  // Alleen velden die we kennen; onbekend blijft weg (JSON.stringify laat undefined vallen)
+  const amenities = FACILITY_ROWS.filter((f) => typeof place[f.key] === "boolean").map((f) => ({
+    "@type": "LocationFeatureSpecification",
+    name: f.yes,
+    value: place[f.key] as boolean,
+  }));
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Campground",
     name: place.name,
     url: `${SITE_URL}/plek/${place.slug}`,
-    image: photos.map((p) => upgradePhotoUrl(p.url)),
+    image: photos.length ? photos.map((p) => upgradePhotoUrl(p.url)) : undefined,
+    description: place.description,
     address: { "@type": "PostalAddress", streetAddress: place.street, postalCode: place.postcode, addressLocality: place.town, addressRegion: place.province, addressCountry: "NL" },
     geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lng },
     telephone: tel,
     petsAllowed: place.dogs,
+    amenityFeature: amenities.length ? amenities : undefined,
     ...(place.ratingAvg && place.ratingCount
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: place.ratingAvg, bestRating: 10, worstRating: 1, ratingCount: place.ratingCount } }
       : {}),
   };
+  const crumbs = breadcrumbLd(SITE_URL, [
+    { name: "Start", path: "/" },
+    { name: place.province, path: provPath },
+    ...(island ? [{ name: island.name, path: areaPath(island.province, island.slug) }] : []),
+    { name: place.name, path: `/plek/${place.slug}` },
+  ]);
 
   const price = cardPrice(place);
-  const reserveLabel = place.reservation ? "Reserveren via de website" : "Naar de website";
+  const rule = reservationRuleOf(place);
+  // Laatste controle (website of vertrekcontrole); zonder die datum de laatste wijziging, maar dan geen "verouderd"
+  const lastUpdate = lastChecked(place) ?? place.updatedAt;
+  const reserveLabel = rule === "verplicht" || rule === "mogelijk" ? "Reserveren via de website" : "Naar de website";
 
   return (
     <article className="pb-24 md:pb-8">
       <TrackView slug={place.slug} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(crumbs) }} />
 
       <div className="mx-auto max-w-6xl sm:px-6 sm:pt-4">
         <nav aria-label="Kruimelpad" className="hidden items-center gap-1 pb-3 text-sm text-muted sm:flex">
-          <Link href="/zoeken" className="hover:text-forest hover:underline">Zoeken</Link>
+          <Link href="/zoeken" className="-my-3 inline-block py-3 hover:text-forest hover:underline">Zoeken</Link>
           <Icon name="chevronRight" size={14} />
-          <Link href={searchHref({ province: place.province, where: place.province })} className="hover:text-forest hover:underline">
+          <Link href={provPath} className="-my-3 inline-block py-3 hover:text-forest hover:underline">
             {place.province}
           </Link>
           <Icon name="chevronRight" size={14} />
@@ -128,17 +156,20 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}
             </p>
             <h1 className="mt-1 font-display text-[1.625rem] leading-tight font-semibold text-balance sm:text-4xl">{place.name}</h1>
-            <p className="mt-1 text-[0.9375rem] text-ink-2 sm:text-base">
+            <p className="mt-1 text-ink-2">
               {address || place.town}, {place.province}{" "}
-              <a href="#ligging" className="-my-3 inline-block py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
+              <a href="#ligging" className="-mx-1 -my-3 inline-block px-1 py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
                 Kaart
               </a>
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
               <OpenChip place={place} />
               {place.ratingCount > 0 && <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />}
-              {(place.verifiedAt ?? place.updatedAt) && (
-                <span className="text-sm text-muted">Laatste update: {formatDate((place.verifiedAt ?? place.updatedAt)!)}</span>
+              {lastUpdate && (
+                <span className="text-sm text-muted">
+                  Laatste update: {formatDate(lastUpdate)}
+                  <OutdatedNote verifiedAt={place.verifiedAt} departureCheckedAt={place.departureCheckedAt} />
+                </span>
               )}
             </div>
           </div>
@@ -183,7 +214,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <section aria-labelledby="reviews">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <h2 id="reviews" className="font-display text-xl font-semibold sm:text-2xl">Ervaringen</h2>
-                <WriteReview placeId={place.id} placeName={place.name} />
+                <WriteReview placeId={place.id} placeName={place.name} slug={place.slug} />
               </div>
               {reviews.length > 0 ? (
                 <div className="mt-4 space-y-6">
@@ -212,6 +243,16 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             </ul>
           </section>
         )}
+        <p className="mt-6 flex flex-wrap gap-x-5 gap-y-1">
+          {island && (
+            <Link href={areaPath(island.province, island.slug)} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
+              Alle camperplaatsen op {island.name}
+            </Link>
+          )}
+          <Link href={provPath} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
+            Alle camperplaatsen in {place.province}
+          </Link>
+        </p>
       </div>
 
       {/* Vaste actiebalk op mobiel: altijd binnen één tik bellen, website of route */}
@@ -291,7 +332,10 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
           <p className="mt-1">Nog onbekend: {missing.join(", ")}. Weet jij dit? Laat het weten, dan vullen we het aan.</p>
         )}
         {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het weten, dan passen we het aan.</p>}
-        <ReportProblem placeId={place.id} placeName={place.name} />
+        <div className="mt-1 flex flex-wrap gap-x-5">
+          <ReportProblem placeId={place.id} placeName={place.name} />
+          <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
+        </div>
       </div>
     </>
   );
@@ -310,6 +354,7 @@ function Decision({ place }: { place: Place }) {
   const claimed = place.departure === "vrij" || place.departure === "per24";
   const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
   const departure = departureLong(place);
+  const incomplete = isIncomplete(place);
   // De letterlijke bronzin mag blijven, maar klein (besluit eigenaar 19 oktober 2026). Alleen als de vertrekregel
   // ook getoond wordt; bij "Onbekend" zou het citaat het tegenspreken.
   const source = known ? timesSourceLine(place.timesNote) : undefined;
@@ -320,10 +365,11 @@ function Decision({ place }: { place: Place }) {
           ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
           : undefined;
   const times = [
-    place.checkinFrom && `Aankomst vanaf ${place.checkinFrom}`,
+    arrivalText(place),
     place.accessHours && `Slagboom of poort open ${place.accessHours}`,
     place.access24h && !place.accessHours && "24 uur per dag toegankelijk",
     place.maxStayNights && `Maximaal ${pluralize(place.maxStayNights, "nacht", "nachten")}`,
+    reservationRuleOf(place) && RESERVATION_TEXT[reservationRuleOf(place)!],
   ].filter(Boolean) as string[];
   const price = cardPrice(place);
   const extras = place.priceExtras ?? [];
@@ -351,23 +397,35 @@ function Decision({ place }: { place: Place }) {
     <section aria-labelledby="kort" className="overflow-hidden rounded-xl bg-surface shadow-low">
       <h2 id="kort" className="sr-only">In het kort</h2>
       <dl className="divide-y divide-line">
-        {/* Vertrekken: het kernfeit */}
-        <div className="px-4 py-3">
-          <div className="flex items-center gap-3">
+        {/* Vertrekken: het kernfeit. dt en dd direct in de rij (geldige lijst voor schermlezers); extra regels over de
+            volle breedte */}
+        <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-3 [&>dd~dd]:col-span-2">
+          <dt className="flex items-center gap-3 text-ink-2">
             <Sign name="clock" size={28} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
-            <dt className="text-ink-2">Vertrekken</dt>
-            <dd
-              className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${
-                free ? "text-forest" : late ? "text-lake" : known ? "" : "text-muted"
-              }`}
-            >
-              {departure}
-            </dd>
-          </div>
+            Vertrekken
+          </dt>
+          <dd
+            className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${
+              free ? "text-forest" : late ? "text-lake" : known ? "" : "text-muted"
+            }`}
+          >
+            {departure}
+          </dd>
           {source && <dd className="mt-1 pl-10 text-sm leading-snug text-muted break-words">{source}</dd>}
           {note && <dd className="mt-1 pl-10 text-sm text-ink-2">{note}</dd>}
           {times.length > 0 && <dd className="mt-1 pl-10 text-sm text-ink-2">{times.join(". ")}.</dd>}
-          {!known && (
+          {incomplete && (
+            <dd className="mt-2 pl-10">
+              <p className="text-sm text-ink-2">
+                We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten
+                andere camperaars hoe laat ze weg moeten.
+              </p>
+              <div className="mt-2">
+                <GiveDepartureButton placeId={place.id} placeName={place.name} />
+              </div>
+            </dd>
+          )}
+          {!known && !incomplete && (
             <dd className="mt-1 pl-10 text-sm text-ink-2">
               Bel even voor je gaat.
               <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd?" />
@@ -376,14 +434,15 @@ function Decision({ place }: { place: Place }) {
         </div>
 
         {rows.map((r) => (
-          <div key={r.label} className="px-4 py-3">
-            <div className="flex items-center gap-3">
+          <div key={r.label} className="grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-3 [&>dd~dd]:col-span-2">
+            <dt className="flex items-center gap-3 text-ink-2">
               <Sign name={r.sign} size={28} state={r.known ? "on" : "unknown"} />
-              <dt className="text-ink-2">{r.label}</dt>
-              <dd className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${r.known ? "" : "text-muted"}`}>{r.value}</dd>
-            </div>
-            {r.sign === "euro" && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0) && (
+              {r.label}
+            </dt>
+            <dd className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${r.known ? "" : "text-muted"}`}>{r.value}</dd>
+            {r.sign === "euro" && (price || place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0) && (
               <dd className="mt-1 pl-10 text-sm text-ink-2">
+                <NightTotalLine place={place} />
                 {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}
                 {place.touristTaxIncluded !== undefined && <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>}
                 {extras.length > 0 && (
@@ -409,6 +468,36 @@ function Decision({ place }: { place: Place }) {
         ))}
       </dl>
     </section>
+  );
+}
+
+/**
+ * Wat een nacht voor 2 personen kost, met toeristenbelasting en stroom. Alleen een bedrag als elk onderdeel vaststaat;
+ * anders staat er wat ontbreekt. Zo ziet de bezoeker nooit een totaal dat volledig lijkt maar het niet is.
+ */
+const OPEN_REASON: Record<string, string> = {
+  toeristenbelasting: "de toeristenbelasting is onbekend",
+  "stroom (per kWh)": "stroom kost per kWh",
+  stroom: "de stroomprijs per nacht is onbekend",
+  "of de prijs per persoon erbij komt": "het is niet duidelijk of de prijs per persoon erbij komt",
+};
+
+function NightTotalLine({ place }: { place: Place }) {
+  const t = nightTotal(place);
+  if (t.open.includes("prijs per nacht")) return null;
+  if (t.total === undefined) {
+    const why = t.open.map((o) => OPEN_REASON[o] ?? o);
+    const list = why.length > 1 ? `${why.slice(0, -1).join(", ")} en ${why.at(-1)}` : why[0];
+    return <p>Geen totaal voor {TOTAL_PERSONS} personen: {list}.</p>;
+  }
+  const noPower = !place.priceExtras?.some((x) => x.label === "Stroom");
+  return (
+    <p>
+      Voor {TOTAL_PERSONS} personen {t.from ? "vanaf " : ""}
+      <strong className="font-semibold text-ink">{eur(t.total)}</strong> per nacht
+      {t.parts.length > 1 && ` (${t.parts.map((x) => `${x.label.toLowerCase()} ${eur(x.amount)}`).join(", ")})`}.
+      {noPower && " Geen stroomtoeslag genoemd."}
+    </p>
   );
 }
 
@@ -447,7 +536,6 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   const rows: { label: string; value: React.ReactNode }[] = [];
   const unknown: string[] = [];
   const add = (label: string, value: React.ReactNode | undefined, missing: string) => (value === undefined ? unknown.push(missing) : rows.push({ label, value }));
-  add("Reserveren", place.reservation === undefined ? undefined : place.reservation ? "Ja" : "Niet nodig", "reserveren");
   add("Aantal plekken", place.capacity ? String(place.capacity) : undefined, "aantal plekken");
   add("Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : undefined, "ondergrond");
   add("Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : undefined, "maximaal verblijf");

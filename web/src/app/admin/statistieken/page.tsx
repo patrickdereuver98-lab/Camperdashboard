@@ -198,7 +198,7 @@ function DayChart({ rows, days }: { rows: NonNullable<Stats["per_day"]>; days: n
         <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-lake" aria-hidden /> Bezoeken</span>
       </div>
       <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-2">
-        <div className="flex h-44 flex-col justify-between text-right text-xs tabular-nums text-muted sm:h-56">
+        <div className="flex h-44 flex-col justify-between text-right text-sm tabular-nums text-muted sm:h-56">
           <span>{nf(max)}</span>
           <span>{nf(Math.round(max / 2))}</span>
           <span>0</span>
@@ -230,7 +230,7 @@ function DayChart({ rows, days }: { rows: NonNullable<Stats["per_day"]>; days: n
           </svg>
         </div>
         <div />
-        <div className="relative mt-1 h-5 text-xs text-muted">
+        <div className="relative mt-1 h-5 text-sm text-muted">
           {ticks.map((i) => (
             <span
               key={i}

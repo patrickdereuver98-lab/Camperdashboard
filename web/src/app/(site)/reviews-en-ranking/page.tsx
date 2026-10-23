@@ -14,23 +14,25 @@ export default function ReviewsRankingPage() {
     <ProsePage
       title="Reviews en ranking"
       intro="Hoe reviews op VrijStaan komen, wat we wel en niet controleren, en waarom de ene plek boven de andere staat."
-      updated="11 oktober 2026"
+      updated="22 oktober 2026"
     >
       <Section title="Wie een review kan schrijven">
         <p>
-          Iedereen kan een review schrijven, zonder account. We vragen een totaalcijfer van 1 tot 10 en je ervaring, in minstens
-          20 tekens. Als je wilt, geef je ook cijfers voor ligging, rust, voorzieningen en prijs/kwaliteit, een titel, de maand
-          van je bezoek en je soort voertuig. Je naam staat bij je review. Je e-mailadres hoef je niet te geven en is nooit
-          zichtbaar. We gebruiken het alleen als we een vraag hebben over je review.
+          Iedereen die op een plek heeft gestaan, kan een review schrijven. Je logt in, of je vult je e-mailadres in en
+          bevestigt het met een code die we je mailen. Met die code ben je meteen ingelogd. We vragen een totaalcijfer van 1
+          tot 10 en je ervaring, in minstens 20 tekens. Als je wilt, geef je ook cijfers voor ligging, rust, voorzieningen en
+          prijs/kwaliteit, een titel, de maand van je bezoek en je soort voertuig. Je naam staat bij je review. Je
+          e-mailadres is nooit zichtbaar. We gebruiken het alleen als we een vraag hebben over je review.
         </p>
       </Section>
 
       <Section title="Wat we controleren">
         <ul>
+          <li>Een review versturen kan alleen met een bevestigd e-mailadres: via je account of met de code uit de mail.</li>
           <li>Elke review wordt gelezen door iemand van ons voordat hij online komt. Dat gebeurt meestal binnen twee werkdagen.</li>
           <li>We kijken of de review over de plek zelf gaat.</li>
           <li>We weigeren reviews met persoonsgegevens van anderen, beledigingen, haat, reclame of andere inhoud die niet mag volgens de <Link href="/voorwaarden">gebruiksvoorwaarden</Link>.</li>
-          <li>Tegen misbruik: per e-mailadres kun je maximaal 5 reviews per uur sturen, en een filter houdt automatische inzendingen tegen.</li>
+          <li>Tegen misbruik: per account kun je maximaal 5 reviews per uur sturen, en een filter houdt automatische inzendingen tegen.</li>
         </ul>
         <p>
           We plaatsen een review zoals hij is, of niet. We passen de tekst niet aan. Een negatieve review plaatsen we net zo goed
@@ -44,11 +46,10 @@ export default function ReviewsRankingPage() {
             We controleren niet of je echt op de plek bent geweest. VrijStaan neemt geen boekingen aan, dus we hebben daar geen
             bewijs van.
           </li>
-          <li>We controleren niet wie je bent en sturen geen bevestigingsmail naar je e-mailadres.</li>
+          <li>We weten dat er een echt e-mailadres achter elke review zit, maar we controleren niet wie je bent.</li>
         </ul>
         <p>
-          Reviews op VrijStaan zijn daarom niet geverifieerd. Lees ze als ervaringen van andere camperaars, niet als
-          vaststaande feiten.
+          Lees reviews daarom als ervaringen van andere camperaars, niet als vaststaande feiten.
         </p>
       </Section>
 
@@ -62,8 +63,8 @@ export default function ReviewsRankingPage() {
 
       <Section title="Je eigen review laten verwijderen">
         <p>
-          Mail naar {mail} met de naam van de plek en de naam bij je review. Gebruik als het kan hetzelfde e-mailadres als bij je
-          review. Dan halen we hem weg.
+          Mail naar {mail} met de naam van de plek en de naam bij je review. Gebruik als het kan het e-mailadres waarmee je de review
+          stuurde. Dan halen we hem weg.
         </p>
       </Section>
 

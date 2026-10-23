@@ -18,6 +18,7 @@ type FactsPlace = Pick<
   | "toilet"
   | "dogs"
   | "reservation"
+  | "reservationRule"
   | "touristTaxIncluded"
   | "surface"
 >;
@@ -38,7 +39,7 @@ export function knownFacts(p: FactsPlace): { label: string; known: boolean }[] {
     { label: "lozen", known: p.dumpStation !== undefined },
     { label: "toilet", known: p.toilet !== undefined },
     { label: "honden", known: p.dogs !== undefined },
-    { label: "reserveren", known: p.reservation !== undefined },
+    { label: "reserveren", known: p.reservation !== undefined || p.reservationRule !== undefined },
     // Alleen als de pagina iets over toeristenbelasting zegt, niet bij een willekeurige andere toeslag
     { label: "toeristenbelasting", known: p.touristTaxIncluded !== undefined || !!p.priceExtras?.some((x) => x.label === "Toeristenbelasting") },
     { label: "ondergrond", known: !!p.surface },

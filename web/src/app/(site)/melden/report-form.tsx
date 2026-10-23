@@ -16,7 +16,7 @@ const REASONS = [
   { value: "anders", label: "Iets anders", short: "anders", category: "overig" },
 ] as const;
 
-const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 /** Een pad als "/plek/x" wordt een volledig adres op vrijstaan.nl */
 function fullUrl(raw: string): string {

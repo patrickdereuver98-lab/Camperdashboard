@@ -1,100 +1,98 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSummaries } from "@/lib/places";
+import { getLastUpdate, getSummaries } from "@/lib/places";
 import { searchHref } from "@/lib/search";
 import { PROVINCES } from "@/lib/types";
-import { eur, pluralize } from "@/lib/format";
-import { PlaceCard } from "@/components/place-ui";
+import { eur, formatDate } from "@/lib/format";
+import { SITE_URL } from "@/lib/env";
+import {
+  areaIntro,
+  areaPath,
+  areasIn,
+  countsOf,
+  departurePath,
+  DEPARTURE_SEO,
+  indexable,
+  inGroup,
+  itemListLd,
+  provinceFromSlug,
+  provinceSlug,
+  rankForLanding,
+  type SeoDeparture,
+} from "@/lib/seo-pages";
+import { ActionLink, Breadcrumbs, JsonLd, LinkChips, PageHead, PlaceList } from "@/components/seo-ui";
 import { Icon } from "@/components/icons";
 
-const bySlug = (s: string) => PROVINCES.find((p) => p.toLowerCase() === s);
+const SHOWN = 24;
 
 export function generateStaticParams() {
-  return PROVINCES.map((p) => ({ provincie: p.toLowerCase() }));
+  return PROVINCES.map((p) => ({ provincie: provinceSlug(p) }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/camperplaatsen/[provincie]">): Promise<Metadata> {
-  const prov = bySlug((await params).provincie);
+  const prov = provinceFromSlug((await params).provincie);
   if (!prov) return {};
+  const c = countsOf((await getSummaries()).filter((p) => p.province === prov));
   return {
     title: `Camperplaatsen in ${prov}`,
-    description: `Camperplaatsen in ${prov} met vertrektijd, prijs, voorzieningen en route.`,
-    alternates: { canonical: `/camperplaatsen/${prov.toLowerCase()}` },
+    description: c.total
+      ? `${c.total} camperplaatsen in ${prov} met vertrektijd, prijs, voorzieningen en route.${c.vrij ? ` ${c.vrij} zonder vaste vertrektijd.` : ""}${c.free ? ` ${c.free} gratis.` : ""}`
+      : `Camperplaatsen in ${prov} met vertrektijd, prijs, voorzieningen en route.`,
+    alternates: { canonical: `/camperplaatsen/${provinceSlug(prov)}` },
   };
 }
 
 export default async function ProvincePage({ params }: PageProps<"/camperplaatsen/[provincie]">) {
-  const prov = bySlug((await params).provincie);
+  const prov = provinceFromSlug((await params).provincie);
   if (!prov) notFound();
-  const places = (await getSummaries()).filter((p) => p.province === prov);
+  const [all, updatedAt] = await Promise.all([getSummaries(), getLastUpdate()]);
+  const places = all.filter((p) => p.province === prov);
+  const c = countsOf(places);
   const priced = places.filter((p) => p.priceEur !== undefined && p.priceEur > 0).map((p) => p.priceEur!);
   const avg = priced.length ? priced.reduce((a, b) => a + b, 0) / priced.length : null;
-  const free = places.filter((p) => p.priceEur === 0).length;
-  const towns = [...new Set(places.map((p) => p.town))].sort((a, b) => a.localeCompare(b, "nl"));
-  const top = [...places].sort((a, b) => b.completeness - a.completeness || Number(!!b.imageUrl) - Number(!!a.imageUrl) || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0)).slice(0, 12);
+  const ranked = rankForLanding(places);
+  const shown = ranked.slice(0, SHOWN);
+  const areas = areasIn(all, prov);
+  const islands = areas.filter((a) => a.kind === "eiland" && indexable(a.places.length));
+  const towns = areas.filter((a) => a.kind === "plaats").sort((a, b) => a.name.localeCompare(b.name, "nl"));
+  const groups = (Object.keys(DEPARTURE_SEO) as SeoDeparture[]).filter((g) => inGroup(places, g).length > 0);
+  const intro = areaIntro(`in ${prov}`, c);
+  if (avg) intro.push(`Een nacht kost gemiddeld ${eur(avg)}, zonder toeslagen. Die staan per plek.`);
 
   return (
-    <div className="mx-auto max-w-6xl px-3 pt-6 sm:px-6">
-      <nav aria-label="Kruimelpad" className="flex items-center gap-1 text-sm text-muted">
-        <Link href="/" className="-my-3 inline-block py-3 hover:text-forest hover:underline">Start</Link>
-        <Icon name="chevronRight" size={14} />
-        <span>{prov}</span>
-      </nav>
-      <h1 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">Camperplaatsen in {prov}</h1>
-      <p className="mt-3 max-w-2xl text-lg text-ink-2">
-        {places.length
-          ? `${pluralize(places.length, "plek", "plekken")} in ${prov}${free ? `, waarvan ${free} gratis` : ""}.${avg ? ` Een nacht kost gemiddeld ${eur(avg)}.` : ""}`
-          : `Er staan nog geen plekken in ${prov} in de gids.`}
-      </p>
+    <div className="mx-auto max-w-6xl px-3 pt-6 pb-10 sm:px-6">
+      <JsonLd data={itemListLd(SITE_URL, `Camperplaatsen in ${prov}`, shown)} />
+      <Breadcrumbs crumbs={[{ name: "Start", path: "/" }, { name: prov, path: `/camperplaatsen/${provinceSlug(prov)}` }]} />
+      <PageHead title={`Camperplaatsen in ${prov}`} intro={intro} updated={updatedAt ? formatDate(updatedAt) : undefined} />
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link href={`${searchHref({ province: prov, where: prov })}&kaart=1`} className="flex h-12 items-center gap-2 rounded-lg bg-forest px-5 font-semibold text-on-forest">
+        <ActionLink primary href={`${searchHref({ province: prov, where: prov })}&kaart=1`}>
           <Icon name="map" size={19} /> Bekijk op de kaart
-        </Link>
-        {free > 0 ? (
-          <Link href={searchHref({ province: prov, where: prov, free: true })} className="flex h-12 items-center rounded-lg border border-line bg-surface px-5 font-semibold hover:border-forest">
-            Gratis plekken ({free})
-          </Link>
-        ) : (
-          <Link href={searchHref({ province: prov, where: prov, sort: "prijs" })} className="flex h-12 items-center rounded-lg border border-line bg-surface px-5 font-semibold hover:border-forest">
-            Goedkoopste eerst
-          </Link>
-        )}
+        </ActionLink>
+        {groups.map((g) => (
+          <ActionLink key={g} href={departurePath(g, prov)}>
+            {DEPARTURE_SEO[g].short} ({inGroup(places, g).length})
+          </ActionLink>
+        ))}
+        {c.free > 0 && <ActionLink href={searchHref({ province: prov, where: prov, free: true })}>Gratis plekken ({c.free})</ActionLink>}
       </div>
 
-      {top.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-display text-2xl font-semibold">Uitgelicht in {prov}</h2>
-          <ul className="mt-4 grid gap-3 lg:grid-cols-2">
-            {top.map((p) => (
-              <li key={p.id}>
-                <PlaceCard place={p} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <PlaceList
+        title={ranked.length > SHOWN ? `Uitgelicht in ${prov}` : `Alle plekken in ${prov}`}
+        places={shown}
+        more={ranked.length > SHOWN ? { href: searchHref({ province: prov, where: prov }), label: `Alle ${ranked.length} plekken in ${prov} bekijken` } : undefined}
+      />
 
-      {towns.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-display text-2xl font-semibold">Op plaatsnaam</h2>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {towns.map((t) => {
-              const p = places.find((x) => x.town === t)!;
-              return (
-                <li key={t}>
-                  <Link
-                    href={searchHref({ where: t, center: { lat: p.lat, lng: p.lng }, radiusKm: 10 })}
-                    className="inline-flex h-11 items-center rounded-full bg-surface px-4 shadow-low transition-shadow hover:shadow-raised"
-                  >
-                    {t}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+      <LinkChips title="Eilanden" links={islands.map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${a.places.length})` }))} />
+
+      {/* Plaatsen met genoeg plekken hebben een eigen pagina; de rest opent het zoekscherm rond die plaats */}
+      <LinkChips
+        title="Op plaatsnaam"
+        links={towns.map((a) => {
+          if (indexable(a.places.length)) return { href: areaPath(prov, a.slug), label: `${a.name} (${a.places.length})` };
+          const p = a.places[0];
+          return { href: searchHref({ where: a.name, center: { lat: p.lat, lng: p.lng }, radiusKm: 10 }), label: a.name };
+        })}
+      />
     </div>
   );
 }

@@ -95,3 +95,63 @@ export function tripCosts(stops: ExtrasStop[], persons: number, touristTaxEstima
     listed,
   };
 }
+
+/** Standaardsituatie voor de totaalprijs op kaart en plekpagina: 2 volwassenen, 1 nacht, met stroom (review 3.1) */
+export const TOTAL_PERSONS = 2;
+
+export type NightTotal = {
+  /** Totaal per nacht voor TOTAL_PERSONS personen; alleen als elk onderdeel vaststaat */
+  total?: number;
+  /** Waaruit het totaal bestaat, in leesbare stukjes */
+  parts: { label: string; amount: number }[];
+  /** Wat ontbreekt voor een totaal ("toeristenbelasting", "stroom per kWh") */
+  open: string[];
+  /** De basisprijs is een vanaf-prijs */
+  from: boolean;
+};
+
+type TotalPlace = PricedPlace & { priceFrom?: boolean; touristTaxIncluded?: boolean };
+
+/**
+ * Wat een nacht kost voor 2 personen, met toeristenbelasting en stroom. Niets verzinnen: een onderdeel telt alleen mee
+ * als het bedrag én de eenheid eenduidig zijn. Is iets onbekend, dan geen totaal maar een lijst `open`.
+ * - Overnachting: de basisprijs, of bij een plek zonder basisprijs de prijs per persoon per nacht × 2. Noemt een plek
+ *   naast de basisprijs ook een bedrag per persoon, dan weten we niet of dat erbij komt: geen totaal.
+ * - Toeristenbelasting: 0 als die in de prijs zit of de plek gratis is; anders "per persoon per nacht" × 2.
+ * - Stroom: "per nacht" telt één keer, "per persoon per nacht" × 2. Noemt de plek geen stroomtoeslag, dan tellen we
+ *   niets en zeggen we ook niet dat stroom gratis is (de uitleg op de pagina zegt "geen toeslag genoemd").
+ * - Hond, kind, extra auto, douche en dergelijke horen niet bij de standaardsituatie en blijven apart staan.
+ */
+export function nightTotal(p: TotalPlace, persons = TOTAL_PERSONS): NightTotal {
+  const n = Math.max(1, Math.round(persons));
+  const extras = (p.priceExtras ?? []).filter((x) => x.amount > 0);
+  const out: NightTotal = { parts: [], open: [], from: !!p.priceFrom };
+
+  if (p.priceEur !== undefined) {
+    out.parts.push({ label: "Overnachting", amount: p.priceEur });
+    // Een bedrag "per persoon" naast een basisprijs kan erbij komen of een extra volwassene zijn: dan geen totaal
+    if (extras.some((x) => x.label === "Per persoon")) out.open.push("of de prijs per persoon erbij komt");
+  } else {
+    const pp = perPersonPrice(p);
+    if (pp?.perNight) out.parts.push({ label: `${n} × ${pp.amount.toFixed(2).replace(".", ",")} p.p.`, amount: r2(pp.amount * n) });
+    else return { ...out, open: ["prijs per nacht"] };
+  }
+
+  if (p.touristTaxIncluded !== true && p.priceEur !== 0) {
+    const tax = extras.find((x) => x.label === "Toeristenbelasting" && x.unit === "per persoon per nacht");
+    if (tax) out.parts.push({ label: "Toeristenbelasting", amount: r2(tax.amount * n) });
+    else out.open.push("toeristenbelasting");
+  }
+
+  const power = extras.filter((x) => x.label === "Stroom");
+  if (power.length) {
+    const night = power.find((x) => x.unit === "per nacht");
+    const pp = power.find((x) => x.unit === "per persoon per nacht");
+    if (night) out.parts.push({ label: "Stroom", amount: night.amount });
+    else if (pp) out.parts.push({ label: "Stroom", amount: r2(pp.amount * n) });
+    else out.open.push(power.some((x) => x.unit === "per kWh") ? "stroom (per kWh)" : "stroom");
+  }
+
+  if (!out.open.length) out.total = r2(out.parts.reduce((s, x) => s + x.amount, 0));
+  return out;
+}

@@ -5,6 +5,7 @@ import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { Bbox } from "@/lib/bbox";
 import type { LatLng } from "@/lib/geo";
 import { departureShort, markerPrice } from "@/lib/format";
+import { isIncomplete } from "@/lib/place-status";
 import type { PlaceSummary } from "@/lib/types";
 
 const NL_BOUNDS: [[number, number], [number, number]] = [
@@ -13,11 +14,14 @@ const NL_BOUNDS: [[number, number], [number, number]] = [
 ];
 const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
 const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
+/** Straal van het onzichtbare tikvlak rond een punt: 22 px = een tikdoel van 44 × 44 px */
+const HIT_RADIUS = 22;
 
 type MapPlace = Pick<PlaceSummary, "slug" | "name" | "lat" | "lng" | "town" | "priceEur" | "priceFrom" | "imageUrl"> &
   Partial<Pick<PlaceSummary, "priceExtras" | "departure" | "checkoutUntil" | "departureCheck">>;
 
-function toGeoJSON(places: MapPlace[]) {
+/** `departures`: de plekken hebben vertrekgegevens (in beheer niet; dan is niets "onvolledig") */
+function toGeoJSON(places: MapPlace[], departures: boolean) {
   return {
     type: "FeatureCollection" as const,
     features: places.map((p) => ({
@@ -31,6 +35,8 @@ function toGeoJSON(places: MapPlace[]) {
         price: markerPrice(p),
         // Vertrekregel zoals op de kaart in de lijst; leeg = onbekend
         departure: departureShort(p) ?? "",
+        // Onvolledig (geen vertrekregel): grijze stip, onder de gekleurde plekken
+        incomplete: departures && isIncomplete(p),
         image: p.imageUrl ?? "",
       },
     })),
@@ -154,6 +160,8 @@ export function PlaceMap({
       const forest = dark ? "#3f7a5a" : "#2d5a43";
       const lake = dark ? "#82bcc8" : "#2f6f7e";
       const surface = css.getPropertyValue("--surface").trim() || "#fffcf6";
+      // Grijs voor onvolledige plekken: de token --muted (contrast met de kaartgrond minstens 5:1)
+      const muted = css.getPropertyValue("--muted").trim() || (dark ? "#9aa39b" : "#5c665e");
       const ink = css.getPropertyValue("--ink").trim() || "#1f2b24";
 
       map = new maplibregl.Map({
@@ -174,7 +182,7 @@ export function PlaceMap({
         tint(map, dark);
         map.addSource("places", {
           type: "geojson",
-          data: toGeoJSON(latest.current.places),
+          data: toGeoJSON(latest.current.places, latest.current.departures),
           cluster: latest.current.cluster,
           clusterRadius: 46,
           clusterMaxZoom: 10,
@@ -211,7 +219,7 @@ export function PlaceMap({
           type: "symbol",
           source: "places",
           filter: ["has", "point_count"],
-          layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 13, "text-font": ["Noto Sans Bold"] },
+          layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 14, "text-font": ["Noto Sans Bold"] },
           paint: { "text-color": "#ffffff" },
         });
         map.addLayer({
@@ -219,8 +227,9 @@ export function PlaceMap({
           type: "circle",
           source: "places",
           filter: ["!", ["has", "point_count"]],
+          layout: { "circle-sort-key": ["case", ["get", "incomplete"], 0, 1] },
           paint: {
-            "circle-color": ["case", ["get", "free"], ember, forest],
+            "circle-color": ["case", ["get", "incomplete"], muted, ["get", "free"], ember, forest],
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 6, 13, 9],
             "circle-stroke-width": 2.5,
             "circle-stroke-color": surface,
@@ -234,7 +243,7 @@ export function PlaceMap({
           filter: ["all", ["!", ["has", "point_count"]], ["!=", ["get", "price"], ""]],
           layout: {
             "text-field": ["get", "price"],
-            "text-size": 12,
+            "text-size": 14,
             "text-font": ["Noto Sans Bold"],
             "text-offset": [0, 1.5],
             "text-anchor": "top",
@@ -248,14 +257,31 @@ export function PlaceMap({
           filter: ["==", ["get", "slug"], ""],
           paint: { "circle-color": ember, "circle-radius": 13, "circle-stroke-width": 4, "circle-stroke-color": surface },
         });
-
-        map.on("click", "clusters", async (e) => {
+        // Onzichtbaar tikvlak van 44 × 44 px rond elk punt en elke groep (WCAG, docs/stijlgids.md §5). De zichtbare
+        // punten blijven klein, zodat de kaart niet volloopt; een tik net naast een punt telt toch.
+        const hit = { "circle-color": "#000000", "circle-opacity": 0 };
+        map.addLayer({
+          id: "clusters-hit",
+          type: "circle",
+          source: "places",
+          filter: ["has", "point_count"],
+          // Grote groepen (26 px) zijn al groter dan het tikvlak
+          paint: { ...hit, "circle-radius": ["step", ["get", "point_count"], HIT_RADIUS, 100, 26] },
+        });
+        map.addLayer({
+          id: "points-hit",
+          type: "circle",
+          source: "places",
+          filter: ["!", ["has", "point_count"]],
+          paint: { ...hit, "circle-radius": HIT_RADIUS },
+        });
+        map.on("click", "clusters-hit", async (e) => {
           const f = e.features?.[0];
           if (!f || !map) return;
           const zoom = await (map.getSource("places") as GeoJSONSource).getClusterExpansionZoom(f.properties.cluster_id);
           map.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom });
         });
-        map.on("click", "points", (e) => {
+        map.on("click", "points-hit", (e) => {
           const f = e.features?.[0];
           if (!f || !map) return;
           const props = f.properties as PopupProps;
@@ -273,7 +299,7 @@ export function PlaceMap({
         };
         map.on("moveend", reportViewport);
         reportViewport();
-        for (const id of ["clusters", "points"]) {
+        for (const id of ["clusters-hit", "points-hit"]) {
           map.on("mouseenter", id, () => map && (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", id, () => map && (map.getCanvas().style.cursor = ""));
         }
@@ -296,8 +322,8 @@ export function PlaceMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
-    (map.getSource("places") as GeoJSONSource | undefined)?.setData(toGeoJSON(places));
-  }, [places, ready]);
+    (map.getSource("places") as GeoJSONSource | undefined)?.setData(toGeoJSON(places, departures));
+  }, [places, departures, ready]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -351,6 +377,7 @@ export function PlaceMap({
       const dot = document.createElement("div");
       dot.style.cssText =
         "width:20px;height:20px;border-radius:50%;background:#2f6f7e;border:3px solid #fff;box-shadow:0 0 0 8px rgb(47 111 126 / .25)";
+      dot.setAttribute("role", "img");
       dot.setAttribute("aria-label", "Jouw locatie");
       userMarker.current = new maplibregl.Marker({ element: dot }).setLngLat([user.lng, user.lat]).addTo(mapRef.current);
     });

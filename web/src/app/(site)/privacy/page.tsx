@@ -83,9 +83,9 @@ const ROWS: string[][] = [
   ],
   [
     "Reviews",
-    "Je naam (openbaar), e-mailadres (optioneel, nooit openbaar), cijfers, titel, tekst, maand van je bezoek, soort voertuig, de plek en het tijdstip",
+    "Je naam (openbaar), het e-mailadres van je account of van de code per mail (nooit openbaar), je account-id, cijfers, titel, tekst, maand van je bezoek, soort voertuig, de plek en het tijdstip",
     "Overeenkomst: de gebruiksvoorwaarden (art. 6 lid 1 sub b)",
-    "Gepubliceerd: tot de review wordt verwijderd. Afgewezen: 3 maanden",
+    "Gepubliceerd: tot de review wordt verwijderd; bij het verwijderen van je account blijft hij staan zonder koppeling aan jou. Afgewezen: 3 maanden",
   ],
   [
     "Plek aanmelden, correcties en verzoeken van eigenaren",
@@ -168,7 +168,7 @@ export default function PrivacyPage() {
     <ProsePage
       title="Privacyverklaring"
       intro="We verwerken zo weinig persoonsgegevens als we kunnen. Hier lees je welke, waarom, op welke grondslag en hoe lang."
-      updated="18 oktober 2026"
+      updated="22 oktober 2026"
     >
       <Section title="Wie zijn wij">
         <p>
@@ -207,6 +207,12 @@ export default function PrivacyPage() {
           Je kunt inloggen met Google, Apple, Facebook of een inlogcode per e-mail. Log je in via een van die diensten, dan
           krijgen we van hen alleen je naam, e-mailadres en profielfoto. We plaatsen nooit iets namens je en vragen geen
           toegang tot je contacten of berichten. Bij Apple kun je je e-mailadres verbergen.
+        </p>
+        <p>
+          Een review schrijven kan alleen met een account. Heb je er nog geen, dan bevestig je je e-mailadres met een code
+          die we je mailen; daarmee maak je meteen een account. Terwijl je de review schrijft, bewaren we wat je invulde
+          tijdelijk in de lokale opslag van je eigen browser, zodat je niets kwijt bent als je eerst inlogt. Na het versturen
+          of na een week is dat concept weg.
         </p>
         <p>
           Met een account bewaren we je reis (de plekken en het aantal nachten) zodat je hem op al je apparaten ziet. Om

@@ -68,6 +68,8 @@
 | `departure_check` | text | | | menselijke controle: `bevestigd`, `voorwaardelijk`, `afgewezen`; `null` = nog niet gecontroleerd. `null` en `bevestigd` staan allebei op Zonder vertrektijd zonder zichtbaar verschil (een bron is genoeg, besluit 18 oktober 2026); `bevestigd` sorteert alleen eerder bij gelijke stand; `voorwaardelijk` en `afgewezen` staan bij Overige. Wordt automatisch leeg als `departure`, `checkout_until` of `times_note` verandert, en na een jaar (cron `departure-recheck`) |
 | `departure_checked_at`, `departure_checked_by` | timestamptz, text | | | wanneer en door wie (`beheer`, `eigenaar`); te zetten via RPC `check_departure` (alleen beheer) |
 | `checkout_until`, `checkin_from` | text | | | formaat `uu:mm` |
+| `checkin_until` | text | | | laatste aankomsttijd, `uu:mm` (scraper vanaf parser 41) |
+| `reservation_rule` | text | | | `verplicht`, `mogelijk` of `niet_nodig`; leeg = onbekend. Het oude ja/nee-veld `reservation` blijft als terugval |
 | `access_hours` | text | | | slagboom of poort, bv. `07:30–23:00` |
 | `access_24h` | boolean | | | |
 | `times_note` | text | | | letterlijke zin(nen) van de bron, of "Volgens OpenStreetMap" |
@@ -101,7 +103,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `push_subscriptions` | id*, user_id*, endpoint* (uniek, https), p256dh*, auth*, created_at*, disabled_at | alleen via `push_subscribe`; uitgezet bij 404/410 van de pushdienst |
 | `crowd_watches` | user_id* + place_id* (pk), created_at*, expires_at* (+24 uur), notified_at | via `watch_place` (max. 10 tegelijk); trigger op `crowd_reports` roept edge function `push` aan als de stand "rustig" wordt. VAPID-sleutels in `private.secrets` (alleen service_role) |
 | `crowd_reports` | id*, place_id*, user_id*, level* (`rustig`, `druk`, `vol`), created_at* | melden via `report_crowd` (1 per persoon per plek per 30 min, max. 30 per dag); lezen via `crowd_status` (geaggregeerd, zonder persoonsgegevens); cron `crowd-retention` wist na 30 dagen |
-| `reviews` | id*, place_id*, author_name*, author_email, rating* (1–10), score_location/quiet/facilities/value (1–10), title (≤120), body* (20–3.000), vehicle (`camper`, `buscamper`, `caravan`, `overig`), visited_month, status*, admin_note, created_at* | status `pending`; index op place_id |
+| `reviews` | id*, place_id*, author_name*, author_email, rating* (1–10), score_location/quiet/facilities/value (1–10), title (≤120), body* (20–3.000), vehicle (`camper`, `buscamper`, `caravan`, `overig`), visited_month, status*, admin_note, user_id (→ `auth.users`, `ON DELETE SET NULL`), created_at* | status `pending`; index op place_id en op user_id. `author_email` komt uit het account van de schrijver (sinds migratie `20261022100000_reviews_met_account.sql`) |
 | `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, created_at* | status `nieuw` |
 | `tickets` | id*, number* (uniek), access_token* (uniek, willekeurig), name* (2–80), email*, subject* (3–140), category*, status*, priority*, place_id, assignee, created_at*, updated_at* | category `vraag`, status `open`, priority `normaal` |
 | `ticket_messages` | id*, ticket_id*, author* (`klant`, `support`), admin_id, body* (1–5.000), internal* | internal `false`; index op ticket_id |
@@ -150,7 +152,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | Tabel | Lezen | Aanmaken | Wijzigen | Verwijderen |
 |---|---|---|---|---|
 | `places` | iedereen: alleen `published`; beheer: alles | beheer | beheer | beheer |
-| `reviews` | iedereen: alleen `approved`; beheer: alles | via `submit_review` | beheer | beheer |
+| `reviews` | iedereen: alleen `approved`; beheer: alles | via `submit_review` (alleen ingelogd, bevestigd e-mailadres) | beheer | beheer |
 | `faq` | iedereen: alleen `published`; beheer: alles | beheer | beheer | beheer |
 | `site_settings`, `nl_towns`, `route_cache` | iedereen | beheer (instellingen), `cache_route` | beheer | — |
 | `submissions` | beheer | via `submit_place` | beheer | beheer |
@@ -165,7 +167,8 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 
 | Functie | Wie | Wat |
 |---|---|---|
-| `submit_review`, `submit_place`, `create_ticket`, `reply_ticket`, `get_ticket` | iedereen | Invoer met validatie |
+| `submit_place`, `create_ticket`, `reply_ticket`, `get_ticket` | iedereen | Invoer met validatie |
+| `submit_review` | ingelogd (`authenticated`) met `email_confirmed_at`; anon heeft geen `EXECUTE` | Review indienen; `user_id` = `auth.uid()`, e-mailadres uit `auth.users`. Inloggen met de code per mail (`verifyOtp`) bevestigt het adres. Moderatie blijft: status `pending` |
 | `track`, `log_consent`, `report_client_error` | iedereen | Statistieken (na toestemming), cookiekeuze, clientfouten |
 | `cache_route` | server | Routecache vullen |
 | `admin_overview`, `admin_stats(p_days)`, `admin_pipeline(p_action)` | beheer | Dashboard, statistieken, pipeline-knoppen (`scrape-missing`, `scrape-all`, `osm-refresh`, `apply-threshold`) |
@@ -175,7 +178,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 ## Datavalidatie en bedrijfsregels
 
 - CHECK-constraints zoals in de tabellen hierboven (kind, surface, departure, status, scores, lengtes, e-mailformaat).
-- `checkout_until` en `checkin_from` in `uu:mm`.
+- `checkout_until`, `checkin_from` en `checkin_until` in `uu:mm`; `reservation_rule` alleen `verplicht`, `mogelijk` of `niet_nodig`.
 - **Publicatie** (trigger `places_before_write`): een plek wordt `published` als
   1. er een website, telefoonnummer, e-mailadres of beheerder (OSM `operator`) is (besluit eigenaar 19 oktober 2026), én
   2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs, én
@@ -216,7 +219,7 @@ IP-adres of sessie. Bij de eerste overschrijding komt één waarschuwing in `app
 | `report_client_error` | 30 per minuut, 1.000 per dag | Stil overslaan |
 | `submit_place` | 60 per uur, 300 per dag (plus 10 per uur per e-mailadres) | Melding "even erg druk" |
 | `create_ticket` | 30 per uur, 150 per dag (plus 5 per uur per e-mailadres); bericht maximaal 5.000 tekens | Idem |
-| `submit_review` | 5 per uur per plek, 400 per dag (plus 5 per uur per e-mailadres) | Idem |
+| `submit_review` | 5 per uur per plek, 400 per dag (plus 5 per uur per account) | Idem |
 
 Paden onder `/support/` gaan via `private.safe_path()` als `/support/[token]` de database in, in `track` en
 `report_client_error`. De API-routes `/api/route` en `/api/distances` hebben een limiet van 30 per minuut per

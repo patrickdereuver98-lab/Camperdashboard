@@ -8,19 +8,22 @@ const CHOICES: [Exclude<DepartureAnswer, "">, string][] = [
   ["vast", "Op een vaste tijd"],
 ];
 
-/** "Hoe laat moet je hier weg?" Gebruikt bij Doe mee en bij een review. Bij "vast" volgt een tijdveld `checkout`. */
+/** "Hoe laat moet je hier weg?" Gebruikt bij Doe mee, bij een review en in het eigenaarsformulier. Bij "vast" volgt een tijdveld `checkout`. */
 export function DepartureRadios({
   id,
   label,
   value,
   onChange,
   fieldClass,
+  checkoutDefault = "11:00",
 }: {
   id: string;
   label: string;
   value: DepartureAnswer;
   onChange: (v: DepartureAnswer) => void;
   fieldClass: string;
+  /** Beginwaarde van het tijdveld, bijvoorbeeld uit een bewaard concept */
+  checkoutDefault?: string;
 }) {
   return (
     <div role="radiogroup" aria-labelledby={id}>
@@ -45,7 +48,7 @@ export function DepartureRadios({
       {value === "vast" && (
         <label className="mt-3 block">
           <span className="mb-1.5 block font-semibold">Uiterlijk weg om</span>
-          <input name="checkout" type="time" step={900} defaultValue="11:00" required className={`${fieldClass} max-w-40`} />
+          <input name="checkout" type="time" step={900} defaultValue={checkoutDefault} required className={`${fieldClass} max-w-40`} />
         </label>
       )}
     </div>

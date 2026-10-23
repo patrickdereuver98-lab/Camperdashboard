@@ -47,7 +47,7 @@ function BarChart({ title, bars, caption }: { title: string; bars: Bar[]; captio
         ))}
       </ul>
       <details className="mt-4 text-sm">
-        <summary className="cursor-pointer font-semibold text-ink-2">Als tabel</summary>
+        <summary className="-my-2.5 cursor-pointer py-2.5 font-semibold text-ink-2">Als tabel</summary>
         <table className="mt-2 w-full">
           <tbody>
             {bars.map((b) => (

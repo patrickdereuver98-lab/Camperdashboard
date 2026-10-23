@@ -129,6 +129,13 @@ export const DEFAULT_FILTERS: Filters = {
 
 type Params = { get(name: string): string | null };
 
+/** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
+export function withPage(f: Filters, page?: DeparturePage): Filters {
+  if (!page) return f;
+  if (page === "overig") return { ...f, departure: f.departure && pageOf(f.departure) === "overig" ? f.departure : "overig" };
+  return { ...f, departure: page };
+}
+
 export function parseFilters(p: Params): Filters {
   const num = (k: string) => {
     const v = Number(p.get(k));
@@ -220,6 +227,16 @@ const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", 
 /** De huidige datum en tijd in Nederland, als lokale Date (de server draait in UTC) */
 export function nowInNL(): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }));
+}
+
+/**
+ * Kun je hier vandaag zeker niet meer aankomen? Alleen als de laatste aankomsttijd bekend is en voorbij is, en de plek
+ * niet dag en nacht open is. Onbekend telt niet als dicht (Dichtbij verbergt alleen wat zeker niet meer kan).
+ */
+export function arrivalClosed(p: Pick<PlaceSummary, "checkinUntil" | "access24h">, now = nowInNL()): boolean {
+  if (!p.checkinUntil || p.access24h) return false;
+  const [h, m] = p.checkinUntil.split(":").map(Number);
+  return now.getHours() * 60 + now.getMinutes() > h * 60 + m;
 }
 
 export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = nowInNL()): boolean | undefined {

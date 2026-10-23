@@ -7,7 +7,7 @@ import { useExpenses } from "@/lib/store";
 import { Icon } from "@/components/icons";
 
 const LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.label])) as Record<ExpenseCategory, string>;
-const input = "h-11 w-full rounded-lg border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const input = "h-11 w-full rounded-lg border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 const today = () => {
   const d = new Date();

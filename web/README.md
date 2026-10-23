@@ -31,7 +31,7 @@ Zonder internet (bijvoorbeeld in CI) bouwen met de meegeleverde snapshot: `VRIJS
 | `supabase/functions/pipeline/` | Edge function: OpenStreetMap-import en website-scraper |
 | `supabase/functions/push/` | Edge function: pushmeldingen (test: `deno test push/notify_test.ts`, zie de kop van dat bestand) |
 | `supabase/migrations/` | Losse wijzigingen na `schema.sql`, in volgorde uit te voeren (bovenaan staat of ze live al zijn toegepast) |
-| `e2e/`, `tests/` | Playwright-tests (`npm run test:e2e`, na `npm run build:offline`) en unit tests (`npm run test:unit`) |
+| `e2e/`, `tests/` | Playwright-tests (`npm run test:e2e`, na `npm run build:offline`) en unit tests (`npm run test:unit`). `e2e/a11y.spec.ts` controleert WCAG 2.1 AA met axe (licht en donker), tekst ≥ 14 px en tikdoelen ≥ 44 px |
 
 ## Data
 
