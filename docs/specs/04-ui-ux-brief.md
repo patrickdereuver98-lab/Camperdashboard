@@ -52,7 +52,8 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 | Knoppen | Minstens 44 px hoog (meestal 48–56 px); primair bosgroen, hoofdactie startpagina avondzon; secundair met rand |
 | Formulieren | Velden 48 px, label boven het veld, verplichte velden met `*`, foutmelding onder het veld, numeriek toetsenbord bij getallen |
 | Plekkaart | Volgorde van wat een camperaar wil weten: **waar** (naam 17 px op de telefoon, "Soort in plaats", afstand: rijtijd op Dichtbij, anders "x km van je locatie" als locatie aan staat, anders "x km hemelsbreed" vanaf de zoekplek) → **wanneer** (vertrekbadge, daaronder aankomst vanaf / dag en nacht open / poorttijden; "Gesloten tot …" alleen als de plek nu dicht is) → **wat en hoeveel** (max. 3 voorzieningen + aantal links, prijs per nacht rechts, met "+ toeslagen" eronder als toeslagen of toeristenbelasting apart bekend zijn). Foto ±⅓ breed links (rij) of boven (stapel); hartje zonder bol op rijkaarten |
-| Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; meerblauw bij uitslapers (12:00 of later): "Vertrek uiterlijk 12:00"; neutraal bij 11:00 tot 12:00 en eerder: "Vertrek uiterlijk 11:00"; niets bij onbekend |
+| Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; meerblauw bij uitslapers (12:00 of later): "Vertrek uiterlijk 12:00"; neutraal bij 11:00 tot 12:00 en eerder: "Vertrek uiterlijk 11:00". Onvolledige plek (geen vertrekregel): grijs label "Vertrektijd onbekend" (`sunken` met `muted`, contrast 4,8:1 licht en 5,6:1 donker); de tekst zegt het, niet alleen de kleur. Bij een afgewezen of onleesbare regel: geen badge |
+| Kaartstip onvolledig | Plek zonder vertrekregel: grijze stip in `muted` (contrast met de kaartgrond 5,0:1 licht, 6,8:1 donker), onder de gekleurde stippen; de popup zegt "Vertrektijd onbekend". Gaat voor de avondzon-kleur van gratis plekken |
 | Vertrektabbladen | Boven de resultaten: Alle / Zonder vertrektijd / Uitslapers / Overige, met aantal; horizontaal scrollbaar op mobiel |
 | Voorzieningenpictogrammen | Lijnicoon op een lichte ondergrond: bosgroen op lichtgroen (aanwezig), lichtgrijs op zand (onbekend), grijs met rode streep (niet aanwezig) |
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
@@ -60,8 +61,9 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 | Meldingen | Korte toast na bewaren; inline statusregels (`role="status"`/`role="alert"`) |
 | Foto's van een plek | Beste foto vooraan: een foto van de plek zelf, het eigen logo pas als er niets anders is. Nooit keurmerken of logo's van anderen (SVR, ANWB, Zoover), vlaggen, stockfoto's of miniaturen. We vragen bij bekende beeldbanken (WordPress, Wix, Jimdo, Duda, `?width=`) de grote versie op en vallen terug op het origineel. Te klein voor het vak (galerij < 640 px, kaart < 320 px breed) = niet tonen. Logo's en foto's met een heel andere verhouding staan passend in het vak (niet half bijgesneden), met een vervaagde rand. Regels in `web/src/lib/photos.ts` |
 | Over deze plek | Tekst van de website van de plek, alleen hele Nederlandse zinnen: zonder "Lees meer", "…", links, prijzen, telefoonnummers of SEO-titels. Lukt dat niet, dan geen tekst. Onder de tekst: "Zo beschrijft de plek zichzelf op de eigen website." Regels in `web/src/lib/description.ts` |
-| Laatste update | Eén kleine grijze regel bovenaan elke plek- en lijstpagina: "Laatste update: 11 oktober 2026". Geen bronzinnen of "volgens de website" bij losse gegevens (besluit eigenaar). Alleen foto's houden "Foto: domein.nl" in de hoek, zolang de foto laadt |
-| Legenda | Link "Wat betekenen de icoontjes?" bij de resultaten en bij Voorzieningen; opent een sheet met voorzieningen, kleuren (groen, zand, doorgestreept), vertrekbadges en open/dicht |
+| Laatste update | Eén kleine grijze regel bovenaan elke plek- en lijstpagina: "Laatste update: 11 oktober 2026". Geen bronzinnen of "volgens de website" bij losse gegevens (besluit eigenaar). Twee uitzonderingen: foto's houden "Foto: domein.nl" in de hoek, zolang de foto laadt, en de vertrektijd op de plekpagina krijgt de bronzin klein eronder: 14 px (`text-sm`, de kleinste stap), `muted`, compact, als "Bron: “…” (website)" (besluit eigenaar 19 oktober 2026). Op de plekpagina volgt achter de datum ", mogelijk verouderd" (`ink-2`, halfvet) als de laatste controle (`verified_at` of `departure_checked_at`, de jongste) meer dan 12 maanden oud is; zonder die datum geen melding |
+| Oproep vertrektijd | Op de plekpagina van een onvolledige plek, in het beslisblok onder Vertrekken: "We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten andere camperaars hoe laat ze weg moeten." met een secundaire knop **Vertrektijd doorgeven** (44 px, klok-icoon) die het formulier van Doe mee opent |
+| Legenda | Link "Wat betekenen de icoontjes?" bij de resultaten en bij Voorzieningen; opent een sheet met voorzieningen, kleuren (groen, zand, doorgestreept), vertrekbadges (ook "Vertrektijd onbekend" en de grijze kaartstip) en open/dicht |
 | Diepte | Drie schaduwlagen in `globals.css`: `shadow-low` (kaarten: haarlijn + heel zachte schaduw), `shadow-raised` (hover), `shadow-float` (zoekkaart, sheets). Warm getint. Kaarten tillen 1 px op bij hover (`.lift`) |
 | Zoekkaart (start) | Wit vlak met `shadow-float` en een dunne avondzon-rand (1 px, 50%), direct onder de kop; op mobiel gestapeld, vanaf `lg` op één rij |
 
@@ -79,18 +81,24 @@ Donkere modus "avond in het bos": volgt de systeeminstelling.
 | Start | "Waar sta je vannacht?" links uitgelijnd op zandpapier (geen tekening) → zoekkaart direct eronder (bestemming, keuze Vertrekken: Alle / Zonder vertrektijd / Uitslapers, knop Zoeken) → drie vertrouwenspunten → "Hoe wil je staan?" (één lijst met drie regels naar de vertrekpagina's) → Populaire bestemmingen (provincietegels met een echte foto van een plek daar, met bron) → "Vertrekken wanneer je wilt" → zoeken op voorziening → "Zo werkt VrijStaan" in drie stappen → eigenaren |
 | Zoeken en vertrekpagina's | Vertrektabbladen → zoekveld (44 px) → één rij Filters / Sorteren / Kaart zonder randen (op de telefoon; plakt onder de header) → actieve filterchips → "n plekken in …" (18 px) met laatste update, "Uitleg icoontjes" en "Afstand tonen" (vraagt één keer je locatie; de afstand wordt op het apparaat berekend) → compacte kaarten. Doel: de eerste plek staat op een iPhone direct in beeld, niet pas na een half scherm bediening |
 | Plek | Foto (16:9) → soort, naam, adres met link naar de kaart, open/dicht, score, laatste update → **beslisblok** (één kaart: vertrekken bovenaan en als enige opvallend, daaronder prijs met duurste tarief, toeristenbelasting en uitklapbare extra kosten, open, max. lengte) → voorzieningen als labels (aanwezig en niet aanwezig, onbekend in één regel) → over deze plek → ligging en route (kaart + rijtijd) → gegevens bekend / meld een fout → ervaringen → praktisch en contact (alleen bekende gegevens, onbekend in één regel) → in de buurt. Vaste actiebalk: prijs, hartje, bellen, website, **Route**. Niets staat dubbel |
+| Landingspagina's (provincie, plaats of eiland, vertrekgroep per provincie) | Kruimelpad (14 px, gedempt) → h1 "Camperplaatsen op Texel" / "Camperplaatsen zonder vertrektijd in Zeeland" (24 px, vanaf `sm` 36 px) → "Laatste update: datum" → twee of drie korte zinnen, alleen uit de cijfers (geen eigen beschrijving van de plaats: we verzinnen niets) → rij knoppen van 44 px: **Bekijk op de kaart** primair, de rest secundair → plekkaarten (dezelfde rij-kaart als bij zoeken, twee kolommen vanaf `lg`) → ronde linkchips (44 px, `shadow-low`) naar plaatsen, eilanden en verwante pagina's. Geen nieuwe componenten of kleuren; bouwstenen in `web/src/components/seo-ui.tsx` |
 | Dichtbij | Locatievraag → chips (zonder vertrektijd, uitslapers, nu open, voorzieningen) in één scrollrij → kaart → lijst op rijtijd |
 | Mijn reis | Stops met nachten → startpunt → route en kosten → delen en navigatie |
 
 ## Toegankelijkheid
 
-- Doel: WCAG 2.1 AA (de European Accessibility Act geldt waarschijnlijk niet voor een gratis microbedrijf, maar we
-  houden ons eraan).
+- Doel: WCAG 2.1 AA, lanceervoorwaarde in de PRD (de European Accessibility Act geldt waarschijnlijk niet voor een
+  gratis microbedrijf, maar we houden ons eraan). Afgerond 22 oktober 2026 (P13); `web/e2e/a11y.spec.ts` draait axe
+  (WCAG 2.0/2.1 A en AA) op 13 hoofdpagina's en de filtersheet, in licht en donker, en meet de huisregels hieronder.
 - Contrast minstens 4,5:1 voor tekst in beide thema's.
-- Tikdoelen minstens 44 × 44 px (bekende uitzonderingen: kaartmarkers, scoreknoppen in reviews; staan in fase B).
-- Alles met toetsenbord bereikbaar, zichtbare focusring, labels op alle velden en pictogramknoppen
-  (`aria-label` met de naam van de plek).
-- `prefers-reduced-motion` zet animaties uit (`MotionConfig reducedMotion="user"`).
+- Tekst minstens 14 px (basis 16 px op de telefoon); enige uitzondering de kaartbronvermelding van MapLibre (12 px,
+  stijlgids §4).
+- Tikdoelen minstens 44 × 44 px op elk scherm, ook chips, scoreknoppen in reviews (twee rijen van vijf), links in
+  lijsten en kaartbediening. Kaartpunten: onzichtbaar tikvlak van 44 px rond elk punt en elke groep.
+- Alles met toetsenbord bereikbaar, zichtbare focusring (ook op invoervelden), labels op alle velden en
+  pictogramknoppen (`aria-label` met de naam van de plek). Sheets: focus blijft binnen, Escape sluit, focus terug naar
+  de knop die hem opende. Kaartpunten zijn niet met het toetsenbord te kiezen; de lijst toont dezelfde plekken.
+- `prefers-reduced-motion` zet animaties uit (`MotionConfig reducedMotion="user"`, en in CSS ook zonder vertraging).
 
 ## Interactietoestanden
 

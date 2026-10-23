@@ -6,14 +6,15 @@
 //   { "action": "scrape", "n": 6 }          → volgende batch websites
 //   { "action": "enqueue" }                 → plekken met website in de scrape-wachtrij
 //   { "action": "inspect", "url": "…" }     → diagnose: gekozen pagina's en vertrekzinnen (schrijft niets)
+//   { "action": "adres", "n": 40 }          → straat en postcode aanvullen via PDOK (pdok.ts)
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
-import Anthropic from "npm:@anthropic-ai/sdk@0.129.0";
-import { needsAi, passages, SCHEMA, SYSTEM, verify, type AiAnswer } from "./ai.ts";
+import { addressFrom, reverseUrl } from "./pdok.ts";
+import { verify, type QuoteAnswer } from "./quote.ts";
 import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
@@ -22,6 +23,10 @@ declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
 });
+
+// Versie van de extractor. Vond een oudere versie een kernveld dat deze niet meer vindt, dan wist apply_scrape het: zo
+// verdwijnen fouten van een oude parser na een volledige run. Ophogen bij elke wijziging in extract.ts.
+const PARSER = "41";
 
 const UA = "VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)";
 const OVERPASS = [
@@ -32,7 +37,9 @@ const OVERPASS = [
 ];
 
 async function log(level: string, message: string, context: Record<string, unknown> = {}) {
-  await db.from("app_logs").insert({ level, source: "pipeline", message: message.slice(0, 2000), context });
+  const { error } = await db.from("app_logs").insert({ level, source: "pipeline", message: message.slice(0, 2000), context });
+  // Kan de log zelf niet weg, dan in elk geval in de functielogs van Supabase
+  if (error) console.error(`app_logs: ${error.message}; ${level}: ${message}`);
 }
 
 async function overpass(query: string) {
@@ -137,7 +144,9 @@ async function allowed(url: URL): Promise<boolean> {
  * Tot 11 verzoeken tegelijk naar dezelfde server werd door veel kleine sites en hostingpartijen geblokkeerd, waardoor
  * alleen de homepage binnenkwam en de pagina met de vertrektijd ontbrak.
  */
-async function fetchPages(hrefs: string[]): Promise<(string | null)[]> {
+/** Subpagina's ophalen. Een pagina die ook na een tweede poging niet lukt (geen 404) komt in `failed`: dan haperde de
+ *  site, en mag apply_scrape niets wissen wat deze keer ontbreekt. */
+async function fetchPages(hrefs: string[], failed: string[] = []): Promise<(string | null)[]> {
   const out: (string | null)[] = new Array(hrefs.length).fill(null);
   let next = 0;
   const worker = async () => {
@@ -149,7 +158,10 @@ async function fetchPages(hrefs: string[]): Promise<(string | null)[]> {
       } catch (e) {
         if (/HTTP 4(04|10)/.test(String(e))) continue;
         await new Promise((r) => setTimeout(r, 800));
-        out[i] = await fetchPage(url).catch(() => null);
+        out[i] = await fetchPage(url).catch((e2) => {
+          if (!/HTTP 4(04|10)/.test(String(e2))) failed.push(hrefs[i]);
+          return null;
+        });
       }
     }
   };
@@ -259,19 +271,16 @@ async function collectPages(website: string) {
       const url = new URL(path, home).href;
       if (!picked.includes(url)) picked.push(url);
     }
-  const subs = await fetchPages(picked);
+  const failed: string[] = [];
+  const subs = await fetchPages(picked, failed);
   const read = subs.filter((x): x is string => !!x);
   // Tweede laag: vanaf de FAQ en huisregels de links die naar aankomst en vertrek wijzen
   const deeper = deeperLinks([html, ...read], home, [home.href, ...picked]);
-  const more = await fetchPages(deeper);
+  const more = await fetchPages(deeper, failed);
   // PDF's met het reglement of de tarieven: alleen de adressen; lezen gebeurt pas als de pagina's niets opleveren
   const pdfs = [...new Set([html, ...read].flatMap((h) => pdfLinks(h, home)))].slice(0, 2);
-  return { home, html, links: links.length, picked: [...picked, ...deeper], pdfs, viaSitemap, subs: [...subs, ...more] };
+  return { home, html, links: links.length, picked: [...picked, ...deeper], pdfs, viaSitemap, subs: [...subs, ...more], failed };
 }
-
-// AI-lezer (alleen met het geheim ANTHROPIC_API_KEY; model via AI_MODEL, standaard claude-opus-5-5)
-const ai = Deno.env.get("ANTHROPIC_API_KEY") ? new Anthropic() : null;
-const AI_MODEL = Deno.env.get("AI_MODEL") ?? "claude-opus-5-5";
 
 const pageText = (pages: string[]) =>
   pages
@@ -283,10 +292,10 @@ const pageText = (pages: string[]) =>
     .replace(/\s+/g, " ");
 
 // Zoekagenten (handmatige multi-agentronde): een agent levert per plek een letterlijke zin en de bron-URL. We halen die
-// URL hier zelf op en nemen het alleen over als de zin er echt staat (zelfde controle als de AI-lezer). Van de eigen
+// URL hier zelf op en nemen het alleen over als de zin er echt staat (zie quote.ts). Van de eigen
 // website wordt het een kandidaat (zoals de scraper); van een andere bron (gids, review, forum) alleen een inzending
 // voor Beheer, want daar is het een aanwijzing, geen feit.
-type Finding = { id: string; url: string; departure: AiAnswer["departure"]; checkout: string | null; quote: string | null };
+type Finding = { id: string; url: string; departure: QuoteAnswer["departure"]; checkout: string | null; quote: string | null };
 
 async function verifyFinding(f: Finding) {
   const url = new URL(f.url);
@@ -296,14 +305,17 @@ async function verifyFinding(f: Finding) {
   if (!fields) return { id: f.id, ok: false, reason: "zin niet letterlijk op de pagina of zonder tijd" };
   const { data: place } = await db.from("places").select("website, departure, sources").eq("id", f.id).single();
   if (!place) return { id: f.id, ok: false, reason: "plek onbekend" };
-  const quote = String(fields.times_note).replace(/^AI-lezer: /, "");
+  const quote = String(fields.times_note);
   let own = false;
   try {
     own = !!place.website && sameSite(new URL(place.website).host, url.host);
   } catch {
     own = false;
   }
-  if (own && place.departure === null && !(place.sources?.beheer ?? {}).departure) {
+  // sources.beheer is een lijst met velden die Beheer heeft vastgezet (oudere rijen: een object)
+  const beheer = place.sources?.beheer;
+  const managed = Array.isArray(beheer) ? beheer.includes("departure") : !!beheer?.departure;
+  if (own && place.departure === null && !managed) {
     const { error } = await db
       .from("places")
       .update({ ...fields, times_note: `${quote} (bron: ${url.href})`.slice(0, 480) })
@@ -330,32 +342,8 @@ async function verifyFinding(f: Finding) {
   return { id: f.id, ok: true, applied: "inzending" };
 }
 
-/** Vraag het taalmodel naar de vertrektijd; alleen een controleerbaar, letterlijk onderbouwd antwoord telt */
-async function aiDeparture(pages: string[]): Promise<Record<string, unknown> | null> {
-  if (!ai) return null;
-  const text = pageText(pages);
-  if (!needsAi(text)) return null;
-  try {
-    const r = await ai.messages.create({
-      model: AI_MODEL,
-      max_tokens: 1024,
-      system: SYSTEM,
-      output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
-      messages: [{ role: "user", content: passages(text) }],
-    });
-    if (r.stop_reason !== "end_turn") return null;
-    const t = r.content.find((b): b is Anthropic.TextBlock => b.type === "text");
-    if (!t) return null;
-    return verify(JSON.parse(t.text) as AiAnswer, text);
-  } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) await new Promise((res) => setTimeout(res, 2000));
-    else if (!(e instanceof Anthropic.APIError)) await log("warn", `AI-lezer: ${e}`);
-    return null;
-  }
-}
-
 async function scrapeOne(place: { id: string; website: string }) {
-  const { home, html, subs, pdfs } = await collectPages(place.website);
+  const { home, html, subs, pdfs, failed } = await collectPages(place.website);
   const pages = [html];
   for (const sub of subs) if (sub) pages.push(sub);
   let data = extract(pages, home) as Record<string, unknown> & { fields?: string[] };
@@ -368,14 +356,9 @@ async function scrapeOne(place: { id: string; website: string }) {
       data = extract(pages, home) as typeof data;
     }
   }
-  // Vaste regels vonden niets: dan de AI-lezer, met controle op een letterlijke zin
-  if (data.departure === undefined) {
-    const found = await aiDeparture(pages);
-    if (found) {
-      Object.assign(data, found, { departure_source: "ai" });
-      data.fields = [...new Set([...(data.fields ?? []), ...Object.keys(found)])];
-    }
-  }
+  // Haperende site: apply_scrape wist dan niets wat deze keer ontbreekt
+  if (failed.length) data._pages_failed = failed.length;
+  data._parser = PARSER;
   return data;
 }
 
@@ -399,13 +382,39 @@ async function inspect(website: string, field?: string) {
   const term = field && INSPECT_TERMS[field] ? INSPECT_TERMS[field].source : "vertrek|uitcheck|check-?out|abreise|per 24 uur|24 uur";
   const snippets = [...text.matchAll(new RegExp(`[^.]{0,90}(${term})[^.]{0,90}`, "gi"))].slice(0, 8).map((m) => m[0].trim());
   const data = extract(pages, c.home) as Record<string, unknown>;
-  const viaAi = data.departure === undefined ? await aiDeparture(pages) : null;
   return {
     links: c.links, viaSitemap: c.viaSitemap, picked: c.picked, fetched: c.subs.map((x) => !!x),
-    departure: data.departure ?? viaAi?.departure ?? null, checkout: data.checkout_until ?? viaAi?.checkout_until ?? null,
-    viaAi: !!viaAi, aiAvailable: !!ai, pdfs: c.pdfs, snippets,
+    departure: data.departure ?? null, checkout: data.checkout_until ?? null, pdfs: c.pdfs, snippets,
     ...(field ? { fields: Object.fromEntries(Object.entries(data).filter(([k]) => !["description", "photos", "times_note"].includes(k))) } : {}),
   };
+}
+
+/** Straat en postcode aanvullen via PDOK voor plekken zonder adres (zie pdok.ts); ook "niets gevonden" wordt vastgelegd */
+async function runAdres(n: number) {
+  const { data: batch, error } = await db.rpc("next_pdok_batch", { p_limit: n });
+  if (error) throw error;
+  const results = await Promise.all(
+    (batch ?? []).map(async (p: { id: string; lat: number; lng: number }) => {
+      try {
+        const res = await fetch(reverseUrl(p.lat, p.lng), { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(10_000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const a = addressFrom((await res.json()).response?.docs?.[0]);
+        const { error } = await db.rpc("apply_pdok", {
+          p_id: p.id,
+          p_street: a?.street ?? null,
+          p_postcode: a?.postcode ?? null,
+          p_afstand: a?.afstand ?? null,
+        });
+        if (error) throw new Error(`apply_pdok: ${error.message}`);
+        return { id: p.id, found: !!a };
+      } catch (e) {
+        // Niet vastgelegd, dus de volgende ronde probeert het opnieuw
+        await log("warn", `PDOK-adres ${p.id}: ${e}`);
+        return { id: p.id, error: String(e).slice(0, 120) };
+      }
+    }),
+  );
+  return { processed: results.length, found: results.filter((r) => "found" in r && r.found).length };
 }
 
 async function runScrape(n: number) {
@@ -419,10 +428,13 @@ async function runScrape(n: number) {
           scrapeOne(p),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Site te traag (45 s)")), 45_000)),
         ]);
-        await db.rpc("apply_scrape", { p_id: p.id, p_data: data });
+        const { error } = await db.rpc("apply_scrape", { p_id: p.id, p_data: data });
+        if (error) throw new Error(`apply_scrape: ${error.message}`);
         return { id: p.id, ok: true, fields: data.fields };
       } catch (e) {
-        await db.rpc("apply_scrape", { p_id: p.id, p_data: {}, p_error: String(e).slice(0, 300) });
+        const { error } = await db.rpc("apply_scrape", { p_id: p.id, p_data: {}, p_error: String(e).slice(0, 300) });
+        // Ook de foutregistratie mislukt: dan blijft de rij in de wachtrij hangen, dus in elk geval loggen
+        if (error) await log("error", `apply_scrape (fout vastleggen) mislukt voor ${p.id}: ${error.message}`, { scrape: String(e).slice(0, 300) });
         return { id: p.id, ok: false, error: String(e).slice(0, 120) };
       }
     }),
@@ -446,6 +458,10 @@ Deno.serve(async (req) => {
       EdgeRuntime.waitUntil(runScrape(Math.min(8, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (scrape): ${e}`)));
       return Response.json({ started: true }, { status: 202 });
     } else if (body.action === "scrape") result = await runScrape(Math.min(8, Number(body.n) || 4));
+    else if (body.action === "adres" && body.background) {
+      EdgeRuntime.waitUntil(runAdres(Math.min(50, Number(body.n) || 20)).catch((e) => log("error", `Pipeline-fout (adres): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "adres") result = await runAdres(Math.min(50, Number(body.n) || 20));
     else if (body.action === "probe")
       result = await overpass('[out:json][timeout:25];node["tourism"="caravan_site"](52.0,5.0,52.2,5.3);out 3;').then(
         (e) => ({ ok: true, count: e.length }),
@@ -456,7 +472,11 @@ Deno.serve(async (req) => {
       result = await Promise.all(
         (body.items as Finding[]).slice(0, 25).map((f) => verifyFinding(f).catch((e) => ({ id: f.id, ok: false, reason: String(e).slice(0, 120) }))),
       );
-    else if (body.action === "enqueue") result = (await db.rpc("enqueue_scrape", { p_only_missing: body.all !== true })).data;
+    else if (body.action === "enqueue") {
+      const { data, error } = await db.rpc("enqueue_scrape", { p_only_missing: body.all !== true });
+      if (error) throw error;
+      result = data;
+    }
     else return new Response("Onbekende actie", { status: 400 });
     return Response.json(result);
   } catch (e) {

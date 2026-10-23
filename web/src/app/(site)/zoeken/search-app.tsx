@@ -8,14 +8,15 @@ import {
   applyFilters,
   DEPARTURE_PAGES,
   filtersToQuery,
-  pageOf,
   parseFilters,
   refinementCount,
   relaxations,
   searchHref,
   type DeparturePage,
   type Filters,
+  type Result,
   type SortKey,
+  withPage,
 } from "@/lib/search";
 import { usePlaces, useVehicle, useViewportPlaces } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
@@ -58,21 +59,20 @@ function activeChips(f: Filters & { lengthFromVehicle?: boolean }): { label: str
   return chips;
 }
 
-/** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
-function withPage(f: Filters, page?: DeparturePage): Filters {
-  if (!page) return f;
-  if (page === "overig") return { ...f, departure: f.departure && pageOf(f.departure) === "overig" ? f.departure : "overig" };
-  return { ...f, departure: page };
-}
+/** De eerste plekken van deze zoekopdracht, op de server berekend (zie search.tsx) */
+export type InitialResults = { key: string; results: Result[]; total: number };
 
-export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: string }) {
+export function SearchApp({ page, updated, initial }: { page?: DeparturePage; updated?: string; initial?: InitialResults }) {
   const router = useRouter();
   const params = useSearchParams();
   const [vehicle] = useVehicle();
   const filters = useMemo(() => applyVehicle(withPage(parseFilters(params), page), vehicle), [params, page, vehicle]);
   const key = filtersToQuery(filters);
   const { data: places, error } = usePlaces();
-  const results = useMemo(() => (places ? applyFilters(places, filters) : null), [places, filters]);
+  // Tot de hele dataset er is, tonen we de plekken die de server al meegaf (alleen als het om dezelfde zoekopdracht gaat)
+  const early = !places && initial?.key === key ? initial : undefined;
+  const results = useMemo(() => (places ? applyFilters(places, filters) : (early?.results ?? null)), [places, filters, early]);
+  const total = early ? early.total : results?.length;
   const [hovered, setHovered] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(params.get("kaart") === "1");
@@ -107,7 +107,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
   const unknownPlace = filters.where && !filters.center && !filters.province ? filters.where : undefined;
   const heading = unknownPlace ? "Nederland" : (filters.where ?? filters.province ?? "Nederland");
 
-  const map = results && (
+  const map = places && results && (
     <PlaceMap
       places={mapPlaces}
       fitPlaces={fitPlaces}
@@ -133,15 +133,15 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
             <button
               type="button"
               onClick={() => setFiltersOpen(true)}
-              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base sm:hover:border-forest"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 font-semibold sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base sm:hover:border-forest"
             >
               <Icon name="sliders" size={18} />
               Filters
               {count > 0 && (
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-forest px-1 text-xs text-on-forest">{count}</span>
+                <span className="grid h-6 min-w-6 place-items-center rounded-full bg-forest px-1.5 text-sm text-on-forest">{count}</span>
               )}
             </button>
-            <label className="relative flex h-11 min-w-0 flex-1 items-center justify-center text-[0.9375rem] font-semibold has-[select:focus-visible]:rounded-lg has-[select:focus-visible]:outline-[3px] has-[select:focus-visible]:outline-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:pr-9 sm:pl-3 sm:text-base sm:hover:border-forest">
+            <label className="relative flex h-11 min-w-0 flex-1 items-center justify-center font-semibold has-[select:focus-visible]:rounded-lg has-[select:focus-visible]:outline-[3px] has-[select:focus-visible]:outline-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:pr-9 sm:pl-3 sm:text-base sm:hover:border-forest">
               <Icon name="sort" size={17} className="mr-1.5 shrink-0 text-muted" />
               {/* Mobiel staat er alleen "Sorteren" (de keuze past niet); een stip als het niet de standaard is */}
               <span className="sm:hidden">Sorteren</span>
@@ -150,7 +150,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
                 aria-label="Sorteren"
                 value={filters.sort}
                 onChange={(e) => update({ ...filters, sort: e.target.value as SortKey })}
-                className="absolute inset-0 min-w-0 appearance-none truncate bg-transparent opacity-0 focus:outline-none sm:static sm:w-full sm:opacity-100"
+                className="absolute inset-0 min-w-0 appearance-none truncate bg-transparent opacity-0 focus:outline-none sm:static sm:h-full sm:w-full sm:opacity-100"
               >
                 {SORTS.filter((s) => (!s.needsCenter || filters.center) && (s.key !== "score" || hasReviews)).map((s) => (
                   <option key={s.key} value={s.key}>
@@ -168,7 +168,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
                   window.scrollTo({ top: 0 });
                 }}
                 aria-pressed={mapOpen}
-                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 text-[0.9375rem] font-semibold aria-pressed:text-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base"
+                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 font-semibold aria-pressed:text-forest sm:flex-none sm:rounded-lg sm:border sm:border-line sm:bg-surface sm:px-4 sm:text-base"
               >
                 <Icon name={mapOpen ? "list" : "map"} size={18} />
                 {mapOpen ? "Lijst" : "Kaart"}
@@ -211,8 +211,8 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
 
         <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
           <h1 className="font-display text-lg leading-snug font-semibold sm:text-2xl">
-            <span key={results?.length} className="animate-fade-in inline-block">
-              {results ? pluralize(results.length, "plek", "plekken") : "Plekken laden"}
+            <span key={total} className="animate-fade-in inline-block">
+              {total !== undefined ? pluralize(total, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
             <span>{filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}</span>
           </h1>
@@ -245,7 +245,7 @@ export function SearchApp({ page, updated }: { page?: DeparturePage; updated?: s
             </div>
           )}
           {results && places && results.length === 0 && <Empty filters={filters} places={places} onChange={update} />}
-          {results && results.length > 0 && <Results key={key} results={results} hovered={hovered} onHover={setHovered} />}
+          {results && results.length > 0 && <Results key={key} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} />}
         </section>
       </div>
 
@@ -274,7 +274,7 @@ function DistanceToggle() {
 }
 
 const INTRO: Record<DeparturePage, string> = {
-  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst. Bovenaan staan de plekken die we bij de plek zelf hebben gecontroleerd. Daaronder plekken waar het volgens hun website zo is; die controleren we nog.",
+  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst.",
   uitslapers: "Je hoeft pas om 12:00 of later weg. Genoeg tijd voor een rustig ontbijt.",
   overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet zeker weten.",
 };
@@ -319,7 +319,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
               replace
               scroll={false}
               aria-current={active === t.key ? "page" : undefined}
-              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-lg border-b-[3px] px-2.5 text-[0.9375rem] font-semibold sm:px-3 sm:text-base ${
+              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-lg border-b-[3px] px-2.5 font-semibold sm:px-3 sm:text-base ${
                 active === t.key ? "border-forest text-forest" : "border-transparent text-ink-2 hover:text-forest"
               }`}
             >
@@ -332,7 +332,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
       {page && (
         <div className="pt-3 pb-1">
           <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
-          <p className="mt-0.5 text-[0.9375rem] text-ink-2 sm:text-base">{INTRO[page]}</p>
+          <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
           {page === "overig" && (
             <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
               {(
@@ -364,24 +364,31 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
 
 function Results({
   results,
+  total,
+  fromServer,
   hovered,
   onHover,
 }: {
-  results: ReturnType<typeof applyFilters>;
+  results: Result[];
+  /** Kan groter zijn dan results, zolang alleen de eerste plekken van de server er zijn */
+  total: number;
+  /** Plekken die al in de HTML stonden komen niet opnieuw binnenvliegen (en de eerste foto is meteen zichtbaar) */
+  fromServer: boolean;
   hovered: string | null;
   onHover: (s: string | null) => void;
 }) {
   const [limit, setLimit] = useState(PAGE);
+  const [animate] = useState(!fromServer);
   return (
     <>
       <ul className="mt-2 space-y-2.5 sm:mt-4 sm:space-y-3">
         {results.slice(0, limit).map((r, i) => (
-          <li key={r.place.id} className="enter cv-auto" style={{ ["--i" as string]: i % 24 }}>
-            <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} />
+          <li key={r.place.id} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
+            <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} eager={i < 2} />
           </li>
         ))}
       </ul>
-      {limit < results.length && (
+      {limit < total && (
         <div className="mt-6 text-center">
           <button
             type="button"
@@ -391,7 +398,7 @@ function Results({
             Toon meer plekken
           </button>
           <p className="mt-2 text-sm text-muted">
-            {Math.min(limit, results.length)} van {results.length} getoond
+            {Math.min(limit, results.length)} van {total} getoond
           </p>
         </div>
       )}

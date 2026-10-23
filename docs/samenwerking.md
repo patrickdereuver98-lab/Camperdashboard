@@ -15,7 +15,7 @@ Vercel-preview.
 Besluiten van 16 oktober: B2 nee (toelating uit OSM blijft zoals die was), B3 geen advertenties, B4 en B9 ja
 (werkwijze via `acceptatie`). Websites worden voortaan eens per 30 dagen opnieuw gelezen (cron `scrape-refresh`).
 
-Wat nog openstaat, staat in [`plan.md`](../plan.md): §3 voor Patrick (B5 tot B8, B10, B11, B13), §4 voor de
+Wat nog openstaat, staat in [`plan.md`](../plan.md) en het vorige plan [`archief/plan-2026-10-16.md`](archief/plan-2026-10-16.md): §3 voor Patrick (B5 tot B8, B10, B11, B13), §4 voor de
 polishronde. Dit bord blijft hieronder staan als verslag van hoe het samenvoegen is gegaan.
 
 ## 1. Stand van zaken (ochtend 16 oktober)
@@ -135,7 +135,7 @@ voor de eigenaar. Een agent die iets oppakt, zet zijn naam en branch erbij.
 | Kernbelofte: meer plekken zonder vertrektijd (OSM `motorhome=designated`, "per 24 uur" herkennen, Doe mee gericht) en bevestiging door een mens | audit A1, #11 D1/D2 | Sessie "Feature review en plan" | Bezig | 🔄 PR #12 |
 | Mijn reis telt toeslagen per persoon en per nacht mee | audit B1, #11 P7, #10 3.1 en G2 | Agent van #4, ná stap 4 | #4 bouwde al uitgaven en reiskosten in `trip-app.tsx`; anders twee keer hetzelfde bestand | ✅ PR #4 (`a0e73f7`): "per persoon" als nachtprijs alleen zonder basisprijs, toeristenbelasting van de plek vervangt de schatting, overige toeslagen als "+ toeslagen, niet meegeteld" |
 | Routecache op dagen (privacy) | audit C5 | Agent van #10 | `routing.ts` is in #10 al aangepast; één regel | ✅ PR #10 (`a0301b2`) |
-| Eerste resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | audit B4, #10 2.12 (LCP) | Agent van #5, ná stap 3 | `search-app.tsx` is in #5 herschreven | ⬜ |
+| Eerste resultaten server-side op zoek- en vertrekpagina's (vindbaarheid, LCP) | audit B4, #10 2.12 (LCP) | Agent van #5, ná stap 3 | `search-app.tsx` is in #5 herschreven | ✅ Agent van #5 (`claude/mobile-ui-photos-ux-axxlae`): `zoeken/search.tsx` rekent de eerste 20 plekken op de server uit |
 | Door `discover` gevonden websites eerst laten bevestigen | audit A4 | Audit-agent (#9) | Raakt alleen `functions/discover`, `pipeline/discover.ts` en RPC `apply_discovery`. Stand: 380 geprobeerd, 41 gevonden, 16 gepubliceerd; de sessie "Repository redesign" heeft de 41 met de hand nagelopen. Lagere prioriteit zolang er geen nieuwe plekken zonder website bijkomen. Uitrol via een vaste commit op raw.githubusercontent (HANDLEIDING, "Scraper uitrollen") | ⬜ wacht op akkoord (live deploy) |
 | Overpass-ruis in `app_logs` (110 per week) | audit A6 | Audit-agent (#9) | Alleen `functions/pipeline/index.ts`; #4 en #5 raken die niet | ⬜ wacht op akkoord (live deploy) |
 | Tikdoelen ≥ 44 px in de lijst op `/doe-mee` | audit B3 | Agent van #10 of #5 (beide wijzigen `doe-mee/help-list.tsx`) | De sessie "Repository redesign" schreef het bestand en wil het oppakken als #10 en #5 het niet doen; dan pas na stap 3 | ⬜ |

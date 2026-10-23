@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { editDistance, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
 import { usePlaces, useTowns } from "@/lib/store";
 import { track } from "@/lib/track";
 import { PROVINCES, type Town } from "@/lib/types";
 import { distanceKm } from "@/lib/geo";
+import { cleanQuery, LOCATION_KIND, withoutKnownTowns, type Location, type SuggestAnswer } from "@/lib/pdok";
 import { Icon } from "./icons";
 
 /** Eilanden en streken waar camperaars op zoeken; middelpunt en straal bij benadering */
@@ -36,7 +37,19 @@ type Option =
   | { type: "near"; label: string }
   | { type: "province"; label: string }
   | { type: "town"; label: string; sub: string; lat: number; lng: number; radiusKm?: number }
-  | { type: "place"; label: string; sub: string; slug: string };
+  | { type: "place"; label: string; sub: string; slug: string }
+  /** Adres, postcode, woonplaats of gemeente van PDOK (via onze eigen /api/locatie) */
+  | { type: "address"; label: string; sub: string; loc: Location };
+
+/** Suggesties van PDOK via onze server; de browser praat zelf nooit met PDOK */
+async function fetchLocations(q: string, signal?: AbortSignal): Promise<SuggestAnswer> {
+  const res = await fetch(`/api/locatie?q=${encodeURIComponent(q)}`, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/** In de URL en de kop: bij een woonplaats of gemeente alleen de naam ("Giethoorn"), anders de hele weergavenaam */
+const whereLabel = (l: Location) => (l.type === "woonplaats" || l.type === "gemeente" ? l.label.split(",")[0].trim() : l.label);
 
 export function DestinationSearch({
   variant = "hero",
@@ -62,8 +75,30 @@ export function DestinationSearch({
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+  // Antwoord van /api/locatie voor de zoekterm `q`; alleen PDOK-antwoorden (de terugval is dezelfde lijst als hieronder)
+  const [remote, setRemote] = useState<{ q: string; items: Location[] } | null>(null);
   const { data: towns } = useTowns();
   const { data: places } = usePlaces();
+  const remoteQuery = cleanQuery(text);
+
+  // Adressen, postcodes en alle woonplaatsen: pas vragen als je even stopt met typen
+  useEffect(() => {
+    if (!remoteQuery) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      fetchLocations(remoteQuery, ctrl.signal).then(
+        (a) => setRemote({ q: remoteQuery, items: a.bron === "pdok" ? a.resultaten : [] }),
+        () => {
+          // Geen verbinding of PDOK plat: het zoekvak werkt gewoon door met de eigen lijst
+        },
+      );
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [remoteQuery]);
 
   const options = useMemo<Option[]>(() => {
     const q = searchForm(text);
@@ -113,16 +148,30 @@ export function DestinationSearch({
         lat: t.lat,
         lng: t.lng,
       });
+    // Van PDOK: adressen, postcodes, gemeenten en woonplaatsen die hierboven nog niet staan
+    if (remote && remote.q === remoteQuery) {
+      const shown = out.flatMap((o) => (o.type === "town" ? [o.label] : []));
+      for (const loc of withoutKnownTowns(remote.items, shown).slice(0, 6)) {
+        const kind = LOCATION_KIND[loc.type];
+        let sub = kind;
+        if (places && loc.lat !== undefined && loc.lng !== undefined) {
+          const n = nearbyCount({ lat: loc.lat, lng: loc.lng });
+          sub = `${kind}, ${n === 0 ? "geen plekken" : `${n} ${n === 1 ? "plek" : "plekken"}`} binnen 25 km`;
+        }
+        out.push({ type: "address", label: loc.label, sub, loc });
+      }
+    }
     if (q.length > 2)
       for (const p of places ?? []) {
         if (normalize(p.name).includes(q)) out.push({ type: "place", label: p.name, sub: `${p.town}, ${p.province}`, slug: p.slug });
         if (out.length > 12) break;
       }
     return out;
-  }, [text, towns, places]);
+  }, [text, towns, places, remote, remoteQuery]);
 
-  function go(f: Filters) {
-    track("search", { waar: f.where ?? null, provincie: f.province ?? null });
+  /** `waarTrack`: wat de statistieken zien; bij een adres of postcode alleen de soort, nooit het adres zelf */
+  function go(f: Filters, waarTrack: string | null = f.where ?? null) {
+    track("search", { waar: waarTrack, provincie: f.province ?? null });
     if (onPick) onPick(f);
     else router.push(searchHref(f));
   }
@@ -142,6 +191,10 @@ export function DestinationSearch({
     if (o.type === "town") {
       setText(o.label);
       go({ ...keep, where: o.label, center: { lat: o.lat, lng: o.lng }, radiusKm: o.radiusKm ?? keep.radiusKm });
+      return;
+    }
+    if (o.type === "address") {
+      void pickLocation(o.loc, keep);
       return;
     }
     if (!("geolocation" in navigator)) {
@@ -168,15 +221,49 @@ export function DestinationSearch({
     );
   }
 
-  function submit() {
-    const first = options.find((o) => o.type !== "near");
+  /** Adres of postcode gekozen: middelpunt op die plek; zonder coördinaat eerst opzoeken via onze server */
+  async function pickLocation(loc: Location, keep: Filters) {
+    setText(loc.label);
     setNotFound(null);
-    if (text.trim() && first) pick(first);
-    else if (!text.trim()) go({ ...(base ?? DEFAULT_FILTERS), where: undefined, center: undefined, province: undefined });
-    else {
-      setNotFound(text.trim());
-      inputRef.current?.focus();
+    let point = loc.lat !== undefined && loc.lng !== undefined ? { lat: loc.lat, lng: loc.lng } : null;
+    if (!point && loc.id) {
+      setResolving(true);
+      try {
+        const res = await fetch(`/api/locatie?id=${encodeURIComponent(loc.id)}`);
+        const found = res.ok ? ((await res.json()) as Location) : null;
+        if (found?.lat !== undefined && found.lng !== undefined) point = { lat: found.lat, lng: found.lng };
+      } catch {
+        // Hieronder: melding dat we het niet vonden
+      } finally {
+        setResolving(false);
+      }
     }
+    if (!point) {
+      setNotFound(loc.label);
+      inputRef.current?.focus();
+      return;
+    }
+    const exact = loc.type === "adres" || loc.type === "postcode";
+    go({ ...keep, where: whereLabel(loc), center: point }, exact ? LOCATION_KIND[loc.type].toLowerCase() : whereLabel(loc));
+  }
+
+  async function submit() {
+    const first = options.find((o) => o.type !== "near");
+    const typed = text.trim();
+    setNotFound(null);
+    if (typed && first) return pick(first);
+    if (!typed) return go({ ...(base ?? DEFAULT_FILTERS), where: undefined, center: undefined, province: undefined });
+    // Nog geen suggesties van PDOK binnen (snel getypt en Enter): nu vragen
+    const q = cleanQuery(typed);
+    if (q) {
+      setResolving(true);
+      const answer = await fetchLocations(q).catch(() => null);
+      setResolving(false);
+      const loc = answer?.resultaten[0];
+      if (loc) return pick({ type: "address", label: loc.label, sub: "", loc });
+    }
+    setNotFound(typed);
+    inputRef.current?.focus();
   }
 
   const hero = variant === "hero";
@@ -223,7 +310,7 @@ export function DestinationSearch({
         onSubmit={(e) => {
           e.preventDefault();
           if (open && options[active]) pick(options[active]);
-          else submit();
+          else void submit();
         }}
         className={hero ? "flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-end" : "flex items-center gap-2"}
       >
@@ -248,7 +335,7 @@ export function DestinationSearch({
               autoComplete="off"
               enterKeyHint="search"
               value={text}
-              placeholder={hero ? "Plaats, streek of provincie" : "Plaats, provincie of naam"}
+              placeholder={hero ? "Plaats, adres of postcode" : "Plaats, adres of naam"}
               onChange={(e) => {
                 setNotFound(null);
                 setText(e.target.value);
@@ -300,9 +387,14 @@ export function DestinationSearch({
       </form>
 
       {locating && <p className="mt-2 text-sm text-muted">Locatie bepalen…</p>}
+      {resolving && (
+        <p role="status" className="mt-2 text-sm text-muted">
+          Adres opzoeken…
+        </p>
+      )}
       {notFound && (
         <p role="status" className="mt-2 rounded-lg bg-sunken px-3 py-2 text-sm text-ink-2">
-          Geen plaats, streek of plek gevonden voor &quot;{notFound}&quot;. Probeer een andere schrijfwijze of een plaats in de buurt.
+          Geen plaats, adres of plek gevonden voor &quot;{notFound}&quot;. Probeer een andere schrijfwijze of een plaats in de buurt.
         </p>
       )}
       {geoError && (

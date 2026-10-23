@@ -474,6 +474,7 @@ export type Database = {
           access_hours: string | null
           capacity: number | null
           checkin_from: string | null
+          checkin_until: string | null
           checkout_until: string | null
           completeness: number
           created_at: string
@@ -514,6 +515,7 @@ export type Database = {
           rating_avg: number | null
           rating_count: number
           reservation: boolean | null
+          reservation_rule: string | null
           season: string | null
           shower: boolean | null
           slug: string
@@ -537,6 +539,7 @@ export type Database = {
           access_hours?: string | null
           capacity?: number | null
           checkin_from?: string | null
+          checkin_until?: string | null
           checkout_until?: string | null
           completeness?: number
           created_at?: string
@@ -577,6 +580,7 @@ export type Database = {
           rating_avg?: number | null
           rating_count?: number
           reservation?: boolean | null
+          reservation_rule?: string | null
           season?: string | null
           shower?: boolean | null
           slug: string
@@ -600,6 +604,7 @@ export type Database = {
           access_hours?: string | null
           capacity?: number | null
           checkin_from?: string | null
+          checkin_until?: string | null
           checkout_until?: string | null
           completeness?: number
           created_at?: string
@@ -640,6 +645,7 @@ export type Database = {
           rating_avg?: number | null
           rating_count?: number
           reservation?: boolean | null
+          reservation_rule?: string | null
           season?: string | null
           shower?: boolean | null
           slug?: string
@@ -738,6 +744,7 @@ export type Database = {
           score_value: number | null
           status: string
           title: string | null
+          user_id: string | null
           vehicle: string | null
           visited_month: string | null
         }
@@ -756,6 +763,7 @@ export type Database = {
           score_value?: number | null
           status?: string
           title?: string | null
+          user_id?: string | null
           vehicle?: string | null
           visited_month?: string | null
         }
@@ -774,6 +782,7 @@ export type Database = {
           score_value?: number | null
           status?: string
           title?: string | null
+          user_id?: string | null
           vehicle?: string | null
           visited_month?: string | null
         }
@@ -1309,7 +1318,6 @@ export type Database = {
       }
       submit_review: {
         Args: {
-          p_author_email: string
           p_author_name: string
           p_body: string
           p_place_id: string
@@ -1334,6 +1342,7 @@ export type Database = {
         Returns: undefined
       }
       user_trust: { Args: { p_user?: string }; Returns: Json }
+      user_trust_many: { Args: { p_users: string[] }; Returns: Json }
       watch_place: {
         Args: { p_on?: boolean; p_place_id: string }
         Returns: boolean

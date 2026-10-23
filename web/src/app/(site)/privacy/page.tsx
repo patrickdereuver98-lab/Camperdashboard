@@ -83,9 +83,9 @@ const ROWS: string[][] = [
   ],
   [
     "Reviews",
-    "Je naam (openbaar), e-mailadres (optioneel, nooit openbaar), cijfers, titel, tekst, maand van je bezoek, soort voertuig, de plek en het tijdstip",
+    "Je naam (openbaar), het e-mailadres van je account of van de code per mail (nooit openbaar), je account-id, cijfers, titel, tekst, maand van je bezoek, soort voertuig, de plek en het tijdstip",
     "Overeenkomst: de gebruiksvoorwaarden (art. 6 lid 1 sub b)",
-    "Gepubliceerd: tot de review wordt verwijderd. Afgewezen: 3 maanden",
+    "Gepubliceerd: tot de review wordt verwijderd; bij het verwijderen van je account blijft hij staan zonder koppeling aan jou. Afgewezen: 3 maanden",
   ],
   [
     "Plek aanmelden, correcties en verzoeken van eigenaren",
@@ -110,6 +110,12 @@ const ROWS: string[][] = [
     "De coördinaten van je vertrekpunt en bestemming",
     "Gerechtvaardigd belang, op jouw verzoek (art. 6 lid 1 sub f)",
     "Niet opgeslagen in onze database",
+  ],
+  [
+    "Zoeken op adres, postcode of plaats",
+    "Wat je in het zoekveld typt",
+    "Gerechtvaardigd belang, op jouw verzoek (art. 6 lid 1 sub f)",
+    "Niet opgeslagen in onze database; de server onthoudt het antwoord van PDOK een paar uur",
   ],
 ];
 
@@ -162,7 +168,7 @@ export default function PrivacyPage() {
     <ProsePage
       title="Privacyverklaring"
       intro="We verwerken zo weinig persoonsgegevens als we kunnen. Hier lees je welke, waarom, op welke grondslag en hoe lang."
-      updated="11 oktober 2026"
+      updated="22 oktober 2026"
     >
       <Section title="Wie zijn wij">
         <p>
@@ -201,6 +207,12 @@ export default function PrivacyPage() {
           Je kunt inloggen met Google, Apple, Facebook of een inlogcode per e-mail. Log je in via een van die diensten, dan
           krijgen we van hen alleen je naam, e-mailadres en profielfoto. We plaatsen nooit iets namens je en vragen geen
           toegang tot je contacten of berichten. Bij Apple kun je je e-mailadres verbergen.
+        </p>
+        <p>
+          Een review schrijven kan alleen met een account. Heb je er nog geen, dan bevestig je je e-mailadres met een code
+          die we je mailen; daarmee maak je meteen een account. Terwijl je de review schrijft, bewaren we wat je invulde
+          tijdelijk in de lokale opslag van je eigen browser, zodat je niets kwijt bent als je eerst inlogt. Na het versturen
+          of na een week is dat concept weg.
         </p>
         <p>
           Met een account bewaren we je reis (de plekken en het aantal nachten) zodat je hem op al je apparaten ziet. Om
@@ -244,6 +256,11 @@ export default function PrivacyPage() {
           niet aan andere gegevens over jou. Zodat de routeplanner niet te veel vragen krijgt, bewaart de server de uitkomst
           (de rijtijd bij een afgerond punt) een paar dagen in een technische cache. Daarin staat niets wat naar jou te
           herleiden is. De knop &quot;Open in navigatie&quot; opent Google Maps. Daar gelden de privacyregels van Google.
+        </p>
+        <p>
+          Zoek je op een adres, postcode of plaats, dan stuurt onze server wat je typt naar de Locatieserver van PDOK
+          (Kadaster, de Nederlandse overheid). Alleen de zoekterm gaat mee: geen IP-adres en geen andere gegevens over jou.
+          Je browser praat zelf niet met PDOK. Werkt PDOK even niet, dan zoeken we in onze eigen lijst met plaatsen.
         </p>
       </Section>
 
@@ -313,6 +330,10 @@ export default function PrivacyPage() {
           <li>
             <strong>OpenRouteService</strong> (HeiGIT gGmbH) of <strong>FOSSGIS e.V.</strong> krijgen coördinaten als je een
             rijtijd laat berekenen.
+          </li>
+          <li>
+            <strong>PDOK</strong> (Kadaster) krijgt via onze server de zoekterm als je op een adres, postcode of plaats
+            zoekt, zonder je IP-adres.
           </li>
           <li>
             <strong>OpenFreeMap</strong>, <strong>wsrv.nl</strong>, <strong>Wikimedia</strong> en de website van een plek

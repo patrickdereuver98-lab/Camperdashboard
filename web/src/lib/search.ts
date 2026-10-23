@@ -1,4 +1,8 @@
 import { distanceKm, type LatLng } from "./geo";
+import { timeToMinutes } from "./format";
+import { perPersonPrice } from "./trip-extras";
+
+export { timeToMinutes };
 import type { PlaceKind, PlaceSummary } from "./types";
 
 // ── Filters ─────────────────────────────────────────────────────────────────
@@ -25,7 +29,7 @@ export const LATE_CHECKOUT = "12:00";
 export const ROOMY_CHECKOUT = "11:00";
 
 /**
- * Groep per plek: zonder vertrektijd (bevestigd of nog te bevestigen), uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
+ * Groep per plek: zonder vertrektijd (vrij of per 24 uur, niet afgewezen), uitslapers (12:00 of later), ruim (11:00 tot 12:00), vroeg (vóór 11:00) of onbekend.
  * Verdeling okt. 2026 (gepubliceerd, vaste tijd): ±350 uitslapers, ±310 ruim, ±60 vroeg.
  */
 export type DepartureKind = "vrij" | "uitslapers" | "ruim" | "vroeg" | "onbekend";
@@ -35,23 +39,39 @@ export type DepartureGroup = DepartureKind | "overig";
 /** Wat we per plek over vertrekken weten */
 export type DepartureFacts = Pick<PlaceSummary, "departure" | "checkoutUntil" | "departureCheck">;
 
-/**
- * "Geen vaste vertrektijd" volgens de bron, maar nog niet door een mens bevestigd (of met een voorwaarde).
- * Kandidaten staan wel op Zonder vertrektijd, onder de bevestigde plekken en met het label "nog niet bevestigd"
- * (besluit 16 oktober 2026). "Met voorwaarde" en "klopt niet" staan bij Overige.
- */
-export function departureUnconfirmed(p: DepartureFacts): boolean {
-  return (p.departure === "vrij" || p.departure === "per24") && p.departureCheck !== "bevestigd";
-}
+const LATE_MIN = timeToMinutes(LATE_CHECKOUT)!;
+const ROOMY_MIN = timeToMinutes(ROOMY_CHECKOUT)!;
 
 export function departureKind(p: DepartureFacts): DepartureKind {
   if (p.departure === "vrij" || p.departure === "per24")
     return p.departureCheck === "voorwaardelijk" || p.departureCheck === "afgewezen" ? "onbekend" : "vrij";
-  if (p.departure === "vast" && p.checkoutUntil) {
-    if (p.checkoutUntil >= LATE_CHECKOUT) return "uitslapers";
-    return p.checkoutUntil >= ROOMY_CHECKOUT ? "ruim" : "vroeg";
+  // Als minuten vergelijken: als tekst staat "9:00" na "11:00"
+  const min = p.departure === "vast" ? timeToMinutes(p.checkoutUntil) : undefined;
+  if (min !== undefined) {
+    if (min >= LATE_MIN) return "uitslapers";
+    return min >= ROOMY_MIN ? "ruim" : "vroeg";
   }
   return "onbekend";
+}
+
+/** Door een mens bevestigd "geen vaste vertrektijd" */
+export function departureConfirmed(p: DepartureFacts): boolean {
+  return departureKind(p) === "vrij" && p.departureCheck === "bevestigd";
+}
+
+/** Tweede sorteersleutel in elke sortering: bevestigd "geen vaste vertrektijd" eerst (bij gelijke stand) */
+export function confirmedFirst(a: DepartureFacts, b: DepartureFacts): number {
+  return Number(departureConfirmed(b)) - Number(departureConfirmed(a));
+}
+
+/**
+ * Sorteersleutel voor prijs, met dezelfde regel als de kaart (`cardPrice`): eerst plekken met een nachtprijs,
+ * dan plekken met alleen een prijs per persoon (voor twee personen is dat meer dan het bedrag), dan onbekend.
+ */
+export function priceRank(p: Pick<PlaceSummary, "priceEur" | "priceExtras">): [number, number] {
+  if (p.priceEur !== undefined) return [0, p.priceEur];
+  const pp = perPersonPrice(p);
+  return pp ? [1, pp.amount] : [2, 0];
 }
 
 const OTHER: DepartureKind[] = ["ruim", "vroeg", "onbekend"];
@@ -108,6 +128,13 @@ export const DEFAULT_FILTERS: Filters = {
 };
 
 type Params = { get(name: string): string | null };
+
+/** Op een vertrekpagina ligt de groep vast via het adres; op Overige kan nog "vroeg" of "onbekend" gekozen worden */
+export function withPage(f: Filters, page?: DeparturePage): Filters {
+  if (!page) return f;
+  if (page === "overig") return { ...f, departure: f.departure && pageOf(f.departure) === "overig" ? f.departure : "overig" };
+  return { ...f, departure: page };
+}
 
 export function parseFilters(p: Params): Filters {
   const num = (k: string) => {
@@ -202,6 +229,16 @@ export function nowInNL(): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }));
 }
 
+/**
+ * Kun je hier vandaag zeker niet meer aankomen? Alleen als de laatste aankomsttijd bekend is en voorbij is, en de plek
+ * niet dag en nacht open is. Onbekend telt niet als dicht (Dichtbij verbergt alleen wat zeker niet meer kan).
+ */
+export function arrivalClosed(p: Pick<PlaceSummary, "checkinUntil" | "access24h">, now = nowInNL()): boolean {
+  if (!p.checkinUntil || p.access24h) return false;
+  const [h, m] = p.checkinUntil.split(":").map(Number);
+  return now.getHours() * 60 + now.getMinutes() > h * 60 + m;
+}
+
 export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = nowInNL()): boolean | undefined {
   if (p.openAllYear) return true;
   if (!p.season) return undefined;
@@ -241,8 +278,8 @@ export interface Result {
 function recommendScore(p: PlaceSummary): number {
   const rating = p.ratingAvg ? (p.ratingAvg / 10) * Math.min(1, p.ratingCount / 5) : 0;
   const kind = departureKind(p);
-  // Bevestigd "geen vaste vertrektijd" staat altijd boven een kandidaat (+10)
-  const confirmed = kind === "vrij" && p.departureCheck === "bevestigd" ? 10 : 0;
+  // Door beheer bevestigd staat boven een regel die alleen uit de bron komt (+10); zichtbaar verschil is er niet meer
+  const confirmed = departureConfirmed(p) ? 10 : 0;
   return confirmed + p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0) + (kind === "vrij" ? 0.3 : kind === "uitslapers" ? 0.15 : 0);
 }
 
@@ -258,6 +295,8 @@ export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
     }
     if (f.facilities.some((k) => p[k] !== true)) continue;
     if (f.kinds.length && (!p.kind || !f.kinds.includes(p.kind))) continue;
+    // "Gratis" en "tot € X" gaan over de nachtprijs van de plek. Alleen een prijs per persoon zegt niet wat je met
+    // z'n tweeën betaalt; zo'n plek telt hier als prijs onbekend (wel zichtbaar met "ook onbekende prijs").
     const unknownPriceOk = f.priceUnknown && p.priceEur === undefined;
     if (f.free && p.priceEur !== 0 && !unknownPriceOk) continue;
     if (f.maxPrice && !unknownPriceOk && (p.priceEur === undefined || p.priceEur > f.maxPrice)) continue;
@@ -269,13 +308,18 @@ export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
     results.push({ place: p, km });
   }
 
-  const byPrice = (r: Result) => r.place.priceEur ?? Number.POSITIVE_INFINITY;
+  // De gekozen sortering gaat voor; bij gelijke stand staat bevestigd "geen vaste vertrektijd" eerst
+  const byPrice = (a: Result, b: Result) => {
+    const [ta, va] = priceRank(a.place);
+    const [tb, vb] = priceRank(b.place);
+    return ta - tb || va - vb;
+  };
   switch (f.sort) {
     case "afstand":
-      results = results.sort((a, b) => (a.km ?? 0) - (b.km ?? 0));
+      results = results.sort((a, b) => (a.km ?? 0) - (b.km ?? 0) || confirmedFirst(a.place, b.place));
       break;
     case "prijs":
-      results = results.sort((a, b) => byPrice(a) - byPrice(b));
+      results = results.sort((a, b) => byPrice(a, b) || confirmedFirst(a.place, b.place) || recommendScore(b.place) - recommendScore(a.place));
       break;
     case "score":
       results = results.sort((a, b) => (b.place.ratingAvg ?? 0) - (a.place.ratingAvg ?? 0) || recommendScore(b.place) - recommendScore(a.place));

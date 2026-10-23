@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { CardSkeleton } from "@/components/place-ui";
 import { formatDate } from "@/lib/format";
 import { getStats } from "@/lib/places";
-import { SearchApp } from "../zoeken/search-app";
+import { Search } from "../zoeken/search";
 
 export const metadata: Metadata = {
   title: "Camperplaatsen zonder vertrektijd",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/zonder-vertrektijd" },
 };
 
-export default async function Page() {
+export default async function Page({ searchParams }: PageProps<"/zonder-vertrektijd">) {
   const { updatedAt } = await getStats();
   return (
     <Suspense
@@ -23,7 +23,7 @@ export default async function Page() {
         </div>
       }
     >
-      <SearchApp page="vrij" updated={updatedAt ? formatDate(updatedAt) : undefined} />
+      <Search page="vrij" searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
     </Suspense>
   );
 }

@@ -6,8 +6,10 @@ import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/li
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
 import { useMyLocation } from "@/lib/my-location";
-import { cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
+import { arrivalText, cardPrice, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
+import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { useTrip } from "@/lib/store";
+import { isIncomplete } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
@@ -32,6 +34,7 @@ export function PlacePhoto({
   town,
   className = "",
   sizes = "small",
+  eager = sizes === "large",
   onFail,
 }: {
   src?: string;
@@ -40,6 +43,8 @@ export function PlacePhoto({
   town?: string;
   className?: string;
   sizes?: "small" | "large";
+  /** Bovenaan de pagina: meteen laden (grootste beeld bij openen, LCP) */
+  eager?: boolean;
   onFail?: () => void;
 }) {
   // Volgorde: verkleinde WebP van de grote versie (wsrv.nl), de grote versie zelf, het origineel van de site.
@@ -114,7 +119,8 @@ export function PlacePhoto({
         key={current}
         src={current}
         alt={alt}
-        loading={sizes === "large" ? "eager" : "lazy"}
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
         decoding="async"
         referrerPolicy="no-referrer"
         onError={fail}
@@ -133,7 +139,7 @@ export function CreditedPhoto({ src, alt, credit, className = "" }: { src?: stri
     <>
       <PlacePhoto src={src} alt={alt} className={className} onFail={onFail} />
       {src && credit && !failed && (
-        <span className="absolute top-2 right-2 max-w-[70%] truncate rounded-md bg-black/55 px-2 py-0.5 text-xs text-white">
+        <span className="absolute top-2 right-2 max-w-[70%] truncate rounded-md bg-black/55 px-2 py-0.5 text-sm text-white">
           Foto: {credit}
         </span>
       )}
@@ -238,8 +244,9 @@ export function OpenChip({ place, onlyClosed = false }: { place: Pick<PlaceSumma
 }
 
 /** Aankomst of toegang in een paar woorden, alleen wat de bron noemt */
-function arrivalShort(p: Pick<PlaceSummary, "checkinFrom" | "access24h" | "accessHours">): string | undefined {
-  if (p.checkinFrom) return `Aankomst vanaf ${p.checkinFrom}`;
+function arrivalShort(p: Pick<PlaceSummary, "checkinFrom" | "checkinUntil" | "access24h" | "accessHours">): string | undefined {
+  const arrival = arrivalText(p);
+  if (arrival) return arrival;
   if (p.access24h) return "Dag en nacht open";
   if (p.accessHours) return `Poort open ${p.accessHours}`;
   return undefined;
@@ -252,6 +259,7 @@ export function PlaceCard({
   active,
   onHover,
   layout = "row",
+  eager,
 }: {
   place: PlaceSummary;
   km?: number;
@@ -260,6 +268,8 @@ export function PlaceCard({
   active?: boolean;
   onHover?: (slug: string | null) => void;
   layout?: "row" | "stack";
+  /** Eerste kaarten van een lijst: foto meteen laden */
+  eager?: boolean;
 }) {
   const stack = layout === "stack";
   const hasPhoto = Boolean(place.imageUrl);
@@ -295,7 +305,7 @@ export function PlaceCard({
         }`}
       >
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
-          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
+          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
         </ViewTransition>
         {place.priceEur === 0 && (
           <span className="absolute top-2 left-2 rounded-md bg-ember px-2 py-0.5 font-display text-sm font-semibold text-on-ember">Gratis</span>
@@ -320,7 +330,7 @@ export function PlaceCard({
         </div>
 
         {/* Wanneer: vertrekken en aankomen, en alleen een seizoensmelding als het nu dicht is */}
-        {(departureShort(place) || arrival) && (
+        {(departureShort(place) || isIncomplete(place) || arrival) && (
           <div className="min-w-0 space-y-0.5">
             <DepartureChip place={place} />
             {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
@@ -360,15 +370,22 @@ export function CardSkeleton() {
 /** Vertrekregel op de kaart: groen als je kunt vertrekken wanneer je wilt */
 export function DepartureChip({ place }: { place: DepartureFacts }) {
   const label = departureShort(place);
-  if (!label) return null;
+  if (!label) {
+    // Onvolledig: geen vertrekregel. Grijs, met tekst, zodat het niet alleen op kleur leunt (PRD, besluit 18 oktober 2026)
+    if (!isIncomplete(place)) return null;
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-md bg-sunken px-1.5 py-0.5 text-sm leading-tight font-semibold text-muted">
+        <Sign name="clock" size={16} state="unknown" />
+        Vertrektijd onbekend
+      </span>
+    );
+  }
   const kind = departureKind(place);
-  // Groen alleen na bevestiging door een mens; een kandidaat krijgt de neutrale stijl met "nog niet bevestigd"
-  const confirmed = kind !== "vrij" || place.departureCheck === "bevestigd";
-  const style =
-    kind === "vrij" && confirmed ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
+  // Groen bij geen vaste vertrektijd (een bron is genoeg); met voorwaarde of afgewezen valt het onder "onbekend"
+  const style = kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm leading-tight font-semibold ${style}`}>
-      <Sign name="clock" size={16} state={(kind === "vrij" && confirmed) || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
+      <Sign name="clock" size={16} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
       {label}
     </span>
   );
@@ -377,13 +394,22 @@ export function DepartureChip({ place }: { place: DepartureFacts }) {
 function CardPrice({ place }: { place: PlaceSummary }) {
   const price = cardPrice(place);
   if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
-  // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina
-  const surcharges = price.extras || place.touristTaxIncluded === false;
+  // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina.
+  // Staat elk onderdeel vast, dan het totaal voor 2 personen met toeristenbelasting en stroom.
+  const t = nightTotal(place);
+  const total = t.total !== undefined && t.parts.length > 1 ? t.total : undefined;
+  const surcharges = total === undefined && (price.extras || place.touristTaxIncluded === false);
   return (
     <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
       <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
-      {(place.priceEur ?? 0) > 0 && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
+      {price.perNight && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
+      {total !== undefined && (
+        <p className="text-sm text-muted">
+          {TOTAL_PERSONS} pers. {t.from ? "vanaf " : ""}
+          <span className="font-semibold text-ink-2">{eur(total)}</span>
+        </p>
+      )}
       {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
     </div>
   );

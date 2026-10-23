@@ -123,7 +123,7 @@ export function AccountView() {
             <p className="font-semibold text-alert">Weet je het zeker?</p>
             <p className="mt-1 text-ink-2">
               Je account wordt direct en definitief verwijderd, met je reis, je camper, je uitgaven en je papieren. Dit kun je
-              niet ongedaan maken. Reviews zijn niet aan je account gekoppeld en blijven staan.
+              niet ongedaan maken. Je reviews blijven staan, zonder koppeling aan je account.
             </p>
             <label className="mt-3 block">
               <span className="mb-1 block font-semibold">Typ VERWIJDEREN om te bevestigen</span>
@@ -133,7 +133,7 @@ export function AccountView() {
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}
-                className="h-12 w-full rounded-xl border-2 border-line bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none"
+                className="h-12 w-full rounded-xl border-2 border-line bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none focus:ring-2 focus:ring-alert"
               />
             </label>
             <div className="mt-3 flex gap-3">

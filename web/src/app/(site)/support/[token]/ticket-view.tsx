@@ -99,7 +99,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
         <form onSubmit={reply} className="mt-6 space-y-3">
           <label className="block">
             <span className="mb-1.5 block font-semibold">Reageren</span>
-            <textarea name="body" required minLength={1} maxLength={5000} rows={4} className="w-full rounded-lg border border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none" />
+            <textarea name="body" required minLength={1} maxLength={5000} rows={4} className="w-full rounded-lg border border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest" />
           </label>
           {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
           <button type="submit" disabled={busy} className="h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest disabled:opacity-60">
