@@ -9,6 +9,7 @@ import { useMyLocation } from "@/lib/my-location";
 import { arrivalText, cardPrice, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { useTrip } from "@/lib/store";
+import { isIncomplete } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
@@ -329,7 +330,7 @@ export function PlaceCard({
         </div>
 
         {/* Wanneer: vertrekken en aankomen, en alleen een seizoensmelding als het nu dicht is */}
-        {(departureShort(place) || arrival) && (
+        {(departureShort(place) || isIncomplete(place) || arrival) && (
           <div className="min-w-0 space-y-0.5">
             <DepartureChip place={place} />
             {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
@@ -369,7 +370,16 @@ export function CardSkeleton() {
 /** Vertrekregel op de kaart: groen als je kunt vertrekken wanneer je wilt */
 export function DepartureChip({ place }: { place: DepartureFacts }) {
   const label = departureShort(place);
-  if (!label) return null;
+  if (!label) {
+    // Onvolledig: geen vertrekregel. Grijs, met tekst, zodat het niet alleen op kleur leunt (PRD, besluit 18 oktober 2026)
+    if (!isIncomplete(place)) return null;
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-md bg-sunken px-1.5 py-0.5 text-sm leading-tight font-semibold text-muted">
+        <Sign name="clock" size={16} state="unknown" />
+        Vertrektijd onbekend
+      </span>
+    );
+  }
   const kind = departureKind(place);
   // Groen bij geen vaste vertrektijd (een bron is genoeg); met voorwaarde of afgewezen valt het onder "onbekend"
   const style = kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";

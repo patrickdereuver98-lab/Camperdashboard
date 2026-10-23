@@ -6,6 +6,8 @@ import { coarse, formatKm, type LatLng } from "@/lib/geo";
 import { NavigateButton } from "@/components/navigate";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
+import { isPossiblyOutdated } from "@/lib/place-status";
+import { useHydrated } from "@/lib/use-media";
 import type { Photo, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
@@ -522,4 +524,14 @@ export function ShareButton({ title, className = "" }: { title: string; classNam
       {copied ? "Link gekopieerd" : "Delen"}
     </button>
   );
+}
+
+/**
+ * ", mogelijk verouderd" achter "Laatste update" als de laatste controle meer dan 12 maanden geleden is (PRD,
+ * "Databronnen"). Pas na hydratatie: de pagina staat in de cache en "nu" is de datum van de bezoeker.
+ */
+export function OutdatedNote({ verifiedAt, departureCheckedAt }: { verifiedAt?: string; departureCheckedAt?: string }) {
+  const hydrated = useHydrated();
+  if (!hydrated || !isPossiblyOutdated({ verifiedAt, departureCheckedAt })) return null;
+  return <span className="font-semibold text-ink-2">, mogelijk verouderd</span>;
 }
