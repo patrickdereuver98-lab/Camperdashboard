@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
+import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
 import { NavigateButton } from "@/components/navigate";
@@ -384,8 +385,9 @@ function Decision({ place }: { place: Place }) {
               <dt className="text-ink-2">{r.label}</dt>
               <dd className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${r.known ? "" : "text-muted"}`}>{r.value}</dd>
             </div>
-            {r.sign === "euro" && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0) && (
+            {r.sign === "euro" && (price || place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0) && (
               <dd className="mt-1 pl-10 text-sm text-ink-2">
+                <NightTotalLine place={place} />
                 {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}
                 {place.touristTaxIncluded !== undefined && <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>}
                 {extras.length > 0 && (
@@ -411,6 +413,36 @@ function Decision({ place }: { place: Place }) {
         ))}
       </dl>
     </section>
+  );
+}
+
+/**
+ * Wat een nacht voor 2 personen kost, met toeristenbelasting en stroom. Alleen een bedrag als elk onderdeel vaststaat;
+ * anders staat er wat ontbreekt. Zo ziet de bezoeker nooit een totaal dat volledig lijkt maar het niet is.
+ */
+const OPEN_REASON: Record<string, string> = {
+  toeristenbelasting: "de toeristenbelasting is onbekend",
+  "stroom (per kWh)": "stroom kost per kWh",
+  stroom: "de stroomprijs per nacht is onbekend",
+  "of de prijs per persoon erbij komt": "het is niet duidelijk of de prijs per persoon erbij komt",
+};
+
+function NightTotalLine({ place }: { place: Place }) {
+  const t = nightTotal(place);
+  if (t.open.includes("prijs per nacht")) return null;
+  if (t.total === undefined) {
+    const why = t.open.map((o) => OPEN_REASON[o] ?? o);
+    const list = why.length > 1 ? `${why.slice(0, -1).join(", ")} en ${why.at(-1)}` : why[0];
+    return <p>Geen totaal voor {TOTAL_PERSONS} personen: {list}.</p>;
+  }
+  const noPower = !place.priceExtras?.some((x) => x.label === "Stroom");
+  return (
+    <p>
+      Voor {TOTAL_PERSONS} personen {t.from ? "vanaf " : ""}
+      <strong className="font-semibold text-ink">{eur(t.total)}</strong> per nacht
+      {t.parts.length > 1 && ` (${t.parts.map((x) => `${x.label.toLowerCase()} ${eur(x.amount)}`).join(", ")})`}.
+      {noPower && " Geen stroomtoeslag genoemd."}
+    </p>
   );
 }
 

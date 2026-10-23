@@ -6,7 +6,8 @@ import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/li
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
 import { useMyLocation } from "@/lib/my-location";
-import { arrivalText, cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
+import { arrivalText, cardPrice, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
+import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { useTrip } from "@/lib/store";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
@@ -383,13 +384,22 @@ export function DepartureChip({ place }: { place: DepartureFacts }) {
 function CardPrice({ place }: { place: PlaceSummary }) {
   const price = cardPrice(place);
   if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
-  // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina
-  const surcharges = price.extras || place.touristTaxIncluded === false;
+  // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina.
+  // Staat elk onderdeel vast, dan het totaal voor 2 personen met toeristenbelasting en stroom.
+  const t = nightTotal(place);
+  const total = t.total !== undefined && t.parts.length > 1 ? t.total : undefined;
+  const surcharges = total === undefined && (price.extras || place.touristTaxIncluded === false);
   return (
     <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
       <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
       {price.perNight && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
+      {total !== undefined && (
+        <p className="text-sm text-muted">
+          {TOTAL_PERSONS} pers. {t.from ? "vanaf " : ""}
+          <span className="font-semibold text-ink-2">{eur(total)}</span>
+        </p>
+      )}
       {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
     </div>
   );
