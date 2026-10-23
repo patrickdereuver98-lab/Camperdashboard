@@ -41,7 +41,7 @@ export const PDF_RE = /reglement|huisregel|huishoudelijk|voorwaarden|tarie|prijs
 /** Links naar PDF's op dezelfde site die over regels of tarieven gaan, hoogstens `max` */
 export function pdfLinks(html: string, home: URL, max = 2): string[] {
   const out: string[] = [];
-  for (const m of html.matchAll(/<a\s[^>]*href=["']([^"'#]+\.pdf)(?:\?[^"']*)?["'][^>]*>([\s\S]{0,300}?)<\/a>/gi)) {
+  for (const m of html.matchAll(/<a\s[^>]*href=["']([^"'#]+\.pdf)(?:\?[^"']*)?["'][^>]*>([\s\S]{0,3000}?)<\/a>/gi)) {
     let u: URL;
     try {
       u = new URL(m[1], home);
@@ -93,10 +93,14 @@ const decode = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** Links naar pagina's op dezelfde site, met hun zichtbare tekst */
+/**
+ * Links naar pagina's op dezelfde site, met hun zichtbare tekst. De inhoud van een link mag lang zijn: een menu-item met
+ * een SVG-pijltje erin is al snel meer dan 400 tekens, en zo'n link werd vroeger weggegooid (Astra-thema: 6 van de 13
+ * menulinks, waaronder "Aankomst en Vertrek"). De tekst bewaren we afgekapt op 80 tekens.
+ */
 export function extractLinks(html: string, home: URL): Link[] {
   const seen = new Map<string, string>();
-  for (const m of html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]{0,400}?)<\/a>/gi)) {
+  for (const m of html.matchAll(/<a\s[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]{0,3000}?)<\/a>/gi)) {
     let u: URL;
     try {
       u = new URL(m[1], home);
@@ -153,6 +157,24 @@ export function rankLinks(links: Link[], home: URL, max = MAX_SUBPAGES): string[
     out.push(l.url);
     if (out.length >= max) break;
   }
+  return out;
+}
+
+/**
+ * Aanvullen na de ranking: bij een kleine site alle eigen pagina's (die zonder herkenbaar trefwoord, zoals "/over"),
+ * en bij weinig herkende pagina's ook de vaste adressen. `weak` is het oordeel over de herkende pagina's alleen: de
+ * kleine-site-links mogen de vaste adressen en de sitemap niet overslaan (parser 42, eerste versie: 21 plekken
+ * raakten daardoor hun vertrektijd kwijt). Bij een site van één pagina geen vaste adressen raden.
+ */
+export function addExtraPages(picked: string[], links: Link[], home: URL, weak: boolean, single: boolean): string[] {
+  const out = [...picked];
+  if (links.length && links.length <= SMALL_SITE)
+    for (const l of links) if (out.length < MAX_SUBPAGES && !out.includes(l.url)) out.push(l.url);
+  if (!single && weak)
+    for (const path of PROBE_PATHS) {
+      const url = new URL(path, home).href;
+      if (!out.includes(url)) out.push(url);
+    }
   return out;
 }
 
