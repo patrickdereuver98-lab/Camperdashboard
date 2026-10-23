@@ -32,6 +32,7 @@ export function PlacePhoto({
   town,
   className = "",
   sizes = "small",
+  eager = sizes === "large",
   onFail,
 }: {
   src?: string;
@@ -40,6 +41,8 @@ export function PlacePhoto({
   town?: string;
   className?: string;
   sizes?: "small" | "large";
+  /** Bovenaan de pagina: meteen laden (grootste beeld bij openen, LCP) */
+  eager?: boolean;
   onFail?: () => void;
 }) {
   // Volgorde: verkleinde WebP van de grote versie (wsrv.nl), de grote versie zelf, het origineel van de site.
@@ -114,7 +117,8 @@ export function PlacePhoto({
         key={current}
         src={current}
         alt={alt}
-        loading={sizes === "large" ? "eager" : "lazy"}
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
         decoding="async"
         referrerPolicy="no-referrer"
         onError={fail}
@@ -252,6 +256,7 @@ export function PlaceCard({
   active,
   onHover,
   layout = "row",
+  eager,
 }: {
   place: PlaceSummary;
   km?: number;
@@ -260,6 +265,8 @@ export function PlaceCard({
   active?: boolean;
   onHover?: (slug: string | null) => void;
   layout?: "row" | "stack";
+  /** Eerste kaarten van een lijst: foto meteen laden */
+  eager?: boolean;
 }) {
   const stack = layout === "stack";
   const hasPhoto = Boolean(place.imageUrl);
@@ -295,7 +302,7 @@ export function PlaceCard({
         }`}
       >
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
-          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
+          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
         </ViewTransition>
         {place.priceEur === 0 && (
           <span className="absolute top-2 left-2 rounded-md bg-ember px-2 py-0.5 font-display text-sm font-semibold text-on-ember">Gratis</span>
