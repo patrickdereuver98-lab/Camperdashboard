@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
-import { departureKind, searchHref } from "@/lib/search";
+import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, timesSourceLine, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
@@ -12,6 +12,8 @@ import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
+import { inBbox } from "@/lib/bbox";
+import { areaPath, breadcrumbLd, ISLANDS, ldJson, provinceSlug } from "@/lib/seo-pages";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
@@ -85,20 +87,37 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const address = [place.street, [place.postcode, place.town].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const tel = place.phone?.split(/[;,]/)[0]?.trim();
 
+  const provPath = `/camperplaatsen/${provinceSlug(place.province)}`;
+  const island = ISLANDS.find((i) => i.province === place.province && inBbox(place, i.bbox));
+
+  // Alleen velden die we kennen; onbekend blijft weg (JSON.stringify laat undefined vallen)
+  const amenities = FACILITY_ROWS.filter((f) => typeof place[f.key] === "boolean").map((f) => ({
+    "@type": "LocationFeatureSpecification",
+    name: f.yes,
+    value: place[f.key] as boolean,
+  }));
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Campground",
     name: place.name,
     url: `${SITE_URL}/plek/${place.slug}`,
-    image: photos.map((p) => upgradePhotoUrl(p.url)),
+    image: photos.length ? photos.map((p) => upgradePhotoUrl(p.url)) : undefined,
+    description: place.description,
     address: { "@type": "PostalAddress", streetAddress: place.street, postalCode: place.postcode, addressLocality: place.town, addressRegion: place.province, addressCountry: "NL" },
     geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lng },
     telephone: tel,
     petsAllowed: place.dogs,
+    amenityFeature: amenities.length ? amenities : undefined,
     ...(place.ratingAvg && place.ratingCount
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: place.ratingAvg, bestRating: 10, worstRating: 1, ratingCount: place.ratingCount } }
       : {}),
   };
+  const crumbs = breadcrumbLd(SITE_URL, [
+    { name: "Start", path: "/" },
+    { name: place.province, path: provPath },
+    ...(island ? [{ name: island.name, path: areaPath(island.province, island.slug) }] : []),
+    { name: place.name, path: `/plek/${place.slug}` },
+  ]);
 
   const price = cardPrice(place);
   const rule = reservationRuleOf(place);
@@ -109,13 +128,14 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   return (
     <article className="pb-24 md:pb-8">
       <TrackView slug={place.slug} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(crumbs) }} />
 
       <div className="mx-auto max-w-6xl sm:px-6 sm:pt-4">
         <nav aria-label="Kruimelpad" className="hidden items-center gap-1 pb-3 text-sm text-muted sm:flex">
           <Link href="/zoeken" className="hover:text-forest hover:underline">Zoeken</Link>
           <Icon name="chevronRight" size={14} />
-          <Link href={searchHref({ province: place.province, where: place.province })} className="hover:text-forest hover:underline">
+          <Link href={provPath} className="hover:text-forest hover:underline">
             {place.province}
           </Link>
           <Icon name="chevronRight" size={14} />
@@ -223,6 +243,16 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             </ul>
           </section>
         )}
+        <p className="mt-6 flex flex-wrap gap-x-5 gap-y-1">
+          {island && (
+            <Link href={areaPath(island.province, island.slug)} className="-my-2 inline-block py-2 font-semibold text-forest underline underline-offset-2">
+              Alle camperplaatsen op {island.name}
+            </Link>
+          )}
+          <Link href={provPath} className="-my-2 inline-block py-2 font-semibold text-forest underline underline-offset-2">
+            Alle camperplaatsen in {place.province}
+          </Link>
+        </p>
       </div>
 
       {/* Vaste actiebalk op mobiel: altijd binnen één tik bellen, website of route */}
