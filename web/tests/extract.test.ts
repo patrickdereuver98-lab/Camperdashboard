@@ -415,3 +415,16 @@ test("vertrek na 12 uur € 10 extra: optie zonder eindtijd", () => {
   const r = page("<p>Vertrekken voor 12.00 uur. Vertrek na 12 uur € 10 extra.</p>");
   assert.equal(r.checkout_until, "12:00");
 });
+
+test("prijs: '2 personen inclusief … € 30,12' en 'all-inclusief, 2 personen … per nacht € 30,50' (steekproef 24 oktober)", () => {
+  // De Zeeuwse Vlag: bedrag direct na wat er inbegrepen is, zonder "per nacht"
+  assert.equal(
+    page("<p>Onze tarieven Aankomst vanaf 13:30 uur, vertrek voor 11:30 uur 2 personen inclusief kampeermiddel, auto, elektriciteit en toeristenbelasting € 30,12 Volwassene en kinderen vanaf 5 jaar € 7,50 Kinderen van 1 t/m 4 jaar € 3,75 Auto € 2,00 Caravan € 8,00</p>").price_eur,
+    30.12,
+  );
+  // De Catshoek: eenheid voor het bedrag, met een streepje in "all-inclusief"
+  assert.equal(
+    page("<p>Tarieven Minicamping De Catshoek 1 plaats all-inclusief, 2 personen, caravan/tent/camper, elektra en 1 auto, per nacht € 30,50 1 extra persoon € 3,50 1 extra tent € 5,- vermelde tarieven zijn exclusief toeristenbelasting</p>").price_eur,
+    30.5,
+  );
+});
