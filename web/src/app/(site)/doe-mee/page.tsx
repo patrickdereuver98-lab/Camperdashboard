@@ -46,6 +46,17 @@ export default async function HelpPage() {
         </Link>
       </div>
 
+      <section aria-labelledby="eigenaar" className="mt-6 rounded-xl bg-surface p-4 shadow-low">
+        <h2 id="eigenaar" className="font-display text-lg font-semibold">Heb je zelf een camperplaats of camping?</h2>
+        <p className="mt-1 text-ink-2">
+          Zoek je plek op en tik daar op de knop voor eigenaren. Dan vul je de vertrektijd, de prijs en de rest zelf in. We
+          kijken het na en zetten het daarna op de site.
+        </p>
+        <Link href="/zoeken" className="mt-2 inline-flex h-11 items-center gap-2 font-semibold text-forest underline underline-offset-2">
+          <Icon name="search" size={18} /> Zoek je plek
+        </Link>
+      </section>
+
       <section id="vertrektijden" className="mt-12 scroll-mt-24">
         <h2 className="font-display text-2xl font-semibold">Weet jij hoe laat je hier weg moet?</h2>
         <p className="mt-1 text-ink-2">Kies je provincie en tik op een plek waar je bent geweest.</p>
