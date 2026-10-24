@@ -134,3 +134,50 @@ het implementatieplan.
 - Ronde 2 proef (23 oktober): 0 van 8 steekproefplekken kreeg via zoeken of een tweede leesronde een vertrektijd; de tijd staat meestal nergens. Voorstel in `docs/specs/README.md` nummer 59.
 - Pipeline v48 live (24 oktober): lege startpagina wist niets meer; van de 18 teruggevallen plekken zijn er 7 weer gepubliceerd (prijs teruggezet uit de baseline), 11 blijven concept.
 - Kapotte websites (24 oktober): 7 nieuwe adressen gevonden, 5 plekken kregen daardoor een vertrektijd en staan online. 11 sites hebben een certificaatfout (niet omzeild), de rest blijft zonder adres.
+
+---
+
+## 6. Naar beta (24 oktober 2026)
+
+**Beta = gesloten beta:** de site draait op het Vercel-adres van `main`, zonder eigen domein en zonder verplicht account;
+testers komen uit een paar Facebookgroepen en fora. Reviews staan uit tot er eigen mail is; vertrektijd doorgeven,
+eigenaar aanvullen, bewaren, reis en offline werken zonder account. Doel van de beta: laten zien dat de kernbelofte
+(hoe laat moet ik weg) klopt, en leren welke tijden ontbreken of fout zijn.
+
+### 6a. Stand base version (live cijfers)
+
+| | Nu | Beta-doel |
+|---|---|---|
+| Gepubliceerde plekken | 2.095 (1.509 concept) | zo houden |
+| Met vertrektijd | 1.362 (65%), waarvan 1.331 vaste tijd | ≥ 70% van de camperplaatsen |
+| Camperplaatsen met vertrektijd | 137 van 295 (46%) | ≥ 60% of eerlijk "onbekend" met invulroute |
+| Met nachtprijs | 1.221 (58%) | 70% (PRD-release: 90%) |
+| Met laatste aankomst / reserveerregel | 189 / 741 | zo laten groeien |
+| Met contactgegevens | 1.990 (95%) | zo houden |
+| Door beheer bevestigd | 0 | 0 mag in beta, wel de route klaar |
+| Reviews / gebruikers | 0 / 0 | n.v.t. in beta |
+| Database | 198 MB van 500 MB, cron-logboek 156 MB | < 150 MB, groei < 2 MB per dag |
+
+### 6b. Wat de base version is
+Sterk: vertrektijd centraal op kaart en plekpagina; prijs met toeslagen; geen tracking; snel en offline; eerlijk
+"onbekend"; 249 unit-tests en 192 Playwright-tests groen; scraper met controle tegen een baseline (geen verlies meer).
+Zwak: een derde van de camperplaatsen zonder tijd; geen beheeraccount en geen eigen mail (inzendingen en reviews
+bereiken niemand); bedrijfsgegevens staan nog als "[… nog invullen]" op de juridische pagina's; geen eigen domein;
+veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
+
+### 6c. Verbeterplan en wie wat doet
+
+| # | Wat | Wie | Status |
+|---|---|---|---|
+| B1 | PR #56 en #57 (design, scraper v47/v48, eigenaarsroute, bronnenlaag) naar `acceptatie` en `main` | Agent | 🔄 |
+| B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 50.000 regels weg, rest in blokken; `truncate` en functie met `delete` vragen bevestiging in de Supabase-tool |
+| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ⬜ 29 gedaan |
+| B4 | Vertrektijd: Beheer → inzendingen zonder beheeraccount afhandelen: Patrick krijgt beheerrechten via het bestaande account of een melding | Agent | ⬜ |
+| B5 | Dode websites: nog ~100 plekken zonder adres; foutlijst voor Beheer | Agent | ⬜ |
+| B6 | Ronde 2: aanwijzingen zonder controle (8) en twijfelgevallen (18+14) handmatig afwerken voor zover mogelijk | Agent | ⬜ |
+| B7 | Prijzen naar 70%: scraper op PDF-tarieven en zoekagenten voor prijs | Agent | ⬜ |
+| B8 | Juridische pagina's: bedrijfsgegevens leeg tonen als "hobbyproject, contact via het formulier" in plaats van "[nog invullen]" | Agent | ⬜ |
+| B9 | Alleen Patrick: naam en contactadres, domein, mailprovider, OAuth-sleutels, back-upgeheimen | Patrick | 👤 (niet nodig voor de gesloten beta, wel voor livegang) |
+
+Volgorde: B1 → B2 → B3 → B5 → B6 → B7 → B8 → B4.
+
