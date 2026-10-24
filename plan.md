@@ -171,7 +171,7 @@ veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
 |---|---|---|---|
 | B1 | PR #56 en #57 (design, scraper v47/v48, eigenaarsroute, bronnenlaag) naar `acceptatie` en `main` | Agent | 🔄 |
 | B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 50.000 regels weg, rest in blokken; `truncate` en functie met `delete` vragen bevestiging in de Supabase-tool |
-| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ⬜ 29 gedaan |
+| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ✅ 24 okt: 1.395 plekken aangepast, 2.256 klopten al |
 | B4 | Vertrektijd: Beheer → inzendingen zonder beheeraccount afhandelen: Patrick krijgt beheerrechten via het bestaande account of een melding | Agent | ⬜ |
 | B5 | Dode websites: nog ~100 plekken zonder adres; foutlijst voor Beheer | Agent | ⬜ |
 | B6 | Ronde 2: aanwijzingen zonder controle (8) en twijfelgevallen (18+14) handmatig afwerken voor zover mogelijk | Agent | ⬜ |
