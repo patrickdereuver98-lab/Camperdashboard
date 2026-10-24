@@ -98,7 +98,7 @@ Besluit 18 oktober 2026: alle bruikbare informatie wordt gebruikt, ook reviews e
 
 | Functie | Voordeel voor de gebruiker | Prioriteit |
 |---|---|---|
-| Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend); de letterlijke bronzin staat in beheer en op de plekpagina klein onder de vertrekregel ("Bron: “…” (website)", besluit eigenaar 19 oktober 2026); verder per pagina "Laatste update: datum" | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
+| Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend); de letterlijke bronzin staat alleen in beheer (besluit eigenaar 23 oktober 2026, terug van 19 oktober); verder per pagina "Laatste update: datum" | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
 | Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (11:00 tot 12:00 "ruim", vóór 11:00 "vroeg", of onbekend, met keuze daartussen), met tabbladen boven de resultaten en chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
 | Groene vertrekregel uit een bron (website, zoekagent met letterlijk citaat, OpenStreetMap); beheer kan afwijzen of een voorwaarde markeren | Zekerheid op de belangrijkste pagina | Must |
 | Prijs met "vanaf", hoogste tarief en losse toeslagen | Geen verrassingen bij aankomst | Must |
@@ -210,7 +210,7 @@ Could-functies blijven bestaan, maar krijgen geen nieuw werk zolang de kern niet
 
 1. ~~Hoe streng met vertrektijden?~~ **Besloten (11 oktober 2026):** aparte pagina's "Zonder vertrektijd",
    "Uitslapers" (vertrek 12:00 of later) en "Overige". Aangevuld 11 oktober: binnen Overige onderscheid tussen
-   "ruim" (11:00 tot 12:00, de norm) en "vroeg" (vóór 11:00, ongebruikelijk). Bronzinnen niet meer op de site; **gewijzigd (19 oktober 2026, eigenaar):** de bronzin van de vertrektijd mag op de plekpagina blijven, klein.
+   "ruim" (11:00 tot 12:00, de norm) en "vroeg" (vóór 11:00, ongebruikelijk). Bronzinnen niet meer op de site; **gewijzigd (19 oktober 2026, eigenaar):** de bronzin van de vertrektijd mag op de plekpagina blijven, klein. **Teruggedraaid (23 oktober 2026, eigenaar):** de bronzin hoeft er niet te staan; alleen in beheer.
 2. ~~Definitieve publicatiedrempel~~ **Besloten 12 oktober (0,45), aangevuld 18 oktober 2026:** volledig met
    vertrekregel, onvolledig (grijs) zonder; zie "Wanneer staat een plek online".
 3. ~~Websitefoto's~~ **Besloten (11 oktober 2026):** overal aan, met bronvermelding en verwijdering op verzoek via

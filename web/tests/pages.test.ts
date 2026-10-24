@@ -1,7 +1,7 @@
 // Welke pagina's de scraper leest: vertrekpagina's eerst, op adres én linktekst, met de sitemap als terugval.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decodeHtml, deeperLinks, extractLinks, homeCandidates, needsSitemap, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
+import { addExtraPages, decodeHtml, emptySite, deeperLinks, extractLinks, homeCandidates, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
 
 const home = new URL("https://camping-dewei.nl/");
 
@@ -79,4 +79,63 @@ test("startpagina: verhuisde subpagina één niveau diep valt terug op het domei
   ]);
   assert.ok(!homeCandidates("https://www.logerenbijdeboswachter.nl/kamperen/dasselaar").includes("https://www.logerenbijdeboswachter.nl/"));
   assert.deepEqual(homeCandidates("https://www.camping.nl/"), ["https://www.camping.nl/", "https://camping.nl/", "http://www.camping.nl/"]);
+});
+
+test("WordPress zonder nette adressen: '/?page_id=21' is een eigen pagina, niet de homepage", () => {
+  const home = new URL("https://www.campingmaereheerd.nl/");
+  const html = `<a href="https://campingmaereheerd.nl/">Home</a><a href="https://campingmaereheerd.nl/?page_id=21">Huisregels</a><a href="https://campingmaereheerd.nl/?page_id=95">Tarieven</a>`;
+  const links = extractLinks(html, home);
+  assert.deepEqual(links.map((l) => l.url).sort(), ["https://campingmaereheerd.nl/?page_id=21", "https://campingmaereheerd.nl/?page_id=95"]);
+  assert.deepEqual(rankLinks(links, home), ["https://campingmaereheerd.nl/?page_id=21", "https://campingmaereheerd.nl/?page_id=95"]);
+});
+
+test("reserveren telt als pagina met tijden en tarieven", () => {
+  const home = new URL("https://www.dereuten.com/");
+  assert.deepEqual(rankLinks(extractLinks(`<a href="/reserveren">Reserveren</a>`, home), home), ["https://www.dereuten.com/reserveren"]);
+});
+
+test("site van één pagina: menu met '#prijzen' herkend", () => {
+  assert.equal(onePage(`<a href="#home">Home</a><a href="#faciliteiten">Faciliteiten</a><a href="#prijzen">Prijzen</a>`), true);
+  assert.equal(onePage(`<a href="/huisregels">Huisregels</a><a href="#top">Naar boven</a>`), false);
+});
+
+test("kleine site met weinig herkende pagina's krijgt nog steeds de vaste adressen (regressie parser 42)", () => {
+  const home = new URL("https://camping-dewei.nl/");
+  const links = extractLinks(`<a href="/over">Over</a><a href="/albums">Albums</a><a href="/contact">Contact</a>`, home);
+  const ranked = rankLinks(links, home);
+  assert.equal(needsSitemap(ranked), true); // alleen "contact" is herkend: weak
+  const out = addExtraPages(ranked, links, home, needsSitemap(ranked), false).map((u) => new URL(u).pathname);
+  assert.ok(out.includes("/over") && out.includes("/albums"), "eigen pagina's van een kleine site");
+  assert.ok(out.includes("/huisregels") && out.includes("/aankomst-en-vertrek"), "vaste adressen blijven");
+  // eigen pagina's gaan voor de geraden adressen
+  assert.ok(out.indexOf("/over") < out.indexOf("/huisregels"));
+});
+
+test("kleine site met genoeg herkende pagina's: geen geraden adressen, wel de rest van de pagina's", () => {
+  const home = new URL("https://camping-dewei.nl/");
+  const links = extractLinks(`<a href="/tarieven">T</a><a href="/huisregels">H</a><a href="/camperplaats">C</a><a href="/over">Over</a>`, home);
+  const ranked = rankLinks(links, home);
+  const out = addExtraPages(ranked, links, home, needsSitemap(ranked), false).map((u) => new URL(u).pathname);
+  assert.ok(out.includes("/over"));
+  assert.ok(!out.includes("/faq"));
+});
+
+test("site van één pagina: geen geraden adressen", () => {
+  const home = new URL("https://camping-dewei.nl/");
+  assert.deepEqual(addExtraPages([], [], home, true, true), []);
+});
+
+test("menulink met een SVG-icoon erin (lange inhoud) wordt niet weggegooid (De Bosfluiter, 23 oktober 2026)", () => {
+  const home = new URL("https://debosfluiter.nl/");
+  const svg = `<span class="ast-icon icon-arrow"><svg class="ast-arrow-svg" xmlns="http://www.w3.org/2000/svg" version="1.1" x="0px" y="0px" width="26px" height="16.043px" viewbox="57 35.171 26 16.043" enable-background="new 57 35.171 26 16.043" xml:space="preserve"><path d="M57.5,38.193l12.5,12.5l12.5-12.5l-2.5-2.5l-10,10l-10-10L57.5,38.193z" /></svg></span>${" ".repeat(300)}`;
+  const html = `<a href="https://debosfluiter.nl/aankomst-en-vertrek-informatie/" class="menu-link">${svg}</a><a href="/tarieven">Tarieven</a>`;
+  const links = extractLinks(html, home);
+  assert.equal(links.length, 2);
+  assert.ok(rankLinks(links, home)[0].endsWith("/aankomst-en-vertrek-informatie/"), "vertrekpagina gaat voor");
+});
+
+test("lege startpagina (geen links, geen velden) telt als haperende site; één link of één veld niet", () => {
+  assert.equal(emptySite(0, 0), true);
+  assert.equal(emptySite(1, 0), false);
+  assert.equal(emptySite(0, 3), false);
 });

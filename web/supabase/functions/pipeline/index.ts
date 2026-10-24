@@ -15,7 +15,7 @@ import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
-import { decodeHtml, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, parseSitemap, pdfLinks, PROBE_PATHS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -26,7 +26,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 // Versie van de extractor. Vond een oudere versie een kernveld dat deze niet meer vindt, dan wist apply_scrape het: zo
 // verdwijnen fouten van een oude parser na een volledige run. Ophogen bij elke wijziging in extract.ts.
-const PARSER = "41";
+const PARSER = "43";
 
 const UA = "VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)";
 const OVERPASS = [
@@ -263,14 +263,14 @@ async function collectPages(website: string) {
   const { home, html } = await fetchHome(website);
   const links = extractLinks(html, home);
   let picked = rankLinks(links, home);
-  // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij, en anders vaste adressen proberen
+  // Site van één pagina (menu met "#prijzen"): de sitemap proberen mag, maar de tien vaste adressen raden is zinloos
+  const single = onePage(html) && links.length <= 2;
+  // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij, en anders vaste adressen proberen. Dit beoordeelt
+  // alleen de herkende pagina's: de kleine-site-regel hieronder mag de sitemap en de vaste adressen niet overslaan
+  // (parser 42, eerste versie: 21 plekken raakten daardoor hun vertrektijd kwijt)
   const viaSitemap = needsSitemap(picked);
   if (viaSitemap) picked = rankLinks([...links, ...(await sitemapPages(home))], home);
-  if (needsSitemap(picked))
-    for (const path of PROBE_PATHS) {
-      const url = new URL(path, home).href;
-      if (!picked.includes(url)) picked.push(url);
-    }
+  picked = addExtraPages(picked, links, home, needsSitemap(picked), single);
   const failed: string[] = [];
   const subs = await fetchPages(picked, failed);
   const read = subs.filter((x): x is string => !!x);
@@ -343,7 +343,7 @@ async function verifyFinding(f: Finding) {
 }
 
 async function scrapeOne(place: { id: string; website: string }) {
-  const { home, html, subs, pdfs, failed } = await collectPages(place.website);
+  const { home, html, subs, pdfs, failed, links } = await collectPages(place.website);
   const pages = [html];
   for (const sub of subs) if (sub) pages.push(sub);
   let data = extract(pages, home) as Record<string, unknown> & { fields?: string[] };
@@ -358,6 +358,7 @@ async function scrapeOne(place: { id: string; website: string }) {
   }
   // Haperende site: apply_scrape wist dan niets wat deze keer ontbreekt
   if (failed.length) data._pages_failed = failed.length;
+  else if (emptySite(links, data.fields?.length ?? 0)) data._pages_failed = 1;
   data._parser = PARSER;
   return data;
 }

@@ -36,7 +36,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
         <div
           // Waren er foto's maar laadde geen enkele, dan blijft het vak even groot: anders springt de pagina omhoog
-          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-xl ${photos.length ? "aspect-[16/9] sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
+          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-xl ${photos.length ? "aspect-[5/2] sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
           role="img"
           aria-label={`Nog geen foto van ${name}`}
         >
@@ -50,7 +50,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <div
         ref={track_}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="no-scrollbar flex aspect-[16/9] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-xl"
+        className="no-scrollbar flex aspect-[5/2] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-xl"
         // Scrollbaar vak: met Tab bereikbaar, dan bladeren met de pijltjes (WCAG 2.1.1)
         tabIndex={0}
         role="region"

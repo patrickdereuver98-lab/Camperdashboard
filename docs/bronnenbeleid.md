@@ -1,0 +1,99 @@
+# Bronnenbeleid: hoe VrijStaan gegevens verzamelt
+
+> Vastgesteld 18 oktober 2026 (dataplan Fase 0, taak W0.2). Geldt voor elke sessie, agent en workflow die gegevens
+> over plekken ophaalt. Bij twijfel: niet doen en het op het [samenwerkingsbord](samenwerking.md) zetten.
+
+We verzamelen **feiten** uit openbare bronnen en bewaren bij elk feit de bron, de datum en een letterlijk citaat.
+We slaan geen teksten, databanken of persoonsgegevens van anderen op. De vaste regel van het project blijft leidend:
+nooit data verzinnen, onbekend blijft leeg.
+
+## 1. Wat wel en wat niet
+
+| Onderwerp | Wel | Niet |
+|---|---|---|
+| Feiten (vertrekregel, tijden, prijs, voorzieningen, coördinaten) | Overnemen als claim met bron, datum en letterlijk citaat | Hele pagina's, beschrijvingen of foto's kopiëren |
+| Directories (Campercontact, park4night, ACSI, ANWB e.d.) | Losse pagina's lezen als aanwijzing en tweede mening | Lijsten in bulk overnemen (Databankenwet); hun teksten of foto's gebruiken |
+| Fora en reviews | Openbare pagina's lezen; het feit met datum en een postnummer of review-id als `mention_ref` | Reviewteksten (buiten het korte citaat), gebruikersnamen of profielen opslaan |
+| Google | Alleen de officiële Places API, als Patrick een sleutel instelt (W4.4) | Google Maps of Google-reviews scrapen |
+| Facebook, Instagram en andere pagina's achter een inlog | Niets, tot de beheerders van een groep toestemming geven | Inloggen om te lezen, groepen leegtrekken |
+| Beveiliging van sites | `robots.txt` volgen, wachten tussen verzoeken, eerlijke user-agent | Captcha's omzeilen, proxy's of valse user-agents gebruiken, doorgaan na 403 of 429 |
+| Eigenaren | Bevestiging via de site (link op de plekpagina, Doe mee) | E-mailen of bellen (besluit 18 oktober 2026) |
+
+## 2. Tiers en wanneer een feit telt
+
+Elke bron heeft een tier in `bron.sources`. De beslisregel (`bron.decisions`) gebruikt alleen vermeldingen van de
+laatste 24 maanden.
+
+| Tier | Bron | Wanneer telt een feit |
+|---|---|---|
+| 1 | Open data en overheid (OSM, PDOK, gemeente- en provinciesites) | Eén bron is genoeg |
+| 2 | Eigen website van de plek (domein gelijk aan `places.website`) en de eigenaar zelf | Eén bron is genoeg |
+| 3 | Directories | Twee losse vermeldingen met dezelfde waarde |
+| 4 | Fora en openbare community | Twee losse vermeldingen met dezelfde waarde |
+| 5 | Reviews | Twee losse vermeldingen met dezelfde waarde |
+
+- **Twee losse vermeldingen** (besluit 18 oktober 2026): twee verschillende reviews, posts of sites, elk met een
+  eigen citaat. Twee reviews op één pagina tellen als twee als ze elk een eigen `mention_ref` én een ander citaat
+  hebben; dezelfde pagina onder een ander adres telt één keer.
+- **Het citaat onderbouwt de waarde:** minstens 15 tekens, en bij tijden, bedragen en aantallen staat het getal in
+  het citaat zelf.
+- **Datum verplicht bij fora en reviews:** zonder `observed_on` (of een datum van de pagina) wordt de claim geweigerd,
+  zodat een oude post niet als nieuw telt.
+- **De eigen site van plek A zegt niets over plek B:** claims uit een eigen-site-document gelden alleen voor die plek.
+- **Tegenspraak:** zegt een nieuwere vermelding iets anders, dan wordt het een conflict en beslist een mens.
+- **Controle:** steunt een besluit alleen op tekst die een sessie zelf instuurde (`tekst_insturen`), dan kijkt een mens
+  mee. Pagina's die de server zelf ophaalt, zijn tegen de echte pagina gecontroleerd.
+- **Een sessie kan zichzelf geen tier 1 of 2 geven.** Een onbekend domein krijgt de tier van het soort dat de sessie
+  opgeeft (3, 4 of 5). Ook een domein met "gemeente" in de naam wordt niet automatisch tier 1, want iedereen kan zo'n
+  domein registreren; de server zet er een notitie bij en een mens zet echte overheidsdomeinen in `bron.sources` op
+  `kind = 'overheid'`, tier 1. Tier 2 krijgt alleen het domein (bij Facebook, Wix en dergelijke: het pad) uit
+  `places.website` van de opgegeven plek.
+- **De vertrekregel blijft het kernfeit.** De bevestiging op de site (`departure_check`) blijft bij beheer en de
+  eigenaar; claims maken kandidaten, geen bevestiging.
+
+## 3. Tempo en techniek
+
+- User-agent: `VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)`, dezelfde als de pipeline.
+- Wachttijd per host uit `bron.sources.min_delay_s`: 5 s voor eigen sites, 15 s voor directories, 20 s voor fora.
+  De MCP-server dwingt dit af (`bron_fetch_slot`).
+- `robots.txt` volgens RFC 9309: de groep voor VrijStaanBot gaat voor, anders `*`. Is robots.txt onbereikbaar (5xx),
+  dan wachten we. Sluit een site alle bots uit, dan gaat de bron op geblokkeerd (bij een subdomein
+  alleen dat subdomein).
+- Alleen openbare http(s)-adressen; geen IP-adressen of interne namen, en de hostnaam moet via DNS naar een openbaar
+  adres wijzen. Een doorverwijzing naar een andere site volgt de server niet: die site heeft een eigen bron, tier,
+  `robots.txt` en wachttijd.
+- Bij 403, 429, een captcha of een inlogmuur: stoppen en de bron melden met `bron_blokkeren`. Openzetten doet een mens.
+- Opgehaalde tekst blijft 30 dagen staan; daarna bewaren we alleen de citaten (`bron.prune`, cron `bron-opschonen`).
+
+## 4. Werken als sessie
+
+Gebruik de MCP-server **vrijstaan-bronnen** (edge function `bronnen-mcp`) of, zonder MCP, dezelfde functies via de
+Supabase-MCP (`select public.bron_…`). De volgorde:
+
+1. Werk pakken met `volgend_werk` (lease van een uur), of een plek kiezen met `plekken_zoeken`.
+2. Pagina laten ophalen met `pagina_ophalen`; alleen als de server een openbare pagina niet kan lezen `tekst_insturen`.
+3. Feiten leveren met `claims_insturen`. Elk citaat moet letterlijk in het document staan, anders weigert de database.
+4. Nieuwe plekken leveren met `kandidaten_insturen`; de server koppelt ze aan bestaande plekken.
+5. Afronden met `werk_afronden` en wat je vond in de notitie.
+
+Velden die een claim mag hebben: `departure` (`vrij`, `per24`, `vast`), `checkout_until`, `checkin_from` (`uu:mm`),
+`access_hours` (`uu:mm–uu:mm`), `max_stay_nights`, `capacity`, `price_eur`, `max_length_m`, `power`, `water`,
+`dump_station`, `toilet`, `shower`, `wifi`, `dogs`, `open_all_year`, `reservation`, `access_24h`,
+`tourist_tax_included`, `season`, `phone`, `website` en `gesloten`.
+
+## 5. Bronnenregister
+
+Het register staat in `bron.sources`. Startstand (18 oktober 2026):
+
+| Bron | Tier | Status | Opmerking |
+|---|---|---|---|
+| OpenStreetMap, PDOK | 1 | toegestaan | Open data |
+| Eigen site van de plek, eigenaar | 2 | toegestaan | Eigen site alleen als het domein klopt |
+| Campercontact, park4night, ACSI/Eurocampings, ANWB, Camping.info | 3 | toegestaan | `robots.txt` wordt bij het eerste gebruik gecontroleerd en vastgelegd |
+| Reddit | 4 | toegestaan | Geen gebruikersnamen |
+| Zoover | 5 | toegestaan | Alleen afgeleide feiten |
+| Facebook, Instagram | 4 | geblokkeerd | Inlogmuur; de VrijStaan-groep alleen met toestemming van de beheerders (open besluit) |
+| Google Maps (scrapen) | 5 | geblokkeerd | Alleen de Places API (open besluit) |
+
+Nieuwe domeinen registreert de server automatisch bij het eerste gebruik (`auto_registered`); de coördinator loopt
+die wekelijks na.

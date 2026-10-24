@@ -29,8 +29,8 @@ Niet doen (dit verraadt een tekstgenerator):
   eerlijk (als verkooppraatje), transparant, "niet alleen ... maar ook", "of je nu ... of ...".
 - Uitroeptekens en retorische vragen in lopende tekst.
 - Uitleg over onze werkwijze of bronnen bij elk gegeven. Per pagina staat bovenaan "Laatste update: <datum>";
-  dat is genoeg. Alleen een foto krijgt een kleine bronvermelding (auteursrecht), en de vertrektijd op de plekpagina
-  de bronzin klein eronder (besluit eigenaar 19 oktober 2026).
+  dat is genoeg. Alleen een foto krijgt een kleine bronvermelding (auteursrecht). De bronzin van de vertrektijd staat
+  alleen in beheer (besluit eigenaar 23 oktober 2026).
 
 ## Ontwerpen
 
