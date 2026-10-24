@@ -132,3 +132,4 @@ het implementatieplan.
 - Scrape-taken samengevoegd tot één (migratie `20261023210000_scrape_een_taak.sql`): een tiende van de logregels.
 - Later, als de aankomsttijden gevuld zijn: zoeklijst B ("Hier kun je nog aankomen") en start B.
 - Ronde 2 proef (23 oktober): 0 van 8 steekproefplekken kreeg via zoeken of een tweede leesronde een vertrektijd; de tijd staat meestal nergens. Voorstel in `docs/specs/README.md` nummer 59.
+- Pipeline v48 live (24 oktober): lege startpagina wist niets meer; de 18 teruggevallen plekken staan opnieuw in de wachtrij.
