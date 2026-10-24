@@ -271,6 +271,9 @@ export function extract(pages: string[], base: URL) {
     new RegExp(`(?:camper|caravan|kampeerplaats|standplaats|staanplaats)[^€.]{0,160}per (?:nacht|dag)\\*?:?\\s*(?:[a-z–/ -]{0,30}?)?€\\s?${AMOUNT}`, "g"),
     // "per caravan per nacht € 18,50"
     new RegExp(`per (?:camper|caravan|kampeerplaats|standplaats|staanplaats|camperplaats|kampeermiddel)(?: per (?:nacht|dag|overnachting))?\\s*:?\\s*€\\s?${AMOUNT}`, "g"),
+    // Prijs voor een aantal personen zonder eenheid: "2 personen inclusief kampeermiddel, auto, elektriciteit en
+    // toeristenbelasting € 30,12" (De Zeeuwse Vlag, steekproef 24 oktober 2026)
+    new RegExp(`(?:[2-6]|twee|drie|vier)\\s+(?:personen|pers\\.?)\\s+(?:incl\\.?|inclusief)[^€.]{0,160}€\\s?${AMOUNT}`, "g"),
     // "een overnachting kost 7,50 euro"
     new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*€\\s?${AMOUNT}`, "g"),
     new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*${AMOUNT}\\s*euro`, "g"),
