@@ -133,3 +133,4 @@ het implementatieplan.
 - Later, als de aankomsttijden gevuld zijn: zoeklijst B ("Hier kun je nog aankomen") en start B.
 - Ronde 2 proef (23 oktober): 0 van 8 steekproefplekken kreeg via zoeken of een tweede leesronde een vertrektijd; de tijd staat meestal nergens. Voorstel in `docs/specs/README.md` nummer 59.
 - Pipeline v48 live (24 oktober): lege startpagina wist niets meer; van de 18 teruggevallen plekken zijn er 7 weer gepubliceerd (prijs teruggezet uit de baseline), 11 blijven concept.
+- Kapotte websites (24 oktober): 7 nieuwe adressen gevonden, 5 plekken kregen daardoor een vertrektijd en staan online. 11 sites hebben een certificaatfout (niet omzeild), de rest blijft zonder adres.
