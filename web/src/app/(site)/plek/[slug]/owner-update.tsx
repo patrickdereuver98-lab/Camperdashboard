@@ -55,7 +55,17 @@ function Choice({ id, name, label, options, value, onChange }: {
  * "Ben je de eigenaar? Vul je gegevens aan": een formulier met wat we al weten. Er gaat alleen mee wat de eigenaar
  * veranderde; beheer controleert het en zet het daarna pas op de site.
  */
-export function OwnerUpdate({ placeId, placeName, initial }: { placeId: string; placeName: string; initial: OwnerValues }) {
+export function OwnerUpdate({
+  placeId,
+  placeName,
+  initial,
+  label = "Ben je de eigenaar? Vul je gegevens aan",
+}: {
+  placeId: string;
+  placeName: string;
+  initial: OwnerValues;
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -94,8 +104,8 @@ export function OwnerUpdate({ placeId, placeName, initial }: { placeId: string; 
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
-        <Icon name="edit" size={18} /> Ben je de eigenaar? Vul je gegevens aan
+      <button type="button" onClick={() => setOpen(true)} className="flex min-h-11 items-center gap-2 py-1 text-left font-semibold text-forest underline">
+        <Icon name="edit" size={18} className="shrink-0" /> {label}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt" : "Gegevens aanvullen"}>
         {done ? (

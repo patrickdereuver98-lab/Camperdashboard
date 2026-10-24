@@ -40,6 +40,12 @@ te gebruiken (plan: Claude-doc "VrijStaan – Projectplan data-scraping camperpl
 | Zoekvak PDOK (PR #38) | Geocoderen van kandidaten | Hergebruiken via `lib/pdok.ts`, niet dupliceren |
 | Kernbelofte (`departure_check`) | Bevestigen | Claims maken geen bevestiging; dat blijft beheer of eigenaar |
 
+**Stand 24 oktober:** de bronnenlaag zit in PR #56, maar de migratie staat nog niet live (README 60: de goedkeuring
+via `apply_migration` komt niet bij Patrick aan; hij voert het bestand zelf uit in de SQL-editor). Besluit 24 oktober:
+eigenaren worden niet gemaild (README 59); de aanvulroute staat in het vertrekblok en op `Doe mee` (branch
+`data/eigenaar-vooraan`). Uitkomst van de proeven tot nu toe: buiten de eigen site leveren fora en directories weinig
+vertrektijden op (startlijst: 2 van 69 bronnen, beide vast; ronde 2 proef: 0 van 8).
+
 **Meedoen als sessie:** lees `bronnenbeleid.md`, pak werk met `select public.bron_lease_work('<jouw-naam>')` (of de
 MCP-tool `volgend_werk`) en lever via `bron_store_document` en `bron_submit_claims`. Zet je naam hieronder in §6.
 

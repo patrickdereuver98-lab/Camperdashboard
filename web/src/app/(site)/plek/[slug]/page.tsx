@@ -425,12 +425,15 @@ function Decision({ place }: { place: Place }) {
               <div className="mt-2">
                 <GiveDepartureButton placeId={place.id} placeName={place.name} />
               </div>
+              {/* Eigenaren vullen het zelf in: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026) */}
+              <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de vertrektijd in" />
             </dd>
           )}
           {!known && !incomplete && (
             <dd className="mt-1 pl-10 text-sm text-ink-2">
               Bel even voor je gaat.
               <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd?" />
+              <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de vertrektijd in" />
             </dd>
           )}
         </div>
