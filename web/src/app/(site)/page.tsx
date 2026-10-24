@@ -78,7 +78,7 @@ export default async function Home() {
           Waar sta je vannacht?
         </h1>
         <p className="animate-rise mt-1.5 max-w-xl text-ink-2 [animation-delay:60ms] sm:mt-2 sm:text-lg">
-          {nf.format(stats.total)} camperplaatsen in Nederland, met vertrektijd en prijs.
+          {nf.format(stats.total)} camperplaatsen in Nederland. Bij {nf.format(withDeparture)} weten we hoe laat je weg moet.
         </p>
         <div className="animate-rise mt-4 [animation-delay:120ms] sm:mt-6">
           <HomeSearch />
@@ -89,7 +89,7 @@ export default async function Home() {
       <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-3 pt-4 sm:px-6">
         <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
           {[
-            `Van ${nf.format(withDeparture)} plekken weten we hoe laat je weg moet`,
+            "We vullen niets zelf in: wat we niet weten, staat er als onbekend",
             "Prijzen met toeristenbelasting, stroom en andere bijkomende kosten",
             "Gratis te gebruiken, je hebt geen account nodig",
           ].map((t) => (

@@ -76,3 +76,14 @@ test("aankomst en reserveren in tekst", () => {
   assert.equal(reservationRuleOf({ reservation: false }), "niet_nodig");
   assert.equal(reservationRuleOf({}), undefined);
 });
+
+test("aankomstvenster zonder 'tot' of 'tussen' vooraan (steekproef 23 oktober 2026)", () => {
+  assert.equal(until("Kampeerplaatsen: Check-in: vanaf 13:00 uur tot 18:00 uur."), "18:00");
+  assert.equal(until("Uitchecken 09.00 – 11.00 uur. Inchecken 15.00- 17.30 uur."), "17:30");
+  assert.equal(until("Vertrek tussen 09:00 uur en 11:30 uur en aankomst vanaf 13:00 uur tot 16:00 uur."), "16:00");
+  assert.equal(until("Vertrek is om uiterlijk 11.00 uur. Aankomsttijd tussen 13.00 en voor 17.00 uur."), "17:00");
+  // Gaat over de vertrekdag, niet over aankomen
+  assert.equal(until("Aankomst vanaf 14:00 tot 12:00 uur op de dag van vertrek."), undefined);
+  // Alleen op bepaalde dagen: geen vast venster
+  assert.equal(until("Aankomst: 13:00 – 17:00 uur (maandag, dinsdag en vrijdag)."), undefined);
+});

@@ -440,6 +440,15 @@ export function extract(pages: string[], base: URL) {
   // ── Aankomst- en vertrektijden ───────────────────────────────────────────
   const raw = pages.map(toRawText).join(" . ");
   Object.assign(out, arrivalDeparture(text, raw.length === text.length ? raw : text));
+  // Later vertrekken tegen betaling: een toeslag naast de vertrektijd ("Later vertrekken tot 18:00 € 8,00")
+  if (out._late) {
+    const late = out._late as { until?: string; amount: number };
+    const list = (out.price_extras as Extra[] | undefined) ?? [];
+    if (!list.some((x) => x.label.startsWith("Later vertrekken")))
+      list.push({ label: late.until ? `Later vertrekken tot ${late.until}` : "Later vertrekken", amount: late.amount, unit: "eenmalig" });
+    out.price_extras = list;
+    delete out._late;
+  }
   // Niets in de tekst? Boekingssystemen zetten de tijden soms alleen in gestructureerde gegevens (schema.org
   // checkoutTime). Alleen als dat over de camping of camperplaats zelf gaat, niet over een chalet of hotelkamer.
   if (out.departure === undefined) {
@@ -528,11 +537,12 @@ const PITCH_OUT = new RegExp(
   String.raw`(kampeerpla(?:ats|atsen|tsen)|kampeerplek(?:ken)?|camperpla(?:ats|atsen)|camperplek(?:ken)?|staanpla(?:ats|atsen)|standpla(?:ats|atsen)|camping|kampeermiddel(?:en)?)\b(?:(?:(?!open|geopend|receptie|winkel|bereikbaar)[^.?!0-9]){0,40}?(?:voor|vóór|uiterlijk|om|is dat|:))?\s*(\d{1,2})(?:[:.](\d{2})\s*(?:uur|u\b|h\b)?|\s*(?:uur|u\b|h\b))`,
   "g",
 );
+const CHANGEOVER = new RegExp(String.raw`(?:aankomst|aankomen|inchecken)\s*(?:\/|en|&)\s*(?:vertrek|vertrekken|uitchecken)(?:tijd)?\s*:?\s*(?:\.\s*)?${CLOCK}`, "g");
 const OUT_WORD = /vertrek|vertrekken|uitchecken|uitcheck|check-?out|verlaten|verlaat|leeg|auschecken|abreise/g;
 const ARRIVAL_WORD = /aankomst|aankomen|inchecken|check-?in|anreise|beschikbaar vanaf/;
 // "Je betaalt per 24 uur": geen klokvaste vertrektijd, je vertrekt 24 uur na aankomst
 const PER24 =
-  /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival|(?:de |een )?(?:overnachting|verblijf|staanplaats|camperplaats|plaats) (?:is|geldt|duurt|loopt) (?:telkens |steeds )?(?:voor |per )24 uur|(?:prijzen|tarieven|tarief|prijs) (?:zijn |is |gelden |geldt )?per 24 uur|per periode van 24 uur/g;
+  /aankomsttijd is (ook )?(de )?vertrektijd|24 uur (vanaf|na) (aankomst|het moment van aankomst|binnenkomst|inchecken)|(betaal(t|en)?|geldig|gerekend) per 24 uur vanaf|24 stunden ab (ankunft|anreise|einfahrt)|umfasst jeweils 24 stunden|24 hours from arrival|(?:de |een )?(?:overnachting|verblijf|staanplaats|camperplaats|plaats) (?:is|geldt|duurt|loopt) (?:telkens |steeds )?(?:voor |per )24 uur|(?:prijzen|tarieven|tarief|prijs) (?:zijn |is |gelden |geldt )?per 24 uur|per periode van 24 uur|(?:iedere|elke) (?:periode van )?24 uur (?:wordt|word|geldt|telt|betaal|reken)[^.]{0,40}(?:nacht|in rekening|betaald|gerekend)/g;
 // Camperplaatsen met een automaat: "€ 12,50 per 24 uur". Alleen als er geen vaste vertrektijd op de site staat en het
 // over campers gaat; de kernpagina toont zo'n plek pas na bevestiging door een mens (kernbelofte).
 const PER24_PRICE =
@@ -581,10 +591,19 @@ function quote(raw: string, text: string, index: number): string {
   return (from > s ? "… " : "") + q.charAt(0).toUpperCase() + q.slice(1) + (to < e ? " …" : "");
 }
 
+/** Het eerste eurobedrag in een stukje tekst: "€ 8.00", "8,50 euro" */
+function euroAmount(s: string): number | undefined {
+  const m = /(?:€|eur(?:o)?)\s?(\d{1,3}(?:[.,]\d{1,2})?)|(\d{1,3}(?:[.,]\d{1,2})?)\s?(?:€|euro)/.exec(s);
+  const v = m ? Number((m[1] ?? m[2]).replace(",", ".")) : NaN;
+  return v > 0 && v < 200 ? v : undefined;
+}
+
 const asClock = (h: string, m?: string) => `${h.padStart(2, "0")}:${m ?? "00"}`;
 
 export function arrivalDeparture(text: string, raw: string): Record<string, unknown> {
   const hits: TimeHit[] = [];
+  // Later vertrekken tegen betaling ("tussen 12.00 en 18.00 uur € 8 extra"): bij de vertrektijd bewaren als optie
+  const lateOptions = new Map<number, { until?: string; amount?: number }>();
   for (const k of text.matchAll(KEY)) {
     const i = k.index!;
     const [s, e] = sentenceBounds(text, i);
@@ -618,6 +637,21 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     // "vertrek na 12 uur € 10" of "…wordt een extra nacht gerekend": dan is 12:00 wél de vertrektijd (later kost geld)
     const lateFee = !!a && /\b(?:na|after)\s*\d/.test(a[0]) &&
       /€|euro|extra|in rekening|toeslag|dagtarief|halve dag|nacht|meegerekend|berekend|in overleg/.test(ahead.slice(a[0].length, a[0].length + 70));
+    // "Bij vertrek tussen 12.00 uur en 18.00 uur wordt € 8 extra in rekening gebracht": tot het begin van dat venster
+    // is vertrekken gratis, dus dat is de vertrektijd (steekproef 23 oktober 2026)
+    if (a && type === "out" && a[4] && /tussen|between|zwischen/.test(a[0]) &&
+      /\bextra\b|in rekening|toeslag|bijbetal|meerprijs/.test(ahead.slice(a[0].length, a[0].length + 70)) &&
+      !/seizoen|kiezen|keuze/.test(ahead) && (a[2] || a[3])) {
+      [h, m] = [a[1], a[2]];
+      timeEnd = i + k[0].length + a[0].length;
+      lateOptions.set(i, { until: asClock(a[4], a[5]), amount: euroAmount(ahead.slice(a[0].length, a[0].length + 70)) });
+      a = null;
+    }
+    // "vertrek na 12 uur € 10 extra": 12:00 is de vertrektijd, later kan tegen betaling
+    if (a && lateFee && type === "out") {
+      const amount = euroAmount(ahead.slice(a[0].length, a[0].length + 70));
+      if (amount) lateOptions.set(i, { amount });
+    }
     // "na 08.00 uur en voor 12:00 uur": de "voor"-tijd
     if (a && type === "out" && !a[4] && !lateFee && /\b(?:na|after)\s*\d/.test(a[0])) {
       const deadline = new RegExp(String.raw`^[^0-9]{0,25}?(?:voor|vóór|uiterlijk|tot|before|until)\s*${CLOCK}`).exec(ahead.slice(a[0].length));
@@ -703,6 +737,18 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       break;
     }
 
+  // Wisseltijd: "AANKOMST/VERTREK 11.00 uur 's morgens wisselen". Eén tijd voor allebei; alleen met "wissel" erbij,
+  // want zonder dat woord is niet te zeggen of het een aankomst- of vertrektijd is (steekproef 23 oktober 2026)
+  if (!out)
+    for (const w of text.matchAll(CHANGEOVER)) {
+      const near = text.slice(w.index!, w.index! + w[0].length + 60);
+      if (!/wissel/.test(near) || CONDITIONAL.test(near) || RENTAL.test(near)) continue;
+      const hour = Number(w[1]);
+      if (!(w[2] || w[3]) || hour < 7 || hour > 14 || Number(w[2] ?? 0) > 59) continue;
+      out = { type: "out", time: asClock(w[1], w[2]), index: w.index!, strong: true, camper: CAMPER.test(near), cond: false };
+      break;
+    }
+
   let free: { index: number; camper: boolean; weak?: boolean } | undefined;
   for (const f of text.matchAll(FREE)) {
     const [s, e] = sentenceBounds(text, f.index!);
@@ -750,6 +796,8 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
     res.departure = "vast";
     res.checkout_until = out.time;
     notes.push(quote(raw, text, out.index));
+    const late = lateOptions.get(out.index);
+    if (late?.amount) res._late = late;
   }
   // Tegenstrijdig (wel "geen vertrektijden", maar ook een vaste tijd): niets invullen
   if (arrive && res.departure !== undefined) {
@@ -818,7 +866,12 @@ function extraUnit(after: string): string | undefined {
 
 // "aankomen tot 22:00", "inchecken kan tussen 16:00 en 20:00", "aankomst tussen 13.00 - 22.00 uur"
 const LATEST_ARRIVAL = new RegExp(
-  String.raw`\b(?:aankomst(?:tijd(?:en)?)?|aankomen|inchecken|inchecktijd|check-?in|aanmelden)\b([^.!?\d]{0,45}?)\b(tot(?: uiterlijk)?|uiterlijk|tussen)\s*(?:om\s*)?${CLOCK}(?:\s*(?:en|-|–|tot)\s*${CLOCK})?`,
+  String.raw`\b(?:aankomst(?:tijd(?:en)?)?|aankomen|inchecken|inchecktijd|check-?in|aanmelden)\b([^.!?\d]{0,45}?)\b(tot(?: uiterlijk)?|uiterlijk|tussen)\s*(?:om\s*)?${CLOCK}(?:\s*(?:en|-|–|tot)\s*(?:voor|vóór|uiterlijk)?\s*${CLOCK})?`,
+  "g",
+);
+// "aankomst vanaf 13:00 uur tot 16:00 uur", "inchecken 15.00 - 17.30 uur": een venster zonder "tot"/"tussen" vooraan
+const ARRIVAL_WINDOW = new RegExp(
+  String.raw`\b(?:aankomst(?:tijd(?:en)?)?|aankomen|inchecken|inchecktijd|check-?in)\b[^.!?\d]{0,20}?(?:vanaf|van)?\s*:?\s*${CLOCK}\s*(?:tot|-|–|t\/m)\s*${CLOCK}`,
   "g",
 );
 // Smaller dan RENTAL: "melden bij de receptie" of "de slagboom" is geen verhuur
@@ -853,6 +906,21 @@ export function latestArrival(text: string, raw: string): { checkin_until?: stri
     // Een tweede venster direct erna: "tussen 14:00 – 17:00 uur of tussen 19:00 – 20:00 uur"
     const next = MORE_WINDOW.exec(text.slice(end, end + 40));
     if (next && Number(next[4]) <= 23) time = [time, asClock(next[4], next[5])].sort().at(-1)!;
+    if (!best || time > best.time) best = { time, index: m.index! };
+  }
+  // Vensters zonder "tot" of "tussen" vooraan: de eindtijd telt, met dezelfde voorzichtigheid als hierboven
+  for (const m of text.matchAll(ARRIVAL_WINDOW)) {
+    const [h, mm] = [m[4], m[5]];
+    if (!h || !(mm || m[6]) || !(m[2] || m[3])) continue;
+    const hour = Number(h);
+    if (hour < 14 || hour > 23 || Number(mm ?? 0) > 59 || Number(m[1]) >= hour) continue;
+    const end = m.index! + m[0].length;
+    if (/^\s*(?:uur\s*)?op de dag van vertrek|^[^.]{0,25}\bvertrek/.test(text.slice(end, end + 40))) continue;
+    const [s, e] = sentenceBounds(text, m.index!);
+    const sentence = text.slice(s, e);
+    if (WEEKDAYS.test(sentence) || QUESTION.test(sentence)) continue;
+    if (RENTAL_STAY.test(sentence) && !PITCH_ONLY.test(sentence) && !CAMPER.test(sentence)) continue;
+    const time = asClock(h, mm);
     if (!best || time > best.time) best = { time, index: m.index! };
   }
   return best ? { checkin_until: best.time, note: quote(raw, text, best.index) } : {};

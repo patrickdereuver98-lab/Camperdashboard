@@ -372,3 +372,46 @@ test("aantal plekken: 2 is te weinig om op te vertrouwen (boeking of groep), 3 o
   assert.equal(page("<p>Per boeking maximaal 2 kampeerplaatsen.</p>").capacity, undefined);
   assert.equal(page("<p>Wij hebben 3 kampeerplaatsen.</p>").capacity, 3);
 });
+
+// ── Steekproef 23 oktober 2026: zinnen die de scraper miste ──────────────────
+
+test("wisseltijd: 'AANKOMST/VERTREK 11.00 uur wisselen' is vertrek uiterlijk 11:00", () => {
+  const r = page("<p>2e auto € 1,00 AANKOMST/VERTREK 11.00 uur &#8217;s morgens wisselen uitzonderingen in overleg</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "11:00");
+});
+
+test("wisseltijd onder een kopje (de tijd staat in de lijst eronder)", () => {
+  const r = page(`<p><strong>AANKOMST/VERTREK </strong></p><ul><li>11.00 uur &#8217;s morgens wisselen</li><li>uitzonderingen in overleg</li></ul>`);
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "11:00");
+});
+
+test("zonder 'wissel' blijft 'aankomst/vertrek 11.00' onbekend", () => {
+  assert.equal(page("<p>Aankomst/vertrek 11.00 uur</p>").departure, undefined);
+});
+
+test("vertrekvenster met toeslag: tot het begin is vertrekken gratis", () => {
+  const r = page("<p>Bij vertrek tussen 12.00 uur en 18.00 uur wordt € 8,00 extra in rekening gebracht.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "12:00");
+});
+
+test("'iedere 24 uur wordt er een nieuwe nacht in rekening gebracht' is per 24 uur", () => {
+  assert.equal(page("<p>Camperplaats aan het wad. Let op: iedere 24 uur wordt er een nieuwe nacht in rekening gebracht.</p>").departure, "per24");
+});
+
+test("'je kunt maximaal 3 x 24 uur verblijven' is geen per 24 uur", () => {
+  assert.equal(page("<p>Je kunt maximaal 3 x 24 uur op de camperplaats verblijven.</p>").departure, undefined);
+});
+
+test("later vertrekken tegen betaling: vertrek 12:00 met de optie tot 18:00 als toeslag", () => {
+  const r = page("<p>Bij vertrek tussen 12.00 uur en 18.00 uur wordt € 8,00 extra in rekening gebracht.</p>");
+  assert.equal(r.checkout_until, "12:00");
+  assert.deepEqual(r.price_extras, [{ label: "Later vertrekken tot 18:00", amount: 8, unit: "eenmalig" }]);
+});
+
+test("vertrek na 12 uur € 10 extra: optie zonder eindtijd", () => {
+  const r = page("<p>Vertrekken voor 12.00 uur. Vertrek na 12 uur € 10 extra.</p>");
+  assert.equal(r.checkout_until, "12:00");
+});
