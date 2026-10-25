@@ -1,6 +1,6 @@
 # Bronnenbeleid: hoe VrijStaan gegevens verzamelt
 
-> Vastgesteld 18 oktober 2026 (dataplan Fase 0, taak W0.2). Geldt voor elke sessie, agent en workflow die gegevens
+> Vastgesteld 18 oktober 2026 (dataplan Fase 0, taak W0.2), bijgewerkt 25 oktober 2026 (stealth-lezen, §3a). Geldt voor elke sessie, agent en workflow die gegevens
 > over plekken ophaalt. Bij twijfel: niet doen en het op het [samenwerkingsbord](samenwerking.md) zetten.
 
 We verzamelen **feiten** uit openbare bronnen en bewaren bij elk feit de bron, de datum en een letterlijk citaat.
@@ -16,7 +16,7 @@ nooit data verzinnen, onbekend blijft leeg.
 | Fora en reviews | Openbare pagina's lezen; het feit met datum en een postnummer of review-id als `mention_ref` | Reviewteksten (buiten het korte citaat), gebruikersnamen of profielen opslaan |
 | Google | Alleen de officiële Places API, als Patrick een sleutel instelt (W4.4) | Google Maps of Google-reviews scrapen |
 | Facebook, Instagram en andere pagina's achter een inlog | Niets, tot de beheerders van een groep toestemming geven | Inloggen om te lezen, groepen leegtrekken |
-| Beveiliging van sites | `robots.txt` volgen, wachten tussen verzoeken, eerlijke user-agent | Captcha's omzeilen, proxy's of valse user-agents gebruiken, doorgaan na 403 of 429 |
+| Beveiliging van sites | `robots.txt` volgen, wachten tussen verzoeken, eerlijke user-agent. Botbeveiliging (Cloudflare en dergelijke, een 403 of een captcha) mag de stealth-lezer passeren, volgens §3a | Inlogmuren of betaalmuren passeren, doorgaan na 429, wisselende proxy's om een IP-blokkade te ontlopen, doorgaan als de eigenaar vraagt te stoppen |
 | Eigenaren | Bevestiging via de site (link op de plekpagina, Doe mee) | E-mailen of bellen (besluit 18 oktober 2026) |
 
 ## 2. Tiers en wanneer een feit telt
@@ -62,8 +62,33 @@ laatste 24 maanden.
 - Alleen openbare http(s)-adressen; geen IP-adressen of interne namen, en de hostnaam moet via DNS naar een openbaar
   adres wijzen. Een doorverwijzing naar een andere site volgt de server niet: die site heeft een eigen bron, tier,
   `robots.txt` en wachttijd.
-- Bij 403, 429, een captcha of een inlogmuur: stoppen en de bron melden met `bron_blokkeren`. Openzetten doet een mens.
+- Bij 403 of een captcha: de gewone lezer (pipeline, `bronnen-mcp`) stopt en zet de pagina klaar voor de stealth-lezer
+  (§3a). Bij 429 of een inlogmuur: stoppen en de bron melden met `bron_blokkeren`. Openzetten doet een mens.
 - Opgehaalde tekst blijft 30 dagen staan; daarna bewaren we alleen de citaten (`bron.prune`, cron `bron-opschonen`).
+
+## 3a. Stealth-lezer (besluit eigenaar, 25 oktober 2026)
+
+Sommige sites weren elke bot met beveiliging zoals Cloudflare, of laden hun inhoud pas met JavaScript. Voor die
+pagina's mag een aparte lezer met [Scrapling](https://github.com/D4Vinci/Scrapling) een echte browser gebruiken die
+zich als gewone bezoeker voordoet (stealth-modus), en daarmee botbeveiliging en captcha's passeren.
+
+- **Alleen als tweede poging.** De stealth-lezer leest alleen pagina's die de gewone lezer niet kon lezen (403,
+  captcha, of een pagina die zonder JavaScript leeg is). Alles begint bij `VrijStaanBot/1.0`.
+- **`robots.txt` blijft gelden**, gelezen als `VrijStaanBot`. Sluit een site ons of alle bots uit, dan lezen we niet.
+- **Zelfde tempo:** de wachttijd per host uit `bron.sources.min_delay_s` en hoogstens 7 pagina's per site.
+- **Geen 429 negeren:** dan stoppen we, ook met de stealth-lezer, en wachten we minstens een dag (of `Retry-After`).
+- **Geen inlog- of betaalmuren**, geen accounts, en geen wisselende proxy's of proxynetwerken om een IP-blokkade te
+  ontlopen. Facebook, Instagram en Google Maps blijven geblokkeerd.
+- **Vraagt een eigenaar of site ons te stoppen** (mail, klacht, melding op de site), dan gaat de bron op geblokkeerd
+  voor elke lezer. Openzetten doet een mens.
+- **Wat we bewaren verandert niet:** alleen feiten met bron, datum en letterlijk citaat; geen bulk uit directories
+  (Databankenwet); dezelfde bewaartermijn van 30 dagen.
+- **Herkenbaar in de gegevens:** elk document van de stealth-lezer krijgt `fetched_by = 'stealth'`, zodat we het
+  kunnen terugvinden en wissen.
+
+Risico, bewust geaccepteerd door de eigenaar: sites kunnen dit als misbruik zien, ons IP blokkeren of een klacht
+sturen, en voorwaarden van sites kunnen het verbieden. Bij een klacht stoppen we voor die bron (zie hierboven) en
+legt de coördinator het voor aan de eigenaar.
 
 ## 4. Werken als sessie
 
