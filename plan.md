@@ -175,9 +175,10 @@ veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
 | B4 | Vertrektijd: Beheer → inzendingen zonder beheeraccount afhandelen: Patrick krijgt beheerrechten via het bestaande account of een melding | Agent | ⬜ |
 | B5 | Dode websites: nog ~100 plekken zonder adres; foutlijst voor Beheer | Agent | ⬜ |
 | B6 | Ronde 2: aanwijzingen zonder controle (8) en twijfelgevallen (18+14) handmatig afwerken voor zover mogelijk | Agent | ⬜ |
-| B7 | Prijzen naar 70%: scraper op PDF-tarieven en zoekagenten voor prijs | Agent | ⬜ |
+| B7 | Prijzen: scraper v49 en v50 (patronen "N personen inclusief" en "all-inclusief"); prijsdekking 59% | Agent | 🔄 +9 prijzen bij ~1.700 herlezen plekken; 70% is zo niet haalbaar, doel beta 60% met "prijs onbekend" eerlijk zichtbaar |
 | B8 | Juridische pagina's: bedrijfsgegevens leeg tonen als "hobbyproject, contact via het formulier" in plaats van "[nog invullen]" | Agent | ⬜ |
 | B9 | Alleen Patrick: naam en contactadres, domein, mailprovider, OAuth-sleutels, back-upgeheimen | Patrick | 👤 (niet nodig voor de gesloten beta, wel voor livegang) |
 
 Volgorde: B1 → B2 → B3 → B5 → B6 → B7 → B8 → B4.
 
+Open PR's per 25 oktober: alleen #60 (stealth-lezer, besluit eigenaar in open punt 62; uitrol door de sessie "Scraper evaluation"). #28 (TypeScript 7) gesloten tot `typescript-eslint` TS 7 ondersteunt.
