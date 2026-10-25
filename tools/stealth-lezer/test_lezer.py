@@ -66,3 +66,14 @@ def test_aanmelden_met_sleutel_of_github_token(monkeypatch):
     assert pipe.headers()["x-github-oidc"] == "token-1"  # binnen 4 minuten hergebruikt
     t[0] = 400
     assert pipe.headers()["x-github-oidc"] == "token-2"  # daarna een nieuw token
+
+
+def test_uitvoer_voor_de_workflow(tmp_path, monkeypatch):
+    import lezer
+
+    out = tmp_path / "out"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    lezer.write_output("meer", "true")
+    assert out.read_text() == "meer=true\n"
+    monkeypatch.delenv("GITHUB_OUTPUT")
+    lezer.write_output("meer", "false")  # buiten GitHub: niets

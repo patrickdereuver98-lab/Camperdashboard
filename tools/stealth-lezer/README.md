@@ -9,7 +9,8 @@ Leest websites van plekken die de gewone scraper niet of nauwelijks kon lezen, m
 1. `private.enqueue_stealth` (cron `stealth-enqueue`, dagelijks 05:23) zet plekken in `private.stealth_queue`, in deze
    volgorde: onleesbaar (`website_error`), weinig gegevens (minder dan 3 velden), zonder prijs of vertrektijd, en
    herlezen na 30 dagen.
-2. De workflow `Stealth-lezer` draait elk uur 50 minuten. `lezer.py` vraagt plekken op (`stealth_batch`), haalt de
+2. De workflow `Stealth-lezer` draait 50 minuten en start daarna zelf de volgende run zolang de wachtrij niet leeg
+   is (GitHub slaat geplande runs bij openbare repositories vaak over; het uurrooster blijft als vangnet). `lezer.py` vraagt plekken op (`stealth_batch`), haalt de
    startpagina op met een echte browser die Cloudflare-controles oplost, en vraagt de pipeline welke subpagina's
    (`stealth_plan`, `stealth_deeper`). Die keuze is dezelfde als bij de gewone scraper (`pages.ts`).
 3. `stealth_apply` leest alles uit met de gewone extractor en schrijft via `apply_stealth` → `apply_scrape`. Beheer gaat

@@ -285,11 +285,13 @@ def main() -> int:
     pipe = Pipeline(url, key, None if key else GithubToken(oidc_url, oidc_token))
     reader = Reader(proxies)
     done = found = 0
+    empty = False
     try:
         while time.monotonic() < deadline:
             batch = pipe.call("stealth_batch", n=batch_size)
             if not batch:
                 print("Wachtrij leeg")
+                empty = True
                 break
             for place in batch:
                 if time.monotonic() >= deadline:
@@ -310,7 +312,16 @@ def main() -> int:
     finally:
         reader.close()
     print(f"Klaar: {done} plekken gelezen, {found} met gegevens")
+    write_output("meer", "false" if empty else "true")
     return 0
+
+
+def write_output(name: str, value: str) -> None:
+    """Uitvoer voor de workflow: is er nog werk, dan start die zichzelf opnieuw (geplande runs slaat GitHub vaak over)."""
+    path = os.environ.get("GITHUB_OUTPUT")
+    if path:
+        with open(path, "a") as f:
+            f.write(f"{name}={value}\n")
 
 
 if __name__ == "__main__":
