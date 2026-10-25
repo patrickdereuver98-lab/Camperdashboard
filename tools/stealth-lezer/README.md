@@ -26,13 +26,18 @@ Leest websites van plekken die de gewone scraper niet of nauwelijks kon lezen, m
 - Vraagt een eigenaar te stoppen: `select public.apply_stealth('<place_id>', '{}', 'geblokkeerd: <reden>')`. Dan
   leest geen enkele lezer de plek meer.
 
-## Instellen
+## Aanmelden en instellen
 
-GitHub → Settings → Secrets and variables → Actions:
+Er hoeft geen geheim in GitHub te staan. De workflow heeft `id-token: write` en vraagt GitHub om een ondertekend
+OIDC-token met publiek `vrijstaan-pipeline`. De pipeline controleert handtekening, uitgever en vervaldatum, en daarna
+dat het token van `stealth-lezer.yml` op `main` van deze repository komt, gestart door het rooster of met de hand
+(`stealthClaimsOk` in `stealth.ts`). Zo'n token geeft alleen toegang tot de stealth-acties, niet tot de rest van de
+pipeline.
 
-- `PIPELINE_KEY`: de waarde van `internal_secrets.pipeline_key`.
-- `STEALTH_PROXIES` (optioneel): proxy-adressen gescheiden door komma's. Zonder proxy's leest hij vanaf het IP van
-  GitHub.
+Optioneel (GitHub → Settings → Secrets and variables → Actions):
+
+- `STEALTH_PROXIES`: proxy-adressen gescheiden door komma's. Zonder proxy's leest hij vanaf het IP van GitHub.
+- `PIPELINE_KEY`: alleen nodig om de lezer buiten GitHub Actions te draaien (lokaal).
 
 ## Lokaal
 
