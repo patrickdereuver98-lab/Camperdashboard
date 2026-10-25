@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProsePage, Section } from "@/components/prose";
 import { CookieSettingsLink } from "@/components/cookie-banner";
-import { COMPANY, company, companyAddress } from "@/lib/company";
+import { CompanyIdentity } from "@/components/company-identity";
+import { COMPANY } from "@/lib/company";
 
 export const metadata: Metadata = { title: "Privacyverklaring", description: "Welke gegevens VrijStaan verwerkt, waarom, op welke grondslag en hoe lang." };
 
@@ -172,8 +173,7 @@ export default function PrivacyPage() {
     >
       <Section title="Wie zijn wij">
         <p>
-          {COMPANY.tradeName} is een handelsnaam van {company("name")}, {companyAddress()}. KvK-nummer {company("kvk")}.
-          Wij zijn verwerkingsverantwoordelijke voor de persoonsgegevens op deze site.
+          <CompanyIdentity /> Wij zijn verwerkingsverantwoordelijke voor de persoonsgegevens op deze site.
         </p>
         <p>
           Heb je een vraag over privacy, mail dan naar {mail} of gebruik{" "}

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProsePage, Section } from "@/components/prose";
-import { COMPANY, company } from "@/lib/company";
+import { CompanyIdentity } from "@/components/company-identity";
+import { COMPANY } from "@/lib/company";
 
 export const metadata: Metadata = { title: "Disclaimer", description: "Over de juistheid van de informatie op VrijStaan." };
 
@@ -44,7 +45,7 @@ export default function DisclaimerPage() {
       </Section>
       <Section title="Contact">
         <p>
-          {COMPANY.tradeName} is een handelsnaam van {company("name")}, KvK-nummer {company("kvk")}. Zie je een fout, mail dan
+          <CompanyIdentity /> Zie je een fout, mail dan
           naar <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> of gebruik de knop &quot;Klopt er iets niet?&quot; op
           de pagina van de plek.
         </p>
