@@ -1,5 +1,6 @@
 # Stealth-lezer (bronnenbeleid §3a): leest elk uur 50 minuten lang websites uit private.stealth_queue met Scrapling.
 # De pipeline kiest de pagina's en schrijft weg; deze taak haalt alleen op. Code en uitleg: tools/stealth-lezer.
+# Zolang de wachtrij niet leeg is, start elke run de volgende zelf.
 #
 # Geen geheim nodig: de lezer meldt zich bij de pipeline aan met een GitHub-OIDC-token (id-token: write). De pipeline
 # accepteert dat alleen van deze workflow op main en alleen voor de stealth-acties (stealth.ts).
@@ -19,6 +20,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  actions: write
 
 concurrency:
   group: stealth-lezer
@@ -50,4 +52,13 @@ jobs:
         run: python -m pytest -q tools/stealth-lezer
 
       - name: Lezen
+        id: lezen
         run: python tools/stealth-lezer/lezer.py
+
+      # GitHub start geplande runs bij openbare repositories vaak te laat of niet. Is de wachtrij nog niet leeg, dan
+      # start deze run de volgende zelf (workflow_dispatch mag met GITHUB_TOKEN); het rooster blijft als vangnet.
+      - name: Volgende run starten
+        if: steps.lezen.outputs.meer == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run stealth-lezer.yml --ref main
