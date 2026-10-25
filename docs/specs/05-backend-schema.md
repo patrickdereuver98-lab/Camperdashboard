@@ -25,6 +25,7 @@
 | `osm_regions`, `osm_queries`, `osm_staging` | OSM-import per provincie: planning, queries en wachtrij |
 | `internal_secrets` | Sleutel waarmee de database de edge function aanroept |
 | `private.scrape_queue` | Wachtrij van websites die de scraper moet lezen |
+| `private.stealth_queue` | Wachtrij van de stealth-lezer (Scrapling, [bronnenbeleid §3a](../bronnenbeleid.md)) |
 | `private.admin_invites` | E-mailadressen die een beheeraccount mogen aanmaken |
 | `profiles` | Profiel van een bezoekersaccount (naam en foto van Google/Apple/Facebook) |
 | `user_trips` | Mijn reis van een ingelogde bezoeker (`stops` jsonb, ≤ 200) |
@@ -87,7 +88,7 @@
 | `status_locked` | boolean | ja | `false` | handmatig vastgezet; trigger verandert de status dan niet |
 | `geom` | geometry(Point, 4326) | | gegenereerd | uit `lng`/`lat`; GIST-indexen voor `places_in_bbox` en de dubbelen-zoektocht |
 | `merged_into` | uuid | | | samengevoegd in deze plek; de oude slug stuurt door (`place_redirect`) |
-| `sources` | jsonb | ja | `{}` | `osm`, `website` (tijdstip), `website_fields`, `beheer` (velden die beheer invulde), `duplicate_of`, `website_error` (`at`, `error`: website na drie pogingen niet te lezen; verdwijnt bij de volgende geslaagde scrape), `pdok` (`at`, `afstand`, `velden`: adres aangevuld via PDOK, ook vastgelegd als er niets binnen 75 m lag), `website_parser` (versie van de extractor bij de laatste scrape; een nieuwe versie wist kernvelden die ze niet meer vindt) |
+| `sources` | jsonb | ja | `{}` | `osm`, `website` (tijdstip), `website_fields`, `beheer` (velden die beheer invulde), `duplicate_of`, `website_error` (`at`, `error`: website na drie pogingen niet te lezen; verdwijnt bij de volgende geslaagde scrape), `pdok` (`at`, `afstand`, `velden`: adres aangevuld via PDOK, ook vastgelegd als er niets binnen 75 m lag), `website_parser` (versie van de extractor bij de laatste scrape; een nieuwe versie wist kernvelden die ze niet meer vindt), `stealth` (stealth-lezer: `at`, `pages`, `robots_disallows`, `proxy`, of bij een fout `at`, `error`, `blocked`; zonder fout plant de gewone scraper de plek niet meer in) |
 | `last_scraped_at`, `verified_at`, `created_at`, `updated_at` | timestamptz | | | `verified_at`: laatste scrape waarin de website iets over de plek zei |
 
 Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, trigram op `name`.
@@ -125,6 +126,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `osm_regions` | code*, name*, last_run_at, places_req, points_req, attempt* | attempt `0` |
 | `osm_staging` | id*, kind* (`place`, `point`), row*, created_at*, processed_at | index op onverwerkte rijen |
 | `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
+| `private.stealth_queue` | place_id*, reason* (`onleesbaar`, `weinig`, `kernfeit`, `herlezen`), attempts*, next_attempt_at*, done_at, last_error, created_at* | Lease van een uur (`next_stealth_batch`); wegschrijven via `apply_stealth` → `apply_scrape` |
 
 ### Bronnenlaag (schema `bron`, dataplan Fase 0)
 
@@ -159,6 +161,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 - `admins` 1 → n `tickets.assignee`, `ticket_messages.admin_id` (`SET NULL`)
 - `auth.users` 1 → 1 `admins` (`CASCADE`)
 - `places` 1 → 1 `private.scrape_queue` (`CASCADE`)
+- `places` 1 → 1 `private.stealth_queue` (`CASCADE`)
 
 ## Eigendom van records
 

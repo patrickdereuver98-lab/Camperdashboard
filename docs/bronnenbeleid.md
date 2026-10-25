@@ -92,8 +92,9 @@ Wat blijft, omdat het een wettelijke grens is of andere sites schaadt (niet aan 
 - **Stoppen als een eigenaar of site daarom vraagt** (mail, klacht, juridische brief): de bron gaat op geblokkeerd
   voor elke lezer en de coördinator legt het voor aan de eigenaar.
 - **Wat we bewaren verandert niet:** feiten met bron, datum en letterlijk citaat; 30 dagen bewaartermijn.
-- **Herkenbaar in de gegevens:** elk document van de stealth-lezer krijgt `fetched_by = 'stealth'`, zodat we het
-  kunnen terugvinden en wissen.
+- **Herkenbaar in de gegevens:** wat de stealth-lezer op de eigen site van een plek vond, staat in
+  `places.sources.stealth`, zodat we het kunnen terugvinden en wissen. Voor de bronnenlaag (andere bronnen dan de
+  eigen site) volgt `fetched_by = 'stealth'` op de documenten.
 
 Risico, bewust geaccepteerd door de eigenaar: sites kunnen ons blokkeren, een klacht of sommatie sturen, en de
 voorwaarden van sites (Google, Meta, directories) verbieden dit vaak, wat tot een claim kan leiden. VrijStaan
