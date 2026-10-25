@@ -170,14 +170,15 @@ veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
 | # | Wat | Wie | Status |
 |---|---|---|---|
 | B1 | PR #56 en #57 (design, scraper v47/v48, eigenaarsroute, bronnenlaag) naar `acceptatie` en `main` | Agent | 🔄 |
-| B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 50.000 regels weg, rest in blokken; `truncate` en functie met `delete` vragen bevestiging in de Supabase-tool |
-| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ⬜ 29 gedaan |
+| B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 24 okt: logboek opgeruimd (gewone `delete` in blokken + `vacuum full`), database 202 MB → 51 MB, groei ~2 MB per dag. De dagelijkse functie `private.apply_retention()` met cron `retention` staat nog niet live: de Supabase-tool vraagt bij `create function` met `delete` om een bevestiging die niet komt (zie `web/supabase/retention.sql`) |
+| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ✅ 24 okt: 1.395 plekken aangepast, 2.256 klopten al |
 | B4 | Vertrektijd: Beheer → inzendingen zonder beheeraccount afhandelen: Patrick krijgt beheerrechten via het bestaande account of een melding | Agent | ⬜ |
 | B5 | Dode websites: nog ~100 plekken zonder adres; foutlijst voor Beheer | Agent | ⬜ |
 | B6 | Ronde 2: aanwijzingen zonder controle (8) en twijfelgevallen (18+14) handmatig afwerken voor zover mogelijk | Agent | ⬜ |
-| B7 | Prijzen naar 70%: scraper op PDF-tarieven en zoekagenten voor prijs | Agent | ⬜ |
+| B7 | Prijzen: scraper v49 en v50 (patronen "N personen inclusief" en "all-inclusief"); prijsdekking 59% | Agent | 🔄 +9 prijzen bij ~1.700 herlezen plekken; 70% is zo niet haalbaar, doel beta 60% met "prijs onbekend" eerlijk zichtbaar |
 | B8 | Juridische pagina's: bedrijfsgegevens leeg tonen als "hobbyproject, contact via het formulier" in plaats van "[nog invullen]" | Agent | ⬜ |
 | B9 | Alleen Patrick: naam en contactadres, domein, mailprovider, OAuth-sleutels, back-upgeheimen | Patrick | 👤 (niet nodig voor de gesloten beta, wel voor livegang) |
 
 Volgorde: B1 → B2 → B3 → B5 → B6 → B7 → B8 → B4.
 
+Open PR's per 25 oktober: alleen #60 (stealth-lezer, concept, niet samengevoegd: zie implementatieplan). #28 (TypeScript 7) gesloten tot `typescript-eslint` TS 7 ondersteunt.
