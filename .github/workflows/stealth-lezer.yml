@@ -1,6 +1,6 @@
 # Stealth-lezer (bronnenbeleid §3a): leest elk uur 50 minuten lang websites uit private.stealth_queue met Scrapling.
 # De pipeline kiest de pagina's en schrijft weg; deze taak haalt alleen op. Code en uitleg: tools/stealth-lezer.
-# Drie lezers tegelijk, elk op eigen hosts. Zolang de wachtrij niet leeg is, start elke run de volgende zelf.
+# Acht lezers tegelijk, elk op eigen hosts. Zolang de wachtrij niet leeg is, start elke run de volgende zelf.
 #
 # Geen geheim nodig: de lezer meldt zich bij de pipeline aan met een GitHub-OIDC-token (id-token: write). De pipeline
 # accepteert dat alleen van deze workflow op main en alleen voor de stealth-acties (stealth.ts).
@@ -30,14 +30,14 @@ jobs:
   lezen:
     runs-on: ubuntu-latest
     timeout-minutes: 58
-    # Drie lezers tegelijk, elk op een eigen deel van de hosts (zie next_stealth_batch): per host blijft er één lezer
+    # Acht lezers tegelijk (25 okt: van 3 naar 8 voor meer snelheid), elk op een eigen deel van de hosts (zie next_stealth_batch): per host blijft er één lezer
     strategy:
       fail-fast: false
       matrix:
-        lezer: [0, 1, 2]
+        lezer: [0, 1, 2, 3, 4, 5, 6, 7]
     env:
       STEALTH_SHARD: ${{ matrix.lezer }}
-      STEALTH_SHARDS: 3
+      STEALTH_SHARDS: 8
       PIPELINE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/pipeline
       STEALTH_PROXIES: ${{ secrets.STEALTH_PROXIES }}
       STEALTH_MINUTES: ${{ github.event.inputs.minutes || '50' }}
