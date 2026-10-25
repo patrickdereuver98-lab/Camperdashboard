@@ -271,6 +271,9 @@ export function extract(pages: string[], base: URL) {
     new RegExp(`(?:camper|caravan|kampeerplaats|standplaats|staanplaats)[^€.]{0,160}per (?:nacht|dag)\\*?:?\\s*(?:[a-z–/ -]{0,30}?)?€\\s?${AMOUNT}`, "g"),
     // "per caravan per nacht € 18,50"
     new RegExp(`per (?:camper|caravan|kampeerplaats|standplaats|staanplaats|camperplaats|kampeermiddel)(?: per (?:nacht|dag|overnachting))?\\s*:?\\s*€\\s?${AMOUNT}`, "g"),
+    // Prijs voor een aantal personen zonder eenheid: "2 personen inclusief kampeermiddel, auto, elektriciteit en
+    // toeristenbelasting € 30,12" (De Zeeuwse Vlag, steekproef 24 oktober 2026)
+    new RegExp(`(?:[2-6]|twee|drie|vier)\\s+(?:personen|pers\\.?)\\s+(?:incl\\.?|inclusief)[^€.]{0,160}€\\s?${AMOUNT}`, "g"),
     // "een overnachting kost 7,50 euro"
     new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*€\\s?${AMOUNT}`, "g"),
     new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*${AMOUNT}\\s*euro`, "g"),
@@ -284,7 +287,12 @@ export function extract(pages: string[], base: URL) {
       // Wat er inbegrepen is ("inclusief 2 personen, 1 auto, elektra, douche") is geen toeslag
       // Net zo "(excl. toeristenbelasting)": dat zegt dat het bedrag zónder die toeslag is, het is zelf geen toeslag
       const included = /\b(?:incl\.?|inclusief|inkl\.?)[^€]{0,160}|\(?\b(?:excl\.?|exclusief|exkl\.?)\s[^€)]{0,60}\)?|\bmet (?:stroom|elektra|elektriciteit)\b/g;
-      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test(m[0].replace(included, " "))) continue;
+      // Staat vlak vóór de treffer "all-inclusief" of "inclusief" (De Catshoek: "1 plaats all-inclusief, 2 personen, caravan/tent/camper,
+      // elektra, douche … per nacht € 30,50"), dan is wat erna volgt ook inbegrepen
+      const lead = text.slice(Math.max(0, m.index! - 80), m.index!);
+      const li = lead.search(/\b(?:incl\.?|inclusief|inkl\.?)/i);
+      const leadIncl = li >= 0 ? lead.slice(li) : "";
+      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test((leadIncl + m[0]).replace(included, " "))) continue;
       // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
       const before = text.slice(Math.max(0, m.index! - 50), m.index!);
       const sentence = before.slice(before.lastIndexOf(".") + 1);
