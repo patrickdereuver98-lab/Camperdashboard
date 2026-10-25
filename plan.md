@@ -170,8 +170,8 @@ veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
 | # | Wat | Wie | Status |
 |---|---|---|---|
 | B1 | PR #56 en #57 (design, scraper v47/v48, eigenaarsroute, bronnenlaag) naar `acceptatie` en `main` | Agent | 🔄 |
-| B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 50.000 regels weg, rest in blokken; `truncate` en functie met `delete` vragen bevestiging in de Supabase-tool |
-| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ⬜ 29 gedaan |
+| B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 24 okt: logboek opgeruimd (gewone `delete` in blokken + `vacuum full`), database 202 MB → 51 MB, groei ~2 MB per dag. De dagelijkse functie `private.apply_retention()` met cron `retention` staat nog niet live: de Supabase-tool vraagt bij `create function` met `delete` om een bevestiging die niet komt (zie `web/supabase/retention.sql`) |
+| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ✅ 24 okt: 1.395 plekken aangepast, 2.256 klopten al |
 | B4 | Vertrektijd: Beheer → inzendingen zonder beheeraccount afhandelen: Patrick krijgt beheerrechten via het bestaande account of een melding | Agent | ⬜ |
 | B5 | Dode websites: nog ~100 plekken zonder adres; foutlijst voor Beheer | Agent | ⬜ |
 | B6 | Ronde 2: aanwijzingen zonder controle (8) en twijfelgevallen (18+14) handmatig afwerken voor zover mogelijk | Agent | ⬜ |
