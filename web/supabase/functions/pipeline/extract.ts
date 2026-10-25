@@ -287,7 +287,12 @@ export function extract(pages: string[], base: URL) {
       // Wat er inbegrepen is ("inclusief 2 personen, 1 auto, elektra, douche") is geen toeslag
       // Net zo "(excl. toeristenbelasting)": dat zegt dat het bedrag zónder die toeslag is, het is zelf geen toeslag
       const included = /\b(?:incl\.?|inclusief|inkl\.?)[^€]{0,160}|\(?\b(?:excl\.?|exclusief|exkl\.?)\s[^€)]{0,60}\)?|\bmet (?:stroom|elektra|elektriciteit)\b/g;
-      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test(m[0].replace(included, " "))) continue;
+      // Staat vlak vóór de treffer "all-inclusief" of "inclusief" (De Catshoek: "1 plaats all-inclusief, 2 personen, caravan/tent/camper,
+      // elektra, douche … per nacht € 30,50"), dan is wat erna volgt ook inbegrepen
+      const lead = text.slice(Math.max(0, m.index! - 80), m.index!);
+      const li = lead.search(/\b(?:incl\.?|inclusief|inkl\.?)/i);
+      const leadIncl = li >= 0 ? lead.slice(li) : "";
+      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test((leadIncl + m[0]).replace(included, " "))) continue;
       // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
       const before = text.slice(Math.max(0, m.index! - 50), m.index!);
       const sentence = before.slice(before.lastIndexOf(".") + 1);

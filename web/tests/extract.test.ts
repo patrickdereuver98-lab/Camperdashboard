@@ -428,3 +428,12 @@ test("prijs: '2 personen inclusief … € 30,12' en 'all-inclusief, 2 personen 
     30.5,
   );
 });
+
+test("prijs: 'all-inclusief' vlak vóór de opsomming telt als inbegrepen (De Catshoek)", () => {
+  assert.equal(
+    page("<p>Tarieven 1 plaats all-inclusief, 2 personen, caravan/tent/camper, elektra, douche en 1 auto, per nacht € 30,50 1 extra persoon € 3,50 1 extra tent € 5,-</p>").price_eur,
+    30.5,
+  );
+  // Zonder 'inclusief' blijft een douche-bedrag een toeslag
+  assert.equal(page("<p>Camper, douche per nacht € 2,50</p>").price_eur, undefined);
+});
