@@ -1,9 +1,10 @@
 # Stealth-lezer (bronnenbeleid §3a): leest elk uur 50 minuten lang websites uit private.stealth_queue met Scrapling.
 # De pipeline kiest de pagina's en schrijft weg; deze taak haalt alleen op. Code en uitleg: tools/stealth-lezer.
 #
-# Nodig (Settings → Secrets and variables → Actions → Secrets):
-#   PIPELINE_KEY      waarde van internal_secrets.pipeline_key in Supabase
-#   STEALTH_PROXIES   optioneel: proxy-adressen gescheiden door komma's (http://user:pass@host:port)
+# Geen geheim nodig: de lezer meldt zich bij de pipeline aan met een GitHub-OIDC-token (id-token: write). De pipeline
+# accepteert dat alleen van deze workflow op main en alleen voor de stealth-acties (stealth.ts).
+# Optioneel (Settings → Secrets and variables → Actions → Secrets):
+#   STEALTH_PROXIES   proxy-adressen gescheiden door komma's (http://user:pass@host:port)
 name: Stealth-lezer
 
 on:
@@ -17,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: stealth-lezer
@@ -28,40 +30,24 @@ jobs:
     timeout-minutes: 58
     env:
       PIPELINE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/pipeline
-      PIPELINE_KEY: ${{ secrets.PIPELINE_KEY }}
       STEALTH_PROXIES: ${{ secrets.STEALTH_PROXIES }}
       STEALTH_MINUTES: ${{ github.event.inputs.minutes || '50' }}
     steps:
-      - name: Sleutel aanwezig?
-        id: gate
-        run: |
-          if [ -z "$PIPELINE_KEY" ]; then
-            echo "::warning::PIPELINE_KEY ontbreekt; de stealth-lezer heeft niets gelezen. Zie tools/stealth-lezer/README.md."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v4
-        if: steps.gate.outputs.run == 'true'
 
       - uses: actions/setup-python@v5
-        if: steps.gate.outputs.run == 'true'
         with:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: tools/stealth-lezer/requirements.txt
 
       - name: Scrapling en browser installeren
-        if: steps.gate.outputs.run == 'true'
         run: |
           pip install -r tools/stealth-lezer/requirements.txt pytest
           scrapling install
 
       - name: Tests
-        if: steps.gate.outputs.run == 'true'
         run: python -m pytest -q tools/stealth-lezer
 
       - name: Lezen
-        if: steps.gate.outputs.run == 'true'
         run: python tools/stealth-lezer/lezer.py

@@ -9,7 +9,8 @@ hoogstens 7 subpagina's per site per ronde, en bij 429 langzamer in plaats van s
 
 Omgeving:
   PIPELINE_URL      https://<project>.supabase.co/functions/v1/pipeline
-  PIPELINE_KEY      internal_secrets.pipeline_key
+  PIPELINE_KEY      optioneel: internal_secrets.pipeline_key. Zonder sleutel meldt de lezer zich aan met een GitHub-
+                    OIDC-token (alleen in de workflow stealth-lezer.yml op main, die id-token: write heeft)
   STEALTH_PROXIES   optioneel: proxy-adressen, gescheiden door komma's (http://user:pass@host:port)
   STEALTH_MINUTES   hoe lang één run mag duren (standaard 50)
   STEALTH_BATCH     plekken per aanvraag (standaard 5)
@@ -91,15 +92,46 @@ def sitemaps_from_robots(robots: str) -> list[str]:
     return re.findall(r"^\s*sitemap:\s*(\S+)", robots, re.I | re.M)
 
 
+OIDC_AUDIENCE = "vrijstaan-pipeline"
+OIDC_REUSE_S = 240  # tokens van GitHub zijn kort geldig; na 4 minuten een nieuw
+
+
+class GithubToken:
+    """OIDC-token van GitHub Actions voor de pipeline, zodat er geen geheim in GitHub hoeft te staan."""
+
+    def __init__(self, request_url: str, request_token: str, now=time.monotonic):
+        self.request_url, self.request_token, self.now = request_url, request_token, now
+        self.value, self.at = "", -OIDC_REUSE_S
+
+    def get(self) -> str:
+        if not self.value or self.now() - self.at > OIDC_REUSE_S:
+            sep = "&" if "?" in self.request_url else "?"
+            req = urllib.request.Request(
+                f"{self.request_url}{sep}audience={OIDC_AUDIENCE}",
+                headers={"Authorization": f"Bearer {self.request_token}"},
+            )
+            with urllib.request.urlopen(req, timeout=30) as res:
+                self.value, self.at = json.loads(res.read())["value"], self.now()
+        return self.value
+
+
 class Pipeline:
-    def __init__(self, url: str, key: str):
-        self.url, self.key = url, key
+    def __init__(self, url: str, key: str | None = None, token: GithubToken | None = None):
+        self.url, self.key, self.token = url, key, token
+
+    def headers(self) -> dict[str, str]:
+        h = {"Content-Type": "application/json"}
+        if self.key:
+            h["x-pipeline-key"] = self.key
+        elif self.token:
+            h["x-github-oidc"] = self.token.get()
+        return h
 
     def call(self, action: str, **body):
         req = urllib.request.Request(
             self.url,
             data=json.dumps({"action": action, **body}).encode(),
-            headers={"Content-Type": "application/json", "x-pipeline-key": self.key},
+            headers=self.headers(),
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=120) as res:
@@ -243,13 +275,14 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
 
 def main() -> int:
     url, key = os.environ.get("PIPELINE_URL"), os.environ.get("PIPELINE_KEY")
-    if not url or not key:
-        print("PIPELINE_URL en PIPELINE_KEY zijn nodig", file=sys.stderr)
+    oidc_url, oidc_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL"), os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+    if not url or not (key or (oidc_url and oidc_token)):
+        print("PIPELINE_URL en PIPELINE_KEY (of een GitHub-OIDC-token) zijn nodig", file=sys.stderr)
         return 2
     proxies = [p.strip() for p in os.environ.get("STEALTH_PROXIES", "").split(",") if p.strip()]
     deadline = time.monotonic() + 60 * float(os.environ.get("STEALTH_MINUTES", "50"))
     batch_size = int(os.environ.get("STEALTH_BATCH", "5"))
-    pipe = Pipeline(url, key)
+    pipe = Pipeline(url, key, None if key else GithubToken(oidc_url, oidc_token))
     reader = Reader(proxies)
     done = found = 0
     try:

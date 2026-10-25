@@ -1,6 +1,6 @@
 """Tests voor de pure delen van de stealth-lezer: python -m pytest tools/stealth-lezer"""
 
-from lezer import HostClock, home_candidates, is_login_wall, robots_disallows, sitemaps_from_robots
+from lezer import GithubToken, HostClock, Pipeline, home_candidates, is_login_wall, robots_disallows, sitemaps_from_robots
 
 
 def test_wachttijd_per_host():
@@ -38,3 +38,31 @@ def test_robots_wordt_vastgelegd():
     assert not robots_disallows("User-agent: *\nDisallow: /wp-admin", "https://x.nl/")
     assert not robots_disallows("", "https://x.nl/")
     assert sitemaps_from_robots("Sitemap: https://x.nl/s.xml\nsitemap: /b.xml") == ["https://x.nl/s.xml", "/b.xml"]
+
+
+
+def test_aanmelden_met_sleutel_of_github_token(monkeypatch):
+    import io
+    import json
+
+    import lezer
+
+    assert Pipeline("u", key="geheim").headers()["x-pipeline-key"] == "geheim"
+
+    asked = []
+
+    def fake_urlopen(req, timeout):
+        asked.append((req.full_url, req.headers["Authorization"]))
+        return io.BytesIO(json.dumps({"value": f"token-{len(asked)}"}).encode())
+
+    monkeypatch.setattr(lezer.urllib.request, "urlopen", fake_urlopen)
+    t = [0.0]
+    tok = GithubToken("https://gh/token?api-version=2.0", "verzoek", now=lambda: t[0])
+    pipe = Pipeline("u", token=tok)
+    h = pipe.headers()
+    assert h["x-github-oidc"] == "token-1" and "x-pipeline-key" not in h
+    assert asked[0] == ("https://gh/token?api-version=2.0&audience=vrijstaan-pipeline", "Bearer verzoek")
+    t[0] = 100
+    assert pipe.headers()["x-github-oidc"] == "token-1"  # binnen 4 minuten hergebruikt
+    t[0] = 400
+    assert pipe.headers()["x-github-oidc"] == "token-2"  # daarna een nieuw token
