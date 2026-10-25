@@ -7,6 +7,8 @@
 //   { "action": "enqueue" }                 → plekken met website in de scrape-wachtrij
 //   { "action": "inspect", "url": "…" }     → diagnose: gekozen pagina's en vertrekzinnen (schrijft niets)
 //   { "action": "adres", "n": 40 }          → straat en postcode aanvullen via PDOK (pdok.ts)
+//   { "action": "stealth_batch" | "stealth_plan" | "stealth_deeper" | "stealth_apply", … }
+//       → stealth-lezer (tools/stealth-lezer, Scrapling): die haalt op, deze functie kiest en leest uit (stealth.ts)
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
@@ -15,6 +17,7 @@ import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
+import { stealthDeeper, stealthPages, stealthPlan } from "./stealth.ts";
 import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
@@ -230,7 +233,10 @@ async function fetchPdf(url: URL): Promise<string | null> {
   if (!(await allowed(url))) return null;
   const res = await fetch(url, { headers: { "User-Agent": UA }, redirect: "follow", signal: AbortSignal.timeout(12000) });
   if (!res.ok || !(res.headers.get("content-type") ?? "").includes("pdf")) return null;
-  const buf = new Uint8Array(await res.arrayBuffer());
+  return pdfHtml(new Uint8Array(await res.arrayBuffer()));
+}
+
+async function pdfHtml(buf: Uint8Array): Promise<string | null> {
   if (buf.length > 3_000_000) return null;
   const { extractText, getDocumentProxy } = await import("npm:unpdf@1.8.1");
   const { text } = await extractText(await getDocumentProxy(buf), { mergePages: true });
@@ -346,21 +352,64 @@ async function scrapeOne(place: { id: string; website: string }) {
   const { home, html, subs, pdfs, failed, links } = await collectPages(place.website);
   const pages = [html];
   for (const sub of subs) if (sub) pages.push(sub);
+  return extractAll(pages, home, () => Promise.all(pdfs.map((href) => fetchPdf(new URL(href)).catch(() => null))), failed.length, links);
+}
+
+/** Uitlezen zoals de scraper dat doet, ook voor pagina's die de stealth-lezer aanlevert */
+async function extractAll(pages: string[], home: URL, loadPdfs: () => Promise<(string | null)[]>, failed: number, links: number) {
   let data = extract(pages, home) as Record<string, unknown> & { fields?: string[] };
   // Geen vertrektijd op de pagina's? Dan de PDF's (reglement, tarieven) erbij; dat kost meer rekentijd
-  if (data.departure === undefined && pdfs.length) {
-    const texts = await Promise.all(pdfs.map((href) => fetchPdf(new URL(href)).catch(() => null)));
-    const extra = texts.filter((x): x is string => !!x);
+  if (data.departure === undefined) {
+    const extra = (await loadPdfs()).filter((x): x is string => !!x);
     if (extra.length) {
       pages.push(...extra);
       data = extract(pages, home) as typeof data;
     }
   }
   // Haperende site: apply_scrape wist dan niets wat deze keer ontbreekt
-  if (failed.length) data._pages_failed = failed.length;
+  if (failed) data._pages_failed = failed;
   else if (emptySite(links, data.fields?.length ?? 0)) data._pages_failed = 1;
   data._parser = PARSER;
   return data;
+}
+
+// ── Stealth-lezer (bronnenbeleid §3a) ──────────────────────────────────────
+
+const homeUrl = (v: unknown) => {
+  const u = new URL(String(v));
+  if (!/^https?:$/.test(u.protocol)) throw new Error("Alleen http(s)");
+  return u;
+};
+
+function b64(s: string) {
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function stealthApply(body: Record<string, unknown>) {
+  const id = String(body.id);
+  if (body.error) {
+    const { error } = await db.rpc("apply_stealth", { p_id: id, p_data: {}, p_error: String(body.error).slice(0, 300) });
+    if (error) throw new Error(`apply_stealth: ${error.message}`);
+    return { id, ok: false };
+  }
+  const home = homeUrl(body.home);
+  const pages = stealthPages(body.pages);
+  if (!pages.length) throw new Error("Geen pagina's");
+  const pdfs = Array.isArray(body.pdfs) ? (body.pdfs as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 2) : [];
+  const data = await extractAll(
+    pages,
+    home,
+    () => Promise.all(pdfs.map((x) => pdfHtml(b64(x)).catch(() => null))),
+    Number(body.failed) || 0,
+    Number(body.links) || 0,
+  );
+  const meta = { robots_disallows: body.robots_disallows === true, pages: pages.length, proxy: body.proxy === true };
+  const { error } = await db.rpc("apply_stealth", { p_id: id, p_data: data, p_error: null, p_meta: meta });
+  if (error) throw new Error(`apply_stealth: ${error.message}`);
+  return { id, ok: true, fields: data.fields ?? [] };
 }
 
 /** Diagnose (alleen lezen): welke pagina's kiest de scraper en welke zinnen over vertrekken staan erop */
@@ -468,6 +517,15 @@ Deno.serve(async (req) => {
         (e) => ({ ok: true, count: e.length }),
         (e) => ({ ok: false, error: String(e) }),
       );
+    else if (body.action === "stealth_batch") {
+      const { data, error } = await db.rpc("next_stealth_batch", { p_limit: Math.min(20, Number(body.n) || 5) });
+      if (error) throw error;
+      result = data;
+    } else if (body.action === "stealth_plan")
+      result = stealthPlan(homeUrl(body.home), String(body.html ?? ""), Array.isArray(body.sitemaps) ? body.sitemaps.map(String) : []);
+    else if (body.action === "stealth_deeper")
+      result = stealthDeeper(homeUrl(body.home), stealthPages(body.pages), Array.isArray(body.seen) ? body.seen.map(String) : []);
+    else if (body.action === "stealth_apply") result = await stealthApply(body);
     else if (body.action === "inspect") result = await inspect(String(body.url), body.field ? String(body.field) : undefined);
     else if (body.action === "verify")
       result = await Promise.all(

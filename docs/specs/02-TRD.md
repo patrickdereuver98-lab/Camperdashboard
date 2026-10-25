@@ -58,6 +58,7 @@
 | routing.openstreetmap.de (FOSSGIS) | Rijtijden zonder ORS-sleutel | Publieke dienst, eerlijk gebruik | Geen sleutel |
 | PDOK Locatieserver (Kadaster) | Zoekvak "waar": adressen, postcodes, woonplaatsen en gemeenten (`suggest`, `lookup` op `api.pdok.nl/bzk/locatieserver/search/v3_1`) | Gratis overheidsdienst, eerlijk gebruik; 4 s time-out, cache per zoekterm (`cacheLife("hours")`, lookup `"days"`), 120 verzoeken per minuut per IP op `/api/locatie` | Geen sleutel. Alleen onze server praat met PDOK (`/api/locatie`), zonder IP of andere gegevens van de bezoeker; staat in de privacyverklaring. Bij een fout of offline build: de eigen lijst `nl_towns` |
 | Openbare bronnen: gemeentesites, directories (Campercontact, park4night, ACSI, ANWB, Camping.info), fora, reviewsites | Tweede bron voor bestaan en feiten van plekken (dataplan, [bronnenbeleid](../bronnenbeleid.md)) | `robots.txt` gerespecteerd, wachttijd per host 5–20 s (`bron.sources.min_delay_s`), 15 s timeout, max. 2 MB per pagina, alleen openbare hostnamen, user-agent `VrijStaanBot/1.0`; geen inlogpagina's; Facebook, Instagram en Google Maps geblokkeerd | n.v.t. |
+| Stealth-lezer (Scrapling 0.4.15, `tools/stealth-lezer`, GitHub Actions elk uur) | Alle openbare bronnen, ook achter botbeveiliging (Cloudflare, captcha, 403), openbare Google Maps- en Facebook-pagina's | Zie [bronnenbeleid §3a](../bronnenbeleid.md): omzeilt botbeveiliging en `robots.txt`, wisselende proxy's toegestaan; geen inlog- of betaalmuren, geen bulk uit databanken, hoogstens 1 verzoek per 5 s per host, stoppen op verzoek | Proxydienst (nog te kiezen) |
 | MCP-server `vrijstaan-bronnen` (edge function `bronnen-mcp`) | Gedeelde ingang voor sessies die bronnen lezen: werk pakken, pagina's ophalen, claims en kandidaten insturen | Zonder JWT; eigen sleutel `BRONNEN_MCP_KEY` (edge-secret), vergelijking in constante tijd | Account van Patrick |
 | OpenFreeMap | Kaarttegels | Gratis, geen sleutel | Geen; IP van bezoeker gaat naar hun server (staat in privacyverklaring) |
 | Google Maps | "Open in navigatie" (uitgaande link) | n.v.t. | Geen |
@@ -92,6 +93,7 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `scrape`, `scrape-2` … `scrape-10` | elke 15 s | Tien workers, elk 8 websites op de achtergrond (`EdgeRuntime.waitUntil`), zolang er werk in `private.scrape_queue` staat |
 | `scrape-enqueue` | elk half uur | Nieuwe plekken met een website inplannen |
 | `scrape-refresh` | elk half uur (:07 en :37) | De 10 plekken die het langst en minstens 30 dagen niet gelezen zijn opnieuw inplannen |
+| `stealth-enqueue` | dagelijks 05:23 | 300 plekken in `private.stealth_queue` zetten voor de stealth-lezer (onleesbaar, weinig gegevens, zonder prijs of vertrektijd, herlezen na 30 dagen) |
 | `bron-opschonen` | dagelijks 04:43 | Opgehaalde tekst ouder dan 30 dagen terugbrengen tot de citaten; oude wachttijden en vergeten leases opruimen |
 | `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd in de SQL-editor (bevat ook tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log) |
 
