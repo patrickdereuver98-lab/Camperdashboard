@@ -535,7 +535,12 @@ Deno.serve(async (req) => {
         (e) => ({ ok: false, error: String(e) }),
       );
     else if (body.action === "stealth_batch") {
-      const { data, error } = await db.rpc("next_stealth_batch", { p_limit: Math.min(20, Number(body.n) || 5) });
+      // Meerdere lezers tegelijk: elk een vast deel van de hosts (shard), zodat er per host maar één lezer is
+      const shards = Math.min(10, Math.max(1, Number(body.shards) || 1));
+      const limit = Math.min(20, Number(body.n) || 5);
+      const { data, error } = shards > 1
+        ? await db.rpc("next_stealth_batch", { p_limit: limit, p_shard: Math.min(shards - 1, Math.max(0, Number(body.shard) || 0)), p_shards: shards })
+        : await db.rpc("next_stealth_batch", { p_limit: limit });
       if (error) throw error;
       result = data;
     } else if (body.action === "stealth_plan")
