@@ -46,3 +46,22 @@ export function stealthPages(input: unknown): string[] {
     .slice(0, 1 + STEALTH_SUBPAGES)
     .map((x) => x.slice(0, STEALTH_PAGE_CHARS));
 }
+
+// Aanmelden zonder geheim: de workflow vraagt GitHub om een ondertekend OIDC-token met dit publiek, en de pipeline
+// controleert handtekening, uitgever en publiek (index.ts) en daarna deze claims. Zo kan alleen de stealth-workflow op
+// main van deze repository de stealth-acties aanroepen, ook niet een fork of een andere branch.
+export const OIDC_ISSUER = "https://token.actions.githubusercontent.com";
+export const OIDC_AUDIENCE = "vrijstaan-pipeline";
+const REPO = "patrickdereuver98-lab/camperdashboard";
+const WORKFLOW = ".github/workflows/stealth-lezer.yml@refs/heads/main";
+
+export function stealthClaimsOk(c: Record<string, unknown>): boolean {
+  const repo = String(c.repository ?? "").toLowerCase();
+  const workflow = String(c.workflow_ref ?? "").toLowerCase();
+  return (
+    repo === REPO &&
+    c.ref === "refs/heads/main" &&
+    workflow === `${REPO}/${WORKFLOW}` &&
+    (c.event_name === "schedule" || c.event_name === "workflow_dispatch")
+  );
+}
