@@ -14,6 +14,8 @@ Omgeving:
   STEALTH_PROXIES   optioneel: proxy-adressen, gescheiden door komma's (http://user:pass@host:port)
   STEALTH_MINUTES   hoe lang één run mag duren (standaard 50)
   STEALTH_BATCH     plekken per aanvraag (standaard 5)
+  STEALTH_SHARD     optioneel: welk deel van de hosts deze lezer doet (0, 1, …), samen met STEALTH_SHARDS
+  STEALTH_SHARDS    optioneel: aantal lezers tegelijk (standaard 1)
   STEALTH_CHROME    optioneel: pad naar een eigen Chromium (anders die van `scrapling install`)
 """
 
@@ -282,13 +284,14 @@ def main() -> int:
     proxies = [p.strip() for p in os.environ.get("STEALTH_PROXIES", "").split(",") if p.strip()]
     deadline = time.monotonic() + 60 * float(os.environ.get("STEALTH_MINUTES", "50"))
     batch_size = int(os.environ.get("STEALTH_BATCH", "5"))
+    shard = {"shard": int(os.environ.get("STEALTH_SHARD", "0")), "shards": int(os.environ.get("STEALTH_SHARDS", "1"))}
     pipe = Pipeline(url, key, None if key else GithubToken(oidc_url, oidc_token))
     reader = Reader(proxies)
     done = found = 0
     empty = False
     try:
         while time.monotonic() < deadline:
-            batch = pipe.call("stealth_batch", n=batch_size)
+            batch = pipe.call("stealth_batch", n=batch_size, **shard)
             if not batch:
                 print("Wachtrij leeg")
                 empty = True
