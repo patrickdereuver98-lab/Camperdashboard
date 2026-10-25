@@ -181,4 +181,4 @@ veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
 
 Volgorde: B1 → B2 → B3 → B5 → B6 → B7 → B8 → B4.
 
-Open PR's per 25 oktober: alleen #60 (stealth-lezer, concept, niet samengevoegd: zie implementatieplan). #28 (TypeScript 7) gesloten tot `typescript-eslint` TS 7 ondersteunt.
+Open PR's per 25 oktober: alleen #60 (stealth-lezer, besluit eigenaar in open punt 62; uitrol door de sessie "Scraper evaluation"). #28 (TypeScript 7) gesloten tot `typescript-eslint` TS 7 ondersteunt.
