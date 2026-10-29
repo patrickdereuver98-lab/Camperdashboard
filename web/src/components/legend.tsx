@@ -74,12 +74,22 @@ export function Legend({ className = "", label = "Wat betekenen de icoontjes?" }
                 <DepartureChip place={{}} />
                 <span className="text-ink-2">weten we nog niet</span>
               </li>
-              <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="grid h-6 w-6 place-items-center" aria-hidden="true">
-                  <span className="h-3.5 w-3.5 rounded-full bg-muted ring-2 ring-surface" />
-                </span>
-                <span className="text-ink-2">grijze stip op de kaart: vertrektijd nog onbekend</span>
-              </li>
+              {/* Kaartstippen hebben de kleur van de vertrekregel (concept "Kaart eerst", 29 oktober 2026) */}
+              {(
+                [
+                  ["bg-forest", "groene stip op de kaart: geen vaste vertrektijd"],
+                  ["bg-lake", "blauwe stip: vertrek om 12:00 of later"],
+                  ["bg-ink-2", "donkergrijze stip: vertrek vóór 12:00"],
+                  ["bg-surface ring-[3px] ring-muted", "holle grijze stip: vertrektijd nog onbekend"],
+                ] as const
+              ).map(([dot, text]) => (
+                <li key={text} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="grid h-6 w-6 place-items-center" aria-hidden="true">
+                    <span className={`h-3.5 w-3.5 rounded-full ${dot}`} />
+                  </span>
+                  <span className="text-ink-2">{text}</span>
+                </li>
+              ))}
             </ul>
             <p className="mt-3 text-sm text-muted">
               Weet jij de vertrektijd van een grijze plek? Op de pagina van de plek kun je hem doorgeven.
