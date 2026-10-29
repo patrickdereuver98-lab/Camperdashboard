@@ -164,6 +164,22 @@ sierletters.
 Niet overnemen van de inspiratiesites: de grote illustraties en verlopen van Dribbble-concepten, foto's als volledige
 achtergrond, ronde bubbels. Ze botsen met de stijlgids (§2, "wat we nooit doen") en met de 40+-doelgroep.
 
+## 5b. Designreview 2: los van het huidige ontwerp (29 oktober)
+
+Kleuren en Geist blijven; vorm, navigatie en schermindeling zijn losgelaten. Uitgewerkt op het ontwerpcanvas
+(<https://claude.ai/artifact/6Qcc5PMnkrqfotPyhEgUp8>), met echte plekken rond Apeldoorn uit de snapshot.
+
+- **A, antwoord eerst:** tab Vannacht in plaats van Start en Dichtbij, met drie plekken en hun vertrektijd als grootste
+  tekst; plekpagina als één beslisscherm ("Je moet om 11:30 weg. Aankomen kan vanaf 13:30."), voorzieningen als ja,
+  nee of weten we niet, de ligging als kaartje als er geen foto is.
+- **B, vertrekbord:** zoeken als stationsbord in de avondkleuren, 8 plekken per scherm, tijden in Geist Mono (afwijking
+  van de stijlgids §4); de vertrektabbladen vervangen door de vraag "Hoe laat wil je morgen weg?" met aantallen.
+- **C, de kaart is de app:** tijd en prijs op de pin, gekozen plek als blad met drie getallen en Route.
+
+Advies: A als basis, B2 in plaats van de vertrektabbladen, tijd en prijs op de pin uit C; eerst testen met 3 tot 5
+camperaars van 40+. Besluiten voor Patrick: B6 (Vannacht), B7 (tijd als grootste tekst), B8 (Geist Mono), B9
+(avondmodus na zonsondergang).
+
 ## 6. Wat de concurrenten hebben
 
 | | VrijStaan | Campercontact | park4night | ACSI | Camperstop | The Dyrt (VS) |
