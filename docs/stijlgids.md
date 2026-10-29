@@ -5,7 +5,7 @@
 > Opgesteld 12 oktober 2026 na feedback van de eigenaar ("te groot, te AI, te kinderlijk; de kleuren zijn goed"),
 > met als bronnen de skills design-taste-frontend, minimalist-ui, high-end-visual-design en redesign (taste-skill),
 > ui-ux-pro-max, Vercel react-best-practices en de Vercel Web Interface Guidelines. Alles daaruit is vertaald naar
-> VrijStaan: een rustige, betrouwbare gids voor camperaars van 55+, op een telefoon, onderweg.
+> VrijStaan: een rustige, betrouwbare gids voor camperaars van 40+, op een telefoon, onderweg.
 
 ## 1. Richting in één zin
 

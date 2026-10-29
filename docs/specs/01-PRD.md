@@ -24,7 +24,7 @@ gegevens. Bij elke keuze in bouwen of data gaat de vertrektijd voor.
 
 | Groep | Wie | Wat ze nodig hebben |
 |---|---|---|
-| Camperaar onderweg (primair) | Nederlandse camperbezitter, **40+** (besluit 18 oktober 2026, was 55+), op een smartphone, vaak laat op de dag | Vannacht een plek vinden, weten of je vrij kunt aankomen en vertrekken, prijs, stroom/water/lozen, past mijn camper, honden |
+| Camperaar onderweg (primair) | Nederlandse camperbezitter, **40+** (besluit 18 oktober 2026, bevestigd 29 oktober 2026; was 55+), op een smartphone, vaak laat op de dag | Vannacht een plek vinden, weten of je vrij kunt aankomen en vertrekken, prijs, stroom/water/lozen, past mijn camper, honden |
 | Camperaar die vooruit plant | Zelfde groep, thuis op telefoon of tablet | Plekken bewaren, een reis met stops maken, rijtijden zien |
 | Eigenaar van een plek | Camping, camperplaats, boerderij, jachthaven, gemeente | Plek claimen (versie 1), juiste gegevens tonen, later eigen tekst en foto's (fase B) |
 | Beheerder | Patrick; later support-medewerkers | Data controleren, meldingen en reviews afhandelen, statistieken zien |

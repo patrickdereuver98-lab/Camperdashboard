@@ -8,7 +8,7 @@
 
 ## Doelgroep en toon
 
-- Nederlandse camperaars, vooral 55+, op een telefoon, vaak onderweg en bij wisselend licht.
+- Nederlandse camperaars van 40+ (PRD, besluit 18 oktober 2026), op een telefoon, vaak onderweg en bij wisselend licht.
 - Drie woorden: **rustig**, **eerlijk**, **buiten**.
 - Taal: Nederlands, je-vorm, korte gewone zinnen, geen marketingtaal, geen emoji, geen nepurgentie ("nog 2 plekken!").
   Onbekend heet "Onbekend", nooit een gok.
