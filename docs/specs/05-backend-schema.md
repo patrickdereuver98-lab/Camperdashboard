@@ -216,7 +216,8 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 - `checkout_until`, `checkin_from` en `checkin_until` in `uu:mm`; `reservation_rule` alleen `verplicht`, `mogelijk` of `niet_nodig`.
 - **Publicatie** (trigger `places_before_write`): een plek wordt `published` als
   1. er een website, telefoonnummer, e-mailadres of beheerder (OSM `operator`) is (besluit eigenaar 19 oktober 2026), én
-  2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs, én
+  2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs; de vertrekregel telt
+     dubbel, dus contact plus een vertrekregel is genoeg (besluit eigenaar 29 oktober 2026), én
   3. `completeness` ≥ `site_settings.publish_threshold` (nu 0,45).
   Gewichten (20 punten): vertrekregel 4, seizoen 3, prijs 2, stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1,
   honden 1, beschrijving 0,5, echte naam 0,5, douche 0,25, aantal plekken 0,25. `status_locked` slaat dit over.
