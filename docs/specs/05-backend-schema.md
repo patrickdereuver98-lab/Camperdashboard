@@ -26,6 +26,7 @@
 | `internal_secrets` | Sleutel waarmee de database de edge function aanroept |
 | `private.scrape_queue` | Wachtrij van websites die de scraper moet lezen |
 | `private.stealth_queue` | Wachtrij van de stealth-lezer (Scrapling, [bronnenbeleid §3a](../bronnenbeleid.md)) |
+| `private.verwijderde_plekken` | Kopie van opgeruimde onbereikbare plekken; een trigger houdt hetzelfde OSM-nummer tegen bij een nieuwe import |
 | `private.admin_invites` | E-mailadressen die een beheeraccount mogen aanmaken |
 | `profiles` | Profiel van een bezoekersaccount (naam en foto van Google/Apple/Facebook) |
 | `user_trips` | Mijn reis van een ingelogde bezoeker (`stops` jsonb, ≤ 200) |
@@ -127,6 +128,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `osm_staging` | id*, kind* (`place`, `point`), row*, created_at*, processed_at | index op onverwerkte rijen |
 | `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
 | `private.stealth_queue` | place_id*, reason* (`onleesbaar`, `weinig`, `kernfeit`, `herlezen`), attempts*, next_attempt_at*, done_at, last_error, created_at* | Lease van een uur (`next_stealth_batch`); wegschrijven via `apply_stealth` → `apply_scrape` |
+| `private.verwijderde_plekken` | id*, osm_type, osm_id (uniek met osm_type), slug, name, website, reden*, gegevens* (hele rij), removed_at* | Gevuld door `private.verwijder_onbereikbare_plekken()` (cron `onbereikbaar-opruimen`, 06:13): niet gepubliceerd, niet vastgezet, geen prijs of vertrektijd, geen Beheer-velden, en geen website of een website die ook de stealth-lezer niet kon lezen. Trigger `weiger_verwijderde_plek` slaat een nieuwe rij met hetzelfde OSM-nummer over. Terugzetten: rij hier weghalen en de plek uit `gegevens` opnieuw invoegen |
 
 ### Bronnenlaag (schema `bron`, dataplan Fase 0)
 
