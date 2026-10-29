@@ -111,7 +111,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `crowd_watches` | user_id* + place_id* (pk), created_at*, expires_at* (+24 uur), notified_at | via `watch_place` (max. 10 tegelijk); trigger op `crowd_reports` roept edge function `push` aan als de stand "rustig" wordt. VAPID-sleutels in `private.secrets` (alleen service_role) |
 | `crowd_reports` | id*, place_id*, user_id*, level* (`rustig`, `druk`, `vol`), created_at* | melden via `report_crowd` (1 per persoon per plek per 30 min, max. 30 per dag); lezen via `crowd_status` (geaggregeerd, zonder persoonsgegevens); cron `crowd-retention` wist na 30 dagen |
 | `reviews` | id*, place_id*, author_name*, author_email, rating* (1–10), score_location/quiet/facilities/value (1–10), title (≤120), body* (20–3.000), vehicle (`camper`, `buscamper`, `caravan`, `overig`), visited_month, status*, admin_note, user_id (→ `auth.users`, `ON DELETE SET NULL`), created_at* | status `pending`; index op place_id en op user_id. `author_email` komt uit het account van de schrijver (sinds migratie `20261022100000_reviews_met_account.sql`) |
-| `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, created_at* | status `nieuw` |
+| `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, user_id (→ `auth.users`, `ON DELETE SET NULL`; gezet door `submit_place` als je ingelogd bent), created_at* | status `nieuw` |
 | `tickets` | id*, number* (uniek), access_token* (uniek, willekeurig), name* (2–80), email*, subject* (3–140), category*, status*, priority*, place_id, assignee, created_at*, updated_at* | category `vraag`, status `open`, priority `normaal` |
 | `ticket_messages` | id*, ticket_id*, author* (`klant`, `support`), admin_id, body* (1–5.000), internal* | internal `false`; index op ticket_id |
 | `faq` | id*, category*, question*, answer*, position*, published*, updated_at* | published `true` |
@@ -203,6 +203,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | Functie | Wie | Wat |
 |---|---|---|
 | `submit_place`, `create_ticket`, `reply_ticket`, `get_ticket` | iedereen | Invoer met validatie |
+| `departure_visitors(p_place_id)` | iedereen | Aantal accounts dat de huidige vertrekregel van een gepubliceerde plek doorgaf (onderwerp `vertrektijd`, niet afgewezen, laatste 2 jaar); alleen een getal, geen namen |
 | `submit_review` | ingelogd (`authenticated`) met `email_confirmed_at`; anon heeft geen `EXECUTE` | Review indienen; `user_id` = `auth.uid()`, e-mailadres uit `auth.users`. Inloggen met de code per mail (`verifyOtp`) bevestigt het adres. Moderatie blijft: status `pending` |
 | `track`, `log_consent`, `report_client_error` | iedereen | Statistieken (na toestemming), cookiekeuze, clientfouten |
 | `cache_route` | server | Routecache vullen |

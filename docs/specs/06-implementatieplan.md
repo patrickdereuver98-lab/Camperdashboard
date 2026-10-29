@@ -65,7 +65,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Beheer, inclusief statistieken | Agent | PRD | `/admin/*` | Patrick kan alles beheren zonder code | M2 |
 | ✅ Juridische pagina's, Reviews en ranking, Meld inhoud | Agent | Juridisch onderzoek | Pagina's | Teksten kloppen met wat de code doet | — |
 | 🔄 Reviewformulier: ✅ vertrektijdvraag (als inzending), ✅ bezoekdatum, ⬜ foto-upload (max. 5, verkleind, zonder EXIF) | Agent | Fase B | Supabase Storage-bucket, RPC, formulier, moderatie | Foto verschijnt na goedkeuring; geen locatie in het bestand | M2 |
-| ⬜ "Volgens n bezoekers" bij de vertrekregel | Agent | Reviewantwoorden | Weergave op de plekpagina | Bron (website of bezoekers) is altijd duidelijk | Reviewformulier |
+| ✅ "Volgens n bezoekers" bij de vertrekregel (29 okt: alleen meldingen van ingelogde accounts die dezelfde regel noemen, één per account, niet afgewezen, laatste 2 jaar; RPC `departure_visitors`, migratie `20261029180000_vertrektijd_volgens_bezoekers.sql`; README 68) | Agent | Reviewantwoorden | Weergave op de plekpagina | Bron (website of bezoekers) is altijd duidelijk | Reviewformulier |
 | 🔄 Eigenaar claimen en zelf bewerken (incl. toestemming foto's): ✅ ingevuld formulier op elke plekpagina dat alleen de wijzigingen (oud en nieuw) als inzending stuurt, met een overzicht in Beheer → Inzendingen (review 3.4, 22 okt); ⬜ eigen account met zelf bewerken; ⬜ toestemming foto's | Agent | Fase B | `owner-update.tsx`, `lib/owner-update.ts` + beheer | Eigenaar past gegevens aan na controle | M2 |
 | ✅ Websites zoeken voor plekken zonder website (edge function `discover`, cron `discover`) | Agent | Verzoek Patrick | `discover.ts`, `next_discover_batch`, `apply_discovery` | Gevonden site staat in `sources->'discovery'` en gaat de scrape-wachtrij in | Scraper |
 | ✅ Pagina "Doe mee" voor de Facebookgroep: vertrektijden invullen per provincie | Agent | Verzoek Patrick | `/doe-mee` | Inzending komt in Beheer → Inzendingen | — |
@@ -73,7 +73,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Aanmeldformulier: vertrektijd en maximale lengte | Agent | Audit | Extra velden | Velden komen in `submissions.payload` (`vertrek`, `vertrek_uiterlijk`, `max_lengte_m`) | — |
 | ✅ Foto's: verkleind via wsrv.nl met terugval, kapotte adressen hersteld, logo's overgeslagen; scraper v16 leest ook achtergrondfoto's en `<picture>` | Agent | Verzoek Patrick | `place-ui.tsx`, `places.ts`, `extract.ts` | 93 plekken zonder foto opnieuw gescraped | — |
 | ⬜ Tarieven uit PDF lezen | Agent | Voorbeeld-PDF's | Uitbreiding extractor | Steekproef van 10 PDF's klopt | Scraper |
-| ⬜ Reis met datums en waarschuwing bij gesloten plek | Agent | Fase B | Mijn reis | Waarschuwing bij seizoen buiten de datum | — |
+| ✅ Reis met datums en waarschuwing bij gesloten plek (29 okt: vertrekdatum in Mijn reis, per stop aankomst en vertrek, waarschuwing per nacht buiten het seizoen; onbekend seizoen geeft geen waarschuwing; `lib/trip-dates.ts`, unit- en e2e-tests) | Agent | Fase B | Mijn reis | Waarschuwing bij seizoen buiten de datum | — |
 
 ## Mijlpaal 5: kwaliteit 🔄
 

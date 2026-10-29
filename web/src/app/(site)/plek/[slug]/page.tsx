@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
+import { getDepartureVisitors, getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
@@ -80,7 +80,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     if (target) permanentRedirect(`/plek/${target}`);
     notFound();
   }
-  const [reviews, nearby] = await Promise.all([getReviews(place.id), getNearby(place, 6)]);
+  const [reviews, nearby, visitors] = await Promise.all([getReviews(place.id), getNearby(place, 6), getDepartureVisitors(place.id)]);
 
   // Al gesorteerd en gefilterd in places.ts: de beste foto van de plek zelf staat vooraan
   const photos = place.photos;
@@ -179,7 +179,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {/* Mobiel: beslissen, voorzieningen, beschrijving, ligging, ervaringen, praktisch. Groot scherm: zijkolom. */}
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
-            <Decision place={place} />
+            <Decision place={place} visitors={visitors} />
             {/* Foto toevoegen staat onder het kernblok: eerst beslissen, dan bijdragen */}
             <div className="-mt-4 min-h-11">
               <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
@@ -346,7 +346,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
  * Het beslisblok: de vier dingen die een camperaar eerst wil weten, als rustige lijst. Vertrekken staat bovenaan
  * en is het enige dat mag opvallen (bosgroen bij geen vaste vertrektijd, meerblauw bij uitslapers).
  */
-function Decision({ place }: { place: Place }) {
+function Decision({ place, visitors = 0 }: { place: Place; visitors?: number }) {
   const kind = departureKind(place);
   // Groen bij geen vaste vertrektijd: een bron is genoeg (besluit eigenaar 18 oktober 2026). Met voorwaarde of
   // afgewezen door beheer is het geen "vrij" meer.
@@ -410,6 +410,13 @@ function Decision({ place }: { place: Place }) {
             {departure}
           </dd>
           {note && <dd className="mt-1 text-sm text-ink-2">{note}</dd>}
+          {/* Bevestigd door bezoekers met een account die dezelfde regel doorgaven (RPC departure_visitors) */}
+          {known && visitors > 0 && (
+            <dd className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-ink-2" data-testid="departure-visitors">
+              <Icon name="check" size={16} className={late ? "text-lake" : "text-forest"} />
+              Volgens {pluralize(visitors, "bezoeker", "bezoekers")} klopt dit
+            </dd>
+          )}
           {times.length > 0 && <dd className="mt-1 text-ink-2">{times.join(". ")}.</dd>}
           {incomplete && (
             <dd className="mt-2">
