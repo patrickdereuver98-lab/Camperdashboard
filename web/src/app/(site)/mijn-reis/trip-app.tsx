@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { MotionConfig, motion } from "motion/react";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
-import { readTripPlaces, rememberTripPlaces, usePlaces, useTrip, useTripSettings, type TripStop } from "@/lib/store";
+import { readTripPlaces, rememberTripPlaces, usePlaces, useTrip, useTripDate, useTripSettings, type TripStop } from "@/lib/store";
+import { closedText, dayValue, parseDay, shortDay, tripDates } from "@/lib/trip-dates";
 import { tripCosts } from "@/lib/trip-extras";
 import type { PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
@@ -48,6 +49,7 @@ export function TripApp() {
     if (livePlaces) rememberTripPlaces(livePlaces, slugsKey.split(","));
   }, [livePlaces, slugsKey]);
   const [settings, setSettings] = useTripSettings();
+  const [tripDate, setTripDate] = useTripDate();
   const [start, setStart] = useState<LatLng | null>(null);
   const [routeResult, setRouteResult] = useState<{ key: string; data: RouteData | null; failed: boolean }>({ key: "", data: null, failed: false });
   const [shared, setShared] = useState(false);
@@ -168,6 +170,9 @@ export function TripApp() {
   const legFor = (i: number) => legs[start ? i : i - 1];
   const totalKm = route ? route.distanceM / 1000 : null;
   const nights = stops.reduce((a, s) => a + s.nights, 0);
+  // Met een vertrekdatum: per stop aankomst en vertrek, en de nachten waarop de plek volgens het seizoen dicht is
+  const startDay = parseDay(tripDate);
+  const dated = startDay ? tripDates(startDay, stops) : null;
   // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag)
   const fromPrice = stops.some((s) => s.place.priceFrom);
   // Prijs per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart
@@ -272,6 +277,28 @@ export function TripApp() {
             </p>
           )}
 
+          {/* Vertrekdatum: optioneel. Daarmee staat bij elke stop wanneer je er bent en of de plek dan open is */}
+          <div className="mb-3 rounded-xl bg-surface p-3 shadow-low">
+            <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+              <label className="min-w-0 flex-1">
+                <span className="block font-semibold">Vertrekdatum</span>
+                <input
+                  type="date"
+                  value={tripDate ?? ""}
+                  min={dayValue(new Date())}
+                  onChange={(e) => setTripDate(parseDay(e.target.value) ? e.target.value : null)}
+                  className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-base focus:ring-2 focus:ring-forest focus:outline-none"
+                />
+              </label>
+              {tripDate && (
+                <button type="button" onClick={() => setTripDate(null)} aria-label="Vertrekdatum wissen" className="h-11 px-3 font-semibold text-forest underline">
+                  Wissen
+                </button>
+              )}
+            </div>
+            {!tripDate && <p className="mt-1.5 text-sm text-muted">Kies een datum, dan zie je per stop wanneer je er bent en of de plek dan open is.</p>}
+          </div>
+
           <MotionConfig reducedMotion="user">
           <ol>
             {stops.map((s, i) => {
@@ -300,7 +327,13 @@ export function TripApp() {
                         <Link href={`/plek/${s.slug}`} className="-my-2 block truncate py-2.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
                           {s.place.name}
                         </Link>
-                        <OpenChip place={s.place} />
+                        {dated ? (
+                          <p className="text-sm font-semibold text-ink-2" data-testid="stop-dates">
+                            {shortDay(dated[i].arrive)} tot {shortDay(dated[i].leave)}
+                          </p>
+                        ) : (
+                          <OpenChip place={s.place} />
+                        )}
                         <p className="truncate text-sm text-muted">
                           {s.place.town},{" "}
                           {s.place.priceEur === undefined
@@ -311,6 +344,15 @@ export function TripApp() {
                         </p>
                       </div>
                     </div>
+                    {dated && dated[i].closedNights.length > 0 && (
+                      <p className="mt-2 flex items-start gap-2 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert" data-testid="stop-closed">
+                        <Icon name="calendar" size={17} className="mt-0.5 shrink-0" />
+                        <span>
+                          Volgens het seizoen{s.place.season ? ` (${s.place.season.replace(" – ", " t/m ")})` : ""} is deze plek dicht op{" "}
+                          {closedText(dated[i].closedNights)}. Kies een andere datum of bel even voor je gaat.
+                        </span>
+                      </p>
+                    )}
                     <div className="mt-2 flex items-center gap-1">
                       <div className="flex items-center rounded-lg border border-line" role="group" aria-label={`Nachten bij ${s.place.name}`}>
                         <button type="button" aria-label="Een nacht minder" disabled={s.nights <= 1} onClick={() => trip.setNights(s.slug, s.nights - 1)} className="grid h-11 w-11 place-items-center disabled:opacity-30">
