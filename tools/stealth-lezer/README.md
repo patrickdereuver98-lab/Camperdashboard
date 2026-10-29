@@ -9,7 +9,9 @@ Leest websites van plekken die de gewone scraper niet of nauwelijks kon lezen, m
 1. `private.enqueue_stealth` (cron `stealth-enqueue`, dagelijks 05:23) zet plekken in `private.stealth_queue`, in deze
    volgorde: onleesbaar (`website_error`), weinig gegevens (minder dan 3 velden), zonder prijs of vertrektijd, en
    herlezen na 30 dagen.
-2. De workflow `Stealth-lezer` draait elk uur 50 minuten. `lezer.py` vraagt plekken op (`stealth_batch`), haalt de
+2. De workflow `Stealth-lezer` draait acht lezers tegelijk, elk op een vast deel van de hosts (`STEALTH_SHARD`, zodat
+   er per host maar één lezer is), 45 minuten lang, en een aparte job start daarna altijd de volgende run zolang de wachtrij niet leeg
+   is (GitHub slaat geplande runs bij openbare repositories vaak over; het uurrooster blijft als vangnet). `lezer.py` vraagt plekken op (`stealth_batch`), haalt de
    startpagina op met een echte browser die Cloudflare-controles oplost, en vraagt de pipeline welke subpagina's
    (`stealth_plan`, `stealth_deeper`). Die keuze is dezelfde als bij de gewone scraper (`pages.ts`).
 3. `stealth_apply` leest alles uit met de gewone extractor en schrijft via `apply_stealth` → `apply_scrape`. Beheer gaat
@@ -26,13 +28,18 @@ Leest websites van plekken die de gewone scraper niet of nauwelijks kon lezen, m
 - Vraagt een eigenaar te stoppen: `select public.apply_stealth('<place_id>', '{}', 'geblokkeerd: <reden>')`. Dan
   leest geen enkele lezer de plek meer.
 
-## Instellen
+## Aanmelden en instellen
 
-GitHub → Settings → Secrets and variables → Actions:
+Er hoeft geen geheim in GitHub te staan. De workflow heeft `id-token: write` en vraagt GitHub om een ondertekend
+OIDC-token met publiek `vrijstaan-pipeline`. De pipeline controleert handtekening, uitgever en vervaldatum, en daarna
+dat het token van `stealth-lezer.yml` op `main` van deze repository komt, gestart door het rooster of met de hand
+(`stealthClaimsOk` in `stealth.ts`). Zo'n token geeft alleen toegang tot de stealth-acties, niet tot de rest van de
+pipeline.
 
-- `PIPELINE_KEY`: de waarde van `internal_secrets.pipeline_key`.
-- `STEALTH_PROXIES` (optioneel): proxy-adressen gescheiden door komma's. Zonder proxy's leest hij vanaf het IP van
-  GitHub.
+Optioneel (GitHub → Settings → Secrets and variables → Actions):
+
+- `STEALTH_PROXIES`: proxy-adressen gescheiden door komma's. Zonder proxy's leest hij vanaf het IP van GitHub.
+- `PIPELINE_KEY`: alleen nodig om de lezer buiten GitHub Actions te draaien (lokaal).
 
 ## Lokaal
 

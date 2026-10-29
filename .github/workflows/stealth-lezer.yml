@@ -1,9 +1,11 @@
-# Stealth-lezer (bronnenbeleid §3a): leest elk uur 50 minuten lang websites uit private.stealth_queue met Scrapling.
+# Stealth-lezer (bronnenbeleid §3a): leest in runs van 45 minuten websites uit private.stealth_queue met Scrapling.
 # De pipeline kiest de pagina's en schrijft weg; deze taak haalt alleen op. Code en uitleg: tools/stealth-lezer.
+# Acht lezers tegelijk, elk op eigen hosts. Zolang de wachtrij niet leeg is, start elke run de volgende zelf.
 #
-# Nodig (Settings → Secrets and variables → Actions → Secrets):
-#   PIPELINE_KEY      waarde van internal_secrets.pipeline_key in Supabase
-#   STEALTH_PROXIES   optioneel: proxy-adressen gescheiden door komma's (http://user:pass@host:port)
+# Geen geheim nodig: de lezer meldt zich bij de pipeline aan met een GitHub-OIDC-token (id-token: write). De pipeline
+# accepteert dat alleen van deze workflow op main en alleen voor de stealth-acties (stealth.ts).
+# Optioneel (Settings → Secrets and variables → Actions → Secrets):
+#   STEALTH_PROXIES   proxy-adressen gescheiden door komma's (http://user:pass@host:port)
 name: Stealth-lezer
 
 on:
@@ -13,10 +15,12 @@ on:
     inputs:
       minutes:
         description: "Hoe lang lezen (minuten)"
-        default: "50"
+        default: "45"
 
 permissions:
   contents: read
+  id-token: write
+  actions: write
 
 concurrency:
   group: stealth-lezer
@@ -24,44 +28,52 @@ concurrency:
 
 jobs:
   lezen:
+    outputs:
+      meer: ${{ steps.lezen.outputs.meer }}
     runs-on: ubuntu-latest
     timeout-minutes: 58
+    # Acht lezers tegelijk (25 okt: van 3 naar 8 voor meer snelheid), elk op een eigen deel van de hosts (zie next_stealth_batch): per host blijft er één lezer
+    strategy:
+      fail-fast: false
+      matrix:
+        lezer: [0, 1, 2, 3, 4, 5, 6, 7]
     env:
+      STEALTH_SHARD: ${{ matrix.lezer }}
+      STEALTH_SHARDS: 8
       PIPELINE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/pipeline
-      PIPELINE_KEY: ${{ secrets.PIPELINE_KEY }}
       STEALTH_PROXIES: ${{ secrets.STEALTH_PROXIES }}
-      STEALTH_MINUTES: ${{ github.event.inputs.minutes || '50' }}
+      STEALTH_MINUTES: ${{ github.event.inputs.minutes || '45' }}
     steps:
-      - name: Sleutel aanwezig?
-        id: gate
-        run: |
-          if [ -z "$PIPELINE_KEY" ]; then
-            echo "::warning::PIPELINE_KEY ontbreekt; de stealth-lezer heeft niets gelezen. Zie tools/stealth-lezer/README.md."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v4
-        if: steps.gate.outputs.run == 'true'
 
       - uses: actions/setup-python@v5
-        if: steps.gate.outputs.run == 'true'
         with:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: tools/stealth-lezer/requirements.txt
 
       - name: Scrapling en browser installeren
-        if: steps.gate.outputs.run == 'true'
         run: |
           pip install -r tools/stealth-lezer/requirements.txt pytest
           scrapling install
 
       - name: Tests
-        if: steps.gate.outputs.run == 'true'
         run: python -m pytest -q tools/stealth-lezer
 
       - name: Lezen
-        if: steps.gate.outputs.run == 'true'
+        id: lezen
         run: python tools/stealth-lezer/lezer.py
+
+  # Volgende run in een eigen job die altijd draait, ook als een lezer tegen de tijdslimiet aanloopt (25-26 okt brak de
+  # keten twee keer doordat lezer 0 werd afgebroken). Niet als de lezers meldden dat de wachtrij leeg is.
+  # GitHub start geplande runs bij openbare repositories vaak te laat of niet; het rooster blijft als vangnet.
+  volgende:
+    needs: lezen
+    if: always() && needs.lezen.outputs.meer != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Volgende run starten
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run stealth-lezer.yml --ref main --repo ${{ github.repository }}

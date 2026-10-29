@@ -1,7 +1,7 @@
 // Stealth-lezer (bronnenbeleid §3a): de pipeline kiest de pagina's die de Python-lezer ophaalt
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { STEALTH_FIRST, STEALTH_PAGE_CHARS, STEALTH_SUBPAGES, stealthDeeper, stealthPages, stealthPlan } from "../supabase/functions/pipeline/stealth";
+import { STEALTH_FIRST, STEALTH_PAGE_CHARS, STEALTH_SUBPAGES, stealthClaimsOk, stealthDeeper, stealthPages, stealthPlan } from "../supabase/functions/pipeline/stealth";
 
 const home = new URL("https://www.camping.nl/");
 const menu = (paths: string[]) => paths.map((p) => `<a href="${p}">${p.slice(1)}</a>`).join("");
@@ -37,4 +37,20 @@ test("aangeleverde pagina's: alleen tekst, ingekort en hoogstens 8", () => {
   assert.equal(pages.length, 1 + STEALTH_SUBPAGES);
   assert.equal(pages[0].length, STEALTH_PAGE_CHARS);
   assert.deepEqual(stealthPages("geen lijst"), []);
+});
+
+test("alleen de stealth-workflow op main mag zonder sleutel", () => {
+  const ok = {
+    repository: "patrickdereuver98-lab/Camperdashboard",
+    ref: "refs/heads/main",
+    workflow_ref: "patrickdereuver98-lab/Camperdashboard/.github/workflows/stealth-lezer.yml@refs/heads/main",
+    event_name: "schedule",
+  };
+  assert.equal(stealthClaimsOk(ok), true);
+  assert.equal(stealthClaimsOk({ ...ok, event_name: "workflow_dispatch" }), true);
+  assert.equal(stealthClaimsOk({ ...ok, event_name: "pull_request" }), false);
+  assert.equal(stealthClaimsOk({ ...ok, ref: "refs/heads/acceptatie" }), false);
+  assert.equal(stealthClaimsOk({ ...ok, repository: "iemand/Camperdashboard" }), false);
+  assert.equal(stealthClaimsOk({ ...ok, workflow_ref: ok.workflow_ref.replace("stealth-lezer", "ci") }), false);
+  assert.equal(stealthClaimsOk({}), false);
 });

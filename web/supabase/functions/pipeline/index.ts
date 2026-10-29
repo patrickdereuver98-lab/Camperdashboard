@@ -10,14 +10,16 @@
 //   { "action": "stealth_batch" | "stealth_plan" | "stealth_deeper" | "stealth_apply", … }
 //       → stealth-lezer (tools/stealth-lezer, Scrapling): die haalt op, deze functie kiest en leest uit (stealth.ts)
 //
-// Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
+// Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key. De stealth-acties mogen ook
+// met een GitHub-OIDC-token van de workflow stealth-lezer.yml op main (header `x-github-oidc`, zie stealth.ts).
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
-import { stealthDeeper, stealthPages, stealthPlan } from "./stealth.ts";
+import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
+import { OIDC_AUDIENCE, OIDC_ISSUER, stealthClaimsOk, stealthDeeper, stealthPages, stealthPlan } from "./stealth.ts";
 import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
@@ -388,6 +390,19 @@ function b64(s: string) {
   return out;
 }
 
+const githubKeys = createRemoteJWKSet(new URL(`${OIDC_ISSUER}/.well-known/jwks`));
+
+/** Komt dit verzoek van de stealth-workflow op main? Handtekening, uitgever, publiek en vervaldatum via jose. */
+async function fromStealthWorkflow(token: string | null) {
+  if (!token) return false;
+  try {
+    const { payload } = await jwtVerify(token, githubKeys, { issuer: OIDC_ISSUER, audience: OIDC_AUDIENCE });
+    return stealthClaimsOk(payload as Record<string, unknown>);
+  } catch {
+    return false;
+  }
+}
+
 async function stealthApply(body: Record<string, unknown>) {
   const id = String(body.id);
   if (body.error) {
@@ -493,11 +508,13 @@ async function runScrape(n: number) {
 }
 
 Deno.serve(async (req) => {
-  const key = req.headers.get("x-pipeline-key");
-  const { data: secret } = await db.from("internal_secrets").select("value").eq("name", "pipeline_key").single();
-  if (!key || !secret || key !== secret.value) return new Response("Forbidden", { status: 403 });
-
   const body = await req.json().catch(() => ({}));
+  const key = req.headers.get("x-pipeline-key");
+  const { data: secret } = key ? await db.from("internal_secrets").select("value").eq("name", "pipeline_key").single() : { data: null };
+  const byKey = !!key && !!secret && key === secret.value;
+  const byWorkflow = !byKey && String(body.action ?? "").startsWith("stealth_") && (await fromStealthWorkflow(req.headers.get("x-github-oidc")));
+  if (!byKey && !byWorkflow) return new Response("Forbidden", { status: 403 });
+
   try {
     let result: unknown;
     if (body.action === "osm") result = await runOsm(String(body.region));
@@ -518,7 +535,12 @@ Deno.serve(async (req) => {
         (e) => ({ ok: false, error: String(e) }),
       );
     else if (body.action === "stealth_batch") {
-      const { data, error } = await db.rpc("next_stealth_batch", { p_limit: Math.min(20, Number(body.n) || 5) });
+      // Meerdere lezers tegelijk: elk een vast deel van de hosts (shard), zodat er per host maar één lezer is
+      const shards = Math.min(10, Math.max(1, Number(body.shards) || 1));
+      const limit = Math.min(20, Number(body.n) || 5);
+      const { data, error } = shards > 1
+        ? await db.rpc("next_stealth_batch", { p_limit: limit, p_shard: Math.min(shards - 1, Math.max(0, Number(body.shard) || 0)), p_shards: shards })
+        : await db.rpc("next_stealth_batch", { p_limit: limit });
       if (error) throw error;
       result = data;
     } else if (body.action === "stealth_plan")
