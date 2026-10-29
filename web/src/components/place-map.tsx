@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { Bbox } from "@/lib/bbox";
 import type { LatLng } from "@/lib/geo";
 import { departureShort, markerPrice } from "@/lib/format";
 import { isIncomplete } from "@/lib/place-status";
 import { departureKind } from "@/lib/search";
+import { SaveButton } from "./place-ui";
 import type { PlaceSummary } from "@/lib/types";
 
 const NL_BOUNDS: [[number, number], [number, number]] = [
@@ -65,40 +67,32 @@ function tint(map: MlMap, dark: boolean) {
 
 type PopupProps = { slug: string; name: string; town: string; price: string; departure: string; image: string };
 
-function popupNode(p: PopupProps, departures: boolean) {
-  const a = document.createElement("a");
-  a.href = `/plek/${p.slug}`;
-  a.style.cssText = "display:block;width:240px;color:var(--ink);text-decoration:none";
-  if (p.image) {
-    const img = document.createElement("img");
-    img.src = p.image;
-    img.alt = "";
-    img.referrerPolicy = "no-referrer";
-    img.style.cssText = "width:100%;height:120px;object-fit:cover;display:block;background:var(--sunken)";
-    img.onerror = () => img.remove();
-    a.append(img);
-  }
-  const body = document.createElement("div");
-  body.style.cssText = "padding:10px 12px 12px";
-  const name = document.createElement("div");
-  name.textContent = p.name;
-  name.style.cssText = "font-family:var(--font-display);font-weight:700;font-size:16px;line-height:1.25;padding-right:24px";
-  const meta = document.createElement("div");
-  meta.textContent = p.price ? `${p.town}, ${p.price}` : p.town;
-  meta.style.cssText = "margin-top:4px;font-size:14px;color:var(--muted)";
-  // Vertrekken is het kernfeit: een regel, ook als we het niet weten. Alleen waar de kaart vertrekgegevens heeft
-  // (niet in beheer, waar de plekken zonder die velden komen).
-  const dep = document.createElement("div");
-  if (departures) {
-    dep.textContent = p.departure || "Vertrektijd onbekend";
-    dep.style.cssText = `margin-top:4px;font-size:14px;font-weight:600;color:${p.departure ? "var(--ink)" : "var(--muted)"}`;
-  }
-  const cta = document.createElement("div");
-  cta.textContent = "Bekijk plek";
-  cta.style.cssText = "margin-top:8px;font-weight:700;color:var(--forest);font-size:14px;text-decoration:underline";
-  body.append(...(departures ? [name, meta, dep, cta] : [name, meta, cta]));
-  a.append(body);
-  return a;
+/**
+ * Popup van een plek, als React-inhoud in het DOM-vak van MapLibre (portal). Zo werkt het hartje (SaveButton) zoals
+ * overal: bewaren in Mijn reis en de stand blijft gelijk met de lijst. Vertrekken is het kernfeit: altijd een regel,
+ * ook als we het niet weten, behalve in beheer (daar komen de plekken zonder vertrekgegevens).
+ */
+function PopupCard({ p, departures }: { p: PopupProps; departures: boolean }) {
+  const [imageOk, setImageOk] = useState(Boolean(p.image));
+  return (
+    <div className="relative w-60 text-ink">
+      {imageOk && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={p.image} alt="" referrerPolicy="no-referrer" onError={() => setImageOk(false)} className="block h-30 w-full bg-sunken object-cover" />
+      )}
+      <div className="px-3 pt-2.5 pb-1">
+        <p className="pr-8 font-display text-base leading-snug font-semibold">{p.name}</p>
+        <p className="mt-1 text-sm text-muted">{p.price ? `${p.town}, ${p.price}` : p.town}</p>
+        {departures && <p className={`mt-1 text-sm font-semibold ${p.departure ? "text-ink" : "text-muted"}`}>{p.departure || "Vertrektijd onbekend"}</p>}
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <a href={`/plek/${p.slug}`} className="-my-1 inline-flex h-11 items-center text-sm font-semibold text-forest underline underline-offset-2">
+            Bekijk plek
+          </a>
+          {departures && <SaveButton slug={p.slug} variant="plain" />}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function PlaceMap({
@@ -140,6 +134,8 @@ export function PlaceMap({
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const popupRef = useRef<Popup | null>(null);
+  // Inhoud van de open popup: React rendert die via een portal in het vak van MapLibre
+  const [openPopup, setOpenPopup] = useState<{ node: HTMLElement; props: PopupProps } | null>(null);
   const userMarker = useRef<{ remove(): void } | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -303,10 +299,14 @@ export function PlaceMap({
           latest.current.onSelect?.(props.slug);
           popupRef.current?.remove();
           if (!latest.current.popup) return;
-          popupRef.current = new maplibregl.Popup({ offset: 14, maxWidth: "260px" })
+          const node = document.createElement("div");
+          const next = new maplibregl.Popup({ offset: 14, maxWidth: "260px" })
             .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
-            .setDOMContent(popupNode(props, latest.current.departures))
+            .setDOMContent(node)
             .addTo(map);
+          next.on("close", () => setOpenPopup((cur) => (cur?.node === node ? null : cur)));
+          popupRef.current = next;
+          setOpenPopup({ node, props });
         });
         const reportViewport = () => {
           if (!map) return;
@@ -406,6 +406,7 @@ export function PlaceMap({
     <div className={`relative overflow-hidden bg-sunken ${className}`}>
       {/* Inline: maplibre-gl.css (zonder cascade layer) zet position: relative en wint van utilities */}
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
+      {openPopup && createPortal(<PopupCard p={openPopup.props} departures={departures} />, openPopup.node)}
       {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-muted">Kaart laden…</div>}
       {failed && (
         <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-ink-2">
