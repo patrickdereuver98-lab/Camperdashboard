@@ -69,8 +69,8 @@ begin
      and not p.status_locked
      and p.price_eur is null
      and p.departure is null
-     and not (jsonb_typeof(p.sources->'beheer') = 'array' and jsonb_array_length(p.sources->'beheer') > 0)
-     and not (jsonb_typeof(p.sources->'beheer') = 'object' and p.sources->'beheer' <> '{}'::jsonb)
+     -- coalesce: zonder sources.beheer zou een vergelijking met null de hele voorwaarde null maken (dan valt alles af)
+     and coalesce(p.sources->'beheer', '{}'::jsonb) in ('{}'::jsonb, '[]'::jsonb)
      and not exists (select 1 from public.places m where m.merged_into = p.id)
      and (p.website is null
           or (p.sources->'stealth' ? 'error'
