@@ -11,7 +11,7 @@ de ondergaande zon. Het ontwerp is warm en rustig: zandpapier als ondergrond, bo
 avondzon-accenten en meerblauw voor water en routes. Koppen in Fraunces geven karakter, Inter houdt alle
 lopende tekst goed leesbaar.
 
-Het hoofdapparaat is een smartphone, vaak onderweg en vaak bediend door 50-plussers. Daarom: goed leesbare tekst (16px basis op de telefoon, 17px vanaf tablet),
+Het hoofdapparaat is een smartphone, vaak onderweg, bediend door camperaars van 40+ (ook flink ouder). Daarom: goed leesbare tekst (16px basis op de telefoon, 17px vanaf tablet),
 grote tikvlakken (minimaal 44px), voldoende contrast en één duidelijke actie per scherm.
 
 ## Tokens
