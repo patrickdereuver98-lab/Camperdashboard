@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProsePage, Section } from "@/components/prose";
-import { COMPANY, company, companyAddress } from "@/lib/company";
+import { CompanyIdentity } from "@/components/company-identity";
+import { COMPANY, company } from "@/lib/company";
 
 export const metadata: Metadata = { title: "Gebruiksvoorwaarden", description: "De voorwaarden voor het gebruik van VrijStaan en voor reviews, foto's en meldingen." };
 
@@ -11,13 +12,13 @@ export default function TermsPage() {
     <ProsePage title="Gebruiksvoorwaarden" intro="Wat je van VrijStaan mag verwachten en wat wij van jou vragen als je de site gebruikt of iets plaatst." updated="11 oktober 2026">
       <Section title="1. Wie wij zijn">
         <p>
-          {COMPANY.tradeName} is een handelsnaam van {company("name")}, {companyAddress()}.
+          <CompanyIdentity />
         </p>
         <ul>
-          <li>KvK-nummer: {company("kvk")}</li>
-          <li>Btw-nummer: {company("vat")}</li>
+          {COMPANY.kvk && <li>KvK-nummer: {company("kvk")}</li>}
+          {COMPANY.vat && <li>Btw-nummer: {company("vat")}</li>}
           <li>E-mail: {mail}</li>
-          <li>Telefoon: {company("phone")}</li>
+          {COMPANY.phone && <li>Telefoon: {company("phone")}</li>}
         </ul>
         <p>
           Als je VrijStaan gebruikt, ga je akkoord met deze voorwaarden. Plaats je een review, foto of melding, dan gelden ze

@@ -1,7 +1,7 @@
 // Stealth-lezer (bronnenbeleid §3a): de pipeline kiest de pagina's die de Python-lezer ophaalt
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { STEALTH_FIRST, STEALTH_PAGE_CHARS, STEALTH_SUBPAGES, stealthClaimsOk, stealthDeeper, stealthPages, stealthPlan } from "../supabase/functions/pipeline/stealth";
+import { STEALTH_FIRST, STEALTH_PAGE_CHARS, STEALTH_SUBPAGES, stealthClaimsOk, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan } from "../supabase/functions/pipeline/stealth";
 
 const home = new URL("https://www.camping.nl/");
 const menu = (paths: string[]) => paths.map((p) => `<a href="${p}">${p.slice(1)}</a>`).join("");
@@ -53,4 +53,10 @@ test("alleen de stealth-workflow op main mag zonder sleutel", () => {
   assert.equal(stealthClaimsOk({ ...ok, repository: "iemand/Camperdashboard" }), false);
   assert.equal(stealthClaimsOk({ ...ok, workflow_ref: ok.workflow_ref.replace("stealth-lezer", "ci") }), false);
   assert.equal(stealthClaimsOk({}), false);
+});
+
+test("wissen alleen na een volledige lezing met velden", () => {
+  assert.equal(stealthMayWipe(1, 6), false); // alleen de startpagina
+  assert.equal(stealthMayWipe(5, 0), false); // niets gevonden
+  assert.equal(stealthMayWipe(2, 3), true);
 });

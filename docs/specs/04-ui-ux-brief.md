@@ -4,7 +4,7 @@
 > eigenaar). Hoe alles eruitziet en beweegt (typografie, hoeken, schaduw, iconen, beweging) staat in de
 > **stijlgids `docs/stijlgids.md`**, die bij twijfel voorgaat. Tokens: `web/src/app/globals.css`.
 > Bijgewerkt: 29 oktober 2026 (redesign: start en plekpagina "Eén vraag", kaart "Kaart eerst", landingspagina's
-> "Reisgids"; besluit eigenaar 29 oktober 2026, ontwerpcanvas in README nummer 63).
+> "Reisgids"; besluit eigenaar 29 oktober 2026, ontwerpcanvas in README nummer 64).
 
 ## Doelgroep en toon
 
