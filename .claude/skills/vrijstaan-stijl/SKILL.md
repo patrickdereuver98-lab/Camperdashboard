@@ -11,7 +11,7 @@ staat). Kleuren staan vast; typografie, vormen en beweging volgen de stijlgids.
 ## Schrijven
 
 Schrijf zoals een camperaar het aan een andere camperaar vertelt: gewoon Nederlands, je-vorm, korte zinnen,
-één boodschap per zin. Lezers zijn vaak 55+ en lezen op een telefoon, onderweg.
+één boodschap per zin. Lezers zijn 40+ (ook flink ouder) en lezen op een telefoon, onderweg.
 
 Doen:
 - Zeg wat iets is of doet. "Hier mag je vertrekken wanneer je wilt", niet "Ervaar ultieme vrijheid".
