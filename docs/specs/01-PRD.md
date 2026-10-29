@@ -75,7 +75,7 @@ Besluit 18 oktober 2026:
 
 - **Volledig:** de vertrekregel is bekend. Een prijs is het streven (doel 90%) maar geen eis; zonder prijs staat er
   "Prijs onbekend".
-- **Onvolledig:** de plek haalt de huidige drempel (contact plus 2 van 4 kernfeiten; contact is website, telefoon, e-mail of beheerder uit OSM), maar de vertrekregel is
+- **Onvolledig:** de plek haalt de huidige drempel (contact plus 2 van 4 kernfeiten, waarbij de vertrekregel dubbel telt (besluit 29 oktober 2026); contact is website, telefoon, e-mail of beheerder uit OSM), maar de vertrekregel is
   onbekend. Zo'n plek blijft zichtbaar, grijs en met de vraag om de vertrektijd door te geven.
 - Plekken onder de drempel blijven verborgen en worden aangevuld door de scraper en de zoekagenten.
 
