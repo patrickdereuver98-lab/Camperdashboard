@@ -47,6 +47,14 @@ export function stealthPages(input: unknown): string[] {
     .map((x) => x.slice(0, STEALTH_PAGE_CHARS));
 }
 
+/**
+ * Mag apply_scrape na deze lezing velden wissen die er nu niet meer staan? Niet als er geen enkel veld uitkwam of alleen
+ * de startpagina gelezen werd: dat is bijna altijd een haperende site of een gemiste subpagina, geen site die alles
+ * weghaalde. In de stealth-ronde van 25 tot 29 oktober verloren 11 plekken zo hun prijs en gingen er 22 van gepubliceerd
+ * naar concept (Frerichsoord, De Kalverhoek, 't Looveld), terwijl emptySite alleen een startpagina zonder links ving.
+ */
+export const stealthMayWipe = (pages: number, fields: number) => pages > 1 && fields > 0;
+
 // Aanmelden zonder geheim: de workflow vraagt GitHub om een ondertekend OIDC-token met dit publiek, en de pipeline
 // controleert handtekening, uitgever en publiek (index.ts) en daarna deze claims. Zo kan alleen de stealth-workflow op
 // main van deze repository de stealth-acties aanroepen, ook niet een fork of een andere branch.
