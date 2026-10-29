@@ -375,7 +375,13 @@ export function TripApp() {
               </div>
               <div className="flex justify-between border-t border-line pt-2">
                 <dt className="font-display text-lg font-semibold">{fuel === null ? "Totaal, zonder brandstof*" : "Totaal met jouw schatting*"}</dt>
-                <dd className="font-display text-2xl font-semibold">{eur(total, true)}</dd>
+                {/* Eerlijk totaal: ontbreken er prijzen, dan staat dat in het bedrag zelf ("€ 84 + 2 onbekend"), zodat
+                    het nooit volledig lijkt (UX-audit, implementatieplan) */}
+                <dd className="text-right font-display text-2xl font-semibold" data-testid="trip-total">
+                  {eur(total, true)}
+                  {unknownPriceStops > 0 && <span className="text-lg text-muted"> + {unknownPriceStops} onbekend</span>}
+                  {costs.listed.length > 0 && <span className="block text-sm font-normal tracking-normal text-muted">+ toeslagen, niet meegeteld</span>}
+                </dd>
               </div>
             </dl>
             <p className="mt-2 text-sm text-muted">

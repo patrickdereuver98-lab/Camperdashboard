@@ -32,3 +32,18 @@ test("Mijn reis rekent prijs per persoon en toeristenbelasting van de plek mee, 
   await expect(extras).toContainText("hond € 3 per nacht");
   await expect(extras).not.toContainText(c.name);
 });
+
+test("totaal in Mijn reis noemt plekken zonder bekende prijs in het bedrag zelf", async ({ page, request }) => {
+  const all = (await (await request.get("/api/places")).json()) as { slug: string; priceEur?: number; priceExtras?: unknown }[];
+  const known = all.find((p) => p.priceEur !== undefined && p.priceEur > 0)!;
+  const [u1, u2] = all.filter((p) => p.priceEur === undefined).slice(0, 2);
+  // Geen prijs per persoon bij de onbekende plekken, dan blijft hun prijs echt onbekend
+  const patched = all.map((p) => (p.slug === u1.slug || p.slug === u2.slug ? { ...p, priceExtras: [] } : p));
+  await page.route("**/api/places", (r) => r.fulfill({ json: patched }));
+  await page.addInitScript(
+    ([x, y, z]) => localStorage.setItem("vrijstaan:reis", JSON.stringify([{ slug: x, nights: 1 }, { slug: y, nights: 1 }, { slug: z, nights: 1 }])),
+    [known.slug, u1.slug, u2.slug],
+  );
+  await page.goto("/mijn-reis");
+  await expect(page.getByTestId("trip-total")).toContainText("+ 2 onbekend");
+});
