@@ -16,6 +16,7 @@ import { SUPABASE_URL } from "@/lib/env";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
+import { NavigateButton } from "./navigate";
 
 // ── Foto met nette terugval ─────────────────────────────────────────────────
 
@@ -412,5 +413,54 @@ function CardPrice({ place }: { place: PlaceSummary }) {
       )}
       {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
     </div>
+  );
+}
+
+/**
+ * Gekozen plek onderaan de kaart (concept "Kaart eerst", 29 oktober 2026): na een tik op een stip schuift één plek
+ * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route en Bekijk plek. Vervangt op de
+ * telefoon de kleine popup van de kaart.
+ */
+export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () => void }) {
+  const arrival = arrivalShort(place);
+  return (
+    <section aria-label={`Gekozen plek: ${place.name}`} className="animate-rise absolute inset-x-2 bottom-2 z-20 rounded-2xl bg-surface p-3 shadow-float">
+      <div className="flex gap-3">
+        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-sunken">
+          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-1 pr-9">
+          <h2 className="font-display text-[1.0625rem] leading-snug font-semibold">{place.name}</h2>
+          <p className="truncate text-sm text-ink-2">
+            {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
+          </p>
+          <DepartureChip place={place} />
+          {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Sluiten"
+          className="absolute top-1.5 right-1.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-sunken"
+        >
+          <Icon name="x" size={18} />
+        </button>
+      </div>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <FacilitySigns place={place} max={4} size={22} />
+        <CardPrice place={place} />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <NavigateButton to={place} name={place.name} className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
+          <Icon name="route" size={18} /> Route
+        </NavigateButton>
+        <Link
+          href={`/plek/${place.slug}`}
+          className="flex h-12 items-center justify-center rounded-lg border border-line bg-surface font-semibold text-ink hover:border-forest"
+        >
+          Bekijk plek
+        </Link>
+      </div>
+    </section>
   );
 }
