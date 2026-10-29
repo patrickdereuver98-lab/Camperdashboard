@@ -1,4 +1,6 @@
 import { expect, test } from "./fixtures";
+import { encodeSummaries } from "../src/lib/summary-wire";
+import type { PlaceSummary } from "../src/lib/types";
 
 test("Mijn reis rekent prijs per persoon en toeristenbelasting van de plek mee, en noemt andere toeslagen", async ({ page, request }) => {
   const all = (await (await request.get("/api/places")).json()) as { slug: string; name: string; priceEur?: number; priceExtras?: unknown }[];
@@ -14,7 +16,8 @@ test("Mijn reis rekent prijs per persoon en toeristenbelasting van de plek mee, 
           ? { ...p, priceEur: 10, touristTaxIncluded: true, priceExtras: [] }
           : p,
   );
-  await page.route("**/api/places", (r) => r.fulfill({ json: patched }));
+  // De browser haalt het compacte formaat op (lib/summary-wire.ts)
+  await page.route("**/api/places?f=compact", (r) => r.fulfill({ json: encodeSummaries(patched as unknown as PlaceSummary[]) }));
   await page.addInitScript(
     ([x, y, z]) => {
       localStorage.setItem("vrijstaan:reis", JSON.stringify([{ slug: x, nights: 2 }, { slug: y, nights: 1 }, { slug: z, nights: 3 }]));
@@ -39,7 +42,8 @@ test("totaal in Mijn reis noemt plekken zonder bekende prijs in het bedrag zelf"
   const [u1, u2] = all.filter((p) => p.priceEur === undefined).slice(0, 2);
   // Geen prijs per persoon bij de onbekende plekken, dan blijft hun prijs echt onbekend
   const patched = all.map((p) => (p.slug === u1.slug || p.slug === u2.slug ? { ...p, priceExtras: [] } : p));
-  await page.route("**/api/places", (r) => r.fulfill({ json: patched }));
+  // De browser haalt het compacte formaat op (lib/summary-wire.ts)
+  await page.route("**/api/places?f=compact", (r) => r.fulfill({ json: encodeSummaries(patched as unknown as PlaceSummary[]) }));
   await page.addInitScript(
     ([x, y, z]) => localStorage.setItem("vrijstaan:reis", JSON.stringify([{ slug: x, nights: 1 }, { slug: y, nights: 1 }, { slug: z, nights: 1 }])),
     [known.slug, u1.slug, u2.slug],

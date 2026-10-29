@@ -221,8 +221,8 @@ B1 is besloten (ja) en staat op de startpagina en in de PRD.
 | # | Wat | Waarom | Wie | Grootte |
 |---|---|---|---|---|
 | F1 | Eigen beeldcache voor foto's (S4) | Snelheid, privacy, minder kapotte foto's | Agent | M |
-| F2 | Compacte dataset (S5) | 4G op het platteland | Agent | M |
-| F3 | Compacte resultaatkaart en laptop-plekpagina (D4, D9) | Meer plekken per scherm, beslisblok boven de vouw | Agent | M |
+| F2 | ✅ Compacte dataset (S5): `/api/places?f=compact`, kolommen en woordenlijsten, zonder id (Doe mee zoekt het id op via de slug). 680 plekken: brotli 64,7 → 44,6 kB, gzip 79,5 → 53,2 kB | 4G op het platteland | Agent | M |
+| F3 | ✅ Compacte resultaatkaart (D4: vierkante foto van 96 px, voorzieningen als woorden op de telefoon) en laptop-plekpagina (D9: foto max. 320 px, al in fase 2) | Meer plekken per scherm, beslisblok boven de vouw | Agent | M |
 | F4 | Zoeken op de kaart: zwevende knop, direct laden bij verschuiven, prijslabels (D10, D11) | Zoals de apps die camperaars al kennen | Agent | M |
 | F5 | Lighthouse en Core Web Vitals op de echte Vercel-site, op een middenklasse Android | Lanceervoorwaarde 3 | Agent | S |
 | F6 | Testplan uit de PRD op iPhone en Android, met twee echte camperaars van 40+ | Lanceervoorwaarde | 👤 + Agent | M |

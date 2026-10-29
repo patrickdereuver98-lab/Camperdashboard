@@ -173,7 +173,7 @@ export default async function Home() {
           </div>
           <ul className="no-scrollbar -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
             {featured.map((p) => (
-              <li key={p.id} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
+              <li key={p.slug} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
                 <PlaceCard place={p} layout="stack" />
               </li>
             ))}

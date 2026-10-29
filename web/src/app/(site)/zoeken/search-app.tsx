@@ -402,7 +402,7 @@ function Results({
     <>
       <ul className="mt-2 space-y-2.5 sm:mt-4 sm:space-y-3">
         {results.slice(0, limit).map((r, i) => (
-          <li key={r.place.id} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
+          <li key={r.place.slug} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
             <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} eager={i < 2} />
           </li>
         ))}

@@ -1,4 +1,6 @@
 import { expect, test } from "./fixtures";
+import { encodeSummaries } from "../src/lib/summary-wire";
+import type { PlaceSummary } from "../src/lib/types";
 
 test("reis met datums: aankomst en vertrek per stop, waarschuwing als de plek dan dicht is", async ({ page, request }) => {
   const all = (await (await request.get("/api/places")).json()) as { slug: string; season?: string; openAllYear?: boolean }[];
@@ -7,7 +9,8 @@ test("reis met datums: aankomst en vertrek per stop, waarschuwing als de plek da
   const patched = all.map((p) =>
     p.slug === a.slug ? { ...p, openAllYear: true, season: undefined } : p.slug === b.slug ? { ...p, openAllYear: false, season: "1 april – 31 oktober" } : p,
   );
-  await page.route("**/api/places", (r) => r.fulfill({ json: patched }));
+  // De browser haalt het compacte formaat op (lib/summary-wire.ts)
+  await page.route("**/api/places?f=compact", (r) => r.fulfill({ json: encodeSummaries(patched as unknown as PlaceSummary[]) }));
   await page.addInitScript(
     ([x, y]) => {
       localStorage.setItem("vrijstaan:reis", JSON.stringify([{ slug: x, nights: 2 }, { slug: y, nights: 1 }]));

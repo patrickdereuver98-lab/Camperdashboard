@@ -264,7 +264,7 @@ export function NearbyApp() {
         {!places && <CardSkeleton />}
         <ul className="mt-2 space-y-2.5 sm:mt-3 sm:space-y-3">
           {list.map(({ place, km }) => (
-            <li key={place.id}>
+            <li key={place.slug}>
               <PlaceCard place={place as PlaceSummary} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />
             </li>
           ))}

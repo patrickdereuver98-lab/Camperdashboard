@@ -237,7 +237,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <h2 id="buurt" className="font-display text-xl font-semibold sm:text-2xl">In de buurt</h2>
             <ul className="no-scrollbar -mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
               {nearby.map(({ place: p, km }) => (
-                <li key={p.id} className="w-[75vw] max-w-xs shrink-0 snap-start sm:w-auto sm:max-w-none">
+                <li key={p.slug} className="w-[75vw] max-w-xs shrink-0 snap-start sm:w-auto sm:max-w-none">
                   <PlaceCard place={p} km={km} layout="stack" />
                 </li>
               ))}

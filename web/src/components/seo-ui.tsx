@@ -113,7 +113,7 @@ export function PlaceList({ title, places, more }: { title: string; places: Plac
           </thead>
           <tbody className="divide-y divide-line">
             {places.map((p) => (
-              <tr key={p.id} className="align-top transition-colors hover:bg-sunken/40">
+              <tr key={p.slug} className="align-top transition-colors hover:bg-sunken/40">
                 <td className="px-3.5 py-3 sm:px-5">
                   <Link href={`/plek/${p.slug}`} prefetch={false} className="-my-3 block py-3 leading-snug font-semibold text-ink hover:text-forest hover:underline">
                     {p.name}
