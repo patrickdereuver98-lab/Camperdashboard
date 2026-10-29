@@ -134,6 +134,10 @@ const settingsStore = createStore<TripSettings>("vrijstaan:reisinstellingen", DE
 );
 export const useTripSettings = () => [settingsStore.use(), settingsStore.write] as const;
 
+/** Vertrekdatum van de reis ("2026-11-06"); leeg = geen datums. Los van de instellingen, zodat oude opslag blijft werken */
+const tripDateStore = createStore<string | null>("vrijstaan:reisdatum", null, (v): v is string | null => v === null || typeof v === "string");
+export const useTripDate = () => [tripDateStore.use(), tripDateStore.write] as const;
+
 // ── Cookie-toestemming ──────────────────────────────────────────────────────
 
 export interface Consent {

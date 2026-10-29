@@ -205,6 +205,30 @@ export async function getRedirect(slug: string): Promise<string | undefined> {
 }
 
 /**
+ * Aantal bezoekers met een account dat de huidige vertrekregel van de plek heeft doorgegeven (RPC `departure_visitors`).
+ * Bij een storing of offline 0: dan staat er geen regel, nooit een gok.
+ */
+export async function getDepartureVisitors(placeId: string): Promise<number> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("places", `bezoekers-${placeId}`);
+  if (OFFLINE_BUILD) return 0;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/departure_visitors`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_place_id: placeId }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return 0;
+    const n = (await res.json()) as number | null;
+    return typeof n === "number" && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Plekken binnen een (op het raster afgeronde) bounding box, via PostGIS (`places_in_bbox`, GIST-index).
  * Gecachet per bbox: bezoekers die hetzelfde gebied bekijken delen één database-aanvraag.
  */
