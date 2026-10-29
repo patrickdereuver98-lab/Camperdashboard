@@ -2,6 +2,7 @@
 // Alles hier is puur (geen Next.js), zodat de slug- en drempelregels in `tests/seo-pages.test.ts` te testen zijn.
 import { inBbox, type Bbox } from "./bbox";
 import { departureKind, type DepartureGroup } from "./search";
+import { eur } from "./format";
 import { PROVINCES, type PlaceSummary } from "./types";
 
 /**
@@ -170,6 +171,21 @@ export function areaIntro(where: string, c: Counts): string[] {
   if (dep.length) lines.push(`${cap(dep.join(", en "))}.`);
   if (c.unknownDeparture) lines.push(`Van ${plekken(c.unknownDeparture)} weten we de vertrektijd nog niet.`);
   return lines;
+}
+
+/**
+ * De cijfers van een plaats-, eiland- of provinciepagina als korte regels (getal vooraan), zodat de lijst op de
+ * telefoon eerder in beeld staat dan bij een alinea per cijfer (verbeterplan D8). Een groep zonder plekken valt weg.
+ */
+export function areaFacts(c: Counts, avgPrice?: number | null): { value: string; label: string }[] {
+  const facts = [
+    // Het totaal en het aantal gratis plekken staan al in de inleidende zin
+    { n: c.vrij, value: nl(c.vrij), label: "zonder vaste vertrektijd" },
+    { n: c.uitslapers, value: nl(c.uitslapers), label: "voor uitslapers" },
+    { n: c.unknownDeparture, value: nl(c.unknownDeparture), label: "vertrektijd nog onbekend" },
+    { n: avgPrice ?? 0, value: avgPrice ? eur(avgPrice) : "", label: "gemiddeld per nacht, zonder toeslagen" },
+  ];
+  return facts.filter((f) => f.n > 0).map(({ value, label }) => ({ value, label }));
 }
 
 export function departureIntro(g: SeoDeparture, province: string, count: number, free: number): string {

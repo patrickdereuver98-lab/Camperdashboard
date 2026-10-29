@@ -182,7 +182,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           </div>
           {chips.length > 0 && (
             <MotionConfig reducedMotion="user">
-            <ul className="no-scrollbar -mx-3 mt-1 mb-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:mt-3 sm:mb-0 sm:flex-wrap sm:px-0">
+            <ul className="no-scrollbar scroll-fade -mx-3 mt-1 mb-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:mt-3 sm:mb-0 sm:flex-wrap sm:px-0">
               <AnimatePresence initial={false}>
               {chips.map((c) => (
                 <motion.li
@@ -330,7 +330,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
   }, [active, counts]);
   return (
     <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-1 sm:px-6 sm:pt-3 lg:border-0 lg:bg-transparent lg:pt-6">
-      <ul ref={list} className="no-scrollbar -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+      <ul ref={list} className="no-scrollbar scroll-fade -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
         {tabs.map((t) => (
           <li key={t.key} className="shrink-0">
             <Link
@@ -353,7 +353,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
           <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
           <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
           {page === "overig" && (
-            <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
+            <div className="no-scrollbar scroll-fade -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
               {(
                 [
                   ["overig", "Alle"],

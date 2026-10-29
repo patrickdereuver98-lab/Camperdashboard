@@ -56,19 +56,12 @@ export default async function Home() {
     },
     {
       href: "/zoeken",
-      title: "Alle camperplaatsen",
-      text: "Ook plekken waarvan we de vertrektijd nog niet weten.",
+      title: "Alle plekken",
+      text: "Met de vertrektijd erbij als we die weten.",
       count: stats.total,
       sign: "camper",
       tone: "forest",
     },
-  ];
-
-  const facilities: { href: string; sign: SignName; label: string; count: number }[] = [
-    { href: searchHref({ openNow: true }), sign: "calendar", label: "Nu open", count: stats.openNow },
-    { href: searchHref({ facilities: ["power"] }), sign: "power", label: "Met stroom", count: stats.power },
-    { href: searchHref({ facilities: ["dumpStation"] }), sign: "dump", label: "Lozen mogelijk", count: stats.dump },
-    { href: searchHref({ facilities: ["dogs"] }), sign: "dog", label: "Honden welkom", count: stats.dogs },
   ];
 
   return (
@@ -79,7 +72,8 @@ export default async function Home() {
           Waar sta je vannacht?
         </h1>
         <p className="animate-rise mt-1.5 max-w-xl text-ink-2 [animation-delay:60ms] sm:mt-2 sm:text-lg">
-          {nf.format(stats.total)} camperplaatsen in Nederland. Bij {nf.format(withDeparture)} weten we hoe laat je weg moet.
+          {/* Belofte: weet vooraf hoe laat je weg moet (besluit eigenaar B1, 29 oktober 2026) */}
+          {nf.format(stats.total)} plekken voor je camper in Nederland. Bij {nf.format(withDeparture)} weet je vooraf hoe laat je weg moet.
         </p>
         <div className="animate-rise mt-4 [animation-delay:120ms] sm:mt-6">
           <HomeSearch />
@@ -186,64 +180,6 @@ export default async function Home() {
           </ul>
         </section>
       )}
-
-      {/* Zoeken op voorziening */}
-      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-        <h2 className="font-display text-lg font-semibold sm:text-2xl">Zoek op wat je nodig hebt</h2>
-        <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-4">
-          {facilities
-            .filter((f) => f.count > 0)
-            .map((f) => (
-              <li key={f.label}>
-                <Link
-                  href={f.href}
-                  className="flex h-full min-h-16 items-center gap-2.5 rounded-xl bg-surface p-3 shadow-low transition-shadow hover:shadow-raised sm:min-h-20 sm:gap-3 sm:p-4"
-                >
-                  <Sign name={f.sign} size={34} />
-                  <span className="min-w-0">
-                    <span className="block font-semibold leading-tight">{f.label}</span>
-                    <span className="block text-sm text-muted">{nf.format(f.count)} plekken</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-        </ul>
-      </section>
-
-      {/* Zo werkt het */}
-      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-        <h2 className="font-display text-lg font-semibold sm:text-2xl">Zo werkt VrijStaan</h2>
-        <ol className="mt-3 grid gap-4 md:mt-5 md:grid-cols-3 md:gap-8">
-          {[
-            {
-              sign: "pin" as SignName,
-              title: "Zoek een plek",
-              text: "Typ een plaats, streek of eiland. Of kijk wat er bij jou in de buurt is.",
-            },
-            {
-              sign: "clock" as SignName,
-              title: "Kijk wanneer je weg moet",
-              text: "Bij elke plek zie je de vertrektijd, wat een nacht kost met alle bijkomende kosten, en wat er aan voorzieningen is.",
-            },
-            {
-              sign: "camper" as SignName,
-              title: "Rij erheen",
-              text: "Je ziet hoe lang je nog moet rijden. Met één tik open je de route in je eigen navigatie.",
-            },
-          ].map((s, i) => (
-            <li key={s.title} className="flex gap-3 border-t border-line pt-4 md:flex-col md:gap-3 md:pt-5">
-              <Sign name={s.sign} size={32} />
-              <div>
-                <h3 className="font-display text-base font-semibold sm:text-lg">
-                  <span className="mr-1.5 text-muted tabular-nums">{i + 1}.</span>
-                  {s.title}
-                </h3>
-                <p className="mt-0.5 text-ink-2">{s.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
 
       {/* Eigenaren */}
       <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">

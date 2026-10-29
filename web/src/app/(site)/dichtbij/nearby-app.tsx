@@ -158,7 +158,7 @@ export function NearbyApp() {
             <Icon name="refresh" size={18} /> Opnieuw
           </button>
         </div>
-        <ul className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:mt-3 sm:flex-wrap sm:px-0">
+        <ul className="no-scrollbar scroll-fade -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:mt-3 sm:flex-wrap sm:px-0">
           <li className="shrink-0">
             <button
               type="button"

@@ -224,7 +224,7 @@ export default function PrivacyPage() {
 
       <Section title="Statistieken">
         <p>
-          Alleen als je kiest voor &quot;Statistieken toestaan&quot;, houden we bij hoe de site wordt gebruikt. Dat staat in onze
+          Alleen als je &quot;Ja&quot; kiest bij de vraag of we mogen tellen hoe de site wordt gebruikt, houden we bij hoe de site wordt gebruikt. Dat staat in onze
           eigen database (tabel <em>events</em>): de soort gebeurtenis, het pad van de pagina, een klein detail zoals de zoekterm
           of de plek, een willekeurig sessienummer en het tijdstip. We slaan geen IP-adres op, gebruiken geen cookies, koppelen
           het niet aan andere gegevens en delen het met niemand.

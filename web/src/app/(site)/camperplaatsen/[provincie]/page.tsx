@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { getLastUpdate, getSummaries } from "@/lib/places";
 import { searchHref } from "@/lib/search";
 import { PROVINCES } from "@/lib/types";
-import { eur, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { SITE_URL } from "@/lib/env";
 import {
+  areaFacts,
   areaIntro,
   areaPath,
   areasIn,
@@ -56,14 +57,14 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
   const islands = areas.filter((a) => a.kind === "eiland" && indexable(a.places.length));
   const towns = areas.filter((a) => a.kind === "plaats").sort((a, b) => a.name.localeCompare(b.name, "nl"));
   const groups = (Object.keys(DEPARTURE_SEO) as SeoDeparture[]).filter((g) => inGroup(places, g).length > 0);
-  const intro = areaIntro(`in ${prov}`, c);
-  if (avg) intro.push(`Een nacht kost gemiddeld ${eur(avg)}, zonder toeslagen. Die staan per plek.`);
+  // Eén zin als inleiding, de rest van de cijfers als korte regels (verbeterplan D8)
+  const intro = areaIntro(`in ${prov}`, c).slice(0, 1);
 
   return (
     <div className="mx-auto max-w-6xl px-3 pt-6 pb-10 sm:px-6">
       <JsonLd data={itemListLd(SITE_URL, `Camperplaatsen in ${prov}`, shown)} />
       <Breadcrumbs crumbs={[{ name: "Start", path: "/" }, { name: prov, path: `/camperplaatsen/${provinceSlug(prov)}` }]} />
-      <PageHead title={`Camperplaatsen in ${prov}`} intro={intro} updated={updatedAt ? formatDate(updatedAt) : undefined} />
+      <PageHead title={`Camperplaatsen in ${prov}`} intro={intro} facts={areaFacts(c, avg)} updated={updatedAt ? formatDate(updatedAt) : undefined} />
       <div className="mt-5 flex flex-wrap gap-2">
         <ActionLink primary href={`${searchHref({ province: prov, where: prov })}&kaart=1`}>
           <Icon name="map" size={19} /> Bekijk op de kaart
