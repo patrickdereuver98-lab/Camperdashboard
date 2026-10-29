@@ -1,60 +1,25 @@
-"use client";
-
 import Link from "next/link";
-import { useId, useState } from "react";
-import { motion } from "motion/react";
-import { DEFAULT_FILTERS, type DepartureGroup } from "@/lib/search";
+import { DEFAULT_FILTERS } from "@/lib/search";
 import { DestinationSearch } from "./destination-search";
 import { Icon } from "./icons";
 
-const CHOICES: { value?: DepartureGroup; label: string }[] = [
-  { value: undefined, label: "Alle" },
-  { value: "vrij", label: "Zonder vertrektijd" },
-  { value: "uitslapers", label: "Uitslapers" },
-];
-
-/** Zoekkaart op de startpagina: bestemming plus de keuze voor vertrektijd (bepaalt de resultaatpagina) */
+/**
+ * Startpagina (concept "Eén vraag", 29 oktober 2026): de hoofdactie is "Plekken bij mij in de buurt" in avondzon,
+ * daaronder één zoekveld. De keuze voor vertrektijd staat in "Hoe wil je staan?" direct eronder.
+ */
 export function HomeSearch() {
-  const id = useId();
-  const [departure, setDeparture] = useState<DepartureGroup | undefined>(undefined);
   return (
-    <div className="rounded-2xl bg-surface p-3.5 shadow-float ring-1 ring-ember/50 sm:p-5">
-      <DestinationSearch variant="hero" base={{ ...DEFAULT_FILTERS, departure }}>
-        <fieldset className="min-w-0 lg:w-[23rem]">
-          <legend id={`${id}-v`} className="mb-1.5 block text-sm font-semibold text-ink-2">
-            Vertrekken
-          </legend>
-          <div className="grid h-13 grid-cols-[auto_1fr_auto] gap-1 rounded-lg bg-paper p-1 sm:h-14 ring-1 ring-line">
-            {CHOICES.map((c) => {
-              const on = departure === c.value;
-              return (
-                <button
-                  key={c.label}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => setDeparture(c.value)}
-                  className={`relative flex items-center justify-center gap-1.5 rounded-lg px-2 font-semibold whitespace-nowrap transition-colors duration-200 sm:px-3 ${
-                    on ? "text-on-forest" : "text-ink-2 hover:text-ink"
-                  }`}
-                >
-                  {on && (
-                    <motion.span
-                      layoutId={`${id}-keuze`}
-                      transition={{ type: "spring", stiffness: 520, damping: 40 }}
-                      className="absolute inset-0 rounded-lg bg-forest shadow-[0_2px_6px_-2px_rgb(20_40_28/0.5)]"
-                    />
-                  )}
-                  {c.value && <Icon name="clock" size={16} className={`relative hidden sm:block ${on ? "" : "text-forest"}`} />}
-                  <span className="relative">{c.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-      </DestinationSearch>
-      <Link href="/dichtbij" className="mt-1 inline-flex h-11 items-center gap-2 font-semibold text-forest hover:underline">
-        <Icon name="locate" size={20} /> Of zoek plekken dichtbij mij
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+      <Link
+        href="/dichtbij"
+        className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-lg bg-ember px-6 text-[17px] font-semibold text-on-ember shadow-float transition-[filter] duration-200 hover:brightness-105 active:scale-[0.98] lg:h-auto"
+      >
+        <Icon name="locate" size={22} /> Plekken bij mij in de buurt
       </Link>
+      {/* Eén regel: zoekveld en knop naast elkaar, zodat "Hoe wil je staan?" op de telefoon in beeld blijft */}
+      <div className="min-w-0 flex-1">
+        <DestinationSearch variant="bar" base={DEFAULT_FILTERS} />
+      </div>
     </div>
   );
 }

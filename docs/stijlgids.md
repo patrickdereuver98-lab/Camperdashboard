@@ -38,7 +38,10 @@ De kleuren staan vast en zijn goedgekeurd: zandpapier, bosgroen, avondzon, meerb
 Spelregels:
 
 - **Eén accent per scherm.** Bosgroen is de hoofdkleur (knoppen, links, "aanwezig"). Avondzon alleen voor de
-  hoofdactie op de startpagina en de geselecteerde plek op de kaart. Meerblauw alleen voor water en uitslapers.
+  hoofdactie op de startpagina ("Plekken bij mij in de buurt") en de geselecteerde plek op de kaart. Meerblauw alleen
+  voor water en uitslapers.
+- **Kaartstippen** hebben de kleur van de vertrekregel (bosgroen, meerblauw, donkergrijs); onbekend is een holle grijze
+  ring. Gratis heeft geen eigen stipkleur (besluit 29 oktober 2026).
 - **Kleur is betekenis.** Een groene badge betekent "geen vaste vertrektijd", niet "mooi". Grote vlakken zijn
   zandpapier of wit (`surface`); getinte vlakken (`forest-tint`) alleen klein (badge, chip).
 - **Tekst**: `ink` voor koppen en waarden, `ink-2` voor lopende tekst, `muted` voor bijzaken. Nooit zuiver zwart.

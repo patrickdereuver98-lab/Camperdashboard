@@ -59,7 +59,7 @@ export function DestinationSearch({
   children,
 }: {
   variant?: "hero" | "bar";
-  /** Extra velden tussen het zoekveld en de knop (startpagina: keuze voor vertrektijd) */
+  /** Extra velden tussen het zoekveld en de knop */
   children?: ReactNode;
   /** Verfijningen die behouden blijven bij een nieuwe bestemming */
   base?: Filters;
@@ -377,7 +377,7 @@ export function DestinationSearch({
           type="submit"
           className={`font-semibold transition-colors ${
             hero
-              ? "flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-ember px-8 text-base text-on-ember hover:brightness-105 sm:h-14 lg:w-auto"
+              ? "flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-forest px-8 text-base text-on-forest hover:bg-forest-deep sm:h-14 lg:w-auto"
               : "h-11 shrink-0 rounded-lg bg-forest px-4 text-on-forest hover:bg-forest-deep sm:h-12 sm:px-5"
           }`}
         >

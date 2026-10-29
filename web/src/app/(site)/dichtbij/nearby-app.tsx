@@ -9,7 +9,7 @@ import { usePlaces, useVehicle } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
 import { useMediaQuery } from "@/lib/use-media";
 import type { PlaceSummary } from "@/lib/types";
-import { CardSkeleton, PlaceCard } from "@/components/place-ui";
+import { CardSkeleton, MapPick, PlaceCard } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { Landscape } from "@/components/landscape";
@@ -38,6 +38,8 @@ export function NearbyApp() {
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
   const wide = useMediaQuery("(min-width: 1024px)");
+  // Telefoon: gekozen stip als paneel onderaan de kaart (concept "Kaart eerst")
+  const [picked, setPicked] = useState<string | null>(null);
 
   function locate() {
     if (!("geolocation" in navigator)) return setStatus("unavailable");
@@ -146,6 +148,7 @@ export function NearbyApp() {
   }
 
   const list = sorted ?? [];
+  const pickedPlace = picked ? list.find((r) => r.place.slug === picked)?.place : undefined;
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <section className="min-w-0 px-3 pt-3 pb-8 sm:px-6 sm:pt-5">
@@ -227,10 +230,24 @@ export function NearbyApp() {
           })}
         </ul>
 
+        {/* Telefoon: kaart eerst, groot en van rand tot rand; de lijst ligt eronder als een sheet die je omhoog veegt */}
         {!wide && list.length > 0 && (
-          <PlaceMap places={list.map((r) => r.place)} user={pos} fitKey={`${pos.lat}-${list.length}`} className="mt-3 h-44 rounded-xl shadow-low sm:h-56" />
+          <div className="relative -mx-3 mt-3 h-[52dvh] min-h-80 sm:-mx-6">
+            <PlaceMap
+              places={list.map((r) => r.place)}
+              user={pos}
+              fitKey={`${pos.lat}-${list.length}`}
+              highlight={picked}
+              onSelect={setPicked}
+              popup={false}
+              className="h-full w-full"
+            />
+            {pickedPlace && <MapPick key={pickedPlace.slug} place={pickedPlace as PlaceSummary} onClose={() => setPicked(null)} />}
+          </div>
         )}
 
+        <div className={!wide && list.length > 0 ? "relative z-10 -mx-3 -mt-4 rounded-t-2xl bg-paper px-3 pt-2 shadow-float sm:-mx-6 sm:px-6" : ""}>
+        {!wide && list.length > 0 && <span aria-hidden="true" className="mx-auto mb-1 block h-1 w-10 rounded-full bg-line" />}
         <p className="mt-3 text-sm text-ink-2" aria-live="polite">
           {!places
             ? "Plekken laden…"
@@ -252,6 +269,7 @@ export function NearbyApp() {
             </li>
           ))}
         </ul>
+        </div>
       </section>
       {wide && (
         <aside className="sticky top-16 h-[calc(100dvh-4rem)] border-l border-line">

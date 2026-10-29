@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { SITE_URL } from "@/lib/env";
 import { breadcrumbLd, ldJson } from "@/lib/seo-pages";
-import type { PlaceSummary } from "@/lib/types";
-import { PlaceCard } from "./place-ui";
+import { cardPrice, departureShort } from "@/lib/format";
+import { isIncomplete } from "@/lib/place-status";
+import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
+import { DepartureChip } from "./place-ui";
 import { Icon } from "./icons";
 
 export function JsonLd({ data }: { data: unknown }) {
@@ -65,6 +67,11 @@ export function ActionLink({ href, children, primary }: { href: string; children
   );
 }
 
+/**
+ * Plekken als vergelijkingstabel (concept "Reisgids", 29 oktober 2026): per rij naam, vertrek en nachtprijs, zonder
+ * foto's, zodat je op een telefoon veel plekken naast elkaar ziet. Op de telefoon staat de vertrekregel onder de naam,
+ * vanaf `sm` in een eigen kolom. Onbekend staat er gewoon als onbekend.
+ */
 export function PlaceList({ title, places, more }: { title: string; places: PlaceSummary[]; more?: { href: string; label: string } }) {
   if (!places.length) return null;
   return (
@@ -72,13 +79,42 @@ export function PlaceList({ title, places, more }: { title: string; places: Plac
       <h2 id="lijst" className="font-display text-lg font-semibold tracking-tight sm:text-[1.375rem]">
         {title}
       </h2>
-      <ul className="mt-3 grid gap-3 lg:grid-cols-2">
-        {places.map((p) => (
-          <li key={p.id}>
-            <PlaceCard place={p} />
-          </li>
-        ))}
-      </ul>
+      <div className="mt-3 overflow-hidden rounded-xl bg-surface shadow-low">
+        <table className="w-full border-collapse text-left">
+          <caption className="sr-only">{title}, met vertrektijd en prijs per nacht</caption>
+          <thead>
+            <tr className="border-b border-line text-sm text-muted">
+              <th scope="col" className="px-3.5 py-2.5 font-normal sm:px-5">Plek</th>
+              <th scope="col" className="hidden px-2 py-2.5 font-normal sm:table-cell">Vertrek</th>
+              <th scope="col" className="px-3.5 py-2.5 text-right font-normal sm:px-5">Per nacht</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {places.map((p) => (
+              <tr key={p.id} className="align-top transition-colors hover:bg-sunken/40">
+                <td className="px-3.5 py-3 sm:px-5">
+                  <Link href={`/plek/${p.slug}`} prefetch={false} className="-my-3 block py-3 leading-snug font-semibold text-ink hover:text-forest hover:underline">
+                    {p.name}
+                  </Link>
+                  <span className="block text-sm text-ink-2">
+                    {p.kind ? KIND_LABEL[p.kind] : "Camperplaats"} in {p.town}
+                    {p.maxLengthM ? `, tot ${String(p.maxLengthM).replace(".", ",")} m` : ""}
+                  </span>
+                  <span className="mt-1.5 block sm:hidden">
+                    <Departure place={p} />
+                  </span>
+                </td>
+                <td className="hidden px-2 py-3 sm:table-cell">
+                  <Departure place={p} />
+                </td>
+                <td className="px-3.5 py-3 text-right whitespace-nowrap sm:px-5">
+                  <Price place={p} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {more && (
         <p className="mt-4">
           <Link href={more.href} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
@@ -87,6 +123,23 @@ export function PlaceList({ title, places, more }: { title: string; places: Plac
         </p>
       )}
     </section>
+  );
+}
+
+function Departure({ place }: { place: PlaceSummary }) {
+  // DepartureChip toont niets bij een regel die beheer afwees; dan zeggen we gewoon dat het onbekend is
+  if (!departureShort(place) && !isIncomplete(place)) return <span className="text-sm text-muted">Onbekend</span>;
+  return <DepartureChip place={place} />;
+}
+
+function Price({ place }: { place: PlaceSummary }) {
+  const price = cardPrice(place);
+  if (!price) return <span className="text-sm text-muted">Onbekend</span>;
+  return (
+    <>
+      <span className="block font-semibold text-ink tabular-nums">{price.value}</span>
+      {(price.extras || place.touristTaxIncluded === false) && <span className="block text-sm text-muted">+ toeslagen</span>}
+    </>
   );
 }
 

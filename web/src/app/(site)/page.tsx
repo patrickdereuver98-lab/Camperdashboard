@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getStats, getSummaries } from "@/lib/places";
 import { departureKind, searchHref } from "@/lib/search";
+import { pluralize } from "@/lib/format";
 import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { HomeSearch } from "@/components/home-search";
 import { Icon } from "@/components/icons";
@@ -40,7 +41,7 @@ export default async function Home() {
     {
       href: searchHref({ departure: "vrij" }),
       title: "Zonder vertrektijd",
-      text: "Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf aankomst.",
+      text: "Blijf tot je zelf weg wilt, of betaal per 24 uur.",
       count: stats.freeDeparture,
       sign: "clock",
       tone: "forest",
@@ -48,7 +49,7 @@ export default async function Home() {
     {
       href: searchHref({ departure: "uitslapers" }),
       title: "Voor uitslapers",
-      text: "Je hoeft pas om 12:00 of later weg.",
+      text: "Vertrek om 12:00 of later.",
       count: stats.lateCheckout,
       sign: "clock",
       tone: "lake",
@@ -56,7 +57,7 @@ export default async function Home() {
     {
       href: "/zoeken",
       title: "Alle camperplaatsen",
-      text: "Alle plekken in de gids, ook die waarvan we de vertrektijd nog niet weten.",
+      text: "Ook plekken waarvan we de vertrektijd nog niet weten.",
       count: stats.total,
       sign: "camper",
       tone: "forest",
@@ -72,7 +73,7 @@ export default async function Home() {
 
   return (
     <>
-      {/* Kop: rustig en zakelijk, de zoekkaart is het belangrijkste (docs/stijlgids.md) */}
+      {/* Kop: één vraag, daaronder de hoofdactie (dichtbij) en het zoekveld (docs/specs/04-ui-ux-brief.md) */}
       <section className="mx-auto w-full max-w-6xl px-3 pt-5 sm:px-6 sm:pt-10">
         <h1 className="animate-rise font-display text-[1.75rem] leading-[1.1] font-semibold tracking-tight text-ink sm:text-5xl">
           Waar sta je vannacht?
@@ -85,8 +86,30 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Hoe wil je staan: het antwoord op de vraag in de kop, direct eronder (concept "Eén vraag") */}
+      <section aria-labelledby="hoe" className="mx-auto w-full max-w-6xl px-3 pt-7 sm:px-6 sm:pt-10">
+        <h2 id="hoe" className="font-display text-lg font-semibold sm:text-2xl">Hoe wil je staan?</h2>
+        <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {ways.map((w) => (
+            <li key={w.title}>
+              <Link href={w.href} className="group flex h-full min-h-19 items-center gap-3.5 px-3.5 py-3 hover:bg-sunken/50 sm:flex-col sm:items-start sm:gap-2 sm:p-5">
+                <Sign name={w.sign} size={36} tone={w.tone} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[17px] font-semibold">{w.title}</span>
+                  <span className="mt-0.5 block text-sm text-ink-2">{w.text}</span>
+                </span>
+                <span className={`shrink-0 font-semibold tabular-nums sm:hidden ${w.tone === "lake" ? "text-lake" : "text-forest"}`}>{nf.format(w.count)}</span>
+                <span className={`hidden text-sm font-semibold tabular-nums sm:block ${w.tone === "lake" ? "text-lake" : "text-forest"}`}>
+                  {pluralize(w.count, "plek", "plekken")}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* Vertrouwen: wat je hier zeker weet */}
-      <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-3 pt-4 sm:px-6">
+      <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-3 pt-6 sm:px-6 sm:pt-8">
         <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
           {[
             "We vullen niets zelf in: wat we niet weten, staat er als onbekend",
@@ -98,29 +121,6 @@ export default async function Home() {
                 <Icon name="check" size={16} />
               </span>
               <span className="leading-snug sm:text-base">{t}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Hoe wil je staan: de drie vertrekpagina's, als rustige lijst */}
-      <section className="mx-auto w-full max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-        <h2 className="font-display text-lg font-semibold sm:text-2xl">Hoe wil je staan?</h2>
-        <p className="mt-0.5 text-ink-2">Voor camperaars is de vertrektijd vaak belangrijker dan de prijs.</p>
-        <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {ways.map((w) => (
-            <li key={w.title}>
-              <Link href={w.href} className="group flex h-full items-start gap-3 p-3.5 hover:bg-sunken/50 sm:flex-col sm:gap-2 sm:p-5">
-                <Sign name={w.sign} size={32} tone={w.tone} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="font-semibold">{w.title}</span>
-                    <span className="text-sm text-muted tabular-nums">{nf.format(w.count)}</span>
-                  </span>
-                  <span className="mt-0.5 block text-sm text-ink-2">{w.text}</span>
-                </span>
-                <Icon name="chevronRight" size={18} className="mt-1 shrink-0 text-muted transition-transform group-hover:translate-x-0.5 sm:hidden" />
-              </Link>
             </li>
           ))}
         </ul>
