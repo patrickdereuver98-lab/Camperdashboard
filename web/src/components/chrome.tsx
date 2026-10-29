@@ -109,14 +109,9 @@ function HeaderView({ pathname }: { pathname: string }) {
             Plek aanmelden
           </Link>
         </nav>
+        {/* Telefoon: alleen Hulp en account in de kop. Plek aanmelden staat op de startpagina, bij Doe mee en in de
+            footer; een losse "+" was niet te raden (verbeterplan D7) */}
         <div className="ml-auto flex items-center gap-1 md:hidden">
-          <Link
-            href="/plek-aanmelden"
-            className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken"
-            aria-label="Plek aanmelden"
-          >
-            <Icon name="plus" size={22} />
-          </Link>
           <Link href="/veelgestelde-vragen" className="flex h-11 items-center gap-1.5 rounded-xl px-2.5 font-semibold text-ink-2 hover:bg-sunken">
             <Icon name="help" size={22} />
             Hulp

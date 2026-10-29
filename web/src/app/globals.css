@@ -228,6 +228,15 @@ button:active:not(:disabled),
   display: none;
 }
 
+/* Rij die je opzij kunt vegen: de rechterrand vervaagt, zodat zichtbaar is dat er meer is (verbeterplan D6).
+   Extra ruimte rechts zorgt dat het laatste item helemaal leesbaar is als je tot het eind veegt. */
+@media (max-width: 639.98px) {
+  .scroll-fade {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    padding-right: 2rem;
+  }
+}
+
 /* Schermlezers */
 .sr-only-focusable:not(:focus) {
   position: absolute;

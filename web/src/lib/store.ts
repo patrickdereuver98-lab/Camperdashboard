@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { bboxKey, snapBbox, type Bbox } from "./bbox";
 import type { PlaceSummary, Town } from "./types";
+import { decodeSummaries, type SummaryWire } from "./summary-wire";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
 
@@ -187,7 +188,7 @@ function useLoader<T>(get: () => Promise<T>) {
   return state;
 }
 
-const getPlaces = () => (placesPromise ??= once<PlaceSummary[]>("/api/places", "places"));
+const getPlaces = () => (placesPromise ??= once<SummaryWire>("/api/places?f=compact", "places").then(decodeSummaries));
 const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 
 export const usePlaces = () => useLoader(getPlaces);
@@ -200,9 +201,9 @@ const bboxCache = new Map<string, Promise<PlaceSummary[]>>();
 function getBbox(key: string) {
   let p = bboxCache.get(key);
   if (!p) {
-    p = fetch(`/api/places?bbox=${key}`).then((r) => {
+    p = fetch(`/api/places?bbox=${key}&f=compact`).then(async (r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<PlaceSummary[]>;
+      return decodeSummaries((await r.json()) as SummaryWire);
     });
     p.catch(() => bboxCache.delete(key));
     bboxCache.set(key, p);

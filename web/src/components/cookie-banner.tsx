@@ -96,20 +96,30 @@ export function CookieBanner() {
         </>
       ) : (
         <>
-          {/* Een smalle balk: bij het eerste bezoek blijft de pagina zelf zichtbaar (review 23 oktober 2026) */}
-          <p id="cookie-titel" className="text-[0.9375rem] leading-snug text-ink-2">
-            Mogen we tellen hoe de site wordt gebruikt, zonder cookies van derden?{" "}
-            <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
-              Zelf instellen
+          {/* Eén rij: vraag links, Ja en Nee rechts, zodat de balk op de telefoon half zo hoog is (verbeterplan D1) */}
+          <div className="flex items-center gap-2">
+            <p id="cookie-titel" className="min-w-0 flex-1 text-sm leading-snug text-ink-2">
+              Mogen we tellen hoe de site wordt gebruikt?{" "}
+              <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
+                Zelf instellen
+              </button>
+            </p>
+            {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
+            <button
+              type="button"
+              onClick={() => close(true)}
+              aria-label="Ja, statistieken toestaan"
+              className="min-h-11 min-w-14 shrink-0 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest"
+            >
+              Ja
             </button>
-          </p>
-          {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => close(true)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
-              Toestaan
-            </button>
-            <button type="button" onClick={() => close(false)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
-              Alleen nodig
+            <button
+              type="button"
+              onClick={() => close(false)}
+              aria-label="Nee, alleen wat nodig is"
+              className="min-h-11 min-w-14 shrink-0 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest"
+            >
+              Nee
             </button>
           </div>
         </>

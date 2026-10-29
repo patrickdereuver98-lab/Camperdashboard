@@ -1,7 +1,7 @@
 # 6. Implementatieplan
 
 > Doel: een geordende bouwvolgorde met controlepunten, voor mensen en AI-agents.
-> Bijgewerkt: 29 oktober 2026 (livegang 1 januari 2027, zie PRD). Het plan naar de nieuwe base version staat in [`plan.md`](../../plan.md); het vorige plan in [`docs/archief/plan-2026-10-16.md`](../archief/plan-2026-10-16.md). Status: ✅ klaar, 🔄 bezig, ⬜ open.
+> Bijgewerkt: 29 oktober 2026 (livegang 1 januari 2027, zie PRD). Het plan naar de nieuwe base version staat in [`plan.md`](../../plan.md); het vorige plan in [`docs/archief/plan-2026-10-16.md`](../archief/plan-2026-10-16.md). Review en verbeterplan van 29 oktober (gebruikers, design, concurrenten, fasen 0 tot 4): [`docs/verbeterplan-2026-10-29.md`](../verbeterplan-2026-10-29.md). Status: ✅ klaar, 🔄 bezig, ⬜ open.
 > Eigenaar: "Patrick" = de eigenaar van VrijStaan; "Agent" = een AI-codeeragent (Claude Code) in deze repository.
 
 ## Mijlpaal 1: projectopzet ✅
@@ -79,6 +79,8 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
+| ✅ Verbeterplan F2 en F3 (29 oktober 2026): `/api/places?f=compact` (`lib/summary-wire.ts`, zonder id; brotli 31% en gzip 33% kleiner op 680 plekken), Doe mee zoekt het id op via de slug (`placeIdOf`); resultaatkaart op de telefoon compacter (foto 96 px, voorzieningen als woorden) | Agent | [Verbeterplan](../verbeterplan-2026-10-29.md) §7 fase 3 | Code, tests | 268 unit-tests, 198 Playwright-tests groen | — |
+| ✅ Verbeterplan fase 2, snelle UX-winst (29 oktober 2026): D1 cookiebalk op één rij (Ja / Nee), D2 laag fotovak als geen foto laadt en foto max. 320 px hoog op groot scherm, D3 "Vertrektijd nog onbekend" met **Bel en vraag het**, D5 startpagina korter (voorzieningen en "Zo werkt" weg), D6 vervaagde rand aan veegrijen, D7 geen "+" in de kop op de telefoon, D8 cijfers als korte regels op landingspagina's, D12 donkere modus nagelopen; plus belofte B1 op de startpagina | Agent | [Verbeterplan](../verbeterplan-2026-10-29.md) §5 | Componenten, specs | `npm run check`, 266 unit-tests en 196 Playwright-tests (met axe, licht en donker) groen; screenshots iPhone en laptop | B1 |
 | ✅ Plekpagina rustiger op mobiel: beslisblok, voorzieningen als labels, niets dubbel, kleinere koppen en header, basis 16 px op de telefoon | Agent | Verzoek Patrick, UX-onderzoek | `plek/[slug]/page.tsx`, `chrome.tsx`, `globals.css` | Vertrekken, prijs, open en lengte in één scherm op iPhone-formaat | — |
 | ✅ Plekkaart opnieuw ingedeeld: waar (plaats, afstand vanaf je locatie), wanneer (vertrek + aankomst), wat en hoeveel (voorzieningen, prijs + toeslagen) | Agent | Verzoek Patrick | `place-ui.tsx`, `lib/my-location.ts`, samenvattingen met aankomsttijden | Afstand, vertrek, aankomst en prijs op elke kaart zonder doortikken | — |
 | ✅ Zoekscherm compacter op mobiel (Booking als voorbeeld): kleinere tabbladen en zoekveld, één rij Filters/Sorteren/Kaart, kleinere kop, compactere kaarten, prijs past altijd | Agent | Verzoek Patrick | `search-app.tsx`, `destination-search.tsx`, `place-ui.tsx` | Eerste plek direct in beeld op iPhone | — |
