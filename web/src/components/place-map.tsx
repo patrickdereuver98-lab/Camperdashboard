@@ -6,6 +6,7 @@ import type { Bbox } from "@/lib/bbox";
 import type { LatLng } from "@/lib/geo";
 import { departureShort, markerPrice } from "@/lib/format";
 import { isIncomplete } from "@/lib/place-status";
+import { departureKind } from "@/lib/search";
 import type { PlaceSummary } from "@/lib/types";
 
 const NL_BOUNDS: [[number, number], [number, number]] = [
@@ -31,8 +32,10 @@ function toGeoJSON(places: MapPlace[], departures: boolean) {
         slug: p.slug,
         name: p.name,
         town: p.town,
-        free: p.priceEur === 0,
         price: markerPrice(p),
+        // Kleur van de stip = vertrekregel (concept "Kaart eerst", 29 oktober 2026): groen zonder vaste vertrektijd,
+        // meerblauw voor uitslapers, donkergrijs bij een vaste tijd vóór 12:00
+        group: !departures ? "plain" : departureKind(p) === "vrij" ? "vrij" : departureKind(p) === "uitslapers" ? "uitslapers" : "overig",
         // Vertrekregel zoals op de kaart in de lijst; leeg = onbekend
         departure: departureShort(p) ?? "",
         // Onvolledig (geen vertrekregel): grijze stip, onder de gekleurde plekken
@@ -110,6 +113,7 @@ export function PlaceMap({
   cluster = true,
   departures = true,
   onShowList,
+  popup = true,
   className = "",
 }: {
   places: MapPlace[];
@@ -129,6 +133,8 @@ export function PlaceMap({
   departures?: boolean;
   /** Knop "Toon lijst" bij een kaartfout (alleen waar een lijst naast de kaart bestaat) */
   onShowList?: () => void;
+  /** Uit als de pagina zelf een paneel met de gekozen plek toont (MapPick op de telefoon) */
+  popup?: boolean;
   className?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
@@ -138,9 +144,9 @@ export function PlaceMap({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const latest = useRef({ places, onSelect, onViewportChange, cluster, departures });
+  const latest = useRef({ places, onSelect, onViewportChange, cluster, departures, popup });
   useEffect(() => {
-    latest.current = { places, onSelect, onViewportChange, cluster, departures };
+    latest.current = { places, onSelect, onViewportChange, cluster, departures, popup };
   });
 
   // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
@@ -154,7 +160,7 @@ export function PlaceMap({
       maplibregl.setWorkerUrl(`/maplibre-gl-worker.mjs?v=${maplibregl.getVersion()}`);
       const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const css = getComputedStyle(document.documentElement);
-      // Bosgroen voor plekken, avondzon voor gratis plekken en de geselecteerde plek, meerblauw voor de route
+      // Bosgroen zonder vaste vertrektijd, meerblauw voor uitslapers en de route, avondzon voor de geselecteerde plek
       // In donker bewust donkerder dan de tokens --ember en --forest: witte tekst in clusters blijft dan leesbaar
       const ember = dark ? "#d9783f" : "#b9592a";
       const forest = dark ? "#3f7a5a" : "#2d5a43";
@@ -163,6 +169,9 @@ export function PlaceMap({
       // Grijs voor onvolledige plekken: de token --muted (contrast met de kaartgrond minstens 5:1)
       const muted = css.getPropertyValue("--muted").trim() || (dark ? "#9aa39b" : "#5c665e");
       const ink = css.getPropertyValue("--ink").trim() || "#1f2b24";
+      // Vaste vertrektijd vóór 12:00: neutraal donker, duidelijk anders dan de holle grijze stip van "onbekend"
+      const ink2 = css.getPropertyValue("--ink-2").trim() || (dark ? "#c7c2b6" : "#46524a");
+      const lakePoint = dark ? "#4f95a4" : lake;
 
       map = new maplibregl.Map({
         container: el.current,
@@ -229,10 +238,16 @@ export function PlaceMap({
           filter: ["!", ["has", "point_count"]],
           layout: { "circle-sort-key": ["case", ["get", "incomplete"], 0, 1] },
           paint: {
-            "circle-color": ["case", ["get", "incomplete"], muted, ["get", "free"], ember, forest],
+            // Onvolledig: holle grijze ring (vorm én kleur, niet alleen kleur)
+            "circle-color": [
+              "case",
+              ["get", "incomplete"],
+              surface,
+              ["match", ["get", "group"], "vrij", forest, "uitslapers", lakePoint, "overig", ink2, forest],
+            ],
             "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 6, 13, 9],
-            "circle-stroke-width": 2.5,
-            "circle-stroke-color": surface,
+            "circle-stroke-width": ["case", ["get", "incomplete"], 3, 2.5],
+            "circle-stroke-color": ["case", ["get", "incomplete"], muted, surface],
           },
         });
         map.addLayer({
@@ -287,6 +302,7 @@ export function PlaceMap({
           const props = f.properties as PopupProps;
           latest.current.onSelect?.(props.slug);
           popupRef.current?.remove();
+          if (!latest.current.popup) return;
           popupRef.current = new maplibregl.Popup({ offset: 14, maxWidth: "260px" })
             .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
             .setDOMContent(popupNode(props, latest.current.departures))

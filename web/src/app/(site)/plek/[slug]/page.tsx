@@ -399,25 +399,20 @@ function Decision({ place }: { place: Place }) {
     <section aria-labelledby="kort" className="overflow-hidden rounded-xl bg-surface shadow-low">
       <h2 id="kort" className="sr-only">In het kort</h2>
       <dl className="divide-y divide-line">
-        {/* Vertrekken: het kernfeit. dt en dd direct in de rij (geldige lijst voor schermlezers); extra regels over de
-            volle breedte */}
-        <div className={`grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-4 [&>dd~dd]:col-span-2 ${known ? (late ? "bg-lake-tint" : "bg-forest-tint") : ""}`}>
-          <dt className="flex items-center gap-3 text-ink-2">
-            <Sign name="clock" size={28} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
-            Vertrekken
+        {/* Vertrekken: het kernfeit, als antwoord bovenaan (concept "Eén vraag", 29 oktober 2026). Label klein en in
+            de kleur van de vertrekgroep, het antwoord groot, daaronder aankomst en de andere tijden. */}
+        <div className={`px-4 py-4 sm:px-5 ${known ? (late ? "bg-lake-tint" : "bg-forest-tint") : ""}`}>
+          <dt className={`flex items-center gap-2 text-sm font-semibold ${free ? "text-forest" : late ? "text-lake" : "text-ink-2"}`}>
+            <Sign name="clock" size={24} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
+            {free ? "Zonder vertrektijd" : late ? "Voor uitslapers" : "Vertrekken"}
           </dt>
-          {/* Het kernfeit van de site: groter dan de andere rijen, ook op de telefoon boven de vouw */}
-          <dd
-            className={`ml-auto text-right font-display text-[1.375rem] leading-tight font-semibold sm:text-2xl ${
-              free ? "text-forest" : late ? "text-lake" : known ? "" : "text-muted"
-            }`}
-          >
+          <dd className={`mt-1.5 font-display text-[1.625rem] leading-tight font-semibold tracking-tight text-balance sm:text-3xl ${known ? "text-ink" : "text-muted"}`}>
             {departure}
           </dd>
-          {note && <dd className="mt-1 pl-10 text-sm text-ink-2">{note}</dd>}
-          {times.length > 0 && <dd className="mt-1 pl-10 text-sm text-ink-2">{times.join(". ")}.</dd>}
+          {note && <dd className="mt-1 text-sm text-ink-2">{note}</dd>}
+          {times.length > 0 && <dd className="mt-1 text-ink-2">{times.join(". ")}.</dd>}
           {incomplete && (
-            <dd className="mt-2 pl-10">
+            <dd className="mt-2">
               <p className="text-sm text-ink-2">
                 We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten
                 andere camperaars hoe laat ze weg moeten.
@@ -430,7 +425,7 @@ function Decision({ place }: { place: Place }) {
             </dd>
           )}
           {!known && !incomplete && (
-            <dd className="mt-1 pl-10 text-sm text-ink-2">
+            <dd className="mt-1 text-sm text-ink-2">
               Bel even voor je gaat.
               <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd?" />
               <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de vertrektijd in" />

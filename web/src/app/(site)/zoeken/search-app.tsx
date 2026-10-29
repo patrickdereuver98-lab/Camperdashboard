@@ -27,7 +27,7 @@ import { pluralize } from "@/lib/format";
 import { DestinationSearch } from "@/components/destination-search";
 import { FilterSheet } from "@/components/filter-sheet";
 import { Legend } from "@/components/legend";
-import { CardSkeleton, PlaceCard } from "@/components/place-ui";
+import { CardSkeleton, MapPick, PlaceCard } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { FACILITIES } from "@/lib/search";
@@ -86,6 +86,9 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
     [viewportPlaces, results, filters],
   );
   const fitPlaces = useMemo(() => results?.map((r) => r.place), [results]);
+  // Telefoon: een tik op een stip toont de plek onderaan de kaart (MapPick) in plaats van een popup
+  const [picked, setPicked] = useState<string | null>(null);
+  const pickedPlace = picked ? mapPlaces.find((p) => p.slug === picked) : undefined;
 
   // Elke vertrekgroep heeft een eigen pagina; een andere groep kiezen gaat naar die pagina
   const update = (f: Filters) => router.replace(searchHref(f), { scroll: false });
@@ -98,6 +101,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
 
   const focusCard = (slug: string) => {
     setHovered(slug);
+    if (!wide) setPicked(slug);
     if (wide) document.querySelector(`[data-slug="${CSS.escape(slug)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
@@ -117,6 +121,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
       fitKey={key}
       user={filters.where === "Mijn locatie" ? filters.center : null}
       onShowList={() => setMapOpen(false)}
+      popup={wide}
       className="h-full w-full"
     />
   );
@@ -207,7 +212,21 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
         </div>
 
         {/* Mobiele kaart */}
-        {!wide && mapOpen && <div className="animate-fade-in h-[calc(100dvh-15rem-env(safe-area-inset-bottom))] min-h-80">{map}</div>}
+        {!wide && mapOpen && (
+          <div className="animate-fade-in relative h-[calc(100dvh-15rem-env(safe-area-inset-bottom))] min-h-80">
+            {map}
+            {pickedPlace && (
+              <MapPick
+                key={pickedPlace.slug}
+                place={pickedPlace}
+                onClose={() => {
+                  setPicked(null);
+                  setHovered(null);
+                }}
+              />
+            )}
+          </div>
+        )}
 
         <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
           <h1 className="font-display text-lg leading-snug font-semibold sm:text-2xl">
