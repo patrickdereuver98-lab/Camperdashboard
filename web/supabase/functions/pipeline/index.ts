@@ -19,7 +19,7 @@ import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
-import { OIDC_AUDIENCE, OIDC_ISSUER, stealthClaimsOk, stealthDeeper, stealthPages, stealthPlan } from "./stealth.ts";
+import { OIDC_AUDIENCE, OIDC_ISSUER, stealthClaimsOk, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan } from "./stealth.ts";
 import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
@@ -421,6 +421,7 @@ async function stealthApply(body: Record<string, unknown>) {
     Number(body.failed) || 0,
     Number(body.links) || 0,
   );
+  if (!stealthMayWipe(pages.length, data.fields?.length ?? 0)) data._pages_failed ??= 1;
   const meta = { robots_disallows: body.robots_disallows === true, pages: pages.length, proxy: body.proxy === true };
   const { error } = await db.rpc("apply_stealth", { p_id: id, p_data: data, p_error: null, p_meta: meta });
   if (error) throw new Error(`apply_stealth: ${error.message}`);
