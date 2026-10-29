@@ -211,8 +211,10 @@ dichten; de community komt pas na livegang.
 
 ### Fase 2: snelle UX-winst (twee weken, kan naast fase 1)
 
-D1, D2, D3, D5, D6, D7, D8, D12 uit §5. Samen ±3 dagen werk; elk punt in een eigen kleine PR met screenshots voor en
-na, en de a11y-test erbij.
+D1, D2, D3, D5, D6, D7, D8, D12 uit §5. ✅ Gebouwd op 29 oktober in één PR, met screenshots
+voor en na en de a11y-test erbij. Afwijking: bij D5 blijft "Vertrekken wanneer je wilt" (uitgelichte plekken) staan,
+omdat dat de directe weg van de startpagina naar een plek is; zoeken op voorziening en "Zo werkt VrijStaan" zijn weg.
+B1 is besloten (ja) en staat op de startpagina en in de PRD.
 
 ### Fase 3: vóór livegang (december)
 
@@ -250,7 +252,7 @@ bezoekers zijn. Dit blijft zoals de PRD het zegt.
 
 | # | Vraag | Voorstel |
 |---|---|---|
-| B1 | Wordt de hoofdbelofte "Weet vooraf hoe laat je weg moet" in plaats van alleen "zonder vertrektijd"? | Ja (S1). Zonder vertrektijd blijft een eigen pagina |
+| B1 | Wordt de hoofdbelofte "Weet vooraf hoe laat je weg moet" in plaats van alleen "zonder vertrektijd"? | ✅ Besloten 29 oktober: ja. Zonder vertrektijd blijft een eigen pagina |
 | B2 | Data-werk eerst op camperplaatsen? | Ja (S2) |
 | B3 | Foto's via een eigen cache in plaats van rechtstreeks van de websites? | Ja (S4); kost opslag binnen het gratis plan |
 | B4 | Cookiebanner weg als de statistieken anoniem en zonder cookies zijn? | Eerst juridisch laten nakijken, dan ja |

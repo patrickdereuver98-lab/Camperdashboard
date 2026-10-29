@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  areaFacts,
   areaIntro,
   areaPath,
   areasIn,
@@ -21,6 +22,7 @@ import {
   slugify,
 } from "../src/lib/seo-pages";
 import { PROVINCES, type PlaceSummary } from "../src/lib/types";
+import { eur } from "../src/lib/format";
 
 let n = 0;
 function place(over: Partial<PlaceSummary>): PlaceSummary {
@@ -116,6 +118,16 @@ test("inleiding zegt alleen wat de cijfers zeggen", () => {
   );
   assert.equal(departureIntro("uitslapers", "Utrecht", 1, 0), "Er is 1 camperplaats in Utrecht waar je pas om 12:00 of later weg hoeft.");
   assert.match(departureIntro("vrij", "Flevoland", 0, 0), /nog geen camperplaatsen/);
+});
+
+test("cijfers van een landingspagina als korte regels; lege groepen vallen weg", () => {
+  assert.deepEqual(areaFacts({ total: 63, free: 1, vrij: 3, uitslapers: 6, unknownDeparture: 29 }, 17.4), [
+    { value: "3", label: "zonder vaste vertrektijd" },
+    { value: "6", label: "voor uitslapers" },
+    { value: "29", label: "vertrektijd nog onbekend" },
+    { value: eur(17.4), label: "gemiddeld per nacht, zonder toeslagen" },
+  ]);
+  assert.deepEqual(areaFacts({ total: 1, free: 0, vrij: 0, uitslapers: 0, unknownDeparture: 0 }), []);
 });
 
 test("volgorde: volledigheid, dan foto, dan score met reviews, dan naam", () => {

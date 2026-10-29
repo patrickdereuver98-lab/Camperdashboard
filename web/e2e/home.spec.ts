@@ -6,7 +6,7 @@ test.describe("startpagina", () => {
     expect(res?.status()).toBe(200);
     await expect(page).toHaveTitle(/VrijStaan/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Waar sta je");
-    await expect(page.getByText(/^\d[\d.]* camperplaatsen in Nederland/)).toBeVisible();
+    await expect(page.getByText(/^\d[\d.]* plekken voor je camper in Nederland/)).toBeVisible();
 
     const cards = page.locator('main a[href^="/plek/"]');
     await expect(cards.first()).toBeVisible();

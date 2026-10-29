@@ -26,7 +26,7 @@
 
 | Scherm | Route | Doel | Benodigde data |
 |---|---|---|---|
-| Start | `/` | Knop **Plekken bij mij in de buurt** (→ `/dichtbij`), zoekveld (bestemming → `/zoeken`), direct daaronder "Hoe wil je staan?" met drie regels (→ `/zonder-vertrektijd`, `/uitslapers`, `/zoeken`), populaire bestemmingen, uitgelichte plekken, voorzieningen (nu open, stroom, lozen, honden), uitleg in drie stappen | Statistieken, alle plekken (voor de bestemmingsfoto's), uitgelichte samenvattingen |
+| Start | `/` | Knop **Plekken bij mij in de buurt** (→ `/dichtbij`), zoekveld (bestemming → `/zoeken`), direct daaronder "Hoe wil je staan?" met drie regels (→ `/zonder-vertrektijd`, `/uitslapers`, `/zoeken` als "Alle plekken"), vertrouwenspunten, populaire bestemmingen, uitgelichte plekken, eigenaren. Zoeken op voorziening en "Zo werkt VrijStaan" zijn weg (verbeterplan D5, 29 oktober 2026) | Statistieken, alle plekken (voor de bestemmingsfoto's), uitgelichte samenvattingen |
 | Zoeken | `/zoeken` | Lijst of kaart met filters en sortering, alle plekken. De eerste 20 plekken van de zoekopdracht in het adres staan al in de HTML (server); daarna rekent de browser met de hele dataset | Eerste 20 op de server (`getSummaries`), daarna alle samenvattingen (`/api/places`), woonplaatsen (`/api/towns`), adressen en postcodes (`/api/locatie`, PDOK) |
 | Zonder vertrektijd | `/zonder-vertrektijd` | Zelfde zoekscherm, vertrekregel vrij of per 24 uur, allemaal in groen en gelijkwaardig: een regel uit een bron (website, zoekagent met letterlijk citaat, OSM) is genoeg, zonder label "nog niet bevestigd" (besluit eigenaar 18 oktober 2026). Door beheer of de eigenaar bevestigd (Beheer → Vertrektijden) is alleen de tweede sorteersleutel: bij gelijke prijs, afstand of score staat die eerst. Met voorwaarde of afgewezen staat bij Overige | Idem |
 | Uitslapers | `/uitslapers` | Zelfde zoekscherm, vaste vertrektijd 12:00 of later | Idem |
@@ -95,7 +95,7 @@ Snelle variant: `Start` → **Plekken bij mij in de buurt** → `Dichtbij` (loca
 | Review versturen | **Review versturen** (of **Stuur mij een code** / **Bevestigen en versturen** zonder account) | Totaalcijfer verplicht, tekst 20–3.000 tekens, naam 2–60 tekens; ingelogd of code uit de mail (de database weigert anders); verborgen honeypotveld tegen spam | Knop "Versturen…" | "Bedankt, we controleren je review" | Foutmelding in de sheet | Zelfde scherm |
 | Fout melden | **Versturen** in de sheet | Onderwerp en toelichting (min. 5 tekens) verplicht; e-mail geldig als ingevuld; honeypotveld | Knop uit | "Bedankt voor je melding" | Foutmelding in de sheet | Zelfde scherm |
 | Melding (DSA) | **Melding versturen** | Reden, URL, toelichting, naam, e-mail, verklaring te goeder trouw | Knop uit | Bevestiging met persoonlijke link | Foutmelding | `/support/<token>` |
-| Cookiekeuze | **Statistieken toestaan**, **Alleen noodzakelijk** of **Zelf instellen** | — | — | Banner weg, keuze opgeslagen en gelogd | — | Zelfde scherm |
+| Cookiekeuze | Eén rij: "Mogen we tellen hoe de site wordt gebruikt?" met **Ja**, **Nee** (even zwaar) en de link **Zelf instellen** (verbeterplan D1) | — | — | Banner weg, keuze opgeslagen en gelogd | — | Zelfde scherm |
 
 ## Zoekvak "waar"
 
@@ -119,7 +119,7 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 
 - **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
   vaste actiebalk met prijs, hartje, bellen, website en **Route**.
-- **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden). Op `/plek/*` een terugknop.
+- **Header**: logo naar Start, **? Hulp** naar Veelgestelde vragen en account (de **+** naar Plek aanmelden is op de telefoon weg, verbeterplan D7; Plek aanmelden staat op de startpagina, bij Doe mee en in de footer) (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden). Op `/plek/*` een terugknop.
 - **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
 - **Kruimelpad op de plekpagina**: Zoeken › provincie (naar `/camperplaatsen/<provincie>`) › plek; onder "In de buurt"
   links naar alle camperplaatsen in de provincie en, op een Waddeneiland, op dat eiland.

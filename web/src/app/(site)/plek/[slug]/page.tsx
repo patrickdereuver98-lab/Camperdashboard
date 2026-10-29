@@ -179,7 +179,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {/* Mobiel: beslissen, voorzieningen, beschrijving, ligging, ervaringen, praktisch. Groot scherm: zijkolom. */}
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
-            <Decision place={place} visitors={visitors} />
+            <Decision place={place} visitors={visitors} tel={tel} />
             {/* Foto toevoegen staat onder het kernblok: eerst beslissen, dan bijdragen */}
             <div className="-mt-4 min-h-11">
               <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
@@ -342,11 +342,24 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
   );
 }
 
+/** Bellen vanuit het vertrekblok als de vertrektijd onbekend is: één tik om het na te vragen */
+function CallButton({ tel, name }: { tel: string; name: string }) {
+  return (
+    <a
+      href={`tel:${tel.replace(/[^\d+]/g, "")}`}
+      aria-label={`Bel en vraag het bij ${name}`}
+      className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep"
+    >
+      <Icon name="phone" size={18} /> Bel en vraag het
+    </a>
+  );
+}
+
 /**
  * Het beslisblok: de vier dingen die een camperaar eerst wil weten, als rustige lijst. Vertrekken staat bovenaan
  * en is het enige dat mag opvallen (bosgroen bij geen vaste vertrektijd, meerblauw bij uitslapers).
  */
-function Decision({ place, visitors = 0 }: { place: Place; visitors?: number }) {
+function Decision({ place, visitors = 0, tel }: { place: Place; visitors?: number; tel?: string }) {
   const kind = departureKind(place);
   // Groen bij geen vaste vertrektijd: een bron is genoeg (besluit eigenaar 18 oktober 2026). Met voorwaarde of
   // afgewezen door beheer is het geen "vrij" meer.
@@ -406,9 +419,12 @@ function Decision({ place, visitors = 0 }: { place: Place; visitors?: number }) 
             <Sign name="clock" size={24} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
             {free ? "Zonder vertrektijd" : late ? "Voor uitslapers" : "Vertrekken"}
           </dt>
-          <dd className={`mt-1.5 font-display text-[1.625rem] leading-tight font-semibold tracking-tight text-balance sm:text-3xl ${known ? "text-ink" : "text-muted"}`}>
-            {departure}
-          </dd>
+          {/* Onbekend is geen antwoord: een rustige regel in plaats van het grootste woord van de pagina (verbeterplan D3) */}
+          {known ? (
+            <dd className="mt-1.5 font-display text-[1.625rem] leading-tight font-semibold tracking-tight text-balance text-ink sm:text-3xl">{departure}</dd>
+          ) : (
+            <dd className="mt-1 font-display text-lg font-semibold text-ink-2">Vertrektijd nog onbekend</dd>
+          )}
           {note && <dd className="mt-1 text-sm text-ink-2">{note}</dd>}
           {/* Bevestigd door bezoekers met een account die dezelfde regel doorgaven (RPC departure_visitors) */}
           {known && visitors > 0 && (
@@ -421,10 +437,10 @@ function Decision({ place, visitors = 0 }: { place: Place; visitors?: number }) 
           {incomplete && (
             <dd className="mt-2">
               <p className="text-sm text-ink-2">
-                We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten
-                andere camperaars hoe laat ze weg moeten.
+                Bel even voor je gaat. Weet je het al, geef het dan door. Zo weten andere camperaars hoe laat ze weg moeten.
               </p>
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
+                {tel && <CallButton tel={tel} name={place.name} />}
                 <GiveDepartureButton placeId={place.id} placeName={place.name} />
               </div>
               {/* Eigenaren vullen het zelf in: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026) */}
@@ -434,6 +450,11 @@ function Decision({ place, visitors = 0 }: { place: Place; visitors?: number }) 
           {!known && !incomplete && (
             <dd className="mt-1 text-sm text-ink-2">
               Bel even voor je gaat.
+              {tel && (
+                <div className="mt-2">
+                  <CallButton tel={tel} name={place.name} />
+                </div>
+              )}
               <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd?" />
               <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de vertrektijd in" />
             </dd>

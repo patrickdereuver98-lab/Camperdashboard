@@ -11,6 +11,10 @@ staan, wat het echt kost (inclusief alle toeslagen) en welke voorzieningen er zi
 **Volgorde van de belofte (besluit 18 oktober 2026):** vertrektijd eerst, daarna de volledige prijs, daarna actuele
 gegevens. Bij elke keuze in bouwen of data gaat de vertrektijd voor.
 
+**Hoofdbelofte (besluit eigenaar 29 oktober 2026, B1 in het [verbeterplan](../verbeterplan-2026-10-29.md)):** "Weet vooraf
+hoe laat je weg moet." Een vaste vertrektijd die je kent is ook een antwoord; zonder vaste vertrektijd (live 32 van de
+2.193 plekken) blijft een eigen pagina en filter, maar is niet langer het enige verhaal op de startpagina.
+
 ## Positie
 
 | Wat | VrijStaan | Campercontact, park4night, ACSI |
