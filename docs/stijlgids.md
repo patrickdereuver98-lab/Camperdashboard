@@ -42,6 +42,9 @@ Spelregels:
   voor water en uitslapers.
 - **Kaartstippen** hebben de kleur van de vertrekregel (bosgroen, meerblauw, donkergrijs); onbekend is een holle grijze
   ring. Gratis heeft geen eigen stipkleur (besluit 29 oktober 2026).
+- **Kaartgroepen** (clusters) zijn bosgroen met een wit getal en groeien in drie stappen mee met het aantal plekken:
+  < 10, 10–49 en ≥ 50 (16, 21, 27 px), van licht naar donker bosgroen (`clusterColors` in `src/lib/map-data.ts`, wit
+  getal ≥ 4,5:1). Geen avondzon: die is voor de geselecteerde plek. Een tik zoomt in tot de groep uiteenvalt.
 - **Kleur is betekenis.** Een groene badge betekent "geen vaste vertrektijd", niet "mooi". Grote vlakken zijn
   zandpapier of wit (`surface`); getinte vlakken (`forest-tint`) alleen klein (badge, chip).
 - **Tekst**: `ink` voor koppen en waarden, `ink-2` voor lopende tekst, `muted` voor bijzaken. Nooit zuiver zwart.

@@ -3,13 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
-import type { Bbox } from "@/lib/bbox";
 import type { LatLng } from "@/lib/geo";
-import { departureShort, markerPrice } from "@/lib/format";
-import { isIncomplete } from "@/lib/place-status";
-import { departureKind } from "@/lib/search";
+import { byClusterSize, CLUSTER_RADIUS, clusterColors, popupProps, toGeoJSON, type MapPlace, type PinProps, type PopupProps } from "@/lib/map-data";
 import { SaveButton } from "./place-ui";
-import type { PlaceSummary } from "@/lib/types";
 
 const NL_BOUNDS: [[number, number], [number, number]] = [
   [3.3, 50.75],
@@ -19,34 +15,6 @@ const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
 const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 /** Straal van het onzichtbare tikvlak rond een punt: 22 px = een tikdoel van 44 × 44 px */
 const HIT_RADIUS = 22;
-
-type MapPlace = Pick<PlaceSummary, "slug" | "name" | "lat" | "lng" | "town" | "priceEur" | "priceFrom" | "imageUrl"> &
-  Partial<Pick<PlaceSummary, "priceExtras" | "departure" | "checkoutUntil" | "departureCheck">>;
-
-/** `departures`: de plekken hebben vertrekgegevens (in beheer niet; dan is niets "onvolledig") */
-function toGeoJSON(places: MapPlace[], departures: boolean) {
-  return {
-    type: "FeatureCollection" as const,
-    features: places.map((p) => ({
-      type: "Feature" as const,
-      geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
-      properties: {
-        slug: p.slug,
-        name: p.name,
-        town: p.town,
-        price: markerPrice(p),
-        // Kleur van de stip = vertrekregel (concept "Kaart eerst", 29 oktober 2026): groen zonder vaste vertrektijd,
-        // meerblauw voor uitslapers, donkergrijs bij een vaste tijd vóór 12:00
-        group: !departures ? "plain" : departureKind(p) === "vrij" ? "vrij" : departureKind(p) === "uitslapers" ? "uitslapers" : "overig",
-        // Vertrekregel zoals op de kaart in de lijst; leeg = onbekend
-        departure: departureShort(p) ?? "",
-        // Onvolledig (geen vertrekregel): grijze stip, onder de gekleurde plekken
-        incomplete: departures && isIncomplete(p),
-        image: p.imageUrl ?? "",
-      },
-    })),
-  };
-}
 
 /** Basiskaart in de tinten van de site: koel wit, zacht groen, meerblauw */
 function tint(map: MlMap, dark: boolean) {
@@ -64,8 +32,6 @@ function tint(map: MlMap, dark: boolean) {
     }
   }
 }
-
-type PopupProps = { slug: string; name: string; town: string; price: string; departure: string; image: string };
 
 /**
  * Popup van een plek, als React-inhoud in het DOM-vak van MapLibre (portal). Zo werkt het hartje (SaveButton) zoals
@@ -97,10 +63,8 @@ function PopupCard({ p, departures }: { p: PopupProps; departures: boolean }) {
 
 export function PlaceMap({
   places,
-  fitPlaces,
   highlight,
   onSelect,
-  onViewportChange,
   fitKey,
   route,
   user,
@@ -111,12 +75,8 @@ export function PlaceMap({
   className = "",
 }: {
   places: MapPlace[];
-  /** Plekken om naartoe te zoomen bij een nieuwe fitKey (standaard `places`) */
-  fitPlaces?: Pick<MapPlace, "lat" | "lng">[];
   highlight?: string | null;
   onSelect?: (slug: string) => void;
-  /** Zichtbaar gebied na elke verplaatsing of zoom (voor laden per bounding box) */
-  onViewportChange?: (bbox: Bbox) => void;
   /** Verandert deze waarde, dan zoomt de kaart naar de huidige plekken. */
   fitKey?: string;
   /** Lijn over de weg (lng/lat), bijvoorbeeld van de routeplanner */
@@ -140,9 +100,9 @@ export function PlaceMap({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const latest = useRef({ places, onSelect, onViewportChange, cluster, departures, popup });
+  const latest = useRef({ places, onSelect, cluster, departures, popup });
   useEffect(() => {
-    latest.current = { places, onSelect, onViewportChange, cluster, departures, popup };
+    latest.current = { places, onSelect, cluster, departures, popup };
   });
 
   // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
@@ -168,6 +128,11 @@ export function PlaceMap({
       // Vaste vertrektijd vóór 12:00: neutraal donker, duidelijk anders dan de holle grijze stip van "onbekend"
       const ink2 = css.getPropertyValue("--ink-2").trim() || (dark ? "#c7c2b6" : "#46524a");
       const lakePoint = dark ? "#4f95a4" : lake;
+      // Clusters: groter en donkerder groen naarmate er meer plekken in zitten (map-data.ts). In donker draagt een
+      // lichtgroene rand het verschil bij de grotere groepen.
+      const clusterFill = clusterColors(dark);
+      const ringLight = css.getPropertyValue("--forest").trim() || "#8dbf9f";
+      const clusterRing = dark ? byClusterSize([surface, ringLight, ringLight]) : surface;
 
       map = new maplibregl.Map({
         container: el.current,
@@ -213,10 +178,10 @@ export function PlaceMap({
           source: "places",
           filter: ["has", "point_count"],
           paint: {
-            "circle-color": forest,
-            "circle-radius": ["step", ["get", "point_count"], 16, 20, 20, 100, 26],
+            "circle-color": byClusterSize(clusterFill),
+            "circle-radius": byClusterSize(CLUSTER_RADIUS),
             "circle-stroke-width": 3,
-            "circle-stroke-color": surface,
+            "circle-stroke-color": clusterRing,
           },
         });
         map.addLayer({
@@ -224,7 +189,12 @@ export function PlaceMap({
           type: "symbol",
           source: "places",
           filter: ["has", "point_count"],
-          layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 14, "text-font": ["Noto Sans Bold"] },
+          layout: {
+            "text-field": ["get", "point_count_abbreviated"],
+            "text-size": byClusterSize([14, 15, 16]),
+            "text-font": ["Noto Sans Bold"],
+            "text-allow-overlap": true,
+          },
           paint: { "text-color": "#ffffff" },
         });
         map.addLayer({
@@ -276,8 +246,8 @@ export function PlaceMap({
           type: "circle",
           source: "places",
           filter: ["has", "point_count"],
-          // Grote groepen (26 px) zijn al groter dan het tikvlak
-          paint: { ...hit, "circle-radius": ["step", ["get", "point_count"], HIT_RADIUS, 100, 26] },
+          // De grootste groepen (27 px) zijn al groter dan het tikvlak
+          paint: { ...hit, "circle-radius": byClusterSize([HIT_RADIUS, HIT_RADIUS, CLUSTER_RADIUS[2]]) },
         });
         map.addLayer({
           id: "points-hit",
@@ -295,10 +265,13 @@ export function PlaceMap({
         map.on("click", "points-hit", (e) => {
           const f = e.features?.[0];
           if (!f || !map) return;
-          const props = f.properties as PopupProps;
-          latest.current.onSelect?.(props.slug);
+          const { slug } = f.properties as PinProps;
+          latest.current.onSelect?.(slug);
           popupRef.current?.remove();
-          if (!latest.current.popup) return;
+          // De stip draagt alleen de slug; de rest van de pop-up komt uit de plekken zelf
+          const place = latest.current.places.find((p) => p.slug === slug);
+          if (!latest.current.popup || !place) return;
+          const props = popupProps(place);
           const node = document.createElement("div");
           const next = new maplibregl.Popup({ offset: 14, maxWidth: "260px" })
             .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
@@ -308,13 +281,6 @@ export function PlaceMap({
           popupRef.current = next;
           setOpenPopup({ node, props });
         });
-        const reportViewport = () => {
-          if (!map) return;
-          const b = map.getBounds();
-          latest.current.onViewportChange?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
-        };
-        map.on("moveend", reportViewport);
-        reportViewport();
         for (const id of ["clusters-hit", "points-hit"]) {
           map.on("mouseenter", id, () => map && (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", id, () => map && (map.getCanvas().style.cursor = ""));
@@ -355,7 +321,7 @@ export function PlaceMap({
     const map = mapRef.current;
     if (!ready || !map) return;
     const pts: [number, number][] = [
-      ...(fitPlaces ?? places).map((p) => [p.lng, p.lat] as [number, number]),
+      ...places.map((p) => [p.lng, p.lat] as [number, number]),
       ...(user ? [[user.lng, user.lat] as [number, number]] : []),
     ];
     if (!pts.length) return;
