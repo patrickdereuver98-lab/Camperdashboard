@@ -95,8 +95,7 @@ en de sleutel in de tabel `geo_bronnen`. Alleen `"status": "actief"` draait; elk
 | `file_csv`, `file_gpx`, `file_kml` | `pad` binnen `tools/data-collectors` (moet in de repository staan; `data/` staat niet in git) |
 | `bestanden` | `map` met KML/GPX/CSV-bestanden |
 
-Actief: `osm` (tier 4), `archies` (tier 3) en `svr` (tier 4), alle drie toegestaan in `geo_bronnen` (besluit eigenaar
-30 oktober 2026; voor Archies en SVR is de eigenaar verantwoordelijk voor de licentie, README 74). Een bestandsbron
+Actief: alleen `osm` (tier 4, besluit eigenaar 30 oktober 2026: productie alleen met open data). Een bestandsbron
 zonder bestand wordt overgeslagen met "wacht op bestand"; de andere bronnen draaien door. Promotie naar `places` gebeurt
 pas als een plek in twee toegestane bronnen staat (tier 3–5); OSM alleen vult `geo_master`.
 
