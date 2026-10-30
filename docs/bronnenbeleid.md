@@ -87,7 +87,8 @@ Wat blijft, omdat het een wettelijke grens is of andere sites schaadt (niet aan 
 - **Geen databank in bulk overnemen** (Databankenwet): van een directory lezen we losse pagina's voor losse feiten,
   we kopiëren hun lijst niet. Teksten en foto's van anderen nemen we niet over.
 - **Geen persoonsgegevens opslaan** (AVG): geen namen, profielen of reviewteksten buiten het korte citaat.
-- **Niemand overbelasten:** hoogstens één verzoek per 5 seconden per host en 7 pagina's per site per ronde. Bij 429
+- **Niemand overbelasten:** hoogstens één verzoek per 5 seconden per host (plus willekeurige spreiding) en 15 pagina's per
+  site per ronde (was 7; besluit eigenaar 30 oktober 2026, Master Database). Bij 429
   of een trage site gaan we langzamer, niet sneller.
 - **Stoppen als een eigenaar of site daarom vraagt** (mail, klacht, juridische brief): de bron gaat op geblokkeerd
   voor elke lezer en de coördinator legt het voor aan de eigenaar.

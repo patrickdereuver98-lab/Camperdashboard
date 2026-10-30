@@ -1,20 +1,43 @@
 // OpenStreetMap → VrijStaan-velden
 
-/** Overpass-query per provincie (ISO 3166-2, bv. NL-GE) */
+/**
+ * Overpass-gebied: "NL" is heel Nederland in één query (besluit 30 oktober 2026, Master Database), een ISO 3166-2-code
+ * (bv. NL-GE) één provincie. De provincie-route blijft als terugval als Overpass de landsquery weigert. Voor het land
+ * twee selectors samen, zodat de query blijft werken als de landsrelatie de code onder ISO3166-1:alpha2 draagt;
+ * Caribisch Nederland valt in mapOsm af op de coördinaten.
+ */
+function area(region: string) {
+  return region === "NL"
+    ? `(area["ISO3166-1"="NL"][admin_level=2];area["ISO3166-1:alpha2"="NL"][admin_level=2];)->.r;`
+    : `area["ISO3166-2"="${region}"]->.r;`;
+}
+
+/** Minder plekken dan dit uit de landsquery is een fout (verkeerd gebied), geen leeg Nederland */
+export const NL_MIN_PLACES = 1500;
+
+/**
+ * Alle plekken waar een camper mag staan: camperplaatsen (tourism=caravan_site), campings die campers niet uitsluiten
+ * (motorhome=yes valt hieronder), parkeerplaatsen met motorhome=designated of yes, en al het andere met een expliciete
+ * motorhome-tag (havens, boerderijen). `out center tags`: vlakken komen als één punt terug en zonder de lijst van
+ * knooppunten die `out center` meestuurt, dus zelfde coördinaten met minder bytes.
+ */
 export function placesQuery(region: string) {
-  return `[out:json][timeout:110];
-area["ISO3166-2"="${region}"]->.r;
+  const timeout = region === "NL" ? 300 : 110;
+  return `[out:json][timeout:${timeout}];
+${area(region)}
 (
   nwr["tourism"="caravan_site"](area.r);
   nwr["tourism"="camp_site"]["motorhome"!="no"]["tents"!="only"](area.r);
+  nwr["amenity"="parking"]["motorhome"~"^(yes|designated)$",i](area.r);
   nwr["motorhome"~"^(yes|designated)$",i](area.r);
 );
 out center tags;`;
 }
 
 export function pointsQuery(region: string) {
-  return `[out:json][timeout:60];
-area["ISO3166-2"="${region}"]->.r;
+  const timeout = region === "NL" ? 180 : 60;
+  return `[out:json][timeout:${timeout}];
+${area(region)}
 (
   nwr["amenity"="sanitary_dump_station"](area.r);
   nwr["amenity"="water_point"](area.r);
@@ -22,7 +45,9 @@ area["ISO3166-2"="${region}"]->.r;
 out center tags;`;
 }
 
+/** Regio's met hun provincie; bij "NL" bepaalt ingest_osm de provincie via de dichtstbijzijnde plaats */
 export const REGIONS: Record<string, string> = {
+  NL: "",
   "NL-DR": "Drenthe", "NL-FL": "Flevoland", "NL-FR": "Friesland", "NL-GE": "Gelderland",
   "NL-GR": "Groningen", "NL-LI": "Limburg", "NL-NB": "Noord-Brabant", "NL-NH": "Noord-Holland",
   "NL-OV": "Overijssel", "NL-UT": "Utrecht", "NL-ZE": "Zeeland", "NL-ZH": "Zuid-Holland",

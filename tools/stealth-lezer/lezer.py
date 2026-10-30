@@ -4,18 +4,22 @@ Leest websites die de gewone scraper niet of nauwelijks kon lezen, met Scrapling
 die zich als gewone bezoeker voordoet en Cloudflare-controles oplost. De lezer haalt alleen op; de pipeline (edge
 function, acties stealth_*) kiest de pagina's en leest ze uit met dezelfde extractor als de gewone scraper.
 
-Grenzen die blijven (bronnenbeleid §3a): geen inlog- of betaalmuren, hoogstens één verzoek per 5 seconden per host,
-hoogstens 7 subpagina's per site per ronde, en bij 429 langzamer in plaats van sneller.
+Eén proces leest de hele wachtrij leeg (besluit eigenaar 30 oktober 2026): geen verdeling over losse lezers meer, maar
+STEALTH_PARALLEL browsers in één proces die samen één klok per host delen. Tijdelijke fouten (time-outs, 5xx, 429)
+krijgen een nieuwe poging met exponentiële wachttijd en willekeurige spreiding; pas daarna gaat de plek terug in de
+wachtrij.
+
+Grenzen die blijven (bronnenbeleid §3a): geen inlog- of betaalmuren, hoogstens één verzoek per 5 seconden per host (plus
+spreiding), de subpagina's die de pipeline kiest (stealth.ts), en bij 429 langzamer in plaats van sneller.
 
 Omgeving:
   PIPELINE_URL      https://<project>.supabase.co/functions/v1/pipeline
   PIPELINE_KEY      optioneel: internal_secrets.pipeline_key. Zonder sleutel meldt de lezer zich aan met een GitHub-
                     OIDC-token (alleen in de workflow stealth-lezer.yml op main, die id-token: write heeft)
   STEALTH_PROXIES   optioneel: proxy-adressen, gescheiden door komma's (http://user:pass@host:port)
-  STEALTH_MINUTES   hoe lang één run mag duren (standaard 50)
+  STEALTH_MINUTES   hoe lang één run mag duren (standaard 330; de workflow start daarna zelf de volgende)
   STEALTH_BATCH     plekken per aanvraag (standaard 5)
-  STEALTH_SHARD     optioneel: welk deel van de hosts deze lezer doet (0, 1, …), samen met STEALTH_SHARDS
-  STEALTH_SHARDS    optioneel: aantal lezers tegelijk (standaard 1)
+  STEALTH_PARALLEL  browsers tegelijk in dit proces (standaard 6); per host blijft er één verzoek per 5 seconden
   STEALTH_CHROME    optioneel: pad naar een eigen Chromium (anders die van `scrapling install`)
 """
 
@@ -24,13 +28,21 @@ from __future__ import annotations
 import base64
 import json
 import os
+import queue
+import random
 import re
 import sys
+import threading
 import time
+import urllib.error
 import urllib.request
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 HOST_DELAY_S = 5.0
+HOST_JITTER_S = 2.5  # willekeurige extra wachttijd per verzoek, zodat het verkeer niet als een metronoom loopt
+RETRIES = 3  # nieuwe pogingen per pagina bij een tijdelijke fout
+BACKOFF_S = 4.0  # eerste wachttijd na een tijdelijke fout; daarna 8, 16 … seconden
+BACKOFF_MAX_S = 600.0
 PAGE_TIMEOUT_MS = 45_000
 PDF_MAX_BYTES = 3_000_000
 ROBOTS_AGENT = "VrijStaanBot"
@@ -40,24 +52,75 @@ LOGIN_PATH = re.compile(r"/(login|inloggen|aanmelden|signin|sign-in|account|mijn
 
 
 class TooManyRequests(Exception):
-    """429: de site vraagt ons langzamer te gaan. We stoppen met deze plek; de wachtrij probeert het later opnieuw."""
+    """429 bleef na alle pogingen: we stoppen met deze plek; de wachtrij probeert het later opnieuw."""
+
+
+class Transient(Exception):
+    """Tijdelijke fout (5xx, time-out, verbinding weg): nog een poging na een wachttijd."""
+
+
+def backoff(attempt: int, base: float = BACKOFF_S, cap: float = BACKOFF_MAX_S, rand=random.random) -> float:
+    """Exponentiële wachttijd met volledige spreiding: willekeurig tussen de helft en het geheel van base * 2^attempt."""
+    top = min(cap, base * (2**attempt))
+    return top / 2 + rand() * top / 2
+
+
+def retry_after(value) -> float | None:
+    """Retry-After in seconden (alleen de getalvorm; een datum negeren we en dan geldt onze eigen wachttijd)."""
+    try:
+        return max(0.0, min(BACKOFF_MAX_S, float(str(value).strip())))
+    except (TypeError, ValueError):
+        return None
+
+
+def host_of(url: str) -> str:
+    return (urlsplit(url).hostname or "").removeprefix("www.")
 
 
 class HostClock:
-    """Hoogstens één verzoek per HOST_DELAY_S seconden per host (www. telt als dezelfde host)."""
+    """Hoogstens één verzoek per HOST_DELAY_S (+ spreiding) per host (www. telt als dezelfde host), ook over threads.
 
-    def __init__(self, delay: float = HOST_DELAY_S, now=time.monotonic, sleep=time.sleep):
-        self.delay, self.now, self.sleep = delay, now, sleep
+    Elke aanvraag reserveert onder een slot het eerstvolgende vrije moment voor zijn host en slaapt daarna buiten het
+    slot, zodat andere hosts niet hoeven te wachten. Na een 429 schuift slow_down het volgende moment op.
+    """
+
+    def __init__(self, delay: float = HOST_DELAY_S, jitter: float = HOST_JITTER_S, now=time.monotonic, sleep=time.sleep, rand=random.random):
+        self.delay, self.jitter, self.now, self.sleep, self.rand = delay, jitter, now, sleep, rand
         self.last: dict[str, float] = {}
+        self.lock = threading.Lock()
 
     def wait(self, url: str) -> None:
-        host = (urlsplit(url).hostname or "").removeprefix("www.")
-        prev = self.last.get(host)
-        if prev is not None:
-            rest = self.delay - (self.now() - prev)
-            if rest > 0:
-                self.sleep(rest)
-        self.last[host] = self.now()
+        host = host_of(url)
+        with self.lock:
+            now = self.now()
+            prev = self.last.get(host)
+            slot = now if prev is None else max(now, prev + self.delay + self.rand() * self.jitter)
+            self.last[host] = slot
+        if slot > now:
+            self.sleep(slot - now)
+
+    def slow_down(self, url: str, seconds: float) -> None:
+        """De site vroeg om rustiger aan te doen: het volgende verzoek naar deze host pas over `seconds`."""
+        host = host_of(url)
+        with self.lock:
+            self.last[host] = max(self.last.get(host, 0.0), self.now() + seconds - self.delay)
+
+
+def with_retries(fn, url: str, clock: HostClock, retries: int = RETRIES, sleep=time.sleep):
+    """fn() opnieuw bij Transient en bij 429 (dan wacht de hele host), met exponentiële wachttijd."""
+    for attempt in range(retries + 1):
+        try:
+            return fn()
+        except TooManyRequests as e:
+            if attempt == retries:
+                raise
+            wait = retry_after(getattr(e, "retry_after", None)) or backoff(attempt + 1)
+            clock.slow_down(url, wait)
+        except Transient:
+            if attempt == retries:
+                raise
+            sleep(backoff(attempt))
+    raise AssertionError("onbereikbaar")
 
 
 def is_login_wall(url: str, html: str) -> bool:
@@ -129,21 +192,28 @@ class Pipeline:
             h["x-github-oidc"] = self.token.get()
         return h
 
-    def call(self, action: str, **body):
-        req = urllib.request.Request(
-            self.url,
-            data=json.dumps({"action": action, **body}).encode(),
-            headers=self.headers(),
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=120) as res:
-            return json.loads(res.read())
+    def call(self, action: str, retries: int = 4, sleep=time.sleep, **body):
+        """Actie op de pipeline; bij een netwerkfout, 429 of 5xx tot vier keer opnieuw met exponentiële wachttijd."""
+        data = json.dumps({"action": action, **body}).encode()
+        for attempt in range(retries + 1):
+            req = urllib.request.Request(self.url, data=data, headers=self.headers(), method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=120) as res:
+                    return json.loads(res.read())
+            except urllib.error.HTTPError as e:
+                if attempt == retries or not (e.code == 429 or e.code >= 500):
+                    raise
+            except (urllib.error.URLError, TimeoutError, ConnectionError):
+                if attempt == retries:
+                    raise
+            sleep(backoff(attempt, base=2.0, cap=60.0))
+        raise AssertionError("onbereikbaar")
 
 
 class Reader:
-    """Eén browser voor de hele run; verzoeken per host met wachttijd."""
+    """Eén browser per thread; de klok per host deelt hij met de andere threads."""
 
-    def __init__(self, proxies: list[str]):
+    def __init__(self, proxies: list[str], clock: HostClock):
         from scrapling.engines.toolbelt import ProxyRotator
         from scrapling.fetchers import StealthySession
 
@@ -155,17 +225,33 @@ class Reader:
             opts["executable_path"] = os.environ["STEALTH_CHROME"]
         self.session = StealthySession(**opts)
         self.session.start()
-        self.clock = HostClock()
+        self.clock = clock
 
     def close(self):
         self.session.close()
 
+    @staticmethod
+    def check(status: int, url: str, headers=None) -> None:
+        if status == 429:
+            e = TooManyRequests(f"HTTP 429 van {urlsplit(url).hostname}")
+            e.retry_after = (headers or {}).get("retry-after")
+            raise e
+        if status in (500, 502, 503, 504, 520, 521, 522, 524):
+            raise Transient(f"HTTP {status} van {urlsplit(url).hostname}")
+
     def html(self, url: str) -> str | None:
-        """HTML na JavaScript; None bij 404/410, een inlogmuur of een andere fout. 429 stopt de plek."""
-        self.clock.wait(url)
-        page = self.session.fetch(url, network_idle=True)
-        if page.status == 429:
-            raise TooManyRequests(f"HTTP 429 van {urlsplit(url).hostname}")
+        """HTML na JavaScript; None bij 404/410, een inlogmuur of een andere blijvende fout."""
+
+        def once():
+            self.clock.wait(url)
+            try:
+                page = self.session.fetch(url, network_idle=True)
+            except Exception as e:  # noqa: BLE001 - time-out of verbinding weg: nog een poging
+                raise Transient(str(e)[:200]) from e
+            self.check(page.status, url, page.headers)
+            return page
+
+        page = with_retries(once, url, self.clock)
         if page.status >= 400:
             return None
         html = page.html_content or ""
@@ -175,13 +261,20 @@ class Reader:
         """Robots.txt, sitemaps en PDF's: zonder browser, met de vingerafdruk van Chrome."""
         from scrapling.fetchers import Fetcher
 
-        self.clock.wait(url)
         kw = {"impersonate": "chrome", "stealthy_headers": True, "timeout": 20}
         if self.rotator:
             kw["proxy_rotator"] = self.rotator
-        page = Fetcher.get(url, **kw)
-        if page.status == 429:
-            raise TooManyRequests(f"HTTP 429 van {urlsplit(url).hostname}")
+
+        def once():
+            self.clock.wait(url)
+            try:
+                page = Fetcher.get(url, **kw)
+            except Exception as e:  # noqa: BLE001
+                raise Transient(str(e)[:200]) from e
+            self.check(page.status, url, page.headers)
+            return page
+
+        page = with_retries(once, url, self.clock)
         ctype = str((page.headers or {}).get("content-type", ""))
         return page.status, ctype, page.body or b""
 
@@ -219,7 +312,7 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
     plan = pipe.call("stealth_plan", home=home, html=html)
     if plan.get("wantSitemap"):
         xmls = []
-        for sm in (sitemaps_from_robots(robots) + [urljoin(origin, "/sitemap.xml")])[:2]:
+        for sm in list(dict.fromkeys(sitemaps_from_robots(robots) + [urljoin(origin, "/sitemap.xml")]))[:3]:
             try:
                 status, ctype, body = reader.raw(urljoin(origin, sm))
                 if status == 200 and re.search(r"xml|text/plain", ctype):
@@ -275,6 +368,46 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
     )
 
 
+def read_one(reader: Reader, pipe: Pipeline, place: dict) -> bool:
+    """Eén plek lezen en wegschrijven; een fout wordt vastgelegd zodat de wachtrij hem later opnieuw probeert."""
+    print(f"{place.get('name')} ({place.get('reason')}): {place['website']}")
+    try:
+        res = read_place(reader, pipe, place)
+        fields = res.get("fields", [])
+        print(f"  {len(fields)} velden: {', '.join(fields)}")
+        return bool(fields)
+    except Exception as e:  # noqa: BLE001 - fout vastleggen, door met de volgende
+        print(f"  fout: {e}", file=sys.stderr)
+        try:
+            pipe.call("stealth_apply", id=place["id"], error=str(e)[:300])
+        except Exception as e2:  # noqa: BLE001
+            print(f"  fout vastleggen mislukt: {e2}", file=sys.stderr)
+        return False
+
+
+class Feed:
+    """Haalt plekken uit de wachtrij van de pipeline voor alle threads; leeg = klaar."""
+
+    def __init__(self, pipe: Pipeline, batch_size: int, deadline: float, now=time.monotonic):
+        self.pipe, self.batch_size, self.deadline, self.now = pipe, batch_size, deadline, now
+        self.buffer: queue.SimpleQueue = queue.SimpleQueue()
+        self.lock = threading.Lock()
+        self.empty = False
+
+    def next(self) -> dict | None:
+        # Na de deadline geen nieuwe plekken meer: de lease verloopt na een uur en de plek komt vanzelf terug
+        if self.now() >= self.deadline:
+            return None
+        with self.lock:
+            if self.buffer.empty() and not self.empty:
+                batch = self.pipe.call("stealth_batch", n=self.batch_size)
+                if not batch:
+                    self.empty = True
+                for place in batch or []:
+                    self.buffer.put(place)
+            return None if self.buffer.empty() else self.buffer.get()
+
+
 def main() -> int:
     url, key = os.environ.get("PIPELINE_URL"), os.environ.get("PIPELINE_KEY")
     oidc_url, oidc_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL"), os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
@@ -282,40 +415,34 @@ def main() -> int:
         print("PIPELINE_URL en PIPELINE_KEY (of een GitHub-OIDC-token) zijn nodig", file=sys.stderr)
         return 2
     proxies = [p.strip() for p in os.environ.get("STEALTH_PROXIES", "").split(",") if p.strip()]
-    deadline = time.monotonic() + 60 * float(os.environ.get("STEALTH_MINUTES", "50"))
-    batch_size = int(os.environ.get("STEALTH_BATCH", "5"))
-    shard = {"shard": int(os.environ.get("STEALTH_SHARD", "0")), "shards": int(os.environ.get("STEALTH_SHARDS", "1"))}
+    deadline = time.monotonic() + 60 * float(os.environ.get("STEALTH_MINUTES", "330"))
+    parallel = max(1, int(os.environ.get("STEALTH_PARALLEL", "6")))
     pipe = Pipeline(url, key, None if key else GithubToken(oidc_url, oidc_token))
-    reader = Reader(proxies)
-    done = found = 0
-    empty = False
-    try:
-        while time.monotonic() < deadline:
-            batch = pipe.call("stealth_batch", n=batch_size, **shard)
-            if not batch:
-                print("Wachtrij leeg")
-                empty = True
-                break
-            for place in batch:
-                if time.monotonic() >= deadline:
-                    break  # lease verloopt na een uur; de plek komt vanzelf terug
-                print(f"{place.get('name')} ({place.get('reason')}): {place['website']}")
-                try:
-                    res = read_place(reader, pipe, place)
-                    fields = res.get("fields", [])
-                    found += bool(fields)
-                    print(f"  {len(fields)} velden: {', '.join(fields)}")
-                except Exception as e:  # noqa: BLE001 - fout vastleggen, door met de volgende
-                    print(f"  fout: {e}", file=sys.stderr)
-                    try:
-                        pipe.call("stealth_apply", id=place["id"], error=str(e)[:300])
-                    except Exception as e2:  # noqa: BLE001
-                        print(f"  fout vastleggen mislukt: {e2}", file=sys.stderr)
-                done += 1
-    finally:
-        reader.close()
-    print(f"Klaar: {done} plekken gelezen, {found} met gegevens")
-    write_output("meer", "false" if empty else "true")
+    feed = Feed(pipe, max(1, int(os.environ.get("STEALTH_BATCH", "5"))), deadline)
+    clock = HostClock()
+    counts = {"done": 0, "found": 0}
+    count_lock = threading.Lock()
+
+    def work():
+        reader = Reader(proxies, clock)
+        try:
+            while (place := feed.next()) is not None:
+                ok = read_one(reader, pipe, place)
+                with count_lock:
+                    counts["done"] += 1
+                    counts["found"] += ok
+        finally:
+            reader.close()
+
+    threads = [threading.Thread(target=work, name=f"lezer-{i}") for i in range(parallel)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    if feed.empty:
+        print("Wachtrij leeg")
+    print(f"Klaar: {counts['done']} plekken gelezen, {counts['found']} met gegevens")
+    write_output("meer", "false" if feed.empty else "true")
     return 0
 
 
