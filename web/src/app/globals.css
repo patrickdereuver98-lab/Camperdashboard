@@ -33,8 +33,10 @@
   color-scheme: light;
 }
 
+/* Donker: volgt het systeem, of de avondmodus (data-theme op <html>, lib/theme.ts, besluit B9). Zonder JavaScript
+   alleen het systeem; met data-theme="light" blijft het licht, ook als het systeem donker vraagt. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --paper: #111713;
     --surface: #18201b;
     --sunken: #222c26;
@@ -61,6 +63,33 @@
     --elev-float: 0 28px 64px -16px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.07), 0 0 0 1px rgb(255 255 255 / 0.07);
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --paper: #111713;
+  --surface: #18201b;
+  --sunken: #222c26;
+  --ink: #ece7db;
+  --ink-2: #c7c2b6;
+  --muted: #9aa39b;
+  --line: #2c3730;
+  --forest: #8dbf9f;
+  --forest-deep: #b9dcc4;
+  --forest-tint: #1e3227;
+  --on-forest: #0f1612;
+  --ember: #e8915c;
+  --ember-tint: #3a2519;
+  --on-ember: #0f1612;
+  --lake: #82bcc8;
+  --lake-tint: #17303a;
+  --alert: #f08a72;
+  --alert-tint: #3a1f19;
+  --scrim: rgb(0 0 0 / 0.6);
+  --lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.45);
+  /* In het donker: schaduw plus een zacht licht randje boven, zoals maanlicht op een dak */
+  --elev-low: 0 1px 2px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.04), inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  --elev-raised: 0 12px 30px -10px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  --elev-float: 0 28px 64px -16px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.07), 0 0 0 1px rgb(255 255 255 / 0.07);
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -216,9 +245,12 @@ button:active:not(:disabled),
 
 /* Gegenereerde landschappen iets gedempt in het donker */
 @media (prefers-color-scheme: dark) {
-  [data-landscape] {
+  :root:not([data-theme="light"]) [data-landscape] {
     filter: brightness(0.8) saturate(0.9);
   }
+}
+:root[data-theme="dark"] [data-landscape] {
+  filter: brightness(0.8) saturate(0.9);
 }
 
 .no-scrollbar {
@@ -226,6 +258,15 @@ button:active:not(:disabled),
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Rij die je opzij kunt vegen: de rechterrand vervaagt, zodat zichtbaar is dat er meer is (verbeterplan D6).
+   Extra ruimte rechts zorgt dat het laatste item helemaal leesbaar is als je tot het eind veegt. */
+@media (max-width: 639.98px) {
+  .scroll-fade {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    padding-right: 2rem;
+  }
 }
 
 /* Schermlezers */
@@ -374,16 +415,26 @@ details[open]::details-content {
   inset: -10px;
 }
 @media (prefers-color-scheme: dark) {
-  .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  :root:not([data-theme="light"]) .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
     filter: invert(1);
   }
-  .maplibregl-ctrl-attrib {
+  :root:not([data-theme="light"]) .maplibregl-ctrl-attrib {
     background: rgb(24 32 27 / 0.85) !important;
     color: var(--muted);
   }
-  .maplibregl-ctrl-attrib a {
+  :root:not([data-theme="light"]) .maplibregl-ctrl-attrib a {
     color: var(--ink-2);
   }
+}
+:root[data-theme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+:root[data-theme="dark"] .maplibregl-ctrl-attrib {
+  background: rgb(24 32 27 / 0.85) !important;
+  color: var(--muted);
+}
+:root[data-theme="dark"] .maplibregl-ctrl-attrib a {
+  color: var(--ink-2);
 }
 
 @media (prefers-reduced-motion: reduce) {

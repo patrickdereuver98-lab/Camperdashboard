@@ -3,6 +3,7 @@ import { PROVINCES } from "@/lib/types";
 import { searchHref } from "@/lib/search";
 import { Logo } from "./icons";
 import { CookieSettingsLink } from "./cookie-banner";
+import { ThemeChoice } from "./theme-choice";
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
@@ -78,6 +79,9 @@ export function Footer() {
       </div>
       <div className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <div className="mb-6">
+            <ThemeChoice />
+          </div>
           <h2 className="text-sm font-semibold text-ink-2">Camperplaatsen per provincie</h2>
           <ul className="mt-2 flex flex-wrap gap-2">
             {PROVINCES.map((p) => (

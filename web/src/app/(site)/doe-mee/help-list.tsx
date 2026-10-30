@@ -55,14 +55,14 @@ export function HelpList() {
           <p className="mt-3 text-sm text-muted">{list.length.toLocaleString("nl-NL")} plekken</p>
           <ul className="mt-2 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low">
             {list.slice(0, shown).map((p) => (
-              <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+              <li key={p.slug} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
                   <Link href={`/plek/${p.slug}`} className="block truncate font-semibold hover:text-forest hover:underline">
                     {p.name}
                   </Link>
                   <span className="block truncate text-sm text-muted">{p.town}</span>
                 </div>
-                {sent.includes(p.id) ? (
+                {sent.includes(p.slug) ? (
                   <span className="flex h-11 shrink-0 items-center gap-1.5 text-sm font-semibold text-forest">
                     <Icon name="check" size={18} /> Bedankt
                   </span>
@@ -89,8 +89,8 @@ export function HelpList() {
       <DepartureForm
         place={picked}
         onClose={() => setPicked(null)}
-        onSent={(id) => {
-          setSent((s) => [...s, id]);
+        onSent={() => {
+          if (picked) setSent((s) => [...s, picked.slug]);
           setPicked(null);
         }}
       />

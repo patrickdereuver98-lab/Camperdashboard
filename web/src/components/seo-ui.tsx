@@ -38,7 +38,17 @@ export function Breadcrumbs({ crumbs }: { crumbs: { name: string; path: string }
   );
 }
 
-export function PageHead({ title, intro, updated }: { title: string; intro: string[]; updated?: string }) {
+export function PageHead({
+  title,
+  intro,
+  updated,
+  facts,
+}: {
+  title: string;
+  intro: string[];
+  updated?: string;
+  facts?: { value: string; label: string }[];
+}) {
   return (
     <>
       <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-balance sm:text-4xl">{title}</h1>
@@ -48,6 +58,18 @@ export function PageHead({ title, intro, updated }: { title: string; intro: stri
           <p key={line}>{line}</p>
         ))}
       </div>
+      {/* De cijfers als korte regels met het getal vooraan: op de telefoon twee kolommen (verbeterplan D8) */}
+      {facts && facts.length > 0 && (
+        <dl className="mt-3 grid max-w-3xl grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+          {facts.map((f) => (
+            <div key={f.label} className="flex flex-col">
+              <dt className="sr-only">{f.label}</dt>
+              <dd className="font-display text-lg leading-tight font-semibold tabular-nums">{f.value}</dd>
+              <dd className="text-sm leading-snug text-ink-2">{f.label}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </>
   );
 }
@@ -91,7 +113,7 @@ export function PlaceList({ title, places, more }: { title: string; places: Plac
           </thead>
           <tbody className="divide-y divide-line">
             {places.map((p) => (
-              <tr key={p.id} className="align-top transition-colors hover:bg-sunken/40">
+              <tr key={p.slug} className="align-top transition-colors hover:bg-sunken/40">
                 <td className="px-3.5 py-3 sm:px-5">
                   <Link href={`/plek/${p.slug}`} prefetch={false} className="-my-3 block py-3 leading-snug font-semibold text-ink hover:text-forest hover:underline">
                     {p.name}

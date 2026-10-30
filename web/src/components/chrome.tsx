@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useOffline } from "next/offline";
 import { Suspense, useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
@@ -9,11 +9,13 @@ import { useTrip } from "@/lib/store";
 import { track } from "@/lib/track";
 import { Icon, Logo, type IconName } from "./icons";
 
+// Vannacht vervangt Start en Dichtbij als eerste tabblad (besluit eigenaar B6, 29 oktober 2026)
 const NAV: { href: string; label: string; icon: IconName }[] = [
+  { href: "/dichtbij", label: "Vannacht", icon: "moon" },
   { href: "/zoeken", label: "Zoeken", icon: "search" },
-  { href: "/dichtbij", label: "Dichtbij", icon: "locate" },
   { href: "/mijn-reis", label: "Mijn reis", icon: "heart" },
 ];
+const MAP_TAB = "/zoeken?kaart=1";
 
 // De vertrekpagina's en provinciepagina's zijn zoekresultaten: daar hoort het tabblad Zoeken bij
 const SEARCH_PATHS = ["/zonder-vertrektijd", "/uitslapers", "/overige-plekken", "/camperplaatsen"];
@@ -51,7 +53,8 @@ export function TabBar() {
 }
 
 function TabBarLive() {
-  return <TabBarView pathname={usePathname()} />;
+  const map = useSearchParams().get("kaart") === "1";
+  return <TabBarView pathname={usePathname()} map={map} />;
 }
 
 function TripBadge({ className = "" }: { className?: string }) {
@@ -109,14 +112,9 @@ function HeaderView({ pathname }: { pathname: string }) {
             Plek aanmelden
           </Link>
         </nav>
+        {/* Telefoon: alleen Hulp en account in de kop. Plek aanmelden staat op de startpagina, bij Doe mee en in de
+            footer; een losse "+" was niet te raden (verbeterplan D7) */}
         <div className="ml-auto flex items-center gap-1 md:hidden">
-          <Link
-            href="/plek-aanmelden"
-            className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken"
-            aria-label="Plek aanmelden"
-          >
-            <Icon name="plus" size={22} />
-          </Link>
           <Link href="/veelgestelde-vragen" className="flex h-11 items-center gap-1.5 rounded-xl px-2.5 font-semibold text-ink-2 hover:bg-sunken">
             <Icon name="help" size={22} />
             Hulp
@@ -166,11 +164,13 @@ function OfflineBar() {
   );
 }
 
-function TabBarView({ pathname }: { pathname: string }) {
-  const isActive = activeIn(pathname);
+function TabBarView({ pathname, map = false }: { pathname: string; map?: boolean }) {
+  const inSearch = activeIn(pathname);
+  // Kaart is het zoekscherm met kaart=1: dan is Kaart actief en Zoeken niet
+  const isActive = (href: string) => (href === MAP_TAB ? map && inSearch("/zoeken") : href === "/zoeken" ? !map && inSearch(href) : inSearch(href));
   // Op een plekpagina neemt de actiebalk (prijs, bewaren, website) de onderrand over
   if (pathname.startsWith("/admin") || pathname.startsWith("/plek/")) return null;
-  const tabs: { href: string; label: string; icon: IconName }[] = [{ href: "/", label: "Start", icon: "home" }, ...NAV];
+  const tabs: { href: string; label: string; icon: IconName }[] = [NAV[0], NAV[1], { href: MAP_TAB, label: "Kaart", icon: "map" }, NAV[2]];
   return (
     <>
     {/* Ruimte zodat de vaste tabbalk geen inhoud bedekt */}

@@ -85,10 +85,13 @@ export interface Place {
   updatedAt?: string;
 }
 
-/** Lichte variant voor zoeken en kaarten (zonder lange teksten). */
-export type PlaceSummary = Pick<
+/**
+ * Lichte variant voor zoeken en kaarten (zonder lange teksten). Het id ontbreekt in de browser: het compacte formaat van
+ * `/api/places` laat het weg (een derde van de verpakte grootte, verbeterplan F2). Wie het nodig heeft, zoekt het op
+ * via de slug (`placeIdOf` in `supabase-browser.ts`).
+ */
+export type PlaceSummary = { id?: string } & Pick<
   Place,
-  | "id"
   | "slug"
   | "name"
   | "kind"

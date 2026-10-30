@@ -32,6 +32,15 @@ export function supabase(): SupabaseClient<Database> {
   return client;
 }
 
+/**
+ * Het id van een gepubliceerde plek via de slug. De lijst in de browser heeft geen ids (verbeterplan F2); alleen wie
+ * iets over een plek instuurt, heeft het nodig. `null` als de plek niet (meer) bestaat.
+ */
+export async function placeIdOf(slug: string): Promise<string | null> {
+  const { data } = await supabase().from("places").select("id").eq("slug", slug).eq("status", "published").maybeSingle();
+  return data?.id ?? null;
+}
+
 /** Tekst uit een formulierveld; `null` als het veld ontbreekt (of een bestand is) */
 export function formValue(form: FormData, name: string): string | null {
   const v = form.get(name);

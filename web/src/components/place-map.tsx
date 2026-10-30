@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { Bbox } from "@/lib/bbox";
 import type { LatLng } from "@/lib/geo";
-import { departureShort, markerPrice } from "@/lib/format";
+import { departureShort, markerLabel } from "@/lib/format";
 import { isIncomplete } from "@/lib/place-status";
 import { departureKind } from "@/lib/search";
 import { SaveButton } from "./place-ui";
@@ -34,7 +34,8 @@ function toGeoJSON(places: MapPlace[], departures: boolean) {
         slug: p.slug,
         name: p.name,
         town: p.town,
-        price: markerPrice(p),
+        // Tijd en prijs onder de stip (vanaf zoom 10): "12:00" en "€ 10" op twee regels
+        price: markerLabel(p),
         // Kleur van de stip = vertrekregel (concept "Kaart eerst", 29 oktober 2026): groen zonder vaste vertrektijd,
         // meerblauw voor uitslapers, donkergrijs bij een vaste tijd vóór 12:00
         group: !departures ? "plain" : departureKind(p) === "vrij" ? "vrij" : departureKind(p) === "uitslapers" ? "uitslapers" : "overig",
@@ -154,7 +155,8 @@ export function PlaceMap({
       if (cancelled || !el.current) return;
       // Worker staat in public/ (scripts/copy-maplibre-worker.mjs); de versie in de URL voorkomt een oude cache
       maplibregl.setWorkerUrl(`/maplibre-gl-worker.mjs?v=${maplibregl.getVersion()}`);
-      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      // Het thema van de pagina (systeem of avondmodus, lib/theme.ts)
+      const dark = document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
       const css = getComputedStyle(document.documentElement);
       // Bosgroen zonder vaste vertrektijd, meerblauw voor uitslapers en de route, avondzon voor de geselecteerde plek
       // In donker bewust donkerder dan de tokens --ember en --forest: witte tekst in clusters blijft dan leesbaar
@@ -256,6 +258,7 @@ export function PlaceMap({
             "text-field": ["get", "price"],
             "text-size": 14,
             "text-font": ["Noto Sans Bold"],
+            "text-line-height": 1.15,
             "text-offset": [0, 1.5],
             "text-anchor": "top",
           },

@@ -153,12 +153,12 @@ export function NearbyApp() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <section className="min-w-0 px-3 pt-3 pb-8 sm:px-6 sm:pt-5">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-xl font-semibold sm:text-3xl">Dichtbij jou</h1>
+          <h1 className="font-display text-xl font-semibold sm:text-3xl">Hier kun je vannacht staan</h1>
           <button type="button" onClick={locate} className="flex h-11 items-center gap-1.5 font-semibold text-forest">
             <Icon name="refresh" size={18} /> Opnieuw
           </button>
         </div>
-        <ul className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:mt-3 sm:flex-wrap sm:px-0">
+        <ul className="no-scrollbar scroll-fade -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:mt-3 sm:flex-wrap sm:px-0">
           <li className="shrink-0">
             <button
               type="button"
@@ -264,7 +264,7 @@ export function NearbyApp() {
         {!places && <CardSkeleton />}
         <ul className="mt-2 space-y-2.5 sm:mt-3 sm:space-y-3">
           {list.map(({ place, km }) => (
-            <li key={place.id}>
+            <li key={place.slug}>
               <PlaceCard place={place as PlaceSummary} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />
             </li>
           ))}

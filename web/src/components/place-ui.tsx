@@ -6,7 +6,7 @@ import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/li
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
 import { useMyLocation } from "@/lib/my-location";
-import { arrivalText, cardPrice, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
+import { arrivalText, cardPrice, departureHeadline, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { useTrip } from "@/lib/store";
 import { isIncomplete } from "@/lib/place-status";
@@ -228,6 +228,19 @@ function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max
   );
 }
 
+/** Voorzieningen als woorden ("Stroom, water, lozen en 2 meer"): op de telefoon leesbaar zonder legenda (verbeterplan D4) */
+function FacilityWords({ place, max = 3 }: { place: PlaceSummary; max?: number }) {
+  const present = FACILITIES.filter((f) => place[f.key] === true).map((f, i) => (i ? f.label.toLowerCase() : f.label));
+  if (!present.length) return null;
+  const rest = present.length - max;
+  return (
+    <p className="min-w-0 text-sm leading-snug text-ink-2">
+      {present.slice(0, max).join(", ")}
+      {rest > 0 && ` en ${rest} meer`}
+    </p>
+  );
+}
+
 // ── Resultaatkaart ──────────────────────────────────────────────────────────
 
 /** Seizoensstatus als klein label; alleen als het seizoen bekend is */
@@ -302,31 +315,32 @@ export function PlaceCard({
     >
       <div
         className={`relative shrink-0 ${
-          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-[32%] max-w-36 self-stretch sm:w-56 sm:max-w-none"
+          // Rij op de telefoon: een vierkante foto van 96 px bovenaan, zodat er 3 tot 4 plekken in beeld passen (verbeterplan D4)
+          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "m-3 mr-0 aspect-square w-24 self-start overflow-hidden rounded-lg sm:m-0 sm:aspect-auto sm:w-56 sm:self-stretch sm:rounded-none"
         }`}
       >
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
         </ViewTransition>
         {place.priceEur === 0 && (
-          <span className="absolute top-2 left-2 rounded-md bg-ember px-2 py-0.5 font-display text-sm font-semibold text-on-ember">Gratis</span>
+          <span className={`absolute rounded-md bg-ember font-display text-sm font-semibold text-on-ember ${stack ? "top-2 left-2 px-2 py-0.5" : "top-1 left-1 px-1.5 sm:top-2 sm:left-2 sm:px-2 sm:py-0.5"}`}>Gratis</span>
         )}
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
       <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-0.5 right-0.5 sm:top-2 sm:right-2"}`}>
         <SaveButton slug={place.slug} variant={stack ? "icon" : "plain"} />
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-2 py-2.5 pr-3 pl-3 sm:p-4"}`}>
-        {/* Wanneer eerst: de vertrekregel is waar je op kiest (review 23 oktober 2026), daarna aankomen */}
+      <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-1.5 py-3 pr-3 pl-3 sm:gap-2 sm:p-4"}`}>
+        {/* Wanneer eerst, als grootste tekst van de kaart (besluit eigenaar B7, 29 oktober 2026), daarna aankomen */}
         {(departureShort(place) || isIncomplete(place) || arrival) && (
           <div className={`min-w-0 space-y-0.5 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
-            <DepartureChip place={place} />
+            <DepartureHeadline place={place} />
             {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
           </div>
         )}
         {/* Waar: naam, soort en plaats, afstand */}
         <div className={`min-w-0 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
-          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-[1.0625rem] sm:text-xl"}`}>
+          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-lg" : "text-base sm:text-lg"}`}>
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
@@ -342,7 +356,18 @@ export function PlaceCard({
 
         {/* Wat en hoeveel: voorzieningen links, prijs rechts */}
         <div className="mt-auto flex items-end justify-between gap-2 pt-0.5">
-          <FacilitySigns place={place} max={stack ? 5 : 3} size={stack ? 26 : 22} />
+          {stack ? (
+            <FacilitySigns place={place} max={5} size={26} />
+          ) : (
+            <>
+              <span className="min-w-0 sm:hidden">
+                <FacilityWords place={place} max={2} />
+              </span>
+              <span className="hidden sm:block">
+                <FacilitySigns place={place} max={3} size={22} />
+              </span>
+            </>
+          )}
           <CardPrice place={place} />
         </div>
       </div>
@@ -353,7 +378,7 @@ export function PlaceCard({
 export function CardSkeleton() {
   return (
     <div className="flex overflow-hidden rounded-xl bg-surface shadow-low">
-      <div className="h-36 w-[34%] max-w-36 shrink-0 animate-pulse bg-sunken sm:h-48 sm:w-60 sm:max-w-none" />
+      <div className="m-3 mr-0 h-24 w-24 shrink-0 animate-pulse rounded-lg bg-sunken sm:m-0 sm:h-48 sm:w-60 sm:rounded-none" />
       <div className="flex-1 space-y-3 p-3 sm:p-4">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
         <div className="h-6 w-3/4 animate-pulse rounded bg-sunken" />
@@ -366,6 +391,21 @@ export function CardSkeleton() {
       </div>
     </div>
   );
+}
+
+/**
+ * Vertrekregel als kop van de resultaatkaart: groot, in de kleur van de groep. Onbekend is een rustige grijze regel,
+ * niet het grootste woord (zelfde gedachte als D3 op de plekpagina).
+ */
+export function DepartureHeadline({ place }: { place: DepartureFacts }) {
+  const text = departureHeadline(place);
+  if (!text) {
+    if (!isIncomplete(place)) return null;
+    return <p className="text-sm font-semibold text-muted">Vertrektijd onbekend</p>;
+  }
+  const kind = departureKind(place);
+  const tone = kind === "vrij" ? "text-forest" : kind === "uitslapers" ? "text-lake" : "text-ink";
+  return <p className={`font-display text-[1.1875rem] leading-tight font-semibold tracking-tight sm:text-xl ${tone}`}>{text}</p>;
 }
 
 /** Vertrekregel op de kaart: groen als je kunt vertrekken wanneer je wilt */

@@ -70,7 +70,7 @@
 Bezoeker (telefoon)
    │  HTTPS
    ▼
-Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/locatie → PDOK, /api/route, /api/distances)
+Vercel: Next.js (pagina's met 'use cache', /api/places (de browser vraagt `?f=compact`: kolommen, woordenlijsten, geen id, een derde kleiner; `web/src/lib/summary-wire.ts`), /api/towns, /api/locatie → PDOK, /api/route, /api/distances)
    │  REST + RPC (publishable key, Row Level Security)
    ▼
 Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (OSM)        [elke 3 min: volgende provincie]

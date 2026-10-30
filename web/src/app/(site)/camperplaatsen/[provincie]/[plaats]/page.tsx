@@ -6,6 +6,7 @@ import { PROVINCES } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { SITE_URL } from "@/lib/env";
 import {
+  areaFacts,
   areaIntro,
   areaPath,
   areasIn,
@@ -102,7 +103,7 @@ export default async function AreaPage({ params }: PageProps<"/camperplaatsen/[p
           { name: area.name, path: areaPath(prov, area.slug) },
         ]}
       />
-      <PageHead title={title} intro={areaIntro(`${area.prep} ${area.name}`, c)} updated={updatedAt ? formatDate(updatedAt) : undefined} />
+      <PageHead title={title} intro={areaIntro(`${area.prep} ${area.name}`, c).slice(0, 1)} facts={areaFacts(c)} updated={updatedAt ? formatDate(updatedAt) : undefined} />
       <div className="mt-5 flex flex-wrap gap-2">
         <ActionLink primary href={`${mapHref(area)}&kaart=1`}>
           <Icon name="map" size={19} /> Bekijk op de kaart

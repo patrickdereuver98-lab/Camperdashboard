@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
+import { errorMessage, formValue, placeIdOf, supabase } from "@/lib/supabase-browser";
 import type { PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
 import { Sheet } from "./sheet";
@@ -18,9 +18,10 @@ export function DepartureForm({
   onClose,
   onSent,
 }: {
-  place: Pick<PlaceSummary, "id" | "name"> | null;
+  /** Met id (plekpagina) of alleen de slug (Doe mee, uit de lijst zonder ids) */
+  place: Pick<PlaceSummary, "id" | "slug" | "name"> | { id: string; slug?: undefined; name: string } | null;
   onClose: () => void;
-  onSent: (id: string) => void;
+  onSent: () => void;
 }) {
   const [kind, setKind] = useState<DepartureAnswer>("");
   const [busy, setBusy] = useState(false);
@@ -34,9 +35,14 @@ export function DepartureForm({
     if (!kind) return setErr("Kies hoe laat je weg moet.");
     setBusy(true);
     setErr(null);
+    const placeId = place.id ?? (place.slug ? await placeIdOf(place.slug).catch(() => null) : null);
+    if (!placeId) {
+      setBusy(false);
+      return setErr("Deze plek kon niet worden gevonden. Ververs de pagina en probeer het opnieuw.");
+    }
     const { error } = await supabase().rpc("submit_place", {
       p_kind: "correctie",
-      p_place_id: place.id,
+      p_place_id: placeId,
       p_payload: {
         onderwerp: "vertrektijd",
         plek: place.name,
@@ -51,7 +57,7 @@ export function DepartureForm({
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     setKind("");
-    onSent(place.id);
+    onSent();
   }
 
   return (

@@ -1,7 +1,7 @@
 // Wat de site toont (datareview 18 oktober 2026, stap 4: W2, W3, W5 tot W8).
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { cardPrice, departureLong, departureShort, markerPrice } from "../src/lib/format.ts";
+import { cardPrice, departureHeadline, markerLabel, departureLong, departureSentence, departureShort, markerPrice } from "../src/lib/format.ts";
 import { perPersonPrice, stopSurcharges } from "../src/lib/trip-extras.ts";
 import { applyFilters, confirmedFirst, DEFAULT_FILTERS, departureKind, priceRank, timeToMinutes } from "../src/lib/search.ts";
 import { knownFacts } from "../src/lib/place-facts.ts";
@@ -221,3 +221,27 @@ test("afgewezen blijft onbekend; voorwaardelijk houdt zijn eigen regel", () => {
   assert.equal(departureKind({ departure: "vrij", departureCheck: "voorwaardelijk" }), "onbekend");
 });
 
+
+test("B7: vertrekregel als kop van de kaart en als zin op de plekpagina; onbekend blijft leeg", () => {
+  assert.equal(departureHeadline({ departure: "vrij" }), "Weg wanneer je wilt");
+  assert.equal(departureHeadline({ departure: "per24" }), "Per 24 uur, geen vaste tijd");
+  assert.equal(departureHeadline({ departure: "vast", checkoutUntil: "11:30" }), "Uiterlijk 11:30 weg");
+  assert.equal(departureHeadline({ departure: "vast" }), "Vaste vertrektijd");
+  assert.equal(departureHeadline({ departure: "vrij", departureCheck: "voorwaardelijk" }), "Meestal geen vaste vertrektijd");
+  assert.equal(departureHeadline({ departure: "vrij", departureCheck: "afgewezen" }), undefined);
+  assert.equal(departureHeadline({}), undefined);
+  assert.equal(departureSentence({ departure: "vrij" }), "Je mag blijven tot je zelf weg wilt.");
+  assert.equal(departureSentence({ departure: "per24" }), "Geen vaste vertrektijd. Je betaalt per 24 uur.");
+  assert.equal(departureSentence({ departure: "vast", checkoutUntil: "11:30" }), "Je moet uiterlijk om 11:30 weg.");
+  assert.equal(departureSentence({ departure: "vast" }), "Er is een vaste vertrektijd. Welke weten we nog niet.");
+  assert.equal(departureSentence({ departure: "per24", departureCheck: "voorwaardelijk" }), "Meestal per 24 uur.");
+  assert.equal(departureSentence({}), undefined);
+});
+
+test("kaartlabel: tijd en prijs op twee regels; onbekend blijft weg", () => {
+  assert.equal(markerLabel({ departure: "vast", checkoutUntil: "12:00", priceEur: 10 }), "12:00\n€\u00a010");
+  assert.equal(markerLabel({ departure: "vrij" }), "Vrij");
+  assert.equal(markerLabel({ departure: "per24", priceEur: 0 }).split("\n")[0], "24 uur");
+  assert.equal(markerLabel({ priceEur: 8 }).includes("\n"), false);
+  assert.equal(markerLabel({ departure: "vrij", departureCheck: "afgewezen" }), "");
+});

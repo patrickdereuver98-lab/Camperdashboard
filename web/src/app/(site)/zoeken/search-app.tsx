@@ -182,7 +182,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           </div>
           {chips.length > 0 && (
             <MotionConfig reducedMotion="user">
-            <ul className="no-scrollbar -mx-3 mt-1 mb-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:mt-3 sm:mb-0 sm:flex-wrap sm:px-0">
+            <ul className="no-scrollbar scroll-fade -mx-3 mt-1 mb-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:mt-3 sm:mb-0 sm:flex-wrap sm:px-0">
               <AnimatePresence initial={false}>
               {chips.map((c) => (
                 <motion.li
@@ -311,7 +311,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
     };
   }, [places, filters]);
   const tabs: { key: DeparturePage | "alle"; label: string; href: string }[] = [
-    { key: "alle", label: "Alle", href: searchHref({ ...filters, departure: undefined }) },
+    { key: "alle", label: "Maakt niet uit", href: searchHref({ ...filters, departure: undefined }) },
     ...(Object.keys(DEPARTURE_PAGES) as DeparturePage[]).map((k) => ({
       key: k,
       label: DEPARTURE_PAGES[k].tab,
@@ -329,8 +329,10 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
     }
   }, [active, counts]);
   return (
-    <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-1 sm:px-6 sm:pt-3 lg:border-0 lg:bg-transparent lg:pt-6">
-      <ul ref={list} className="no-scrollbar -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+    <nav aria-labelledby="vertrek-vraag" className="border-b border-line bg-surface px-3 pt-2 sm:px-6 sm:pt-3 lg:border-0 lg:bg-transparent lg:pt-6">
+      {/* De tabbladen als antwoorden op één vraag (besluit eigenaar, richting B2 van de designreview, 29 oktober 2026) */}
+      <p id="vertrek-vraag" className="text-sm font-semibold text-ink-2">Hoe laat wil je weg?</p>
+      <ul ref={list} className="no-scrollbar scroll-fade -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
         {tabs.map((t) => (
           <li key={t.key} className="shrink-0">
             <Link
@@ -353,7 +355,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
           <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
           <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
           {page === "overig" && (
-            <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
+            <div className="no-scrollbar scroll-fade -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
               {(
                 [
                   ["overig", "Alle"],
@@ -402,7 +404,7 @@ function Results({
     <>
       <ul className="mt-2 space-y-2.5 sm:mt-4 sm:space-y-3">
         {results.slice(0, limit).map((r, i) => (
-          <li key={r.place.id} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
+          <li key={r.place.slug} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
             <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} eager={i < 2} />
           </li>
         ))}
