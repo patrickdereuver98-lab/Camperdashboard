@@ -291,6 +291,7 @@ export function PlaceCard({
       )
     ));
   const arrival = arrivalShort(place);
+  if (!stack) return <PlaceRow place={place} distance={distance} active={active} onHover={onHover} eager={eager} />;
   return (
     <article
       data-slug={place.slug}
@@ -350,6 +351,91 @@ export function PlaceCard({
   );
 }
 
+/**
+ * Resultaat als compacte rij van ±110 px (redesign 30 oktober 2026, UX-audit): zo staan er op een telefoon vier tot vijf
+ * plekken op één scherm. Volgorde zoals de stijlgids: wanneer (vertrekregel), waar (naam, plaats, afstand), hoe goed
+ * (score) en wat het kost (prijs met toeslagen). Voorzieningen en aankomst staan op de plekpagina.
+ */
+function PlaceRow({
+  place,
+  distance,
+  active,
+  onHover,
+  eager,
+}: {
+  place: PlaceSummary;
+  distance: React.ReactNode;
+  active?: boolean;
+  onHover?: (slug: string | null) => void;
+  eager?: boolean;
+}) {
+  return (
+    <article
+      data-slug={place.slug}
+      onMouseEnter={() => onHover?.(place.slug)}
+      onMouseLeave={() => onHover?.(null)}
+      className={`lift group relative flex min-h-[6.5rem] overflow-hidden rounded-xl bg-surface outline has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest ${
+        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent"
+      }`}
+    >
+      <div className="relative w-24 shrink-0 self-stretch sm:w-36">
+        <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
+          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
+        </ViewTransition>
+      </div>
+      <div className="flex min-w-0 flex-1 gap-2 py-2 pr-2 pl-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <DepartureChip place={place} compact />
+          <h3 className="truncate font-display text-base leading-snug font-semibold text-ink sm:text-lg">
+            <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
+              {place.name}
+            </Link>
+          </h3>
+          <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
+            {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
+          </p>
+          <div className="mt-auto flex min-w-0 items-center gap-2 text-sm">
+            {place.ratingCount > 0 && place.ratingAvg ? (
+              <span className="inline-flex shrink-0 items-center gap-1" aria-label={`Score ${scoreLabel(place.ratingAvg)} uit ${place.ratingCount} reviews`}>
+                <span className="rounded-md rounded-bl-none bg-forest px-1.5 font-display font-semibold text-on-forest">{scoreLabel(place.ratingAvg)}</span>
+                <span className="text-muted">({place.ratingCount})</span>
+              </span>
+            ) : null}
+            {distance && <span className="truncate font-semibold text-forest">{distance}</span>}
+            <OpenChip place={place} onlyClosed />
+          </div>
+        </div>
+        <div className="relative z-10 flex shrink-0 flex-col items-end justify-between">
+          <SaveButton slug={place.slug} variant="plain" />
+          <RowPrice place={place} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/** Prijs in de rij: het bedrag en één regel eronder (totaal voor 2 personen, toeslagen of per nacht) */
+function RowPrice({ place }: { place: PlaceSummary }) {
+  const price = cardPrice(place);
+  if (!price) return <p className="max-w-16 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
+  const t = nightTotal(place);
+  const total = t.total !== undefined && t.parts.length > 1 ? t.total : undefined;
+  const sub =
+    total !== undefined
+      ? `${TOTAL_PERSONS} pers. ${t.from ? "vanaf " : ""}${eur(total)}`
+      : price.extras || place.touristTaxIncluded === false
+        ? "+ toeslagen"
+        : price.perNight
+          ? "per nacht"
+          : undefined;
+  return (
+    <div className="text-right leading-tight">
+      <p className="font-display text-lg leading-none font-semibold text-ink">{price.value}</p>
+      {sub && <p className="mt-0.5 text-sm whitespace-nowrap text-muted">{sub}</p>}
+    </div>
+  );
+}
+
 export function CardSkeleton() {
   return (
     <div className="flex overflow-hidden rounded-xl bg-surface shadow-low">
@@ -369,13 +455,13 @@ export function CardSkeleton() {
 }
 
 /** Vertrekregel op de kaart: groen als je kunt vertrekken wanneer je wilt */
-export function DepartureChip({ place }: { place: DepartureFacts }) {
+export function DepartureChip({ place, compact = false }: { place: DepartureFacts; compact?: boolean }) {
   const label = departureShort(place);
   if (!label) {
     // Onvolledig: geen vertrekregel. Grijs, met tekst, zodat het niet alleen op kleur leunt (PRD, besluit 18 oktober 2026)
     if (!isIncomplete(place)) return null;
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-md bg-sunken px-1.5 py-0.5 text-sm leading-tight font-semibold text-muted">
+      <span className={`inline-flex items-center gap-1.5 rounded-md bg-sunken px-1.5 py-0.5 text-sm leading-tight font-semibold text-muted ${compact ? "self-start" : ""}`}>
         <Sign name="clock" size={16} state="unknown" />
         Vertrektijd onbekend
       </span>
@@ -385,9 +471,9 @@ export function DepartureChip({ place }: { place: DepartureFacts }) {
   // Groen bij geen vaste vertrektijd (een bron is genoeg); met voorwaarde of afgewezen valt het onder "onbekend"
   const style = kind === "vrij" ? "bg-forest-tint text-forest" : kind === "uitslapers" ? "bg-lake-tint text-lake" : "bg-sunken text-ink-2";
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm leading-tight font-semibold ${style}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-sm leading-tight font-semibold ${style} ${compact ? "max-w-full self-start" : ""}`}>
       <Sign name="clock" size={16} state={kind === "vrij" || kind === "uitslapers" ? "on" : "unknown"} tone={kind === "uitslapers" ? "lake" : "forest"} />
-      {label}
+      {compact ? <span className="truncate" title={label}>{label}</span> : label}
     </span>
   );
 }

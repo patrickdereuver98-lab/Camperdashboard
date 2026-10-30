@@ -49,13 +49,14 @@ export function CookieBanner() {
     setDetails(false);
   };
 
-  // Klein en onderaan, zodat het zoekveld en de resultaten zichtbaar blijven. Met "Zelf instellen" klapt de uitleg open.
+  // Eén smalle rij boven de navigatiebalk (redesign 30 oktober 2026): de resultaten blijven zichtbaar. Met "Zelf instellen"
+  // klapt de uitleg open.
   return (
     <div
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-titel"
-      className={`fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-xl bg-surface shadow-float md:bottom-6 ${details ? "p-4" : "px-3 py-2.5"}`}
+      className={`fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-xl bg-surface shadow-float md:bottom-6 ${details ? "p-4" : "py-1.5 pr-1.5 pl-3"}`}
     >
       {details ? (
         <>
@@ -96,20 +97,29 @@ export function CookieBanner() {
         </>
       ) : (
         <>
-          {/* Een smalle balk: bij het eerste bezoek blijft de pagina zelf zichtbaar (review 23 oktober 2026) */}
-          <p id="cookie-titel" className="text-[0.9375rem] leading-snug text-ink-2">
-            Mogen we tellen hoe de site wordt gebruikt, zonder cookies van derden?{" "}
-            <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
-              Zelf instellen
+          {/* Eén rij: vraag links, twee even zware knoppen rechts (richtlijn Autoriteit Persoonsgegevens) */}
+          <div className="flex items-center gap-2">
+            <p id="cookie-titel" className="min-w-0 flex-1 text-sm leading-snug text-ink-2">
+              Mogen we bezoek tellen, zonder cookies van derden?{" "}
+              <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
+                Zelf instellen
+              </button>
+            </p>
+            <button
+              type="button"
+              onClick={() => close(true)}
+              aria-label="Ja, tel mijn bezoek"
+              className="min-h-11 shrink-0 rounded-lg border border-forest bg-forest-tint px-3.5 font-semibold text-forest"
+            >
+              Ja
             </button>
-          </p>
-          {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => close(true)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
-              Toestaan
-            </button>
-            <button type="button" onClick={() => close(false)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
-              Alleen nodig
+            <button
+              type="button"
+              onClick={() => close(false)}
+              aria-label="Nee, alleen wat nodig is"
+              className="min-h-11 shrink-0 rounded-lg border border-forest bg-forest-tint px-3.5 font-semibold text-forest"
+            >
+              Nee
             </button>
           </div>
         </>

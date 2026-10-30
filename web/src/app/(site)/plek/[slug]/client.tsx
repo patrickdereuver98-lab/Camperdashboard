@@ -38,7 +38,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
         <div
           // Waren er foto's maar laadde geen enkele, dan blijft het vak even groot: anders springt de pagina omhoog
-          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-xl ${photos.length ? "aspect-[5/2] sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
+          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-xl ${photos.length ? "aspect-[2/1] sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
           role="img"
           aria-label={`Nog geen foto van ${name}`}
         >
@@ -52,7 +52,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <div
         ref={track_}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="no-scrollbar flex aspect-[5/2] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-xl"
+        className="no-scrollbar flex aspect-[2/1] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-xl"
         // Scrollbaar vak: met Tab bereikbaar, dan bladeren met de pijltjes (WCAG 2.1.1)
         tabIndex={0}
         role="region"
@@ -636,11 +636,14 @@ export function ReportProblem({
   topic = "prijs",
   label = "Klopt er iets niet? Meld het",
   facilities = {},
+  context,
 }: {
   placeId: string;
   placeName: string;
   topic?: string;
   label?: string;
+  /** Extra uitleg voor schermlezers bij een korte knoptekst ("Weet jij dit?" → "De prijs doorgeven") */
+  context?: string;
   /** Wat we nu over de voorzieningen weten; beginstand van "Wat is er op deze plek?" */
   facilities?: Partial<Pick<PlaceFacilities, FacilityKey>>;
 }) {
@@ -683,7 +686,8 @@ export function ReportProblem({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
-        <Icon name="alert" size={18} /> {label}
+        <Icon name={context ? "help" : "alert"} size={18} /> {label}
+        {context && <span className="sr-only"> {context}</span>}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je melding" : "Gegevens aanpassen"}>
         {done ? (
