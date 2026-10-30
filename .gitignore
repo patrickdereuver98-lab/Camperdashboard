@@ -9,3 +9,6 @@ Thumbs.db
 
 # Tijdelijke worktrees van agents
 .claude/worktrees/
+
+# Video van /brag-slim
+brag-output*/

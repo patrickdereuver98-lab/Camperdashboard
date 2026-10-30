@@ -36,3 +36,11 @@ wereldwijd). `security-review` is weggelaten omdat de ingebouwde `/security-revi
 Ze zijn Engelstalig en algemeen. **CLAUDE.md, `docs/specs/` en de stijlgids gaan voor** (Nederlandse teksten en
 commits, nooit data verzinnen, controle met `npm run check`). Bijwerken: kopieer de map opnieuw uit een nieuwere
 commit en pas het commitnummer hier aan.
+
+## brag-slim: korte lanceervideo
+
+Op 30 oktober 2026 toegevoegd (verzoek eigenaar): `brag-slim` uit github.com/latent-spaces/brag
+(`skills/brag-slim`, commit 669ab92, MIT). Maakt van het project een video van ongeveer 20 seconden met muziek
+en deeltekst, met alleen gereedschap dat al op de machine staat (Playwright, ffmpeg). De volledige `/brag` (met
+Hyperframes en meegeleverde muziek) is niet overgenomen. Uitvoer komt in `brag-output/` en hoort niet in git.
+Ook hier gaan de stijlgids en `vrijstaan-stijl` voor bij zichtbare tekst.
