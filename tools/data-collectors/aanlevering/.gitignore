@@ -1,0 +1,5 @@
+# Aangeleverde bestanden van derden: alleen versleuteld (*.enc) in git; de workflow ontsleutelt ze met het secret
+# AANLEVERING_SLEUTEL. Platte bestanden nooit committen: de repository is openbaar.
+*
+!.gitignore
+!*.enc

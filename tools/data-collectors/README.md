@@ -95,9 +95,20 @@ en de sleutel in de tabel `geo_bronnen`. Alleen `"status": "actief"` draait; elk
 | `file_csv`, `file_gpx`, `file_kml` | `pad` binnen `tools/data-collectors` (moet in de repository staan; `data/` staat niet in git) |
 | `bestanden` | `map` met KML/GPX/CSV-bestanden |
 
-Actief: alleen `osm` (tier 4, besluit eigenaar 30 oktober 2026: productie alleen met open data). Een bestandsbron
-zonder bestand wordt overgeslagen met "wacht op bestand"; de andere bronnen draaien door. Promotie naar `places` gebeurt
-pas als een plek in twee toegestane bronnen staat (tier 3–5); OSM alleen vult `geo_master`.
+Actief: `osm` (tier 4; camp_site, caravan_site en parkeerplaatsen met motorhome=yes/designated, geen camp_pitch) en
+`archies` (tier 3, README 74). Promotie naar `places` gebeurt pas als een plek in twee toegestane bronnen staat (tier
+3–5): een plek die zowel in OSM als bij Archies staat. Een bestandsbron zonder bestand wordt overgeslagen met "wacht op
+bestand"; de andere bronnen draaien door.
+
+**Bestanden van derden** staan alleen versleuteld in de repository (die is openbaar): `aanlevering/<naam>.enc`. De
+workflow ontsleutelt ze met het secret `AANLEVERING_SLEUTEL`. Een nieuwe aanlevering versleutelen:
+
+```bash
+openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in aanlevering/x.gpx -out aanlevering/x.gpx.enc -pass env:AANLEVERING_SLEUTEL
+```
+
+Archie's Campings komt als GPX van heel Europa; `filter_archies.py` houdt alleen Nederland over (rechthoek én een
+Nederlands nummer of geen nummer) en haalt naam, plaats en "hele jaar open" uit de naam.
 
 - `${NAAM}` komt uit een GitHub-secret met die naam. Ontbreekt die, dan stopt de run (nooit met een lege sleutel).
 - Lukt één bron niet, dan stopt de run vóór het samenvoegen; `merge_master` krijgt altijd alle lijsten tegelijk.

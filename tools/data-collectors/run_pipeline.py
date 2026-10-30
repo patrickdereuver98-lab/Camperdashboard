@@ -29,7 +29,7 @@ from typing import Any, Callable
 
 import requests
 
-from api_client import DATA_DIR, ApiClient, write_json
+from api_client import DATA_DIR, ApiClient, ApiError, RetryableHTTPError, write_json
 from map_api_data import map_raw
 from parse_statics import PARSERS, ParseResult, dedupe_ids, parse_file
 
@@ -131,16 +131,42 @@ def load_config(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]
     return active, inactive
 
 
+# Zelfde reeks als OVERPASS in web/supabase/functions/pipeline/index.ts: overpass-api.de weigert verzoeken vanaf sommige
+# cloud-adressen (406 vanaf GitHub Actions, 30 oktober 2026), dan nemen we de volgende
+OVERPASS_MIRRORS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+)
+
+
+def fetch_overpass(b: dict[str, Any], client_factory: Callable[..., ApiClient] = ApiClient) -> Any:
+    """Query als ?data= (GET, zoals index.ts), eerst op de url uit bronnen.json en dan op de mirrors. Per server de
+    gewone retries (429/5xx); een 4xx (zoals 406) gaat meteen door naar de volgende."""
+    client = client_factory(timeout=240, max_attempts=3, initial_wait=10, max_wait=120)
+    # Geen Accept-header: overpass-api.de antwoordt op Accept: application/json met 406 (zie overpass() in index.ts)
+    session = getattr(client, "session", None)
+    if session is not None:
+        session.headers.pop("Accept", None)
+    errors = []
+    for url in dict.fromkeys([b["url"], *OVERPASS_MIRRORS]):
+        try:
+            data = client.request_json("GET", url, params={"data": b["query"]})
+        except (ApiError, RetryableHTTPError, requests.RequestException) as e:
+            errors.append(f"{url.split('/')[2]}: {e}"[:200])
+            log.warning("Overpass %s lukt niet, volgende: %s", url, str(e)[:120])
+            continue
+        if isinstance(data, dict) and isinstance(data.get("elements"), list):
+            log.info("Overpass %s: %d elementen", url, len(data["elements"]))
+            return data
+        errors.append(f"{url.split('/')[2]}: geen elements in het antwoord")
+    raise ConfigError("Overpass: geen enkele server gaf antwoord | " + " | ".join(errors))
+
+
 def collect_api(b: dict[str, Any], env: dict[str, str], client_factory: Callable[..., ApiClient] = ApiClient) -> ParseResult:
     if b["type"] == "api_overpass":
-        # Overpass: de query als formulierveld "data" (POST), zoals overpass-api.de het verwacht; ruim boven de
-        # time-out in de query zelf
-        client = client_factory(timeout=240, max_attempts=4, initial_wait=10, max_wait=120)
-        # Geen Accept-header: overpass-api.de antwoordt daarop met 406 (zelfde regel als overpass() in index.ts)
-        session = getattr(client, "session", None)
-        if session is not None:
-            session.headers.pop("Accept", None)
-        raw: Any = client.request_json("POST", b["url"], data={"data": b["query"]})
+        raw: Any = fetch_overpass(b, client_factory)
     else:
         client = client_factory(headers=resolve_secrets(b.get("headers", {}), env))
         params = resolve_secrets(b.get("params", {}), env)
