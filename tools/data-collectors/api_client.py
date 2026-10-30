@@ -17,7 +17,10 @@ Gebruik als module:
 
 Of vanaf de opdrachtregel:
 
-    python api_client.py https://api.partner.nl/v1/plekken --out uit/partner.json --header "Authorization: Bearer …"
+    python api_client.py https://api.partner.nl/v1/plekken --header "Authorization: Bearer …"
+
+Zonder `--out` komt de ruwe respons in `data/raw_api_data.json` (naast dit script); `map_api_data.py` zet die om
+naar de standaardvorm. Alleen een geslaagde fetch wordt weggeschreven: bij een fout blijft het oude bestand staan.
 """
 
 from __future__ import annotations
@@ -49,6 +52,8 @@ DEFAULT_TIMEOUT_S = 30.0
 DEFAULT_ATTEMPTS = 6
 DEFAULT_MAX_WAIT_S = 120.0
 USER_AGENT = "VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)"
+DATA_DIR = Path(__file__).resolve().parent / "data"
+DEFAULT_RAW_PATH = DATA_DIR / "raw_api_data.json"
 
 
 class RetryableHTTPError(Exception):
@@ -91,7 +96,7 @@ class _WaitRespectingRetryAfter:
     """Exponential backoff met jitter; noemt de server een langere `Retry-After`, dan wachten we die (tot max_wait)."""
 
     def __init__(self, initial: float, max_wait: float):
-        self.backoff = wait_exponential_jitter(initial=initial, max=max_wait, jitter=initial)
+        self.backoff = wait_exponential_jitter(multiplier=initial, max=max_wait, jitter=initial)
         self.max_wait = max_wait
 
     def __call__(self, state: RetryCallState) -> float:
@@ -217,22 +222,26 @@ def _parse_header(value: str) -> tuple[str, str]:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="JSON ophalen van een partner-API, met retries.")
     p.add_argument("url")
-    p.add_argument("--out", help="pad voor de JSON (anders naar stdout)")
+    p.add_argument("--out", default=str(DEFAULT_RAW_PATH), help=f"pad voor de ruwe JSON (standaard {DEFAULT_RAW_PATH})")
+    p.add_argument("--stdout", action="store_true", help="naar stdout in plaats van een bestand")
     p.add_argument("--header", action="append", type=_parse_header, default=[], help="'Naam: waarde' (herhaalbaar)")
     p.add_argument("--param", action="append", default=[], help="naam=waarde voor de querystring (herhaalbaar)")
     p.add_argument("--attempts", type=int, default=DEFAULT_ATTEMPTS)
     p.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_S)
+    p.add_argument("--initial-wait", type=float, default=1.0, help="eerste wachttijd in seconden bij een retry")
+    p.add_argument("--max-wait", type=float, default=DEFAULT_MAX_WAIT_S, help="langste wachttijd in seconden")
     args = p.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     params = dict(kv.split("=", 1) for kv in args.param)
-    client = ApiClient(headers=dict(args.header), timeout=args.timeout, max_attempts=args.attempts)
+    client = ApiClient(headers=dict(args.header), timeout=args.timeout, max_attempts=args.attempts,
+                       initial_wait=args.initial_wait, max_wait=args.max_wait)
     try:
         data = client.get_json(args.url, params=params or None)
     except (ApiError, RetryableHTTPError, requests.RequestException) as e:
         log.error("%s", e)
         return 1
-    if args.out:
+    if not args.stdout:
         log.info("geschreven: %s", write_json(data, args.out))
     else:
         json.dump(data, sys.stdout, ensure_ascii=False, indent=2)

@@ -189,3 +189,88 @@ def test_bestandstype_en_dubbele_ids(tmp_path):
     assert [r["bron_id"] for r in recs] == ["partner_x:1", "partner_x:1#2"]
     with pytest.raises(ValueError):
         parse_file(tmp_path / "a.xlsx")
+
+
+# ── api_client tegen een echte lokale HTTP-server ────────────────────────────
+
+def test_retry_via_echte_socket(tmp_path):
+    """429 (met Retry-After) en 503 van een echte server, daarna 200: één bestand met de respons."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    hits = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            hits.append(self.path)
+            code = {1: 429, 2: 503}.get(len(hits), 200)
+            body = json.dumps({"type": "FeatureCollection", "features": []} if code == 200 else {"fout": code}).encode()
+            self.send_response(code)
+            if code == 429:
+                self.send_header("Retry-After", "0")
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        from api_client import main
+        out = tmp_path / "raw.json"
+        assert main([f"http://127.0.0.1:{server.server_port}/plekken", "--out", str(out), "--initial-wait", "0.01", "--max-wait", "0.05"]) == 0
+        assert len(hits) == 3
+        assert json.loads(out.read_text())["type"] == "FeatureCollection"
+    finally:
+        server.shutdown()
+
+
+# ── map_api_data ─────────────────────────────────────────────────────────────
+
+from map_api_data import map_raw  # noqa: E402
+
+
+def test_geojson_tekstcoordinaten_en_geneste_faciliteiten():
+    raw = {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "id": 7, "geometry": {"type": "Point", "coordinates": ["5,12", "52.09"]},
+         "properties": {"title": "De Bosrand", "voorzieningen": {"stroom": "yes"}, "amenities": ["water", "zwembad"]}},
+        {"type": "Feature", "geometry": {"type": "Polygon", "coordinates": []}, "properties": {}},
+        {"type": "Feature", "geometry": {"type": "Point", "coordinates": ["abc", "52"]}, "properties": {}},
+    ]}
+    res = map_raw(raw, "api")
+    assert res.records == [{"naam": "De Bosrand", "lat": 52.09, "lon": 5.12, "bron_id": "api:7",
+                            "faciliteiten": {"stroom": True, "water": True}}]
+    assert res.skipped == {"geen punt (vlak, lijn of geen geometrie)": 1, "geen geldige coördinaten": 1}
+
+
+def test_overpass():
+    raw = {"elements": [
+        {"type": "node", "id": 1, "lat": 52.1, "lon": 5.2, "tags": {"name": "A", "power_supply": "yes", "fee": "yes"}},
+        {"type": "way", "id": 2, "center": {"lat": 52.2, "lon": 5.3}, "tags": {"drinking_water": "no"}},
+    ]}
+    res = map_raw(raw, "osm")
+    assert [r["bron_id"] for r in res.records] == ["osm:node/1", "osm:way/2"]
+    assert res.records[0]["faciliteiten"] == {"stroom": True}
+    assert res.records[1] == {"naam": None, "lat": 52.2, "lon": 5.3, "bron_id": "osm:way/2", "faciliteiten": {"water": False}}
+
+
+def test_gewone_records_ingepakt_en_geneste_locatie():
+    raw = {"data": [
+        {"id": "x1", "naam": "B", "location": {"latitude": "52.3", "longitude": "4.9"}, "faciliteiten": {"wifi": "ja"}},
+        {"id": "x2", "name": "C", "lat": 52.4, "lng": 4.8, "toiletten": 1},
+        {"id": "x3", "name": "D", "coordinates": "52.5,4.7"},
+        "geen object",
+    ]}
+    res = map_raw(raw, "p")
+    assert [(r["bron_id"], r["lat"], r["lon"]) for r in res.records] == [("p:x1", 52.3, 4.9), ("p:x2", 52.4, 4.8), ("p:x3", 52.5, 4.7)]
+    assert res.records[0]["faciliteiten"] == {"wifi": True}
+    assert res.records[1]["faciliteiten"] == {"toilet": True}
+    assert res.skipped == {"geen object": 1}
+
+
+def test_onbekende_vorm():
+    with pytest.raises(ValueError):
+        map_raw({"iets": 1}, "p")

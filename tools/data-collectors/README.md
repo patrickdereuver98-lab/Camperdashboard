@@ -6,6 +6,7 @@ Partnerdata en open data samenvoegen tot één masterlijst (`geo_master` in Supa
 |---|---|---|
 | 1 | `api_client.py` | JSON ophalen van partner-API's, met exponential backoff bij 429, 5xx en netwerkfouten |
 | 2 | `parse_statics.py` | Aangeleverde KML/KMZ, GPX en CSV omzetten naar de standaardvorm |
+| 2b | `map_api_data.py` | Ruwe API-respons (GeoJSON, Overpass of een lijst objecten) omzetten naar de standaardvorm |
 | 3 | `web/supabase/functions/pipeline/merge_master.ts` | Lijsten ontdubbelen en in stukken van 500 upserten (pipeline-actie `merge_master`) |
 
 ## Standaardvorm
@@ -25,9 +26,23 @@ Partnerdata en open data samenvoegen tot één masterlijst (`geo_master` in Supa
 pip install -r tools/data-collectors/requirements.txt
 ```
 
+Van een API: ophalen (ruwe respons in `data/raw_api_data.json`), omzetten (`data/mapped_api_data.json`) en
+lokaal proefdraaien met de merge-engine. `data/` staat niet in git.
+
 ```bash
-python tools/data-collectors/api_client.py https://api.partner.nl/v1/plekken --header "Authorization: Bearer …" --out uit/partner.json
+python tools/data-collectors/api_client.py https://api.partner.nl/v1/plekken --header "Authorization: Bearer …"
 ```
+
+```bash
+python tools/data-collectors/map_api_data.py --bron partner_x
+```
+
+```bash
+deno run --allow-read tools/data-collectors/test_merge.ts tools/data-collectors/data/mapped_api_data.json
+```
+
+`test_merge.ts` voegt samen zonder database, controleert elk record tegen de regels van `geo_master` en laat zien
+wat er per stuk van 500 geüpsert zou worden. Meer lijsten mag, in volgorde van voorrang.
 
 ```bash
 python tools/data-collectors/parse_statics.py aanlevering/*.csv aanlevering/*.kml --bron partner_x --out uit/partner_x.json
