@@ -36,6 +36,7 @@ test("levenshtein", () => {
 test("namen: soortwoorden, accenten en leestekens tellen niet", () => {
   assert.equal(normalizeName("Camperplaats 'De Hoeve'"), "de hoeve");
   assert.equal(normalizeName("Wohnmobilstellplatz Düsseldorf"), "dusseldorf");
+  assert.equal(normalizeName("De Bosrand Camperplek"), "de bosrand");
   assert.equal(normalizeName("Camping"), "camping"); // alleen een soortwoord: dat houden we
   assert.equal(normalizeName(null), "");
 });

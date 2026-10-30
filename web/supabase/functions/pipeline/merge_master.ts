@@ -97,7 +97,7 @@ export function geohash(lat: number, lon: number, precision = GEOHASH_PRECISION)
 
 // Woorden die zeggen wát het is, niet wélke plek: "Camperplaats De Hoeve" en "De Hoeve" zijn dezelfde
 const GENERIC = new Set([
-  "camperplaats", "camperplaatsen", "camperpark", "camperparkeerplaats", "campervoorziening", "camperstandplaats",
+  "camperplaats", "camperplaatsen", "camperplek", "camperplekken", "camperpark", "camperparkeerplaats", "campervoorziening", "camperstandplaats",
   "camperhaven", "camping", "minicamping", "kampeerterrein", "boerderijcamping", "natuurcamping", "parking",
   "parkeerplaats", "jachthaven", "passantenhaven", "stellplatz", "wohnmobilstellplatz", "reisemobilstellplatz",
   "campingplatz", "aire", "motorhome", "camper", "campers", "vakantiepark", "recreatiepark",
