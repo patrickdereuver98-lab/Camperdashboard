@@ -8,10 +8,15 @@
 
 import { addExtraPages, deeperLinks, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks } from "./pages.ts";
 
-/** Hoogstens 7 subpagina's per site per ronde (bronnenbeleid §3a), plus de startpagina en 2 PDF's */
-export const STEALTH_SUBPAGES = 7;
-/** Eerste laag; de rest van de 7 blijft over voor de tweede laag (aankomst en vertrek vanaf de FAQ) */
-export const STEALTH_FIRST = 5;
+/**
+ * Hoogstens 15 subpagina's per site per ronde, plus de startpagina en 4 PDF's (besluit eigenaar 30 oktober 2026: van 7
+ * naar 15 voor meer gegevens per plek). Geen volledige crawl: rankLinks kiest de pagina's met tarieven, voorzieningen,
+ * reglement en FAQ; een blog of webwinkel levert geen feiten op. Met 5 s per host is dat ruim een minuut per site.
+ */
+export const STEALTH_SUBPAGES = 15;
+/** Eerste laag; de rest van de 15 blijft over voor de tweede laag (aankomst en vertrek vanaf de FAQ) */
+export const STEALTH_FIRST = 10;
+export const STEALTH_PDFS = 4;
 /** Zelfde grens als fetchPage in de gewone scraper */
 export const STEALTH_PAGE_CHARS = 1_200_000;
 
@@ -29,16 +34,16 @@ export function stealthPlan(home: URL, html: string, sitemaps: string[] = []): S
   return { links: links.length, picked: picked.slice(0, STEALTH_FIRST), wantSitemap: weak && !sitemaps.length && !single };
 }
 
-/** Tweede laag en PDF's, binnen wat er van de 7 subpagina's over is */
+/** Tweede laag en PDF's, binnen wat er van de 15 subpagina's over is */
 export function stealthDeeper(home: URL, pages: string[], seen: string[]): { deeper: string[]; pdfs: string[] } {
   const room = Math.max(0, STEALTH_SUBPAGES - Math.max(0, seen.length - 1));
   return {
     deeper: deeperLinks(pages, home, seen).slice(0, room),
-    pdfs: [...new Set(pages.flatMap((h) => pdfLinks(h, home)))].slice(0, 2),
+    pdfs: [...new Set(pages.flatMap((h) => pdfLinks(h, home)))].slice(0, STEALTH_PDFS),
   };
 }
 
-/** Pagina's van de lezer: alleen tekst, ingekort, en hoogstens startpagina + 7 subpagina's */
+/** Pagina's van de lezer: alleen tekst, ingekort, en hoogstens startpagina + 15 subpagina's */
 export function stealthPages(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
   return input

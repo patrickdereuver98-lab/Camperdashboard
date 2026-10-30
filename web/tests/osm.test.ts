@@ -27,6 +27,16 @@ test("Overpass-query vraagt caravan_site, campings zonder uitsluiting en motorho
   assert.match(q, /\["tourism"="caravan_site"\]/);
   assert.match(q, /\["tourism"="camp_site"\]\["motorhome"!="no"\]\["tents"!="only"\]/);
   assert.match(q, /\["motorhome"~"\^\(yes\|designated\)\$",i\]/);
+  assert.match(q, /area\["ISO3166-2"="NL-UT"\]/);
+});
+
+test("landsquery: heel Nederland in één keer, ruime time-out, parkeerplaatsen voor campers en middelpunten", () => {
+  const q = placesQuery("NL");
+  assert.match(q, /^\[out:json\]\[timeout:300\];/);
+  assert.match(q, /\(area\["ISO3166-1"="NL"\]\[admin_level=2\];area\["ISO3166-1:alpha2"="NL"\]\[admin_level=2\];\)->\.r;/);
+  assert.match(q, /\["amenity"="parking"\]\["motorhome"~"\^\(yes\|designated\)\$",i\]/);
+  assert.match(q, /out center tags;$/);
+  assert.doesNotMatch(q, /\(\s*-?\d+\.\d+\s*,/); // geen bounding box
 });
 
 test("geweigerd: privé, buiten gebruik, buiten Nederland, zonder coördinaten", () => {

@@ -15,11 +15,13 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
-import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
+import { mapOsm, NL_MIN_PLACES, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
+import { dedupeOsm } from "./dedupe.ts";
+import { fetchRetry, mapLimit } from "./retry.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
-import { OIDC_AUDIENCE, OIDC_ISSUER, stealthClaimsOk, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan } from "./stealth.ts";
+import { OIDC_AUDIENCE, OIDC_ISSUER, STEALTH_PDFS, stealthClaimsOk, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan } from "./stealth.ts";
 import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
@@ -51,11 +53,13 @@ async function overpass(query: string) {
   const errors: string[] = [];
   for (const url of OVERPASS) {
     try {
-      const res = await fetch(`${url}?data=${encodeURIComponent(query)}`, {
+      // Overbelast (429/502/504) is bij Overpass normaal: per server twee nieuwe pogingen met wachttijd, dan de volgende
+      const res = await fetchRetry(
+        `${url}?data=${encodeURIComponent(query)}`,
         // Geen Accept-header: overpass-api.de antwoordt daarop met 406
-        headers: { "User-Agent": UA },
-        signal: AbortSignal.timeout(115_000),
-      });
+        { headers: { "User-Agent": UA } },
+        { retries: 2, baseMs: 5000, timeoutMs: 115_000 },
+      );
       if (res.ok) return (await res.json()).elements as Record<string, unknown>[];
       errors.push(`${new URL(url).host}: HTTP ${res.status} ${(await res.text()).slice(0, 160).replace(/\s+/g, " ")}`);
     } catch (e) {
@@ -67,13 +71,19 @@ async function overpass(query: string) {
 
 type Element = Record<string, unknown>;
 
+const STAGE_CHUNK = 500;
+
 /** OSM-elementen van één provincie in de wachtrij zetten (verwerking: pg_cron → process_osm_staging) */
 async function stageOsm(region: string, elements: Element[], pointElements: Element[]) {
   const province = REGIONS[region];
-  if (!province) throw new Error(`Onbekende regio ${region}`);
+  if (province === undefined) throw new Error(`Onbekende regio ${region}`);
+  const label = province || "Nederland";
   const { data: run } = await db.from("ingest_runs").insert({ kind: `osm ${region}` }).select("id").single();
   try {
-    const rows = elements.map(mapOsm).filter(Boolean).map((r) => ({ ...r, province }));
+    const mapped = elements.map(mapOsm).filter(Boolean) as (Record<string, unknown> & { lat: number; lng: number })[];
+    // Zelfde plek als punt én vlak: één rij, de andere OSM-objecten in osm_refs (dedupe.ts)
+    const rows = dedupeOsm(mapped).map((r) => (province ? { ...r, province } : r));
+    if (region === "NL" && rows.length < NL_MIN_PLACES) throw new Error(`Landsquery gaf maar ${rows.length} plekken; gebied of Overpass klopt niet`);
     const points = pointElements.map((e) => ({
       lat: e.lat ?? (e.center as { lat: number })?.lat,
       lng: e.lon ?? (e.center as { lon: number })?.lon,
@@ -81,17 +91,23 @@ async function stageOsm(region: string, elements: Element[], pointElements: Elem
       water: (e.tags as Record<string, string>)?.water_point === "yes",
     }));
     const staged = [...rows.map((row) => ({ kind: "place", row })), ...points.map((row) => ({ kind: "point", row }))];
-    for (let i = 0; i < staged.length; i += 1000) {
-      const { error } = await db.from("osm_staging").insert(staged.slice(i, i + 1000));
-      if (error) throw error;
+    // Delen van 500 (ruim onder de payloadgrens van PostgREST); een haperend deel krijgt nog twee pogingen
+    for (let i = 0; i < staged.length; i += STAGE_CHUNK) {
+      const chunk = staged.slice(i, i + STAGE_CHUNK);
+      for (let attempt = 0; ; attempt++) {
+        const { error } = await db.from("osm_staging").insert(chunk);
+        if (!error) break;
+        if (attempt >= 2) throw error;
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      }
     }
-    const stats = { region, elements: elements.length, places: rows.length, service_points: points.length };
+    const stats = { region, elements: elements.length, places: rows.length, merged: mapped.length - rows.length, service_points: points.length };
     await db.from("ingest_runs").update({ status: "ok", finished_at: new Date().toISOString(), stats }).eq("id", run!.id);
-    await log("info", `OSM ${province}: ${rows.length} plekken en ${points.length} servicepunten in de wachtrij`, stats);
+    await log("info", `OSM ${label}: ${rows.length} plekken (${stats.merged} dubbel samengevoegd) en ${points.length} servicepunten in de wachtrij`, stats);
     return stats;
   } catch (e) {
     await db.from("ingest_runs").update({ status: "error", finished_at: new Date().toISOString(), stats: { error: String(e) } }).eq("id", run!.id);
-    await log("error", `OSM-import ${province} mislukt: ${e}`);
+    await log("error", `OSM-import ${label} mislukt: ${e}`);
     throw e;
   }
 }
@@ -413,7 +429,7 @@ async function stealthApply(body: Record<string, unknown>) {
   const home = homeUrl(body.home);
   const pages = stealthPages(body.pages);
   if (!pages.length) throw new Error("Geen pagina's");
-  const pdfs = Array.isArray(body.pdfs) ? (body.pdfs as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 2) : [];
+  const pdfs = Array.isArray(body.pdfs) ? (body.pdfs as unknown[]).filter((x): x is string => typeof x === "string").slice(0, STEALTH_PDFS) : [];
   const data = await extractAll(
     pages,
     home,
@@ -455,14 +471,19 @@ async function inspect(website: string, field?: string) {
   };
 }
 
+const PDOK_PARALLEL = 5;
+
 /** Straat en postcode aanvullen via PDOK voor plekken zonder adres (zie pdok.ts); ook "niets gevonden" wordt vastgelegd */
 async function runAdres(n: number) {
   const { data: batch, error } = await db.rpc("next_pdok_batch", { p_limit: n });
   if (error) throw error;
-  const results = await Promise.all(
-    (batch ?? []).map(async (p: { id: string; lat: number; lng: number }) => {
+  // Vijf tegelijk in plaats van de hele batch: dat voorkomt de meeste 429's; wat toch 429/503 geeft krijgt nieuwe pogingen
+  const results = await mapLimit(
+    batch ?? [],
+    PDOK_PARALLEL,
+    async (p: { id: string; lat: number; lng: number }) => {
       try {
-        const res = await fetch(reverseUrl(p.lat, p.lng), { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(10_000) });
+        const res = await fetchRetry(reverseUrl(p.lat, p.lng), { headers: { "User-Agent": UA } }, { retries: 3, baseMs: 1000, timeoutMs: 10_000 });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const a = addressFrom((await res.json()).response?.docs?.[0]);
         const { error } = await db.rpc("apply_pdok", {
@@ -478,7 +499,7 @@ async function runAdres(n: number) {
         await log("warn", `PDOK-adres ${p.id}: ${e}`);
         return { id: p.id, error: String(e).slice(0, 120) };
       }
-    }),
+    },
   );
   return { processed: results.length, found: results.filter((r) => "found" in r && r.found).length };
 }
@@ -536,12 +557,8 @@ Deno.serve(async (req) => {
         (e) => ({ ok: false, error: String(e) }),
       );
     else if (body.action === "stealth_batch") {
-      // Meerdere lezers tegelijk: elk een vast deel van de hosts (shard), zodat er per host maar één lezer is
-      const shards = Math.min(10, Math.max(1, Number(body.shards) || 1));
-      const limit = Math.min(20, Number(body.n) || 5);
-      const { data, error } = shards > 1
-        ? await db.rpc("next_stealth_batch", { p_limit: limit, p_shard: Math.min(shards - 1, Math.max(0, Number(body.shard) || 0)), p_shards: shards })
-        : await db.rpc("next_stealth_batch", { p_limit: limit });
+      // Eén lezerproces met een gedeelde klok per host (tools/stealth-lezer); geen verdeling over hosts meer nodig
+      const { data, error } = await db.rpc("next_stealth_batch", { p_limit: Math.min(20, Number(body.n) || 5) });
       if (error) throw error;
       result = data;
     } else if (body.action === "stealth_plan")

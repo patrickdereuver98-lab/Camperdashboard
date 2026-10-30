@@ -22,7 +22,7 @@
 | `ingest_runs` | Verloop van data-imports |
 | `nl_towns` | Woonplaatsen met coördinaten (zoeken en dichtstbijzijnde plaats) |
 | `route_cache` | Gecachete routes en rijtijden |
-| `osm_regions`, `osm_queries`, `osm_staging` | OSM-import per provincie: planning, queries en wachtrij |
+| `osm_regions`, `osm_queries`, `osm_staging` | OSM-import (sinds 30 oktober 2026 één regio `NL` voor heel Nederland): planning, queries en wachtrij; `ingest_osm` herkent dubbele OSM-objecten via `osm_refs` |
 | `internal_secrets` | Sleutel waarmee de database de edge function aanroept |
 | `private.scrape_queue` | Wachtrij van websites die de scraper moet lezen |
 | `private.stealth_queue` | Wachtrij van de stealth-lezer (Scrapling, [bronnenbeleid §3a](../bronnenbeleid.md)) |

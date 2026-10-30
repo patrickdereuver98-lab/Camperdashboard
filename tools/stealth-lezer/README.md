@@ -9,9 +9,10 @@ Leest websites van plekken die de gewone scraper niet of nauwelijks kon lezen, m
 1. `private.enqueue_stealth` (cron `stealth-enqueue`, dagelijks 05:23) zet plekken in `private.stealth_queue`, in deze
    volgorde: onleesbaar (`website_error`), weinig gegevens (minder dan 3 velden), zonder prijs of vertrektijd, en
    herlezen na 30 dagen.
-2. De workflow `Stealth-lezer` draait acht lezers tegelijk, elk op een vast deel van de hosts (`STEALTH_SHARD`, zodat
-   er per host maar één lezer is), 45 minuten lang, en een aparte job start daarna altijd de volgende run zolang de wachtrij niet leeg
-   is (GitHub slaat geplande runs bij openbare repositories vaak over; het uurrooster blijft als vangnet). `lezer.py` vraagt plekken op (`stealth_batch`), haalt de
+2. De workflow `Stealth-lezer` draait één lezerproces van 5,5 uur met zes browsers tegelijk (`STEALTH_PARALLEL`), die
+   samen één klok per host delen, en een aparte job start daarna de volgende run zolang de wachtrij niet leeg is
+   (GitHub slaat geplande runs bij openbare repositories vaak over; het uurrooster blijft als vangnet). Tot 30 oktober
+   waren dat acht losse lezers, elk op een eigen deel van de hosts. `lezer.py` vraagt plekken op (`stealth_batch`), haalt de
    startpagina op met een echte browser die Cloudflare-controles oplost, en vraagt de pipeline welke subpagina's
    (`stealth_plan`, `stealth_deeper`). Die keuze is dezelfde als bij de gewone scraper (`pages.ts`).
 3. `stealth_apply` leest alles uit met de gewone extractor en schrijft via `apply_stealth` → `apply_scrape`. Beheer gaat
@@ -21,9 +22,12 @@ Leest websites van plekken die de gewone scraper niet of nauwelijks kon lezen, m
 
 ## Grenzen (bronnenbeleid §3a)
 
-- Hoogstens 1 verzoek per 5 seconden per host, startpagina plus 7 subpagina's en 2 PDF's per site.
+- Hoogstens 1 verzoek per 5 seconden per host (plus 0 tot 2,5 s spreiding), startpagina plus 15 subpagina's en 4 PDF's
+  per site.
+- Tijdelijke fouten (time-out, 5xx) en 429: drie nieuwe pogingen met exponentiële wachttijd; bij 429 wacht de hele host
+  (Retry-After gaat voor). Blijft het misgaan, dan gaat de plek terug in de wachtrij. Ook aanroepen naar de pipeline
+  krijgen bij 429/5xx nieuwe pogingen.
 - Geen inlogpagina's: een adres als `/inloggen` of een pagina met een wachtwoordveld en weinig tekst slaat hij over.
-- Bij 429 stopt hij met de plek; de wachtrij probeert het na een uur opnieuw, hoogstens drie keer.
 - `robots.txt` wordt gelezen en vastgelegd (`sources.stealth.robots_disallows`), maar niet gevolgd.
 - Vraagt een eigenaar te stoppen: `select public.apply_stealth('<place_id>', '{}', 'geblokkeerd: <reden>')`. Dan
   leest geen enkele lezer de plek meer.

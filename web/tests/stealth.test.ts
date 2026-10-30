@@ -6,10 +6,14 @@ import { STEALTH_FIRST, STEALTH_PAGE_CHARS, STEALTH_SUBPAGES, stealthClaimsOk, s
 const home = new URL("https://www.camping.nl/");
 const menu = (paths: string[]) => paths.map((p) => `<a href="${p}">${p.slice(1)}</a>`).join("");
 
-test("eerste laag: vertrek en tarieven eerst, hoogstens 5", () => {
-  const html = menu(["/huisregels", "/tarieven", "/faq", "/camperplaats", "/contact", "/aankomst-en-vertrek", "/faciliteiten", "/nieuws", "/fotos"]);
+test("eerste laag: vertrek en tarieven eerst, hoogstens 10", () => {
+  const html = menu([
+    "/huisregels", "/tarieven", "/faq", "/camperplaats", "/contact", "/aankomst-en-vertrek", "/faciliteiten", "/nieuws", "/fotos",
+    "/prijzen", "/plattegrond", "/voorzieningen", "/route", "/over-ons", "/openingstijden", "/arrangementen",
+  ]);
   const plan = stealthPlan(home, html);
-  assert.equal(plan.picked.length, STEALTH_FIRST);
+  // rankLinks laat pagina's zonder feiten (nieuws, foto's) weg; de rest tot de grens
+  assert.ok(plan.picked.length > 5 && plan.picked.length <= STEALTH_FIRST, `${plan.picked.length}`);
   assert.equal(plan.picked[0], "https://www.camping.nl/huisregels");
   assert.ok(plan.picked.includes("https://www.camping.nl/aankomst-en-vertrek"));
   assert.equal(plan.wantSitemap, false);
@@ -24,16 +28,17 @@ test("menu in JavaScript: vraagt de sitemap en gebruikt die", () => {
   assert.deepEqual(second.picked.slice(0, 2), ["https://www.camping.nl/huisregels", "https://www.camping.nl/tarieven"]);
 });
 
-test("tweede laag past binnen 7 subpagina's", () => {
+test("tweede laag past binnen 15 subpagina's", () => {
   const faq = menu(["/vertrektijden", "/check-out", "/inchecken"]) + `<a href="/reglement.pdf">Reglement</a>`;
-  const seen = [home.href, ...["/a", "/b", "/c", "/d", "/e", "/f"].map((p) => new URL(p, home).href)];
-  const { deeper, pdfs } = stealthDeeper(home, [faq], seen);
-  assert.equal(deeper.length, STEALTH_SUBPAGES - 6);
+  const first = Array.from({ length: STEALTH_SUBPAGES - 2 }, (_, i) => new URL(`/p${i}`, home).href);
+  const { deeper, pdfs } = stealthDeeper(home, [faq], [home.href, ...first]);
+  assert.equal(deeper.length, 2);
+  assert.equal(stealthDeeper(home, [faq], [home.href]).deeper.length, 3);
   assert.deepEqual(pdfs, ["https://www.camping.nl/reglement.pdf"]);
 });
 
-test("aangeleverde pagina's: alleen tekst, ingekort en hoogstens 8", () => {
-  const pages = stealthPages(["x".repeat(STEALTH_PAGE_CHARS + 10), 3, "", ...Array(10).fill("<p>a</p>")]);
+test("aangeleverde pagina's: alleen tekst, ingekort en hoogstens 16", () => {
+  const pages = stealthPages(["x".repeat(STEALTH_PAGE_CHARS + 10), 3, "", ...Array(25).fill("<p>a</p>")]);
   assert.equal(pages.length, 1 + STEALTH_SUBPAGES);
   assert.equal(pages[0].length, STEALTH_PAGE_CHARS);
   assert.deepEqual(stealthPages("geen lijst"), []);
