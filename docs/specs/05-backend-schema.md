@@ -23,6 +23,7 @@
 | `nl_towns` | Woonplaatsen met coördinaten (zoeken en dichtstbijzijnde plaats) |
 | `route_cache` | Gecachete routes en rijtijden |
 | `osm_regions`, `osm_queries`, `osm_staging` | OSM-import per provincie: planning, queries en wachtrij |
+| `geo_master` | Masterlijst uit partnerdata en open data na ontdubbelen (tussenlaag, niet op de site) |
 | `internal_secrets` | Sleutel waarmee de database de edge function aanroept |
 | `private.scrape_queue` | Wachtrij van websites die de scraper moet lezen |
 | `private.stealth_queue` | Wachtrij van de stealth-lezer (Scrapling, [bronnenbeleid §3a](../bronnenbeleid.md)) |
@@ -126,6 +127,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `route_cache` | key*, distance_m*, duration_s*, geometry, provider*, created_at* | |
 | `osm_regions` | code*, name*, last_run_at, places_req, points_req, attempt* | attempt `0` |
 | `osm_staging` | id*, kind* (`place`, `point`), row*, created_at*, processed_at | index op onverwerkte rijen |
+| `geo_master` | master_id* (pk, bron_id van het anker), geohash* (9 tekens), naam, namen*, lat*, lon*, bron_ids* (≥ 1), faciliteiten* (jsonb-object), conflicten* (jsonb-object), match_score* (0–1), aangemaakt_op*, bijgewerkt_op* | Migratie `20261030120000_geo_master.sql`. Alleen `service_role` (RLS aan, geen policies). GIN-index op bron_ids, index op geohash. Gevuld door pipeline-actie `merge_master` (`merge_master.ts`, [tools/data-collectors](../../tools/data-collectors/README.md)): binnen 100 m (haversine) en score ≥ 0,75 (0,8 × naam via Levenshtein + 0,2 × nabijheid) samen; faciliteit alleen als alle bronnen het eens zijn, anders in conflicten. Schrijft niet in `places` |
 | `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
 | `private.stealth_queue` | place_id*, reason* (`onleesbaar`, `weinig`, `kernfeit`, `herlezen`), attempts*, next_attempt_at*, done_at, last_error, created_at* | Lease van een uur (`next_stealth_batch`); wegschrijven via `apply_stealth` → `apply_scrape` |
 | `private.verwijderde_plekken` | id*, osm_type, osm_id (uniek met osm_type), slug, name, website, reden*, gegevens* (hele rij), removed_at* | Gevuld door `private.verwijder_onbereikbare_plekken()` (cron `onbereikbaar-opruimen`, 06:13): niet gepubliceerd, niet vastgezet, geen prijs of vertrektijd, geen Beheer-velden, en geen website of een website die ook de stealth-lezer niet kon lezen. Trigger `weiger_verwijderde_plek` slaat een nieuwe rij met hetzelfde OSM-nummer over. Terugzetten: rij hier weghalen en de plek uit `gegevens` opnieuw invoegen |

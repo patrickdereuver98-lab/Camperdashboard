@@ -9,6 +9,8 @@
 //   { "action": "adres", "n": 40 }          → straat en postcode aanvullen via PDOK (pdok.ts)
 //   { "action": "stealth_batch" | "stealth_plan" | "stealth_deeper" | "stealth_apply", … }
 //       → stealth-lezer (tools/stealth-lezer, Scrapling): die haalt op, deze functie kiest en leest uit (stealth.ts)
+//   { "action": "merge_master", "lists": [[…], […]], "dry_run": true }
+//       → lijsten uit tools/data-collectors ontdubbelen en in geo_master zetten (merge_master.ts); eerste lijst wint
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key. De stealth-acties mogen ook
 // met een GitHub-OIDC-token van de workflow stealth-lezer.yml op main (header `x-github-oidc`, zie stealth.ts).
@@ -16,6 +18,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
+import { runMergeMaster, type MasterDb } from "./merge_master.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
@@ -554,7 +557,10 @@ Deno.serve(async (req) => {
       result = await Promise.all(
         (body.items as Finding[]).slice(0, 25).map((f) => verifyFinding(f).catch((e) => ({ id: f.id, ok: false, reason: String(e).slice(0, 120) }))),
       );
-    else if (body.action === "enqueue") {
+    else if (body.action === "merge_master") {
+      if (!Array.isArray(body.lists) || !body.lists.every(Array.isArray)) return new Response("lists: lijst van lijsten", { status: 400 });
+      result = await runMergeMaster(db as unknown as MasterDb, body.lists, { dryRun: body.dry_run === true });
+    } else if (body.action === "enqueue") {
       const { data, error } = await db.rpc("enqueue_scrape", { p_only_missing: body.all !== true });
       if (error) throw error;
       result = data;
