@@ -4,8 +4,16 @@
     "naam": "OpenStreetMap",
     "type": "api_overpass",
     "url": "https://overpass-api.de/api/interpreter",
-    "query": "[out:json][timeout:90];area[\"ISO3166-1\"=\"NL\"][admin_level=2]->.searchArea;(node[\"tourism\"=\"camp_site\"](area.searchArea);way[\"tourism\"=\"camp_site\"](area.searchArea);node[\"amenity\"=\"parking\"][\"motorhome\"=\"yes\"](area.searchArea);way[\"amenity\"=\"parking\"][\"motorhome\"=\"yes\"](area.searchArea););out center;",
+    "query": "[out:json][timeout:180];area[\"ISO3166-1\"=\"NL\"][admin_level=2]->.nl;(nwr[\"tourism\"=\"camp_site\"](area.nl);nwr[\"tourism\"=\"caravan_site\"](area.nl);nwr[\"amenity\"=\"parking\"][\"motorhome\"~\"^(yes|designated)$\"](area.nl););out center tags;",
     "betrouwbaarheid": 4,
+    "status": "actief"
+  },
+  {
+    "bron_id": "archies",
+    "naam": "Archie's Campings (Nederland)",
+    "type": "file_gpx",
+    "pad": "aanlevering/archies_nl.gpx",
+    "betrouwbaarheid": 3,
     "status": "actief"
   }
 ]
