@@ -484,3 +484,23 @@ def test_alleen_ontbrekende_bestanden_dan_geen_aanroep(tmp_path):
     cfg = _config(tmp_path, [{"bron_id": "svr", "type": "file_gpx", "pad": "data/bestaat_niet.gpx"}])
     assert rp.run(cfg, False, {}, pipeline=fake)["merge_master"] is None
     assert fake.calls == []
+
+
+# ── filter_archies ───────────────────────────────────────────────────────────
+
+from filter_archies import in_nl, parse_name  # noqa: E402
+
+
+def test_archies_naam_plaats_telefoon_en_hele_jaar():
+    assert parse_name("Natuurlijk Limburg - Remersdaal (01/01-31/12) -CCA (261m) +3243810176") == (
+        "Natuurlijk Limburg", "Remersdaal", "+3243810176", True)
+    assert parse_name("Huguet - Sant Julia de Loria [<51] (01/04-31/10)  (890m) +376843718") == (
+        "Huguet", "Sant Julia de Loria", "+376843718", False)
+    assert parse_name("Alleen een naam")[0] == "Alleen een naam"
+
+
+def test_archies_nederland_op_rechthoek_en_landcode():
+    assert in_nl(52.1, 5.2, "+31301234567")
+    assert in_nl(52.1, 5.2, None)
+    assert not in_nl(50.76, 4.62, "+3216474286")  # binnen de rechthoek, maar België
+    assert not in_nl(42.5, 1.5, "+376843718")

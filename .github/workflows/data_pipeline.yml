@@ -7,6 +7,7 @@
 # Geen pipeline-sleutel nodig: de run meldt zich aan met een GitHub-OIDC-token (id-token: write). De pipeline
 # accepteert dat alleen van deze workflow op main en alleen voor merge_master en promote (workflowForAction in
 # web/supabase/functions/pipeline/stealth.ts). Sleutels van partner-API's: als secret met de naam uit bronnen.json.
+# Versleutelde aanleveringen (tools/data-collectors/aanlevering/*.enc): secret AANLEVERING_SLEUTEL.
 name: Dataketen
 
 on:
@@ -40,6 +41,21 @@ jobs:
       - run: pip install -r tools/data-collectors/requirements.txt pytest
       - name: Tests eerst
         run: python -m pytest -q tools/data-collectors
+      # Bestanden van derden staan alleen versleuteld in de (openbare) repository. Zonder secret blijven ze dicht en meldt
+      # de run die bronnen als "wacht op bestand"; de andere bronnen draaien door.
+      - name: Aangeleverde bestanden ontsleutelen
+        env:
+          AANLEVERING_SLEUTEL: ${{ secrets.AANLEVERING_SLEUTEL }}
+        run: |
+          shopt -s nullglob
+          if [ -z "$AANLEVERING_SLEUTEL" ]; then
+            echo "::notice::Geen secret AANLEVERING_SLEUTEL: versleutelde bestanden blijven dicht"
+            exit 0
+          fi
+          for f in tools/data-collectors/aanlevering/*.enc; do
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "$f" -out "${f%.enc}" -pass env:AANLEVERING_SLEUTEL
+            echo "ontsleuteld: ${f%.enc}"
+          done
       - name: Bronnen → merge_master → promote
         env:
           PIPELINE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/pipeline
