@@ -23,5 +23,21 @@
     "pad": "data/svr_locaties.gpx",
     "betrouwbaarheid": 4,
     "status": "actief"
+  },
+  {
+    "bron_id": "partner_1",
+    "naam": "Interne Partner Export 1",
+    "type": "file_csv",
+    "pad": "data/partner_export_1.csv",
+    "betrouwbaarheid": 3,
+    "status": "actief"
+  },
+  {
+    "bron_id": "partner_2",
+    "naam": "Interne Partner Export 2",
+    "type": "file_gpx",
+    "pad": "data/partner_export_2.gpx",
+    "betrouwbaarheid": 4,
+    "status": "actief"
   }
 ]
