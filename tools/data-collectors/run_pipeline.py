@@ -46,6 +46,10 @@ class ConfigError(Exception):
     pass
 
 
+class MissingFile(ConfigError):
+    """Een bestandsbron waarvan het bestand (nog) niet is aangeleverd."""
+
+
 def resolve_secrets(value: Any, env: dict[str, str]) -> Any:
     """${NAAM} → waarde uit env; ontbreekt die, dan een fout (nooit met een lege sleutel doorgaan)."""
     if isinstance(value, str):
@@ -154,7 +158,7 @@ def collect_files(b: dict[str, Any]) -> ParseResult:
     if b["type"] in FILE_TYPES:
         f = inside(b["pad"], b["bron"])
         if not f.is_file():
-            raise ConfigError(f"bron {b['bron']}: bestand {b['pad']} ontbreekt")
+            raise MissingFile(f"bron {b['bron']}: bestand {b['pad']} ontbreekt")
         return parse_file(f, b["bron"], b.get("alle_velden", False))
     folder = inside(b["map"], b["bron"]) if b["map"] not in (".", "") else HERE
     files = sorted(p for p in folder.glob("*") if p.suffix.lower() in PARSERS)
@@ -170,7 +174,14 @@ def collect_all(bronnen: list[dict[str, Any]], env: dict[str, str], **kw: Any) -
     """Alle lijsten in volgorde van voorrang, plus een verslag per bron. Eén fout = uitzondering (geen halve run)."""
     lists, report = [], []
     for b in bronnen:
-        res = collect_api(b, env, **kw) if b["type"] in ("api", "api_overpass") else collect_files(b)
+        try:
+            res = collect_api(b, env, **kw) if b["type"] in ("api", "api_overpass") else collect_files(b)
+        except MissingFile as e:
+            # Nog niet aangeleverd: overslaan en melden, niet de hele run stoppen. Een bron die eerder wel data gaf en nu
+            # ontbreekt, laat zijn records in geo_master staan (merge_master ruimt alleen op wat in een andere groep viel).
+            log.warning("%s: wacht op bestand", e)
+            report.append({"bron": b["bron"], "plekken": 0, "overgeslagen": {}, "wacht_op_bestand": b.get("pad")})
+            continue
         records = dedupe_ids(res.records)
         if not records:
             raise ConfigError(f"bron {b['bron']}: geen enkele bruikbare plek (overgeslagen: {res.skipped})")
@@ -207,7 +218,10 @@ class Pipeline:
 
 
 def summary_markdown(report: list[dict[str, Any]], merged: Any, promoted: Any, dry_run: bool) -> str:
-    rows = "\n".join(f"| {r['bron']} | {r['plekken']} | {sum(r['overgeslagen'].values())} |" for r in report)
+    rows = "\n".join(
+        f"| {r['bron']} | {'wacht op bestand ' + r['wacht_op_bestand'] if r.get('wacht_op_bestand') else r['plekken']} | {sum(r['overgeslagen'].values())} |"
+        for r in report
+    )
     redenen = "\n".join(f"- {k}: {v}" for k, v in (promoted or {}).get("redenen", {}).items()) or "- geen"
     return (
         f"## Dataketen{' (proef)' if dry_run else ''}\n\n| Bron | Plekken | Overgeslagen |\n|---|---|---|\n{rows}\n\n"
@@ -223,6 +237,9 @@ def run(config: Path, dry_run: bool, env: dict[str, str], pipeline: Pipeline | N
         log.warning("geen bronnen in %s: niets te doen", config)
         return {"bronnen": 0}
     lists, report = collect_all(bronnen, env, **kw)
+    if not lists:
+        log.warning("geen enkele bron leverde plekken: niets samen te voegen")
+        return {"bronnen": report, "merge_master": None, "promote": None, "dry_run": dry_run}
     pipeline = pipeline or Pipeline(env.get("PIPELINE_URL", PIPELINE_URL), env)
     merged = pipeline.call("merge_master", lists=lists, dry_run=dry_run)
     log.info("merge_master: %s", {k: v for k, v in merged.items() if k != "sample"} if isinstance(merged, dict) else merged)

@@ -14,7 +14,7 @@
     "type": "file_csv",
     "pad": "data/archies_nederland.csv",
     "betrouwbaarheid": 3,
-    "status": "wacht_op_toestemming"
+    "status": "actief"
   },
   {
     "bron_id": "svr",
@@ -22,6 +22,6 @@
     "type": "file_gpx",
     "pad": "data/svr_locaties.gpx",
     "betrouwbaarheid": 4,
-    "status": "wacht_op_toestemming"
+    "status": "actief"
   }
 ]

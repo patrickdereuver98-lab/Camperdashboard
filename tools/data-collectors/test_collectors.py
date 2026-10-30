@@ -457,6 +457,30 @@ def test_overpass_post_zonder_accept_header(tmp_path, monkeypatch):
     assert res.records[0]["bron_id"] == "osm:node/7"
 
 
-def test_ontbrekend_bestand_is_een_fout():
-    with pytest.raises(rp.ConfigError):
+def test_ontbrekend_bestand_wacht_en_stopt_de_rest_niet(tmp_path, monkeypatch):
+    with pytest.raises(rp.MissingFile):
         rp.collect_files({"bron": "svr", "type": "file_gpx", "pad": "data/bestaat_niet.gpx"})
+    monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
+
+    class Fake:
+        def __init__(self, **kw):
+            self.session = requests.Session()
+
+        def request_json(self, *a, **kw):
+            return {"elements": [{"type": "node", "id": 1, "lat": 52.1, "lon": 5.2, "tags": {"tourism": "camp_site", "name": "De Wei"}}]}
+
+    fake = FakePipeline()
+    cfg = _config(tmp_path, [
+        {"bron_id": "osm", "type": "api_overpass", "url": "https://o.example/api", "query": "Q"},
+        {"bron_id": "svr", "type": "file_gpx", "pad": "data/bestaat_niet.gpx"},
+    ])
+    out = rp.run(cfg, True, {}, pipeline=fake, client_factory=Fake)
+    assert [len(x) for x in fake.calls[0][1]["lists"]] == [1]
+    assert out["bronnen"][1] == {"bron": "svr", "plekken": 0, "overgeslagen": {}, "wacht_op_bestand": "data/bestaat_niet.gpx"}
+
+
+def test_alleen_ontbrekende_bestanden_dan_geen_aanroep(tmp_path):
+    fake = FakePipeline()
+    cfg = _config(tmp_path, [{"bron_id": "svr", "type": "file_gpx", "pad": "data/bestaat_niet.gpx"}])
+    assert rp.run(cfg, False, {}, pipeline=fake)["merge_master"] is None
+    assert fake.calls == []
