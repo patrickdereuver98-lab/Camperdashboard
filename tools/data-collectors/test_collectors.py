@@ -438,23 +438,38 @@ def test_config_in_lijstvorm_met_status_en_markdown_url(tmp_path):
             rp.load_config(cfg)
 
 
-def test_overpass_post_zonder_accept_header(tmp_path, monkeypatch):
+def test_overpass_get_zonder_accept_en_mirror_bij_406(tmp_path, monkeypatch):
+    """406 van overpass-api.de (zoals vanaf GitHub Actions op 30 oktober): door naar de volgende server."""
     monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
-    sent = {}
+    calls = []
 
     class Fake:
         def __init__(self, **kw):
-            sent["kw"] = kw
             self.session = requests.Session()
             self.session.headers["Accept"] = "application/json"
 
         def request_json(self, method, url, **kw):
-            sent.update(method=method, url=url, data=kw.get("data"), accept=self.session.headers.get("Accept"))
+            calls.append((method, url, kw.get("params"), self.session.headers.get("Accept")))
+            if "overpass-api.de" in url:
+                raise ApiError("HTTP 406", 406)
             return {"elements": [{"type": "node", "id": 7, "lat": 52.1, "lon": 5.2, "tags": {"tourism": "camp_site", "name": "De Wei"}}]}
 
-    res = rp.collect_api({"bron": "osm", "type": "api_overpass", "url": "https://o.example/api", "query": "Q"}, {}, client_factory=Fake)
-    assert sent["method"] == "POST" and sent["data"] == {"data": "Q"} and sent["accept"] is None
+    res = rp.collect_api({"bron": "osm", "type": "api_overpass", "url": "https://overpass-api.de/api/interpreter", "query": "Q"}, {}, client_factory=Fake)
+    assert [c[1].split("/")[2] for c in calls] == ["overpass-api.de", "overpass.private.coffee"]
+    assert all(c[0] == "GET" and c[2] == {"data": "Q"} and c[3] is None for c in calls)
     assert res.records[0]["bron_id"] == "osm:node/7"
+
+
+def test_overpass_alle_servers_weg_is_een_fout(tmp_path):
+    class Down:
+        def __init__(self, **kw):
+            pass
+
+        def request_json(self, *a, **kw):
+            raise RetryableHTTPError(504, "u")
+
+    with pytest.raises(rp.ConfigError):
+        rp.fetch_overpass({"url": "https://overpass-api.de/api/interpreter", "query": "Q"}, client_factory=Down)
 
 
 def test_ontbrekend_bestand_wacht_en_stopt_de_rest_niet(tmp_path, monkeypatch):
