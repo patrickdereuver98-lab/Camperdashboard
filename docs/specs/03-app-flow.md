@@ -117,10 +117,11 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 
 ## Navigatieregels
 
-- **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
+- **Tabbalk** onderaan (mobiel): Vannacht (`/dichtbij`, kop "Hier kun je vannacht staan"), Zoeken, Kaart (`/zoeken?kaart=1`), Mijn reis (met teller); Start is bereikbaar via het logo (besluit eigenaar B6, 30 oktober 2026). Op groot scherm in de kop: Vannacht, Zoeken, Mijn reis. Verborgen op `/plek/*`; daar staat een
   vaste actiebalk met prijs, hartje, bellen, website en **Route**.
 - **Header**: logo naar Start, **? Hulp** naar Veelgestelde vragen en account (de **+** naar Plek aanmelden is op de telefoon weg, verbeterplan D7; Plek aanmelden staat op de startpagina, bij Doe mee en in de footer) (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden). Op `/plek/*` een terugknop.
-- **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
+- **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie); met `kaart=1` is Kaart actief in plaats van Zoeken.
+- **Weergave** (footer): Automatisch (standaard: donker na zonsondergang of als het systeem donker vraagt, `web/src/lib/theme.ts`), Licht of Donker; de keuze blijft in de browser (besluit eigenaar B9, 30 oktober 2026).
 - **Kruimelpad op de plekpagina**: Zoeken › provincie (naar `/camperplaatsen/<provincie>`) › plek; onder "In de buurt"
   links naar alle camperplaatsen in de provincie en, op een Waddeneiland, op dat eiland.
 - **Footer**: over VrijStaan, juridisch, Cookie-instellingen, Meld inhoud.

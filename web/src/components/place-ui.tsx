@@ -6,7 +6,7 @@ import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/li
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
 import { useMyLocation } from "@/lib/my-location";
-import { arrivalText, cardPrice, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
+import { arrivalText, cardPrice, departureHeadline, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { useTrip } from "@/lib/store";
 import { isIncomplete } from "@/lib/place-status";
@@ -331,16 +331,16 @@ export function PlaceCard({
         <SaveButton slug={place.slug} variant={stack ? "icon" : "plain"} />
       </div>
       <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-1.5 py-3 pr-3 pl-3 sm:gap-2 sm:p-4"}`}>
-        {/* Wanneer eerst: de vertrekregel is waar je op kiest (review 23 oktober 2026), daarna aankomen */}
+        {/* Wanneer eerst, als grootste tekst van de kaart (besluit eigenaar B7, 29 oktober 2026), daarna aankomen */}
         {(departureShort(place) || isIncomplete(place) || arrival) && (
           <div className={`min-w-0 space-y-0.5 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
-            <DepartureChip place={place} />
+            <DepartureHeadline place={place} />
             {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
           </div>
         )}
         {/* Waar: naam, soort en plaats, afstand */}
         <div className={`min-w-0 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
-          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-[1.0625rem] sm:text-xl"}`}>
+          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-lg" : "text-base sm:text-lg"}`}>
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
@@ -391,6 +391,21 @@ export function CardSkeleton() {
       </div>
     </div>
   );
+}
+
+/**
+ * Vertrekregel als kop van de resultaatkaart: groot, in de kleur van de groep. Onbekend is een rustige grijze regel,
+ * niet het grootste woord (zelfde gedachte als D3 op de plekpagina).
+ */
+export function DepartureHeadline({ place }: { place: DepartureFacts }) {
+  const text = departureHeadline(place);
+  if (!text) {
+    if (!isIncomplete(place)) return null;
+    return <p className="text-sm font-semibold text-muted">Vertrektijd onbekend</p>;
+  }
+  const kind = departureKind(place);
+  const tone = kind === "vrij" ? "text-forest" : kind === "uitslapers" ? "text-lake" : "text-ink";
+  return <p className={`font-display text-[1.1875rem] leading-tight font-semibold tracking-tight sm:text-xl ${tone}`}>{text}</p>;
 }
 
 /** Vertrekregel op de kaart: groen als je kunt vertrekken wanneer je wilt */

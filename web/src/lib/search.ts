@@ -83,9 +83,9 @@ export function inDepartureGroup(p: DepartureFacts, g: DepartureGroup): boolean 
 
 /** De drie pagina's: elke vertrekgroep heeft een eigen adres */
 export const DEPARTURE_PAGES = {
-  vrij: { path: "/zonder-vertrektijd", title: "Zonder vertrektijd", tab: "Zonder vertrektijd" },
-  uitslapers: { path: "/uitslapers", title: "Voor uitslapers", tab: "Uitslapers" },
-  overig: { path: "/overige-plekken", title: "Overige plekken", tab: "Overige" },
+  vrij: { path: "/zonder-vertrektijd", title: "Zonder vertrektijd", tab: "Wanneer ik wil" },
+  uitslapers: { path: "/uitslapers", title: "Voor uitslapers", tab: "12:00 of later" },
+  overig: { path: "/overige-plekken", title: "Overige plekken", tab: "Eerder of onbekend" },
 } as const;
 export type DeparturePage = keyof typeof DEPARTURE_PAGES;
 

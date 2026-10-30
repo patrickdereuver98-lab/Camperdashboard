@@ -9,7 +9,20 @@ export const PRERENDERED = PLACES.filter((p) => top.has(p.slug));
 export const ON_DEMAND = PLACES.filter((p) => !top.has(p.slug));
 
 /** Faalt de test bij onafgevangen JavaScript-fouten in de pagina */
-export const test = base.extend<{ pageErrors: Error[] }>({
+export const test = base.extend<{ pageErrors: Error[]; fixedTheme: void }>({
+  // De avondmodus (lib/theme.ts) volgt de zon; tests leggen het thema vast op het kleurschema van de test,
+  // zodat een test in licht 's avonds niet donker draait
+  fixedTheme: [
+    async ({ page, colorScheme }, use) => {
+      await page.addInitScript((choice) => {
+        try {
+          if (!localStorage.getItem("vrijstaan:thema")) localStorage.setItem("vrijstaan:thema", choice);
+        } catch {}
+      }, colorScheme === "dark" ? "donker" : "licht");
+      await use();
+    },
+    { auto: true },
+  ],
   pageErrors: [
     async ({ page }, use) => {
       const errors: Error[] = [];

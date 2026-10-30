@@ -269,10 +269,14 @@ bezoekers zijn. Dit blijft zoals de PRD het zegt.
 | # | Vraag | Voorstel |
 |---|---|---|
 | B1 | Wordt de hoofdbelofte "Weet vooraf hoe laat je weg moet" in plaats van alleen "zonder vertrektijd"? | ✅ Besloten 29 oktober: ja. Zonder vertrektijd blijft een eigen pagina |
-| B2 | Data-werk eerst op camperplaatsen? | Ja (S2) |
-| B3 | Foto's via een eigen cache in plaats van rechtstreeks van de websites? | Ja (S4); kost opslag binnen het gratis plan |
-| B4 | Cookiebanner weg als de statistieken anoniem en zonder cookies zijn? | Eerst juridisch laten nakijken, dan ja |
-| B5 | "Plekken langs je route" als eerste grote functie na livegang? | Ja (N1) |
+| B2 | Data-werk eerst op camperplaatsen? | ✅ Besloten 30 oktober: ja (S2) |
+| B3 | Foto's via een eigen cache in plaats van rechtstreeks van de websites? | ✅ Besloten 30 oktober: ja (S4, F1) |
+| B4 | Cookiebanner weg als de statistieken anoniem en zonder cookies zijn? | ✅ Besloten 30 oktober: eerst juridisch laten nakijken (Patrick), dan ja |
+| B5 | "Plekken langs je route" als eerste grote functie na livegang? | ✅ Besloten 30 oktober: ja (N1) |
+| B6 | Start en Dichtbij samen als tab Vannacht? | ✅ Besloten 30 oktober: ja; gebouwd |
+| B7 | Tijd als grootste tekst op kaarten, pins en plekpagina? | ✅ Besloten 30 oktober: ja; gebouwd |
+| B8 | Geist Mono voor tijden (afwijking stijlgids)? | ✅ Besloten 30 oktober: eerst testen met het vertrekbord (B1 op het canvas); nog niet gebouwd |
+| B9 | Avondmodus vanzelf na zonsondergang? | ✅ Besloten 30 oktober: ja, met een keuze Automatisch / Licht / Donker; gebouwd |
 
 ## 9. Bronnen
 

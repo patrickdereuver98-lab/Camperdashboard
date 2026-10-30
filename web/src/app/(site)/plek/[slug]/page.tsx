@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getDepartureVisitors, getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
-import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
+import { arrivalText, cardPrice, departureLong, departureSentence, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
 import { isIncomplete, lastChecked } from "@/lib/place-status";
 import { GiveDepartureButton } from "@/components/departure-form";
@@ -367,7 +367,8 @@ function Decision({ place, visitors = 0, tel }: { place: Place; visitors?: numbe
   const late = kind === "uitslapers";
   const claimed = place.departure === "vrij" || place.departure === "per24";
   const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
-  const departure = departureLong(place);
+  // Als gewone zin: "Je moet uiterlijk om 11:30 weg." (besluit eigenaar B7, 29 oktober 2026)
+  const departure = departureSentence(place) ?? departureLong(place);
   const incomplete = isIncomplete(place);
   // De bronzin staat alleen in beheer, niet op de site (besluit eigenaar 23 oktober 2026)
   const note =

@@ -311,7 +311,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
     };
   }, [places, filters]);
   const tabs: { key: DeparturePage | "alle"; label: string; href: string }[] = [
-    { key: "alle", label: "Alle", href: searchHref({ ...filters, departure: undefined }) },
+    { key: "alle", label: "Maakt niet uit", href: searchHref({ ...filters, departure: undefined }) },
     ...(Object.keys(DEPARTURE_PAGES) as DeparturePage[]).map((k) => ({
       key: k,
       label: DEPARTURE_PAGES[k].tab,
@@ -329,7 +329,9 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
     }
   }, [active, counts]);
   return (
-    <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-1 sm:px-6 sm:pt-3 lg:border-0 lg:bg-transparent lg:pt-6">
+    <nav aria-labelledby="vertrek-vraag" className="border-b border-line bg-surface px-3 pt-2 sm:px-6 sm:pt-3 lg:border-0 lg:bg-transparent lg:pt-6">
+      {/* De tabbladen als antwoorden op één vraag (besluit eigenaar, richting B2 van de designreview, 29 oktober 2026) */}
+      <p id="vertrek-vraag" className="text-sm font-semibold text-ink-2">Hoe laat wil je weg?</p>
       <ul ref={list} className="no-scrollbar scroll-fade -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
         {tabs.map((t) => (
           <li key={t.key} className="shrink-0">

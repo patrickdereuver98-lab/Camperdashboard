@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { NearbyApp } from "./nearby-app";
 
 export const metadata: Metadata = {
-  title: "Camperplaatsen dichtbij",
+  title: "Vannacht: camperplaatsen bij jou in de buurt",
   description: "Vind camperplaatsen bij jou in de buurt, gesorteerd op echte rijtijd.",
 };
 

@@ -153,7 +153,7 @@ export function NearbyApp() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <section className="min-w-0 px-3 pt-3 pb-8 sm:px-6 sm:pt-5">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-xl font-semibold sm:text-3xl">Dichtbij jou</h1>
+          <h1 className="font-display text-xl font-semibold sm:text-3xl">Hier kun je vannacht staan</h1>
           <button type="button" onClick={locate} className="flex h-11 items-center gap-1.5 font-semibold text-forest">
             <Icon name="refresh" size={18} /> Opnieuw
           </button>

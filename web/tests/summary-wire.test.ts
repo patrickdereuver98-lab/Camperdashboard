@@ -32,7 +32,11 @@ test("compact formaat geeft dezelfde plekken terug (zonder id), zonder iets bij 
     { id: "3a18c8f0-f180-4e56-bf6c-8a08eca84055", slug: "c", name: "C", lat: 53, lng: 6, town: "Leek", province: "Groningen", ratingCount: 0, completeness: 0.4, dogs: false },
   ] as PlaceSummary[];
   const back = decodeSummaries(JSON.parse(JSON.stringify(encodeSummaries(places))));
-  const noId = places.map(({ id: _id, ...p }) => p);
+  const noId = places.map((p) => {
+    const rest = { ...p };
+    delete rest.id;
+    return rest;
+  });
   assert.deepEqual(back, [{ ...noId[0], lat: 52.00179, lng: 4.78906 }, noId[1], noId[2]]);
   // Geen bron bij een plek zonder foto: niets verzonnen
   assert.equal("imageCredit" in back[2], false);

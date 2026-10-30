@@ -85,6 +85,30 @@ export function departureShort(p: Departure): string | undefined {
   return undefined;
 }
 
+/**
+ * Vertrekregel als kop van een resultaatkaart: de tijd is de grootste tekst (besluit eigenaar B7, 29 oktober 2026).
+ * Zelfde regels als `departureShort`; undefined = onbekend.
+ */
+export function departureHeadline(p: Departure): string | undefined {
+  const short = departureShort(p);
+  if (!short) return undefined;
+  if (p.departureCheck === "voorwaardelijk") return short;
+  if (p.departure === "vrij") return "Weg wanneer je wilt";
+  if (p.departure === "vast" && timeToMinutes(p.checkoutUntil) !== undefined) return `Uiterlijk ${p.checkoutUntil} weg`;
+  return short;
+}
+
+/** De vertrekregel als gewone zin, bovenaan het beslisblok van de plekpagina; undefined = onbekend (B7) */
+export function departureSentence(p: Departure): string | undefined {
+  const short = departureShort(p);
+  if (!short) return undefined;
+  if (p.departureCheck === "voorwaardelijk") return `${short}.`;
+  if (p.departure === "vrij") return "Je mag blijven tot je zelf weg wilt.";
+  if (p.departure === "per24") return "Geen vaste vertrektijd. Je betaalt per 24 uur.";
+  if (timeToMinutes(p.checkoutUntil) !== undefined) return `Je moet uiterlijk om ${p.checkoutUntil} weg.`;
+  return "Er is een vaste vertrektijd. Welke weten we nog niet.";
+}
+
 /** Vertrekregel op de plekpagina (blok "Vertrekken"); "Onbekend" als we het niet weten */
 export function departureLong(p: Departure): string {
   const claimed = p.departure === "vrij" || p.departure === "per24";
@@ -122,6 +146,25 @@ export function markerPrice(p: { priceEur?: number; priceFrom?: boolean; priceEx
   const price = cardPrice(p);
   if (!price) return "";
   return p.priceFrom && p.priceEur !== undefined ? `${price.value.replace(/^vanaf /, "")}+` : price.value;
+}
+
+/**
+ * Label bij een kaartstip: de vertrekregel kort en daaronder de prijs, zodat je zonder tikken ziet hoe laat je weg
+ * moet (richting C van de designreview, 29 oktober 2026). Onbekend laat de regel weg; niets bekend geeft "".
+ */
+export function markerLabel(p: Departure & { priceEur?: number; priceFrom?: boolean; priceExtras?: Extra[] }): string {
+  const short = departureShort(p);
+  const time =
+    !short || p.departureCheck === "voorwaardelijk"
+      ? ""
+      : p.departure === "vrij"
+        ? "Vrij"
+        : p.departure === "per24"
+          ? "24 uur"
+          : timeToMinutes(p.checkoutUntil) !== undefined
+            ? p.checkoutUntil!
+            : "";
+  return [time, markerPrice(p)].filter(Boolean).join("\n");
 }
 
 /** Aankomst in één regel, alleen wat de bron noemt: "Aankomen tussen 14:00 en 22:00", "Aankomen tot 22:00" */
