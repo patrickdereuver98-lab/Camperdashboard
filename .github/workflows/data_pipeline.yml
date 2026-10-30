@@ -1,0 +1,51 @@
+# Dataketen (tools/data-collectors): bronnen ophalen en omzetten → merge_master → promote naar places.
+# Wekelijks, of met de hand (standaard als proef). Bronnen staan in tools/data-collectors/bronnen.json; zolang die
+# lijst leeg is, doet de run niets. Naar places gaat alleen wat aan de bronregels voldoet (promote_geo_master: bron in
+# geo_bronnen op `toegestaan`, binnen Nederland, echte naam, geen wildkamperen; bestaande plekken worden alleen
+# gekoppeld).
+#
+# Geen pipeline-sleutel nodig: de run meldt zich aan met een GitHub-OIDC-token (id-token: write). De pipeline
+# accepteert dat alleen van deze workflow op main en alleen voor merge_master en promote (workflowForAction in
+# web/supabase/functions/pipeline/stealth.ts). Sleutels van partner-API's: als secret met de naam uit bronnen.json.
+name: Dataketen
+
+on:
+  schedule:
+    # Maandag 02:47 UTC, buiten de drukke uren van GitHub en vóór de stealth- en scraperondes van de ochtend
+    - cron: "47 2 * * 1"
+  workflow_dispatch:
+    inputs:
+      proef:
+        description: "Proef: niets schrijven in geo_master of places"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: dataketen
+  cancel-in-progress: false
+
+jobs:
+  keten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/data-collectors/requirements.txt pytest
+      - name: Tests eerst
+        run: python -m pytest -q tools/data-collectors
+      - name: Bronnen → merge_master → promote
+        env:
+          PIPELINE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/pipeline
+          # Alleen nodig voor ${NAAM} in bronnen.json; de waarden blijven gemaskeerd in de log
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        # Gepland = echt; met de hand = proef, tenzij "proef" uit staat
+        run: >
+          python tools/data-collectors/run_pipeline.py
+          ${{ (github.event_name == 'workflow_dispatch' && inputs.proef) && '--dry-run' || '' }}

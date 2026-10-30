@@ -56,20 +56,29 @@ export function stealthPages(input: unknown): string[] {
 export const stealthMayWipe = (pages: number, fields: number) => pages > 1 && fields > 0;
 
 // Aanmelden zonder geheim: de workflow vraagt GitHub om een ondertekend OIDC-token met dit publiek, en de pipeline
-// controleert handtekening, uitgever en publiek (index.ts) en daarna deze claims. Zo kan alleen de stealth-workflow op
-// main van deze repository de stealth-acties aanroepen, ook niet een fork of een andere branch.
+// controleert handtekening, uitgever en publiek (index.ts) en daarna deze claims. Elke actie hoort bij precies één
+// workflow op main van deze repository (workflowForAction); een fork, een andere branch of een andere workflow mag niet.
 export const OIDC_ISSUER = "https://token.actions.githubusercontent.com";
 export const OIDC_AUDIENCE = "vrijstaan-pipeline";
 const REPO = "patrickdereuver98-lab/camperdashboard";
-const WORKFLOW = ".github/workflows/stealth-lezer.yml@refs/heads/main";
 
-export function stealthClaimsOk(c: Record<string, unknown>): boolean {
+/** Workflow-bestand dat deze actie met een OIDC-token mag aanroepen; null = alleen met de pipeline-sleutel */
+export function workflowForAction(action: unknown): string | null {
+  const a = String(action ?? "");
+  if (a.startsWith("stealth_")) return "stealth-lezer.yml";
+  if (a === "merge_master" || a === "promote") return "data_pipeline.yml";
+  return null;
+}
+
+export function workflowClaimsOk(c: Record<string, unknown>, file: string): boolean {
   const repo = String(c.repository ?? "").toLowerCase();
   const workflow = String(c.workflow_ref ?? "").toLowerCase();
   return (
     repo === REPO &&
     c.ref === "refs/heads/main" &&
-    workflow === `${REPO}/${WORKFLOW}` &&
+    workflow === `${REPO}/.github/workflows/${file}@refs/heads/main` &&
     (c.event_name === "schedule" || c.event_name === "workflow_dispatch")
   );
 }
+
+export const stealthClaimsOk = (c: Record<string, unknown>) => workflowClaimsOk(c, "stealth-lezer.yml");

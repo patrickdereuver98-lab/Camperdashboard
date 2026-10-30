@@ -274,3 +274,129 @@ def test_gewone_records_ingepakt_en_geneste_locatie():
 def test_onbekende_vorm():
     with pytest.raises(ValueError):
         map_raw({"iets": 1}, "p")
+
+
+# ── run_pipeline ─────────────────────────────────────────────────────────────
+
+import run_pipeline as rp  # noqa: E402
+
+
+def _config(tmp_path, bronnen):
+    p = tmp_path / "bronnen.json"
+    p.write_text(json.dumps({"bronnen": bronnen}))
+    return p
+
+
+class FakePipeline:
+    def __init__(self, merged=None):
+        self.calls = []
+        self.merged = merged or {"masters": 2}
+
+    def call(self, action, **body):
+        self.calls.append((action, body))
+        return self.merged if action == "merge_master" else {"nieuw": 1, "gekoppeld": 0, "geweigerd": 1, "redenen": {"geen toegestane bron": 1}}
+
+
+def test_geheimen_uit_omgeving_en_nooit_leeg():
+    assert rp.resolve_secrets({"Authorization": "Bearer ${TOKEN_X}"}, {"TOKEN_X": "abc"}) == {"Authorization": "Bearer abc"}
+    with pytest.raises(rp.ConfigError):
+        rp.resolve_secrets("Bearer ${TOKEN_X}", {})
+    with pytest.raises(rp.ConfigError):
+        rp.resolve_secrets("Bearer ${TOKEN_X}", {"TOKEN_X": ""})
+
+
+def test_config_controle(tmp_path):
+    for bad in ([{"bron": "Partner X", "type": "api", "url": "x"}], [{"bron": "px", "type": "ftp"}],
+                [{"bron": "px", "type": "api"}], [{"bron": "px", "type": "api", "url": "u"}, {"bron": "px", "type": "api", "url": "u"}]):
+        with pytest.raises(rp.ConfigError):
+            rp.load_config(_config(tmp_path, bad))
+
+
+def test_lege_config_doet_niets(tmp_path):
+    fake = FakePipeline()
+    assert rp.run(_config(tmp_path, []), True, {}, pipeline=fake) == {"bronnen": 0}
+    assert fake.calls == []
+
+
+def test_bestanden_dan_merge_dan_promote_in_volgorde(tmp_path, monkeypatch):
+    folder = rp.HERE / "aanlevering_test_tmp"
+    folder.mkdir()
+    try:
+        (folder / "a.csv").write_bytes(b"id,name,lat,lon,stroom\n1,De Hoeve,52.1,5.2,ja\n")
+        summary = tmp_path / "summary.md"
+        fake = FakePipeline()
+        out = rp.run(_config(tmp_path, [{"bron": "partner_y", "type": "bestanden", "map": "aanlevering_test_tmp"}]), False,
+                     {"GITHUB_STEP_SUMMARY": str(summary)}, pipeline=fake)
+        assert [c[0] for c in fake.calls] == ["merge_master", "promote"]
+        lists = fake.calls[0][1]["lists"]
+        assert lists == [[{"naam": "De Hoeve", "lat": 52.1, "lon": 5.2, "bron_id": "partner_y:1", "faciliteiten": {"stroom": True}}]]
+        assert fake.calls[0][1]["dry_run"] is False and fake.calls[1][1] == {"dry_run": False, "n": 5000}
+        assert out["bronnen"] == [{"bron": "partner_y", "plekken": 1, "overgeslagen": {}}]
+        assert "geen toegestane bron: 1" in summary.read_text()
+    finally:
+        for f in folder.iterdir():
+            f.unlink()
+        folder.rmdir()
+
+
+def test_een_bron_faalt_dan_geen_merge(tmp_path):
+    class Broken:
+        def __init__(self, **kw):
+            pass
+
+        def get_json(self, *a, **kw):
+            raise RetryableHTTPError(503, "u")
+
+    fake = FakePipeline()
+    cfg = _config(tmp_path, [{"bron": "partner_x", "type": "api", "url": "https://x"}])
+    with pytest.raises(RetryableHTTPError):
+        rp.run(cfg, False, {}, pipeline=fake, client_factory=Broken)
+    assert fake.calls == []
+
+
+def test_map_buiten_de_map_geweigerd(tmp_path):
+    with pytest.raises(rp.ConfigError):
+        rp.collect_files({"bron": "x", "map": "../../.."})
+
+
+def test_mislukte_upsert_slaat_promotie_over(tmp_path):
+    folder = rp.HERE / "aanlevering_test_tmp2"
+    folder.mkdir()
+    try:
+        (folder / "a.csv").write_bytes(b"id,name,lat,lon\n1,A,52.1,5.2\n")
+        fake = FakePipeline(merged={"failed": [{"chunk": 0, "error": "kapot"}]})
+        with pytest.raises(RuntimeError):
+            rp.run(_config(tmp_path, [{"bron": "partner_p", "type": "bestanden", "map": "aanlevering_test_tmp2"}]), False, {}, pipeline=fake)
+        assert [c[0] for c in fake.calls] == ["merge_master"]
+    finally:
+        for f in folder.iterdir():
+            f.unlink()
+        folder.rmdir()
+
+
+def test_pipeline_aanmelden_met_sleutel_of_oidc(monkeypatch):
+    sent = []
+
+    class C:
+        def post_json(self, url, payload, headers):
+            sent.append(headers)
+            return {}
+
+    rp.Pipeline("u", {"PIPELINE_KEY": "k"}, client=C()).call("promote")
+    assert sent[-1] == {"x-pipeline-key": "k"}
+    with pytest.raises(rp.ConfigError):
+        rp.Pipeline("u", {}, client=C()).call("promote")
+
+    class R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"value": "tok"}
+
+    monkeypatch.setattr(rp.requests, "get", lambda url, **kw: (sent.append(url), R())[1])
+    p = rp.Pipeline("u", {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://gh/token?x=1", "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "b"}, client=C())
+    p.call("promote")
+    p.call("merge_master")
+    assert sent[-1] == {"x-github-oidc": "tok"}
+    assert [s for s in sent if isinstance(s, str)] == ["https://gh/token?x=1&audience=vrijstaan-pipeline"]  # één token, hergebruikt
