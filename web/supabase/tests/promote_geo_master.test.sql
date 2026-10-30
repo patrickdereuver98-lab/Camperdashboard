@@ -128,4 +128,15 @@ begin
   assert not has_table_privilege('anon', 'public.geo_bronnen', 'select'), 'geo_bronnen open voor anon';
 end $$;
 
+-- Nummers: 120 m naast "Steiger 12" ligt "Steiger 14": een andere plek, niet koppelen
+insert into public.places (slug, name, lat, lng) values ('steiger-12', 'Passantenhaven Steiger 12', 52.2500, 5.3800);
+insert into public.geo_master (master_id, geohash, naam, namen, lat, lon, bron_ids, faciliteiten, match_score)
+values ('partner_a:12', 'u178k', 'Passantenhaven Steiger 14', '{Passantenhaven Steiger 14}', 52.25108, 5.3800, '{partner_a:12}', '{}', 1);
+do $$
+declare r jsonb := public.promote_geo_master(false);
+begin
+  assert (select promotie from public.geo_master where master_id = 'partner_a:12') = 'nieuw', format('Steiger 14: %s', r);
+  assert not private.geo_nummers_botsen('Steiger 12', 'Steiger') and private.geo_nummers_botsen('Weide 2', 'Weide 3');
+end $$;
+
 select 'promote_geo_master: alle tests geslaagd' as uitkomst;

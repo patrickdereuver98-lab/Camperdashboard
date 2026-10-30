@@ -151,6 +151,10 @@ export function nameSimilarity(a: string | null | undefined, b: string | null | 
   const nb = normalizeName(b);
   if (!na || !nb) return null;
   if (na === nb) return 1;
+  // Noemen beide namen een nummer en verschillen die, dan zijn het andere plekken ("Camperplaats 2" en "3", steiger 12
+  // en 14), hoe kort de rest ook is. Gevonden in de generale repetitie van 30 oktober: "Bosrand 768" ≈ "Bosrand 780".
+  const nums = (s: string) => (s.match(/\d+/g) ?? []).sort().join(",");
+  if (nums(na) && nums(nb) && nums(na) !== nums(nb)) return 0;
   const ta = [...new Set(na.split(" "))].sort();
   const tb = [...new Set(nb.split(" "))].sort();
   let best = Math.max(ratio(na, nb), ratio(ta.join(" "), tb.join(" ")));

@@ -3,9 +3,12 @@
 -- (30 oktober 2026): places (alleen de kolommen die de promotie raakt, met dezelfde checks), slugify, nl_towns en
 -- nearest_town. De statusregel van places_before_write is hier vereenvoudigd tot "concept".
 
-create role anon nologin;
-create role authenticated nologin;
-create role service_role nologin bypassrls;
+-- Rollen gelden voor het hele cluster: alleen aanmaken als ze er nog niet zijn (tweede database, herhaalde run)
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
+end $$;
 create schema extensions;
 create schema private;
 create extension pg_trgm with schema extensions;

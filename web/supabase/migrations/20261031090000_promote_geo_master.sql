@@ -11,7 +11,8 @@
 --      een grenspolygoon nodig.
 --   3. Naam: aanwezig, 3 tot 120 tekens, niet alleen een soortwoord ("Camperplaats"), geen adres of URL.
 --   4. Geen wildkamperen: een naam of faciliteit die op wild- of paalkamperen wijst, gaat niet door.
---   5. Bestaat de plek al in places (≤ 60 m, of ≤ 150 m met een naam die op elkaar lijkt), dan wordt de master alleen
+--   5. Bestaat de plek al in places (≤ 60 m, of ≤ 150 m met een naam die op elkaar lijkt en geen ander nummer noemt),
+--      dan wordt de master alleen
 --      gekoppeld. Hij verandert niets aan die plek: beheer, de eigen website en OpenStreetMap gaan voor (W4.1).
 --   6. Een nieuwe plek krijgt alleen wat de bron letterlijk noemt. De status volgt de bestaande regel in
 --      places_before_write (drempel plus harde eis met contact): zonder website of telefoon blijft hij concept, en de
@@ -129,6 +130,21 @@ begin
   return null;
 end $$;
 
+-- Noemen beide namen een nummer en verschillen die, dan zijn het andere plekken (zelfde regel als nameSimilarity in
+-- merge_master.ts; gevonden in de generale repetitie van 30 oktober: "Vlinder 574" werd aan "Vlinder 502" gekoppeld)
+create or replace function private.geo_nummers_botsen(a text, b text)
+returns boolean
+language sql
+immutable
+set search_path to ''
+as $$
+  with n as (
+    select (select string_agg(x[1], ',' order by x[1]) from regexp_matches(a, '[0-9]+', 'g') x) as na,
+           (select string_agg(x[1], ',' order by x[1]) from regexp_matches(b, '[0-9]+', 'g') x) as nb
+  )
+  select na is not null and nb is not null and na <> nb from n;
+$$;
+
 -- Waarde van een faciliteit als boolean, alleen als de bron echt true/false gaf
 create or replace function private.geo_bool(f jsonb, k text)
 returns boolean
@@ -183,6 +199,7 @@ begin
        and p.lng between m.lon - 0.003 and m.lon + 0.003
        and (private.geo_afstand_m(m.lat, m.lon, p.lat, p.lng) <= 60
             or (private.geo_afstand_m(m.lat, m.lon, p.lat, p.lng) <= 150
+                and not private.geo_nummers_botsen(p.name, m.naam)
                 and extensions.similarity(private.geo_naam_kern(p.name), private.geo_naam_kern(m.naam)) >= 0.3))
      order by private.geo_afstand_m(m.lat, m.lon, p.lat, p.lng)
      limit 1;
@@ -249,3 +266,4 @@ revoke all on function private.geo_promotie_bezwaar(public.geo_master) from publ
 revoke all on function private.geo_naam_kern(text) from public;
 revoke all on function private.geo_afstand_m(float8, float8, float8, float8) from public;
 revoke all on function private.geo_bool(jsonb, text) from public;
+revoke all on function private.geo_nummers_botsen(text, text) from public;

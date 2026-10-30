@@ -168,7 +168,7 @@ def run(config: Path, dry_run: bool, env: dict[str, str], pipeline: Pipeline | N
     lists, report = collect_all(bronnen, env, **kw)
     pipeline = pipeline or Pipeline(env.get("PIPELINE_URL", PIPELINE_URL), env)
     merged = pipeline.call("merge_master", lists=lists, dry_run=dry_run)
-    log.info("merge_master: %s", merged)
+    log.info("merge_master: %s", {k: v for k, v in merged.items() if k != "sample"} if isinstance(merged, dict) else merged)
     if isinstance(merged, dict) and merged.get("failed"):
         raise RuntimeError(f"merge_master: stukken mislukt {merged['failed']}; promotie overgeslagen")
     # Bij een proef staat er niets nieuws in geo_master; de promotie-proef laat zien wat er nu al door zou gaan

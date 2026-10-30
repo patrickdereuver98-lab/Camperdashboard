@@ -50,6 +50,11 @@ test("naamgelijkenis: zelfde plek, tikfout, woordvolgorde, extra plaatsnaam; and
   // Alleen "de" gemeen is geen match
   assert.ok(nameSimilarity("De Wei", "De Molen")! < 0.6);
   assert.equal(nameSimilarity(null, "De Hoeve"), null);
+  // Andere nummers = andere plek; een nummer aan één kant zegt niets
+  assert.equal(nameSimilarity("Bosrand 768", "Camperplaats Bosrand 780"), 0);
+  assert.equal(nameSimilarity("Jachthaven Steiger 12", "Steiger 14"), 0);
+  assert.equal(nameSimilarity("Bosrand 780 Camperplek", "Camperplaats Bosrand 780"), 1);
+  assert.ok(nameSimilarity("De Weide 2", "De Weide")! >= 0.75);
 });
 
 test("score: buiten 100 m geen match; zonder naam alleen dichtbij", () => {
