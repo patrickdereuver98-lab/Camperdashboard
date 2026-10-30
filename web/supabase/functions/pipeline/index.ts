@@ -11,9 +11,12 @@
 //       → stealth-lezer (tools/stealth-lezer, Scrapling): die haalt op, deze functie kiest en leest uit (stealth.ts)
 //   { "action": "merge_master", "lists": [[…], […]], "dry_run": true }
 //       → lijsten uit tools/data-collectors ontdubbelen en in geo_master zetten (merge_master.ts); eerste lijst wint
+//   { "action": "promote", "dry_run": false, "n": 500 }
+//       → geo_master naar places volgens de bronregels (promote_geo_master); zonder "dry_run": false alleen een proef
 //
-// Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key. De stealth-acties mogen ook
-// met een GitHub-OIDC-token van de workflow stealth-lezer.yml op main (header `x-github-oidc`, zie stealth.ts).
+// Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key. Sommige acties mogen ook met
+// een GitHub-OIDC-token (header `x-github-oidc`) van precies één workflow op main: stealth_* van stealth-lezer.yml,
+// merge_master en promote van data_pipeline.yml (workflowForAction in stealth.ts).
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
@@ -22,7 +25,7 @@ import { runMergeMaster, type MasterDb } from "./merge_master.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
-import { OIDC_AUDIENCE, OIDC_ISSUER, stealthClaimsOk, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan } from "./stealth.ts";
+import { OIDC_AUDIENCE, OIDC_ISSUER, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan, workflowClaimsOk, workflowForAction } from "./stealth.ts";
 import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
@@ -396,11 +399,11 @@ function b64(s: string) {
 const githubKeys = createRemoteJWKSet(new URL(`${OIDC_ISSUER}/.well-known/jwks`));
 
 /** Komt dit verzoek van de stealth-workflow op main? Handtekening, uitgever, publiek en vervaldatum via jose. */
-async function fromStealthWorkflow(token: string | null) {
+async function fromWorkflow(token: string | null, file: string) {
   if (!token) return false;
   try {
     const { payload } = await jwtVerify(token, githubKeys, { issuer: OIDC_ISSUER, audience: OIDC_AUDIENCE });
-    return stealthClaimsOk(payload as Record<string, unknown>);
+    return workflowClaimsOk(payload as Record<string, unknown>, file);
   } catch {
     return false;
   }
@@ -516,7 +519,8 @@ Deno.serve(async (req) => {
   const key = req.headers.get("x-pipeline-key");
   const { data: secret } = key ? await db.from("internal_secrets").select("value").eq("name", "pipeline_key").single() : { data: null };
   const byKey = !!key && !!secret && key === secret.value;
-  const byWorkflow = !byKey && String(body.action ?? "").startsWith("stealth_") && (await fromStealthWorkflow(req.headers.get("x-github-oidc")));
+  const workflow = workflowForAction(body.action);
+  const byWorkflow = !byKey && workflow !== null && (await fromWorkflow(req.headers.get("x-github-oidc"), workflow));
   if (!byKey && !byWorkflow) return new Response("Forbidden", { status: 403 });
 
   try {
@@ -560,6 +564,14 @@ Deno.serve(async (req) => {
     else if (body.action === "merge_master") {
       if (!Array.isArray(body.lists) || !body.lists.every(Array.isArray)) return new Response("lists: lijst van lijsten", { status: 400 });
       result = await runMergeMaster(db as unknown as MasterDb, body.lists, { dryRun: body.dry_run === true });
+    } else if (body.action === "promote") {
+      // Veilig standaard: alleen met "dry_run": false wordt er echt in places geschreven
+      const { data, error } = await db.rpc("promote_geo_master", {
+        p_dry_run: body.dry_run !== false,
+        p_limit: Math.min(5000, Math.max(1, Number(body.n) || 500)),
+      });
+      if (error) throw new Error(`promote_geo_master: ${error.message}`);
+      result = data;
     } else if (body.action === "enqueue") {
       const { data, error } = await db.rpc("enqueue_scrape", { p_only_missing: body.all !== true });
       if (error) throw error;

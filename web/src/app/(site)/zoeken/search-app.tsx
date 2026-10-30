@@ -18,9 +18,8 @@ import {
   type SortKey,
   withPage,
 } from "@/lib/search";
-import { usePlaces, useVehicle, useViewportPlaces } from "@/lib/store";
+import { usePlaces, useVehicle } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
-import type { Bbox } from "@/lib/bbox";
 import { requestMyLocation, useMyLocation } from "@/lib/my-location";
 import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
@@ -78,14 +77,9 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
   const [mapOpen, setMapOpen] = useState(params.get("kaart") === "1");
   const hasReviews = useMemo(() => Boolean(places?.some((p) => p.ratingCount > 0)), [places]);
   const wide = useMediaQuery("(min-width: 1024px)");
-  // Kaart: alleen plekken binnen het zichtbare gebied (PostGIS-bbox), met dezelfde filters als de lijst
-  const [viewport, setViewport] = useState<Bbox | null>(null);
-  const viewportPlaces = useViewportPlaces(viewport);
-  const mapPlaces = useMemo(
-    () => (viewportPlaces ? applyFilters(viewportPlaces, filters) : (results ?? [])).map((r) => r.place),
-    [viewportPlaces, results, filters],
-  );
-  const fitPlaces = useMemo(() => results?.map((r) => r.place), [results]);
+  // Kaart: dezelfde gefilterde plekken als de lijst, uit de dataset die al in het geheugen staat. Eén nieuwe set per
+  // filterwijziging (MapLibre clustert in een worker); verschuiven en zoomen kost geen verzoek en geen nieuwe clustering.
+  const mapPlaces = useMemo(() => results?.map((r) => r.place) ?? [], [results]);
   // Telefoon: een tik op een stip toont de plek onderaan de kaart (MapPick) in plaats van een popup
   const [picked, setPicked] = useState<string | null>(null);
   const pickedPlace = picked ? mapPlaces.find((p) => p.slug === picked) : undefined;
@@ -114,8 +108,6 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
   const map = places && results && (
     <PlaceMap
       places={mapPlaces}
-      fitPlaces={fitPlaces}
-      onViewportChange={setViewport}
       highlight={hovered}
       onSelect={focusCard}
       fitKey={key}

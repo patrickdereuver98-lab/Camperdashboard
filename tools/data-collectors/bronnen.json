@@ -1,0 +1,8 @@
+{
+  "_uitleg": "Bronnen voor de dataketen (run_pipeline.py, workflow data_pipeline.yml), in volgorde van voorrang: de eerste wint bij naam en coördinaten. 'bron' moet gelijk zijn aan geo_bronnen.bron; promotie naar places gebeurt alleen voor bronnen die daar op 'toegestaan' staan. Geheimen als ${NAAM} (GitHub-secret met die naam). Zie README.md.",
+  "_voorbeeld": [
+    { "bron": "partner_x", "type": "api", "url": "https://api.partner.example/v1/plekken", "headers": { "Authorization": "Bearer ${PARTNER_X_TOKEN}" }, "pagineren": { "param": "page", "items_key": "items" } },
+    { "bron": "partner_y", "type": "bestanden", "map": "aanlevering/partner_y" }
+  ],
+  "bronnen": []
+}

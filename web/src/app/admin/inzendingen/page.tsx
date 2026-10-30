@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { departureLong } from "@/lib/format";
 import { departureFromSubmission, type DepartureChange } from "@/lib/submissions";
+import { facilitiesFromSubmission, facilityLabel, type FacilityChange, type FacilityColumn } from "@/lib/facility-update";
 import { errorMessage } from "@/lib/supabase-browser";
 import { Badge, Card, Empty, ErrorNote, PageTitle, Segmented, db, primary, secondary, textarea, useQuery, when } from "../ui";
 
@@ -17,15 +18,24 @@ type Submission = {
   status: "nieuw" | "verwerkt" | "afgewezen";
   admin_note: string | null;
   created_at: string;
-  places: { name: string; slug: string; departure: string | null; checkout_until: string | null } | null;
+  places: PlaceNow | null;
 };
+
+type PlaceNow = {
+  name: string;
+  slug: string;
+  departure: string | null;
+  checkout_until: string | null;
+} & Partial<Record<string, string | boolean | null>>;
+
+const FACILITY_COLUMNS = "power, water, dump_station, toilet, shower, wifi, dogs";
 
 const KIND = { nieuw: "Nieuwe plek", correctie: "Correctie", eigenaar: "Eigenaar" } as const;
 
 export default function Submissions() {
   const [status, setStatus] = useState<Submission["status"]>("nieuw");
   const { data, error, loading, reload } = useQuery(
-    () => db().from("submissions").select("*, places(name, slug, departure, checkout_until)").eq("status", status).order("created_at", { ascending: false }).limit(100),
+    () => db().from("submissions").select(`*, places(name, slug, departure, checkout_until, ${FACILITY_COLUMNS})`).eq("status", status).order("created_at", { ascending: false }).limit(100),
     [status],
   );
   // `kind` en `status` zijn in de database tekst met een CHECK; hier als vaste keuzes
@@ -92,6 +102,8 @@ function Item({ s, onChange }: { s: Submission; onChange: () => void }) {
         {Object.entries(s.payload).filter(([, v]) => v !== null && v !== "").map(([k, v]) =>
           k === "wijzigingen" && v && typeof v === "object" ? (
             <Changes key={k} changes={v as Record<string, Change>} />
+          ) : k === "voorzieningen" && v && typeof v === "object" ? (
+            <Changes key={k} changes={facilityText(v as Record<string, FacilityChange>)} />
           ) : (
             <div key={k} className="contents">
               <dt className="font-semibold text-muted">{k}</dt>
@@ -112,6 +124,7 @@ function Item({ s, onChange }: { s: Submission; onChange: () => void }) {
         </p>
       )}
       {s.status === "nieuw" && s.place_id && s.places && <DepartureTakeover s={s} note={note} onDone={onChange} />}
+      {s.status === "nieuw" && s.place_id && s.places && <FacilityTakeover s={s} note={note} onDone={onChange} />}
       <label className="block">
         <span className="mb-1 block text-sm font-semibold">Notitie</span>
         <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} className={textarea} />
@@ -181,6 +194,69 @@ function DepartureTakeover({ s, note, onDone }: { s: Submission; note: string; o
       ) : (
         <button className={primary} disabled={busy} onClick={takeOver}>
           {busy ? "Overnemen…" : "Vertrektijd overnemen"}
+        </button>
+      )}
+      <ErrorNote message={err} />
+    </div>
+  );
+}
+
+const yesNo = (v: unknown) => (v === true ? "ja" : v === false ? "nee" : "onbekend");
+
+/** Voorzieningen uit een inzending als leesbare regels voor Changes ("Lozen: onbekend → nee") */
+function facilityText(changes: Record<string, FacilityChange>): Record<string, Change> {
+  return Object.fromEntries(
+    Object.entries(changes).map(([col, c]) => [facilityLabel(col), { was: c.was === null ? null : yesNo(c.was), nieuw: yesNo(c.nieuw) }]),
+  );
+}
+
+/**
+ * Voorzieningen van een bezoeker met één klik op de plek zetten. Zelfde werkwijze als de vertrektijd: eerst het
+ * merkteken van beheer (de scraper draait het dan niet terug), dan de plek, dan de inzending op verwerkt met de oude
+ * waarden in de notitie. Alleen wat nu nog anders is, wordt overgenomen.
+ */
+function FacilityTakeover({ s, note, onDone }: { s: Submission; note: string; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const proposed = facilitiesFromSubmission(s.payload);
+  if (!proposed || !s.place_id || !s.places) return null;
+  const place = s.places;
+  const placeId = s.place_id;
+  const todo: Partial<Record<FacilityColumn, boolean>> = {};
+  for (const [col, v] of Object.entries(proposed) as [FacilityColumn, boolean][]) if (place[col] !== v) todo[col] = v;
+  const fields = Object.keys(todo) as FacilityColumn[];
+
+  async function takeOver() {
+    setBusy(true);
+    setErr(null);
+    const was = fields.map((col) => `${facilityLabel(col)}: ${yesNo(place[col])}`).join(", ");
+    const mark = await db().rpc("admin_mark_beheer", { p_place_id: placeId, p_fields: fields });
+    const upd = mark.error ? mark : await db().from("places").update(todo).eq("id", placeId);
+    const done = upd.error
+      ? upd
+      : await db()
+          .from("submissions")
+          .update({ status: "verwerkt", admin_note: [note.trim(), `Voorzieningen overgenomen (was: ${was}).`].filter(Boolean).join("\n") })
+          .eq("id", s.id);
+    setBusy(false);
+    if (done.error) setErr(errorMessage(done.error));
+    else onDone();
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg bg-sunken px-4 py-3">
+      <ul className="text-sm">
+        {Object.entries(proposed).map(([col, v]) => (
+          <li key={col}>
+            <span className="text-muted">{facilityLabel(col)}:</span> nu <strong>{yesNo(place[col])}</strong>, volgens deze inzending <strong>{yesNo(v)}</strong>
+          </li>
+        ))}
+      </ul>
+      {fields.length === 0 ? (
+        <p className="text-sm text-muted">Dit staat al zo op de site.</p>
+      ) : (
+        <button className={primary} disabled={busy} onClick={takeOver}>
+          {busy ? "Overnemen…" : "Voorzieningen overnemen"}
         </button>
       )}
       <ErrorNote message={err} />

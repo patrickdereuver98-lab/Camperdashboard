@@ -8,6 +8,8 @@ Partnerdata en open data samenvoegen tot één masterlijst (`geo_master` in Supa
 | 2 | `parse_statics.py` | Aangeleverde KML/KMZ, GPX en CSV omzetten naar de standaardvorm |
 | 2b | `map_api_data.py` | Ruwe API-respons (GeoJSON, Overpass of een lijst objecten) omzetten naar de standaardvorm |
 | 3 | `web/supabase/functions/pipeline/merge_master.ts` | Lijsten ontdubbelen en in stukken van 500 upserten (pipeline-actie `merge_master`) |
+| 4 | `promote_geo_master` (migratie `20261031090000`) | `geo_master` → `places` volgens de bronregels (pipeline-actie `promote`) |
+| alles | `run_pipeline.py` + `bronnen.json` | De hele keten in één run; wekelijks via de workflow `data_pipeline.yml` |
 
 ## Standaardvorm
 
@@ -80,3 +82,37 @@ python -m pytest -q tools/data-collectors
 ```bash
 cd web && node --no-warnings --import ./tests/register.mjs --test tests/merge-master.test.ts
 ```
+
+## Automatisch: bronnen.json en de workflow
+
+`bronnen.json` noemt de bronnen in volgorde van voorrang. `bron` is ook het voorvoegsel van elk `bron_id` en de sleutel
+in de tabel `geo_bronnen`.
+
+```json
+{ "bronnen": [
+  { "bron": "partner_x", "type": "api", "url": "https://api.partner.example/v1/plekken",
+    "headers": { "Authorization": "Bearer ${PARTNER_X_TOKEN}" }, "pagineren": { "param": "page", "items_key": "items" } },
+  { "bron": "partner_y", "type": "bestanden", "map": "aanlevering/partner_y" }
+] }
+```
+
+- `${NAAM}` komt uit een GitHub-secret met die naam. Ontbreekt die, dan stopt de run (nooit met een lege sleutel).
+- Lukt één bron niet, dan stopt de run vóór het samenvoegen; `merge_master` krijgt altijd alle lijsten tegelijk.
+- Lokaal proberen (schrijft niets; aanmelden met `PIPELINE_KEY`):
+
+```bash
+PIPELINE_KEY=… python tools/data-collectors/run_pipeline.py --dry-run
+```
+
+Promotie naar `places` (`promote_geo_master`) gebeurt alleen bij:
+
+1. een bron die een mens in `geo_bronnen` op `toegestaan` zette: tier 1–2 is genoeg, tier 3–5 vraagt twee
+   verschillende toegestane bronnen. Geblokkeerd telt nooit;
+2. een plek binnen Nederland (rechthoek én hoogstens 16 km van een plaats in `nl_towns`);
+3. een echte naam (niet alleen "Camperplaats", geen URL of nummer);
+4. geen wild- of paalkamperen in de namen of faciliteiten.
+
+Ligt er al een plek binnen 60 m (of 150 m met een lijkende naam), dan wordt de master alleen gekoppeld: de bestaande
+plek verandert niet. Anders komt er een nieuwe plek met alleen de waarden die de bron noemt; die blijft concept tot hij
+contact en kernfeiten heeft. Afgewezen masters worden bij de volgende run opnieuw bekeken. De SQL-tests staan in
+`web/supabase/tests/` (`run.sh`).

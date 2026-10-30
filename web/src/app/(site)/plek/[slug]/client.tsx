@@ -9,7 +9,7 @@ import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
 import { isPossiblyOutdated } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
-import type { Photo, Review } from "@/lib/types";
+import type { Photo, Place as PlaceFacilities, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
 import { KIND_SIGN, Sign } from "@/components/sign";
@@ -17,6 +17,8 @@ import { Sheet } from "@/components/sheet";
 import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 import { authErrorMessage, cleanCode, codeErrorMessage, signInWithEmail, useSession, verifyEmailCode } from "@/lib/auth";
 import { clearDraft, loadDraft, saveDraft, type ReviewDraft } from "@/lib/review-draft";
+import { facilityAnswers, facilityChanges, type FacilityAnswer } from "@/lib/facility-update";
+import { FACILITIES, type FacilityKey } from "@/lib/search";
 
 // ── Fotogalerij met vegen ───────────────────────────────────────────────────
 
@@ -594,32 +596,82 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
 
 // ── Fout melden ─────────────────────────────────────────────────────────────
 
+const ANSWERS: [FacilityAnswer, string][] = [
+  ["ja", "Ja"],
+  ["nee", "Nee"],
+  ["", "Weet ik niet"],
+];
+
+/** Per voorziening ja, nee of "weet ik niet", met wat we nu weten als beginstand */
+function FacilityChoices({ value, onChange }: { value: Record<FacilityKey, FacilityAnswer>; onChange: (k: FacilityKey, a: FacilityAnswer) => void }) {
+  return (
+    <fieldset className="space-y-3">
+      <legend className="mb-1 font-semibold">Wat is er op deze plek?</legend>
+      {FACILITIES.map((fac) => (
+        <div key={fac.key} role="radiogroup" aria-labelledby={`vz-${fac.key}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <span id={`vz-${fac.key}`}>{fac.label}</span>
+          <div className="flex gap-1">
+            {ANSWERS.map(([a, l]) => (
+              <button
+                key={l}
+                type="button"
+                role="radio"
+                aria-checked={value[fac.key] === a}
+                onClick={() => onChange(fac.key, a)}
+                className="min-h-11 rounded-lg border border-line px-3 text-sm font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </fieldset>
+  );
+}
+
 export function ReportProblem({
   placeId,
   placeName,
   topic = "prijs",
   label = "Klopt er iets niet? Meld het",
+  facilities = {},
 }: {
   placeId: string;
   placeName: string;
   topic?: string;
   label?: string;
+  /** Wat we nu over de voorzieningen weten; beginstand van "Wat is er op deze plek?" */
+  facilities?: Partial<Pick<PlaceFacilities, FacilityKey>>;
 }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [subject, setSubject] = useState(topic);
+  const [answers, setAnswers] = useState(() => facilityAnswers(facilities));
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     if (formValue(f, "website")) return;
+    const changes = subject === "voorzieningen" ? facilityChanges(facilities, answers) : {};
+    const details = String(formValue(f, "details") ?? "").trim();
+    if (subject === "voorzieningen" ? !Object.keys(changes).length && !details : details.length < 5) {
+      setErr(subject === "voorzieningen" ? "Je hebt nog niets aangepast. Kies ja of nee bij een voorziening of schrijf een toelichting." : "Schrijf kort wat er niet klopt.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     const { error } = await supabase().rpc("submit_place", {
       p_kind: formValue(f, "owner") ? "eigenaar" : "correctie",
       p_place_id: placeId,
-      p_payload: { onderwerp: formValue(f, "topic"), toelichting: formValue(f, "details"), plek: placeName },
+      p_payload: {
+        onderwerp: subject,
+        toelichting: details,
+        plek: placeName,
+        ...(Object.keys(changes).length ? { voorzieningen: changes } : {}),
+      },
       p_contact_name: String(formValue(f, "name") || ""),
       p_contact_email: String(formValue(f, "email") || ""),
     });
@@ -645,7 +697,7 @@ export function ReportProblem({
           <form onSubmit={submit} className="space-y-4 pb-4">
             <label className="block">
               <span className="mb-1.5 block font-semibold">Wat klopt er niet?</span>
-              <select name="topic" className={input} defaultValue={topic}>
+              <select name="topic" className={input} value={subject} onChange={(e) => setSubject(e.target.value)}>
                 <option value="vertrektijd">Aankomst- en vertrektijden</option>
                 <option value="prijs">Prijs of extra kosten</option>
                 <option value="voorzieningen">Voorzieningen</option>
@@ -656,9 +708,10 @@ export function ReportProblem({
                 <option value="anders">Iets anders</option>
               </select>
             </label>
+            {subject === "voorzieningen" && <FacilityChoices value={answers} onChange={(k, a) => setAnswers((cur) => ({ ...cur, [k]: a }))} />}
             <label className="block">
-              <span className="mb-1.5 block font-semibold">Toelichting</span>
-              <textarea name="details" required minLength={5} rows={4} className={`${input} h-auto py-2`} />
+              <span className="mb-1.5 block font-semibold">{subject === "voorzieningen" ? "Toelichting (optioneel)" : "Toelichting"}</span>
+              <textarea name="details" rows={4} className={`${input} h-auto py-2`} />
             </label>
             <label className="flex items-center gap-3">
               <input type="checkbox" name="owner" className="h-5 w-5 accent-[var(--forest)]" /> Ik ben de eigenaar of beheerder

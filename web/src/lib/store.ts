@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { bboxKey, snapBbox, type Bbox } from "./bbox";
 import type { PlaceSummary, Town } from "./types";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
@@ -192,39 +191,6 @@ const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 
 export const usePlaces = () => useLoader(getPlaces);
 export const useTowns = () => useLoader(getTowns);
-
-// ── Plekken binnen de zichtbare kaart (PostGIS-bbox, per afgerond gebied gecachet) ──
-
-const bboxCache = new Map<string, Promise<PlaceSummary[]>>();
-
-function getBbox(key: string) {
-  let p = bboxCache.get(key);
-  if (!p) {
-    p = fetch(`/api/places?bbox=${key}`).then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<PlaceSummary[]>;
-    });
-    p.catch(() => bboxCache.delete(key));
-    bboxCache.set(key, p);
-  }
-  return p;
-}
-
-/** Plekken in het zichtbare kaartgebied; `null` zolang de kaart nog geen gebied heeft doorgegeven */
-export function useViewportPlaces(bbox: Bbox | null) {
-  const key = bbox ? bboxKey(snapBbox(bbox)) : null;
-  const [state, setState] = useState<{ key: string | null; data: PlaceSummary[] | null }>({ key: null, data: null });
-  useEffect(() => {
-    if (!key) return;
-    let alive = true;
-    // Bij een fout blijft het vorige gebied staan (de kaart valt terug op de volledige zoekresultaten)
-    getBbox(key).then((data) => alive && setState({ key, data }), () => {});
-    return () => {
-      alive = false;
-    };
-  }, [key]);
-  return state.data;
-}
 
 // ── Reisplekken lokaal bewaren, zodat Mijn reis ook zonder bereik werkt ──────
 
