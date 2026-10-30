@@ -99,11 +99,25 @@ def map_geojson(features: list[Any], bron: str, keep_unknown: bool) -> ParseResu
     return result
 
 
+def is_motorhome_place(tags: dict[str, Any]) -> bool:
+    """Zelfde toelating als isMotorhomePlace in web/supabase/functions/pipeline/osm.ts (besluit B2): caravan_site,
+    motorhome=yes/designated, of een camping die campers niet uitsluit (geen motorhome=no, geen tents=only)."""
+    if tags.get("tourism") == "caravan_site":
+        return True
+    motorhome = str(tags.get("motorhome", "")).split(";")[0].strip().lower()
+    if motorhome in ("yes", "designated"):
+        return True
+    return tags.get("tourism") == "camp_site" and motorhome != "no" and tags.get("tents") != "only"
+
+
 def map_overpass(elements: list[Any], bron: str, keep_unknown: bool) -> ParseResult:
     result = ParseResult()
     for e in elements:
         if not isinstance(e, dict):
             result.skip("geen object")
+            continue
+        if not is_motorhome_place(e.get("tags") or {}):
+            result.skip("geen camperplek volgens OSM (motorhome=no, alleen tenten of geen camping)")
             continue
         center = e.get("center") or {}
         lat = parse_float(e.get("lat", center.get("lat")))

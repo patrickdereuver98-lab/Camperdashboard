@@ -85,16 +85,19 @@ cd web && node --no-warnings --import ./tests/register.mjs --test tests/merge-ma
 
 ## Automatisch: bronnen.json en de workflow
 
-`bronnen.json` noemt de bronnen in volgorde van voorrang. `bron` is ook het voorvoegsel van elk `bron_id` en de sleutel
-in de tabel `geo_bronnen`.
+`bronnen.json` is een lijst van bronnen in volgorde van voorrang. `bron_id` is ook het voorvoegsel van elk record-id
+en de sleutel in de tabel `geo_bronnen`. Alleen `"status": "actief"` draait; elke andere status wordt overgeslagen.
 
-```json
-{ "bronnen": [
-  { "bron": "partner_x", "type": "api", "url": "https://api.partner.example/v1/plekken",
-    "headers": { "Authorization": "Bearer ${PARTNER_X_TOKEN}" }, "pagineren": { "param": "page", "items_key": "items" } },
-  { "bron": "partner_y", "type": "bestanden", "map": "aanlevering/partner_y" }
-] }
-```
+| type | velden |
+|---|---|
+| `api_overpass` | `url` (https) en `query`; POST naar Overpass, OSM-toelating zoals `osm.ts` (geen `motorhome=no`, geen `tents=only`) |
+| `api` | `url`, optioneel `headers`, `params`, `pagineren` |
+| `file_csv`, `file_gpx`, `file_kml` | `pad` binnen `tools/data-collectors` (moet in de repository staan; `data/` staat niet in git) |
+| `bestanden` | `map` met KML/GPX/CSV-bestanden |
+
+Actief: alleen `osm` (tier 4, besluit eigenaar 30 oktober 2026: productie alleen met open data). Een bestandsbron
+zonder bestand wordt overgeslagen met "wacht op bestand"; de andere bronnen draaien door. Promotie naar `places` gebeurt
+pas als een plek in twee toegestane bronnen staat (tier 3–5); OSM alleen vult `geo_master`.
 
 - `${NAAM}` komt uit een GitHub-secret met die naam. Ontbreekt die, dan stopt de run (nooit met een lege sleutel).
 - Lukt één bron niet, dan stopt de run vóór het samenvoegen; `merge_master` krijgt altijd alle lijsten tegelijk.

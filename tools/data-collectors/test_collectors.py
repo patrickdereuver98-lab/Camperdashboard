@@ -248,13 +248,29 @@ def test_geojson_tekstcoordinaten_en_geneste_faciliteiten():
 
 def test_overpass():
     raw = {"elements": [
-        {"type": "node", "id": 1, "lat": 52.1, "lon": 5.2, "tags": {"name": "A", "power_supply": "yes", "fee": "yes"}},
-        {"type": "way", "id": 2, "center": {"lat": 52.2, "lon": 5.3}, "tags": {"drinking_water": "no"}},
+        {"type": "node", "id": 1, "lat": 52.1, "lon": 5.2, "tags": {"tourism": "caravan_site", "name": "A", "power_supply": "yes", "fee": "yes"}},
+        {"type": "way", "id": 2, "center": {"lat": 52.2, "lon": 5.3}, "tags": {"tourism": "camp_site", "drinking_water": "no"}},
     ]}
     res = map_raw(raw, "osm")
     assert [r["bron_id"] for r in res.records] == ["osm:node/1", "osm:way/2"]
     assert res.records[0]["faciliteiten"] == {"stroom": True}
     assert res.records[1] == {"naam": None, "lat": 52.2, "lon": 5.3, "bron_id": "osm:way/2", "faciliteiten": {"water": False}}
+
+
+def test_overpass_toelating_zoals_osm_ts():
+    """Zelfde regel als isMotorhomePlace (besluit B2): geen tentencampings en geen motorhome=no."""
+    el = lambda i, tags: {"type": "node", "id": i, "lat": 52.1, "lon": 5.2, "tags": {"name": f"P{i}", **tags}}
+    raw = {"elements": [
+        el(1, {"tourism": "camp_site"}),
+        el(2, {"tourism": "camp_site", "motorhome": "no"}),
+        el(3, {"tourism": "camp_site", "tents": "only"}),
+        el(4, {"amenity": "parking", "motorhome": "yes"}),
+        el(5, {"amenity": "parking"}),
+        el(6, {"tourism": "camp_site", "motorhome": "Designated;fee"}),
+    ]}
+    res = map_raw(raw, "osm")
+    assert [r["bron_id"] for r in res.records] == ["osm:node/1", "osm:node/4", "osm:node/6"]
+    assert sum(res.skipped.values()) == 3
 
 
 def test_gewone_records_ingepakt_en_geneste_locatie():
@@ -356,7 +372,7 @@ def test_een_bron_faalt_dan_geen_merge(tmp_path):
 
 def test_map_buiten_de_map_geweigerd(tmp_path):
     with pytest.raises(rp.ConfigError):
-        rp.collect_files({"bron": "x", "map": "../../.."})
+        rp.collect_files({"bron": "x", "type": "bestanden", "map": "../../.."})
 
 
 def test_mislukte_upsert_slaat_promotie_over(tmp_path):
@@ -400,3 +416,71 @@ def test_pipeline_aanmelden_met_sleutel_of_oidc(monkeypatch):
     p.call("merge_master")
     assert sent[-1] == {"x-github-oidc": "tok"}
     assert [s for s in sent if isinstance(s, str)] == ["https://gh/token?x=1&audience=vrijstaan-pipeline"]  # één token, hergebruikt
+
+
+def test_config_in_lijstvorm_met_status_en_markdown_url(tmp_path):
+    cfg = tmp_path / "bronnen.json"
+    cfg.write_text(json.dumps([
+        {"bron_id": "osm", "naam": "OpenStreetMap", "type": "api_overpass",
+         "url": "[https://overpass-api.de/api/interpreter](https://overpass-api.de/api/interpreter)",
+         "query": "[out:json];node(1);out;", "betrouwbaarheid": 4, "status": "actief"},
+        {"bron_id": "archies", "type": "file_csv", "pad": "data/archies.csv", "status": "wacht_op_toestemming"},
+    ]))
+    active, inactive = rp.load_config(cfg)
+    assert [b["bron"] for b in active] == ["osm"] and active[0]["url"] == "https://overpass-api.de/api/interpreter"
+    assert [b["bron"] for b in inactive] == ["archies"]
+    for bad in ([{"bron_id": "x1", "type": "api_overpass", "url": "https://o.example"}],          # geen query
+                [{"bron_id": "x1", "type": "file_gpx", "pad": "data/a.csv"}],                        # verkeerde extensie
+                [{"bron_id": "x1", "type": "file_csv", "pad": "../../geheim.csv"}],                  # buiten de map
+                [{"bron_id": "x1", "type": "api", "url": "http://onveilig.example"}]):               # geen https
+        cfg.write_text(json.dumps(bad))
+        with pytest.raises(rp.ConfigError):
+            rp.load_config(cfg)
+
+
+def test_overpass_post_zonder_accept_header(tmp_path, monkeypatch):
+    monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
+    sent = {}
+
+    class Fake:
+        def __init__(self, **kw):
+            sent["kw"] = kw
+            self.session = requests.Session()
+            self.session.headers["Accept"] = "application/json"
+
+        def request_json(self, method, url, **kw):
+            sent.update(method=method, url=url, data=kw.get("data"), accept=self.session.headers.get("Accept"))
+            return {"elements": [{"type": "node", "id": 7, "lat": 52.1, "lon": 5.2, "tags": {"tourism": "camp_site", "name": "De Wei"}}]}
+
+    res = rp.collect_api({"bron": "osm", "type": "api_overpass", "url": "https://o.example/api", "query": "Q"}, {}, client_factory=Fake)
+    assert sent["method"] == "POST" and sent["data"] == {"data": "Q"} and sent["accept"] is None
+    assert res.records[0]["bron_id"] == "osm:node/7"
+
+
+def test_ontbrekend_bestand_wacht_en_stopt_de_rest_niet(tmp_path, monkeypatch):
+    with pytest.raises(rp.MissingFile):
+        rp.collect_files({"bron": "svr", "type": "file_gpx", "pad": "data/bestaat_niet.gpx"})
+    monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
+
+    class Fake:
+        def __init__(self, **kw):
+            self.session = requests.Session()
+
+        def request_json(self, *a, **kw):
+            return {"elements": [{"type": "node", "id": 1, "lat": 52.1, "lon": 5.2, "tags": {"tourism": "camp_site", "name": "De Wei"}}]}
+
+    fake = FakePipeline()
+    cfg = _config(tmp_path, [
+        {"bron_id": "osm", "type": "api_overpass", "url": "https://o.example/api", "query": "Q"},
+        {"bron_id": "svr", "type": "file_gpx", "pad": "data/bestaat_niet.gpx"},
+    ])
+    out = rp.run(cfg, True, {}, pipeline=fake, client_factory=Fake)
+    assert [len(x) for x in fake.calls[0][1]["lists"]] == [1]
+    assert out["bronnen"][1] == {"bron": "svr", "plekken": 0, "overgeslagen": {}, "wacht_op_bestand": "data/bestaat_niet.gpx"}
+
+
+def test_alleen_ontbrekende_bestanden_dan_geen_aanroep(tmp_path):
+    fake = FakePipeline()
+    cfg = _config(tmp_path, [{"bron_id": "svr", "type": "file_gpx", "pad": "data/bestaat_niet.gpx"}])
+    assert rp.run(cfg, False, {}, pipeline=fake)["merge_master"] is None
+    assert fake.calls == []
