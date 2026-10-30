@@ -279,8 +279,9 @@ Wekelijks (maandag 02:47 UTC) haalt de workflow **Dataketen** (`.github/workflow
 uit `tools/data-collectors/bronnen.json` op, voegt ze samen in `geo_master` (`merge_master`) en zet wat aan de
 bronregels voldoet in `places` (`promote`). Met de hand starten is standaard een proef.
 
-1. **Bron toevoegen** in `bronnen.json` (API of map met bestanden), sleutels als GitHub-secret met de naam uit het
-   bestand. Zie `tools/data-collectors/README.md`.
+1. **Bron toevoegen** in `bronnen.json` (Overpass, API of bestanden), sleutels als GitHub-secret met de naam uit het
+   bestand. Zie `tools/data-collectors/README.md`. Alleen bronnen met `"status": "actief"` draaien. Een lijst uit een
+   directory (Archies, SVR, ACSI en dergelijke) alleen met schriftelijke toestemming (bronnenbeleid, Databankenwet).
 2. **Bron beoordelen.** Niets gaat naar `places` voordat een mens de bron toestaat. Kijk of het om legale plekken gaat
    (geen wildkampeerlijst) en hoe betrouwbaar de bron is (tier 1 = eigenaar of overheid, 2 = eigen lijst van een
    partner, 3–5 = gidsen, fora):

@@ -61,45 +61,102 @@ def resolve_secrets(value: Any, env: dict[str, str]) -> Any:
     return value
 
 
-def load_config(path: Path) -> list[dict[str, Any]]:
+FILE_TYPES = {"file_csv": (".csv", ".tsv", ".txt"), "file_gpx": (".gpx",), "file_kml": (".kml", ".kmz")}
+TYPES = {"api", "api_overpass", "bestanden", *FILE_TYPES}
+MARKDOWN_LINK = re.compile(r"^\[([^\]]*)\]\((https?://[^)\s]+)\)$")
+
+
+def clean_url(value: Any, name: str) -> str:
+    """Een URL, ook als hij als markdown-link is geplakt ("[https://x](https://x)"). Alleen https."""
+    url = str(value or "").strip()
+    m = MARKDOWN_LINK.match(url)
+    if m:
+        url = m.group(2)
+    if not re.fullmatch(r"https://[^\s]+", url):
+        raise ConfigError(f"bron {name}: url moet met https:// beginnen, niet {url!r}")
+    return url
+
+
+def inside(path: str, name: str) -> Path:
+    """Pad binnen tools/data-collectors (nooit daarbuiten)."""
+    p = (HERE / path).resolve()
+    if HERE not in p.parents:
+        raise ConfigError(f"bron {name}: {path!r} moet binnen tools/data-collectors liggen")
+    return p
+
+
+def load_config(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Actieve bronnen (in volgorde van voorrang) en de bronnen die niet actief zijn.
+
+    Vorm: een lijst, of {"bronnen": [...]}. Per bron: bron_id (of bron), naam, type, en per type url (+ query bij
+    api_overpass), pad (file_csv, file_gpx, file_kml) of map (bestanden). Alleen status "actief" (standaard) draait.
+    """
     cfg = json.loads(path.read_text(encoding="utf-8"))
-    bronnen = cfg.get("bronnen")
+    bronnen = cfg.get("bronnen") if isinstance(cfg, dict) else cfg
     if not isinstance(bronnen, list):
-        raise ConfigError("bronnen.json: 'bronnen' moet een lijst zijn")
-    seen: set[str] = set()
-    for b in bronnen:
-        name = b.get("bron")
+        raise ConfigError("bronnen.json: een lijst van bronnen (of 'bronnen': [...])")
+    active, inactive, seen = [], [], set()
+    for raw in bronnen:
+        if not isinstance(raw, dict):
+            raise ConfigError("bronnen.json: elke bron is een object")
+        name = raw.get("bron_id", raw.get("bron"))
         if not isinstance(name, str) or not re.fullmatch(r"[a-z0-9_]{2,40}", name):
             raise ConfigError(f"bron {name!r}: alleen a-z, 0-9 en _ (2–40 tekens), zoals in geo_bronnen")
         if name in seen:
             raise ConfigError(f"bron {name} staat er twee keer in")
         seen.add(name)
-        if b.get("type") == "api" and not b.get("url"):
-            raise ConfigError(f"bron {name}: type api zonder url")
-        if b.get("type") == "bestanden" and not b.get("map"):
+        kind = raw.get("type")
+        if kind not in TYPES:
+            raise ConfigError(f"bron {name}: type moet een van {sorted(TYPES)} zijn")
+        b = {**raw, "bron": name}
+        if kind in ("api", "api_overpass"):
+            b["url"] = clean_url(raw.get("url"), name)
+        if kind == "api_overpass" and not str(raw.get("query", "")).strip():
+            raise ConfigError(f"bron {name}: api_overpass zonder query")
+        if kind in FILE_TYPES:
+            if not raw.get("pad"):
+                raise ConfigError(f"bron {name}: {kind} zonder pad")
+            if not str(raw["pad"]).lower().endswith(FILE_TYPES[kind]):
+                raise ConfigError(f"bron {name}: {raw['pad']} past niet bij {kind}")
+            inside(raw["pad"], name)
+        if kind == "bestanden" and not raw.get("map"):
             raise ConfigError(f"bron {name}: type bestanden zonder map")
-        if b.get("type") not in ("api", "bestanden"):
-            raise ConfigError(f"bron {name}: type moet api of bestanden zijn")
-    return bronnen
+        (active if raw.get("status", "actief") == "actief" else inactive).append(b)
+    for b in inactive:
+        log.info("%s staat op %r: overgeslagen", b["bron"], b.get("status"))
+    return active, inactive
 
 
 def collect_api(b: dict[str, Any], env: dict[str, str], client_factory: Callable[..., ApiClient] = ApiClient) -> ParseResult:
-    client = client_factory(headers=resolve_secrets(b.get("headers", {}), env))
-    params = resolve_secrets(b.get("params", {}), env)
-    pages = b.get("pagineren")
-    if pages:
-        raw: Any = list(client.iter_pages(b["url"], params, page_param=pages.get("param", "page"),
-                                          start=pages.get("start", 1), items_key=pages.get("items_key")))
+    if b["type"] == "api_overpass":
+        # Overpass: de query als formulierveld "data" (POST), zoals overpass-api.de het verwacht; ruim boven de
+        # time-out in de query zelf
+        client = client_factory(timeout=240, max_attempts=4, initial_wait=10, max_wait=120)
+        # Geen Accept-header: overpass-api.de antwoordt daarop met 406 (zelfde regel als overpass() in index.ts)
+        session = getattr(client, "session", None)
+        if session is not None:
+            session.headers.pop("Accept", None)
+        raw: Any = client.request_json("POST", b["url"], data={"data": b["query"]})
     else:
-        raw = client.get_json(b["url"], params=params or None)
+        client = client_factory(headers=resolve_secrets(b.get("headers", {}), env))
+        params = resolve_secrets(b.get("params", {}), env)
+        pages = b.get("pagineren")
+        if pages:
+            raw = list(client.iter_pages(b["url"], params, page_param=pages.get("param", "page"),
+                                         start=pages.get("start", 1), items_key=pages.get("items_key")))
+        else:
+            raw = client.get_json(b["url"], params=params or None)
     write_json(raw, DATA_DIR / f"raw_{b['bron']}.json")
     return map_raw(raw, b["bron"], b.get("alle_velden", False))
 
 
 def collect_files(b: dict[str, Any]) -> ParseResult:
-    folder = (HERE / b["map"]).resolve()
-    if HERE not in folder.parents and folder != HERE:
-        raise ConfigError(f"bron {b['bron']}: map moet binnen tools/data-collectors liggen")
+    if b["type"] in FILE_TYPES:
+        f = inside(b["pad"], b["bron"])
+        if not f.is_file():
+            raise ConfigError(f"bron {b['bron']}: bestand {b['pad']} ontbreekt")
+        return parse_file(f, b["bron"], b.get("alle_velden", False))
+    folder = inside(b["map"], b["bron"]) if b["map"] not in (".", "") else HERE
     files = sorted(p for p in folder.glob("*") if p.suffix.lower() in PARSERS)
     if not files:
         raise ConfigError(f"bron {b['bron']}: geen bestanden in {folder}")
@@ -113,7 +170,7 @@ def collect_all(bronnen: list[dict[str, Any]], env: dict[str, str], **kw: Any) -
     """Alle lijsten in volgorde van voorrang, plus een verslag per bron. Eén fout = uitzondering (geen halve run)."""
     lists, report = [], []
     for b in bronnen:
-        res = collect_api(b, env, **kw) if b["type"] == "api" else collect_files(b)
+        res = collect_api(b, env, **kw) if b["type"] in ("api", "api_overpass") else collect_files(b)
         records = dedupe_ids(res.records)
         if not records:
             raise ConfigError(f"bron {b['bron']}: geen enkele bruikbare plek (overgeslagen: {res.skipped})")
@@ -161,7 +218,7 @@ def summary_markdown(report: list[dict[str, Any]], merged: Any, promoted: Any, d
 
 
 def run(config: Path, dry_run: bool, env: dict[str, str], pipeline: Pipeline | None = None, **kw: Any) -> dict[str, Any]:
-    bronnen = load_config(config)
+    bronnen, inactive = load_config(config)
     if not bronnen:
         log.warning("geen bronnen in %s: niets te doen", config)
         return {"bronnen": 0}
@@ -174,7 +231,8 @@ def run(config: Path, dry_run: bool, env: dict[str, str], pipeline: Pipeline | N
     # Bij een proef staat er niets nieuws in geo_master; de promotie-proef laat zien wat er nu al door zou gaan
     promoted = pipeline.call("promote", dry_run=dry_run, n=5000)
     log.info("promote: %s", promoted)
-    out = {"bronnen": report, "merge_master": merged, "promote": promoted, "dry_run": dry_run}
+    out = {"bronnen": report, "niet_actief": [{"bron": b["bron"], "status": b.get("status")} for b in inactive],
+           "merge_master": merged, "promote": promoted, "dry_run": dry_run}
     if env.get("GITHUB_STEP_SUMMARY"):
         with open(env["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
             f.write(summary_markdown(report, merged, promoted, dry_run))

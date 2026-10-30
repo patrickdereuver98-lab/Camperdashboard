@@ -1,8 +1,27 @@
-{
-  "_uitleg": "Bronnen voor de dataketen (run_pipeline.py, workflow data_pipeline.yml), in volgorde van voorrang: de eerste wint bij naam en coördinaten. 'bron' moet gelijk zijn aan geo_bronnen.bron; promotie naar places gebeurt alleen voor bronnen die daar op 'toegestaan' staan. Geheimen als ${NAAM} (GitHub-secret met die naam). Zie README.md.",
-  "_voorbeeld": [
-    { "bron": "partner_x", "type": "api", "url": "https://api.partner.example/v1/plekken", "headers": { "Authorization": "Bearer ${PARTNER_X_TOKEN}" }, "pagineren": { "param": "page", "items_key": "items" } },
-    { "bron": "partner_y", "type": "bestanden", "map": "aanlevering/partner_y" }
-  ],
-  "bronnen": []
-}
+[
+  {
+    "bron_id": "osm",
+    "naam": "OpenStreetMap",
+    "type": "api_overpass",
+    "url": "https://overpass-api.de/api/interpreter",
+    "query": "[out:json][timeout:90];area[\"ISO3166-1\"=\"NL\"][admin_level=2]->.searchArea;(node[\"tourism\"=\"camp_site\"](area.searchArea);way[\"tourism\"=\"camp_site\"](area.searchArea);node[\"amenity\"=\"parking\"][\"motorhome\"=\"yes\"](area.searchArea);way[\"amenity\"=\"parking\"][\"motorhome\"=\"yes\"](area.searchArea););out center;",
+    "betrouwbaarheid": 4,
+    "status": "actief"
+  },
+  {
+    "bron_id": "archies",
+    "naam": "Archiescampings",
+    "type": "file_csv",
+    "pad": "data/archies_nederland.csv",
+    "betrouwbaarheid": 3,
+    "status": "wacht_op_toestemming"
+  },
+  {
+    "bron_id": "svr",
+    "naam": "SVR Campings",
+    "type": "file_gpx",
+    "pad": "data/svr_locaties.gpx",
+    "betrouwbaarheid": 4,
+    "status": "wacht_op_toestemming"
+  }
+]
