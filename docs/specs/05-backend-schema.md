@@ -23,6 +23,8 @@
 | `nl_towns` | Woonplaatsen met coördinaten (zoeken en dichtstbijzijnde plaats) |
 | `route_cache` | Gecachete routes en rijtijden |
 | `osm_regions`, `osm_queries`, `osm_staging` | OSM-import per provincie: planning, queries en wachtrij |
+| `geo_master` | Masterlijst uit partnerdata en open data na ontdubbelen (tussenlaag, niet op de site) |
+| `geo_bronnen` | Bronnen van de dataketen en of ze naar `places` mogen (een mens beoordeelt) |
 | `internal_secrets` | Sleutel waarmee de database de edge function aanroept |
 | `private.scrape_queue` | Wachtrij van websites die de scraper moet lezen |
 | `private.stealth_queue` | Wachtrij van de stealth-lezer (Scrapling, [bronnenbeleid §3a](../bronnenbeleid.md)) |
@@ -111,7 +113,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `crowd_watches` | user_id* + place_id* (pk), created_at*, expires_at* (+24 uur), notified_at | via `watch_place` (max. 10 tegelijk); trigger op `crowd_reports` roept edge function `push` aan als de stand "rustig" wordt. VAPID-sleutels in `private.secrets` (alleen service_role) |
 | `crowd_reports` | id*, place_id*, user_id*, level* (`rustig`, `druk`, `vol`), created_at* | melden via `report_crowd` (1 per persoon per plek per 30 min, max. 30 per dag); lezen via `crowd_status` (geaggregeerd, zonder persoonsgegevens); cron `crowd-retention` wist na 30 dagen |
 | `reviews` | id*, place_id*, author_name*, author_email, rating* (1–10), score_location/quiet/facilities/value (1–10), title (≤120), body* (20–3.000), vehicle (`camper`, `buscamper`, `caravan`, `overig`), visited_month, status*, admin_note, user_id (→ `auth.users`, `ON DELETE SET NULL`), created_at* | status `pending`; index op place_id en op user_id. `author_email` komt uit het account van de schrijver (sinds migratie `20261022100000_reviews_met_account.sql`) |
-| `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, user_id (→ `auth.users`, `ON DELETE SET NULL`; gezet door `submit_place` als je ingelogd bent), created_at* | status `nieuw` |
+| `submissions` | id*, kind* (`nieuw`, `correctie`, `eigenaar`), place_id, payload* (jsonb), contact_name, contact_email, status*, admin_note, user_id (→ `auth.users`, `ON DELETE SET NULL`; gezet door `submit_place` als je ingelogd bent), created_at* | status `nieuw`. Payload bij voorzieningen: `voorzieningen` = { kolom: { was, nieuw } } met kolommen power, water, dump_station, toilet, shower, wifi, dogs (`src/lib/facility-update.ts`); overnemen zet ook het merkteken van beheer (`admin_mark_beheer`) |
 | `tickets` | id*, number* (uniek), access_token* (uniek, willekeurig), name* (2–80), email*, subject* (3–140), category*, status*, priority*, place_id, assignee, created_at*, updated_at* | category `vraag`, status `open`, priority `normaal` |
 | `ticket_messages` | id*, ticket_id*, author* (`klant`, `support`), admin_id, body* (1–5.000), internal* | internal `false`; index op ticket_id |
 | `faq` | id*, category*, question*, answer*, position*, published*, updated_at* | published `true` |
@@ -126,6 +128,8 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `route_cache` | key*, distance_m*, duration_s*, geometry, provider*, created_at* | |
 | `osm_regions` | code*, name*, last_run_at, places_req, points_req, attempt* | attempt `0` |
 | `osm_staging` | id*, kind* (`place`, `point`), row*, created_at*, processed_at | index op onverwerkte rijen |
+| `geo_master` | master_id* (pk, bron_id van het anker), geohash* (9 tekens), naam, namen*, lat*, lon*, bron_ids* (≥ 1), faciliteiten* (jsonb-object), conflicten* (jsonb-object), match_score* (0–1), aangemaakt_op*, bijgewerkt_op* | Migratie `20261030120000_geo_master.sql`. Alleen `service_role` (RLS aan, geen policies). GIN-index op bron_ids, index op geohash. Gevuld door pipeline-actie `merge_master` (`merge_master.ts`, [tools/data-collectors](../../tools/data-collectors/README.md)): binnen 100 m (haversine) en score ≥ 0,75 (0,8 × naam via Levenshtein + 0,2 × nabijheid) samen; faciliteit alleen als alle bronnen het eens zijn, anders in conflicten. Schrijft niet in `places`. Promotie (migratie `20261031090000_promote_geo_master.sql`): place_id (→ places, `SET NULL`), promotie (`nieuw`, `gekoppeld`, `geweigerd`), promotie_reden, gepromoveerd_op |
+| `geo_bronnen` | bron* (pk, a-z 0-9 _, gelijk aan het voorvoegsel van bron_id), naam*, tier* (1–5), status* (`toegestaan`, `te_beoordelen`, `geblokkeerd`; standaard te beoordelen), soort (soort plek voor de hele bron), notitie, beoordeeld_op, aangemaakt_op* | Alleen `service_role`. Alleen een mens zet een bron op toegestaan (HANDLEIDING, Dataketen). Tier 1–2 is genoeg voor promotie, tier 3–5 vraagt twee toegestane bronnen; geblokkeerd telt nooit |
 | `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
 | `private.stealth_queue` | place_id*, reason* (`onleesbaar`, `weinig`, `kernfeit`, `herlezen`), attempts*, next_attempt_at*, done_at, last_error, created_at* | Lease van een uur (`next_stealth_batch`); wegschrijven via `apply_stealth` → `apply_scrape` |
 | `private.verwijderde_plekken` | id*, osm_type, osm_id (uniek met osm_type), slug, name, website, reden*, gegevens* (hele rij), removed_at* | Gevuld door `private.verwijder_onbereikbare_plekken()` (cron `onbereikbaar-opruimen`, 06:13): niet gepubliceerd, niet vastgezet, geen prijs of vertrektijd, geen Beheer-velden, en geen website of een website die ook de stealth-lezer niet kon lezen. Trigger `weiger_verwijderde_plek` slaat een nieuwe rij met hetzelfde OSM-nummer over. Terugzetten: rij hier weghalen en de plek uit `gegevens` opnieuw invoegen |
@@ -210,6 +214,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `admin_overview`, `admin_stats(p_days)`, `admin_pipeline(p_action)` | beheer | Dashboard, statistieken, pipeline-knoppen (`scrape-missing`, `scrape-all`, `osm-refresh`, `apply-threshold`) |
 | `apply_scrape`, `next_scrape_batch`, `enqueue_scrape`, `ingest_osm`, `ingest_osm_points`, `process_osm_staging`, `osm_response`, `export_snapshot` | pipeline/systeem | Data-import |
 | `place_completeness(p)`, `place_meets_must_haves(p)` | trigger | Score en harde eisen voor publicatie |
+| `promote_geo_master(p_dry_run, p_limit)` | `service_role` (pipeline-actie `promote`) | `geo_master` → `places`: alleen bij een toegestane bron (tier 1–2, of twee uit 3–5), binnen Nederland (rechthoek en ≤ 16 km van `nl_towns`), een echte naam en geen wild- of paalkamperen. Bestaande plek (≤ 60 m, of ≤ 150 m met lijkende naam) → alleen koppelen; anders een nieuwe plek met alleen de waarden die de bron noemt (status via de trigger, meestal concept). Standaard een proef |
 
 ## Datavalidatie en bedrijfsregels
 

@@ -1,0 +1,11 @@
+[
+  {
+    "bron_id": "osm",
+    "naam": "OpenStreetMap",
+    "type": "api_overpass",
+    "url": "https://overpass-api.de/api/interpreter",
+    "query": "[out:json][timeout:90];area[\"ISO3166-1\"=\"NL\"][admin_level=2]->.searchArea;(node[\"tourism\"=\"camp_site\"](area.searchArea);way[\"tourism\"=\"camp_site\"](area.searchArea);node[\"amenity\"=\"parking\"][\"motorhome\"=\"yes\"](area.searchArea);way[\"amenity\"=\"parking\"][\"motorhome\"=\"yes\"](area.searchArea););out center;",
+    "betrouwbaarheid": 4,
+    "status": "actief"
+  }
+]

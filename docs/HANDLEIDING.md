@@ -260,6 +260,43 @@ Supabase bundelt die code bij het uitrollen; daarna hangt de functie niet meer v
 push de wijziging in `web/supabase/functions/pipeline/`, zet de nieuwe commit in die regel en rol uit met
 `verify_jwt` uit (de functie controleert zelf de `x-pipeline-key`).
 
+Met de Supabase CLI doet een script dat in één keer (alleen commits die op `main` of `acceptatie` staan):
+
+```bash
+SUPABASE_ACCESS_TOKEN=… web/scripts/deploy-pipeline.sh origin/main
+```
+
+Geheimen: de functie gebruikt alleen `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY` (geeft Supabase zelf mee) en
+`internal_secrets.pipeline_key` in de database. Er hoeft niets in `supabase secrets` te staan. Noteer elke nieuwe
+versie in het implementatieplan en zet in de eerste regel van de stub welke versie het is.
+
+Controle na het uitrollen (schrijft niets): `select private.call_pipeline('{"action":"promote"}'::jsonb);` en daarna
+het antwoord in `net._http_response` (status 200).
+
+## Dataketen: partnerdata naar places
+
+Wekelijks (maandag 02:47 UTC) haalt de workflow **Dataketen** (`.github/workflows/data_pipeline.yml`) alle bronnen
+uit `tools/data-collectors/bronnen.json` op, voegt ze samen in `geo_master` (`merge_master`) en zet wat aan de
+bronregels voldoet in `places` (`promote`). Met de hand starten is standaard een proef.
+
+1. **Bron toevoegen** in `bronnen.json` (Overpass, API of bestanden), sleutels als GitHub-secret met de naam uit het
+   bestand. Zie `tools/data-collectors/README.md`. Alleen bronnen met `"status": "actief"` draaien. Een lijst uit een
+   directory (Archies, SVR, ACSI en dergelijke) alleen met schriftelijke toestemming (bronnenbeleid, Databankenwet).
+2. **Bron beoordelen.** Niets gaat naar `places` voordat een mens de bron toestaat. Kijk of het om legale plekken gaat
+   (geen wildkampeerlijst) en hoe betrouwbaar de bron is (tier 1 = eigenaar of overheid, 2 = eigen lijst van een
+   partner, 3–5 = gidsen, fora):
+
+   ```sql
+   insert into public.geo_bronnen (bron, naam, tier, status, soort, beoordeeld_op)
+   values ('partner_x', 'Partner X', 2, 'toegestaan', 'camperplaats', now());
+   ```
+
+   Tier 3–5 komt pas door met twee verschillende toegestane bronnen voor dezelfde plek. Stoppen met een bron:
+   `update public.geo_bronnen set status = 'geblokkeerd' where bron = 'partner_x';`
+3. **Uitkomst bekijken**: `select promotie, promotie_reden, count(*) from public.geo_master group by 1, 2;`. Nieuwe
+   plekken staan in `places` met `sources.geo_master` en zijn concept tot ze contact en kernfeiten hebben (zoals
+   elke nieuwe OSM-plek); bestaande plekken worden alleen gekoppeld en niet aangepast.
+
 ## Meer plekken vinden
 
 - **Websites zoeken** (automatisch, cron `discover`, eigen edge function `discover`): voor plekken zonder website

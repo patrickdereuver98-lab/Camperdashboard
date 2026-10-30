@@ -19,6 +19,7 @@ import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
 import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
+import { pickFacilities } from "@/lib/facility-update";
 import { Legend } from "@/components/legend";
 import { Gallery, OutdatedNote, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 import { OwnerUpdate } from "./owner-update";
@@ -334,7 +335,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         )}
         {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het weten, dan passen we het aan.</p>}
         <div className="mt-1 flex flex-wrap gap-x-5">
-          <ReportProblem placeId={place.id} placeName={place.name} />
+          <ReportProblem placeId={place.id} placeName={place.name} facilities={pickFacilities(place)} />
           <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
         </div>
       </div>

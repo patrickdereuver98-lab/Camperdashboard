@@ -45,3 +45,32 @@ jobs:
           name: playwright-report
           path: web/playwright-report
           retention-days: 7
+
+  data-collectors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/data-collectors/requirements.txt pytest
+      - run: python -m pytest -q tools/data-collectors
+
+  # Migraties van geo_master en de promotie naar places op een lege Postgres 16 (web/supabase/tests)
+  sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: web/supabase/tests/run.sh
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres

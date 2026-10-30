@@ -1,7 +1,7 @@
 // Stealth-lezer (bronnenbeleid §3a): de pipeline kiest de pagina's die de Python-lezer ophaalt
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { STEALTH_FIRST, STEALTH_PAGE_CHARS, STEALTH_SUBPAGES, stealthClaimsOk, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan } from "../supabase/functions/pipeline/stealth";
+import { STEALTH_FIRST, STEALTH_PAGE_CHARS, STEALTH_SUBPAGES, stealthClaimsOk, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan, workflowClaimsOk, workflowForAction } from "../supabase/functions/pipeline/stealth";
 
 const home = new URL("https://www.camping.nl/");
 const menu = (paths: string[]) => paths.map((p) => `<a href="${p}">${p.slice(1)}</a>`).join("");
@@ -59,4 +59,22 @@ test("wissen alleen na een volledige lezing met velden", () => {
   assert.equal(stealthMayWipe(1, 6), false); // alleen de startpagina
   assert.equal(stealthMayWipe(5, 0), false); // niets gevonden
   assert.equal(stealthMayWipe(2, 3), true);
+});
+
+test("OIDC: elke actie hoort bij precies één workflow", () => {
+  const claims = (file: string) => ({
+    repository: "patrickdereuver98-lab/Camperdashboard",
+    ref: "refs/heads/main",
+    workflow_ref: `patrickdereuver98-lab/Camperdashboard/.github/workflows/${file}@refs/heads/main`,
+    event_name: "schedule",
+  });
+  assert.equal(workflowForAction("stealth_batch"), "stealth-lezer.yml");
+  assert.equal(workflowForAction("merge_master"), "data_pipeline.yml");
+  assert.equal(workflowForAction("promote"), "data_pipeline.yml");
+  for (const a of ["scrape", "osm", "enqueue", "verify", undefined]) assert.equal(workflowForAction(a), null);
+  assert.equal(workflowClaimsOk(claims("data_pipeline.yml"), "data_pipeline.yml"), true);
+  // De stealth-workflow mag geen promotie doen, en andersom
+  assert.equal(workflowClaimsOk(claims("stealth-lezer.yml"), "data_pipeline.yml"), false);
+  assert.equal(workflowClaimsOk(claims("data_pipeline.yml"), "stealth-lezer.yml"), false);
+  assert.equal(workflowClaimsOk({ ...claims("data_pipeline.yml"), ref: "refs/heads/acceptatie" }, "data_pipeline.yml"), false);
 });
