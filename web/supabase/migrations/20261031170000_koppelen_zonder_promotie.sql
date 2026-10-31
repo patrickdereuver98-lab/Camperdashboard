@@ -5,6 +5,7 @@
 --    krijgt toch het place_id. Er verandert niets aan die plek en er komt niets nieuws bij; alleen de relatie ligt vast,
 --    zodat latere wijzigingen uit de bron bij de juiste plek terechtkomen. promotie = 'gekoppeld' met promotie_reden =
 --    het bezwaar (bij een volledige koppeling is de reden leeg).
+-- 3. (Zie hieronder.) Een nieuwe plek krijgt ook de nachtprijs als de bron die als getal noemt (prijs_eur, OSM charge of fee=no).
 -- 2. Een nieuwe plek wordt niet aangemaakt als op dezelfde plek een plek is opgeruimd (private.verwijderde_plekken,
 --    migratie 20261025160000). De trigger daar herkent alleen OSM-nummers; masters hebben er geen.
 --
@@ -77,7 +78,7 @@ declare
   bezwaar text;
   match_id uuid;
   v_kind text; v_town text; v_province text; v_slug text; base text; n int; new_id uuid;
-  f jsonb; v_len numeric; v_cap int;
+  f jsonb; v_len numeric; v_cap int; v_prijs numeric;
   c_nieuw int := 0; c_gekoppeld int := 0; c_alleen_gekoppeld int := 0; c_geweigerd int := 0; c_bekeken int := 0;
   redenen jsonb := '{}';
   redenen_gekoppeld jsonb := '{}';
@@ -146,17 +147,20 @@ begin
     f := m.faciliteiten;
     v_len := case when jsonb_typeof(f -> 'max_lengte_m') = 'number' and (f ->> 'max_lengte_m')::numeric between 3 and 30
                   then (f ->> 'max_lengte_m')::numeric end;
+    -- Nachtprijs uit de bron (OSM charge, of 0 bij fee=no), alleen als getal binnen de grenzen van places
+    v_prijs := case when jsonb_typeof(f -> 'prijs_eur') = 'number' and (f ->> 'prijs_eur')::numeric >= 0
+                         and (f ->> 'prijs_eur')::numeric < 150 then (f ->> 'prijs_eur')::numeric end;
     v_cap := case when jsonb_typeof(f -> 'capaciteit') = 'number' and (f ->> 'capaciteit')::numeric between 1 and 1999
                        and (f ->> 'capaciteit')::numeric = trunc((f ->> 'capaciteit')::numeric)
                   then (f ->> 'capaciteit')::int end;
 
     insert into public.places (slug, name, name_is_generic, kind, lat, lng, town, province,
-      power, water, dump_station, toilet, shower, wifi, dogs, open_all_year, reservation, max_length_m, capacity, sources)
+      power, water, dump_station, toilet, shower, wifi, dogs, open_all_year, reservation, max_length_m, capacity, price_eur, sources)
     values (v_slug, trim(m.naam), false, v_kind, m.lat, m.lon, v_town, v_province,
       private.geo_bool(f, 'stroom'), private.geo_bool(f, 'water'), private.geo_bool(f, 'lozing'),
       private.geo_bool(f, 'toilet'), private.geo_bool(f, 'douche'), private.geo_bool(f, 'wifi'),
       private.geo_bool(f, 'honden'), private.geo_bool(f, 'jaarrond_open'), private.geo_bool(f, 'reserveren'),
-      v_len, v_cap,
+      v_len, v_cap, v_prijs,
       jsonb_build_object('geo_master', jsonb_build_object('master_id', m.master_id, 'bron_ids', to_jsonb(m.bron_ids), 'at', now())))
     returning id into new_id;
 

@@ -22,6 +22,7 @@ type Row = {
 };
 
 type Full = Row & Record<string, unknown>;
+type ReviewRow = { place_id: string; reden: string; name: string; town: string | null };
 
 const PAGE = 40;
 const STATUS_LABEL = { published: "Online", draft: "Concept", hidden: "Verborgen" } as const;
@@ -70,6 +71,20 @@ export default function PlacesAdmin() {
   const rows = data?.rows ?? [];
   const count = data?.count ?? 0;
 
+  // Handmatig nakijken (B3, 31 oktober 2026): website ook met de stealth-lezer onleesbaar en nog niet door beheer
+  // ingevuld. Deze staan bovenaan; de markering verdwijnt vanzelf zodra beheer een veld vastlegt.
+  const review = useQuery(async () => {
+    const r = await db().rpc("admin_manual_review");
+    if (r.error || !r.data?.length) return { data: [] as ReviewRow[], error: r.error };
+    const ids = r.data.map((x: { place_id: string }) => x.place_id);
+    const p = await db().from("places").select("id,name,town").in("id", ids);
+    const byId = new Map((p.data ?? []).map((x) => [x.id, x]));
+    return {
+      data: r.data.map((x: { place_id: string; reden: string }) => ({ ...x, name: byId.get(x.place_id)?.name ?? "", town: byId.get(x.place_id)?.town ?? null })),
+      error: p.error,
+    };
+  }, []);
+
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <PageTitle title="Plekken" />
@@ -95,7 +110,28 @@ export default function PlacesAdmin() {
           { value: "hidden", label: "Verborgen" },
         ]}
       />
-      <ErrorNote message={error} />
+      <ErrorNote message={error ?? review.error} />
+      {!!review.data?.length && (
+        <section aria-labelledby="nakijken" className="rounded-lg border border-alert/40">
+          <h2 id="nakijken" className="border-b border-line px-4 py-2 font-semibold">
+            Handmatig nakijken ({review.data.length})
+            <span className="block text-sm font-normal text-muted">Website ook met de stealth-lezer onleesbaar. Vul de gegevens zelf in of verberg de plek.</span>
+          </h2>
+          <ul className="max-h-80 divide-y divide-line overflow-y-auto">
+            {review.data.map((r) => (
+              <li key={r.place_id}>
+                <button onClick={() => setEditing(r.place_id)} className="flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left hover:bg-sunken">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{r.name || "Naam onbekend"}</span>
+                    <span className="block truncate text-sm text-muted">{r.town ?? "plaats onbekend"}: {r.reden}</span>
+                  </span>
+                  <Badge tone="red">Nakijken</Badge>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <p className="text-sm text-muted">{loading ? "Laden…" : `${count.toLocaleString("nl-NL")} plekken`}</p>
       {!loading && rows.length === 0 ? (
         <Empty>Geen plekken gevonden.</Empty>
@@ -126,7 +162,7 @@ export default function PlacesAdmin() {
         <span className="text-sm text-muted">Pagina {page + 1} van {Math.max(1, Math.ceil(count / PAGE))}</span>
         <button className={secondary} disabled={(page + 1) * PAGE >= count} onClick={() => setPage((p) => p + 1)}>Volgende</button>
       </div>
-      {editing && <Editor id={editing} onClose={() => setEditing(null)} onSaved={reload} />}
+      {editing && <Editor id={editing} onClose={() => setEditing(null)} onSaved={() => (reload(), review.reload())} />}
     </div>
   );
 }

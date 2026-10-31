@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -99,6 +100,55 @@ def map_geojson(features: list[Any], bron: str, keep_unknown: bool) -> ParseResu
     return result
 
 
+# OSM-waarden, zelfde regels als osm.ts (osmBool, parsePrice): alleen een vaste lijst wordt ja of nee, de rest onbekend
+_OSM_TRUE = {"yes", "true", "1", "designated", "customers", "permissive", "limited", "seasonal", "only", "public"}
+_OSM_FALSE = {"no", "false", "0", "none", "private"}
+
+
+def osm_bool(raw: Any, extra_false: tuple[str, ...] = ()) -> bool | None:
+    if raw is None:
+        return None
+    v = str(raw).split(";")[0].strip().lower().replace(" ", "_")
+    if v in _OSM_FALSE or v in extra_false:
+        return False
+    return True if v in _OSM_TRUE else None
+
+
+def osm_price(raw: Any) -> float | None:
+    """Nachtprijs uit charge ("12 EUR", "€ 12,50"); per uur, persoon of week is geen nachtprijs."""
+    if not raw:
+        return None
+    v = str(raw)
+    if re.search(r"/\s*(?:h|hour|uur|min|person|persoon|pp|week|month|year|kwh)\b|per\s*(?:hour|uur|person|persoon)", v, re.I):
+        return None
+    if re.fullmatch(r"\s*(?:0|free|gratis|none|no)\s*", v, re.I):
+        return 0.0
+    m = re.search(r"(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:eur|€)|(?:€|eur)\s*(\d{1,3}(?:[.,]\d{1,2})?)", v, re.I)
+    n = float((m.group(1) or m.group(2)).replace(",", ".")) if m else None
+    return n if n is not None and 0 <= n < 150 else None
+
+
+def osm_facilities(tags: dict[str, Any]) -> dict[str, Any]:
+    """Lozen, prijs en maximale lengte uit OSM-tags (D1, D2), getypt zoals promote_geo_master ze verwacht."""
+    out: dict[str, Any] = {}
+    dump = next((b for b in (osm_bool(tags.get(k)) for k in ("sanitary_dump_station", "waste_disposal")) if b is not None), None)
+    if dump is not None:
+        out["lozing"] = dump
+    fee = osm_bool(tags.get("fee"), extra_false=("free", "gratis"))
+    price = osm_price(tags.get("charge"))
+    if price is None and fee is False:
+        price = 0.0
+    if price is not None:
+        out["prijs_eur"] = price
+    try:
+        length = float(re.sub(r"\s*m(eter)?\s*$", "", str(tags.get("maxlength") or "")).replace(",", "."))
+    except ValueError:
+        length = None
+    if length is not None and 3 < length < 25:
+        out["max_lengte_m"] = length
+    return out
+
+
 def is_motorhome_place(tags: dict[str, Any]) -> bool:
     """Zelfde toelating als isMotorhomePlace in web/supabase/functions/pipeline/osm.ts (besluit B2): caravan_site,
     motorhome=yes/designated, of een camping die campers niet uitsluit (geen motorhome=no, geen tents=only)."""
@@ -124,8 +174,10 @@ def map_overpass(elements: list[Any], bron: str, keep_unknown: bool) -> ParseRes
         lon = parse_float(e.get("lon", center.get("lon")))
         tags = e.get("tags") or {}
         ref = f"{e.get('type', 'node')}/{e['id']}" if e.get("id") is not None else None
+        # De OSM-regels gaan voor de algemene synoniemen (die laten "7,5 m" of "customers" als tekst staan)
+        osm_keys = ["name", "sanitary_dump_station", "waste_disposal", "maxlength", "fee", "charge"]
         result.add(name=tags.get("name"), lat=lat, lon=lon, ref=ref, bron=bron,
-                   facilities=facilities_from(tags, keep_unknown, skip=["name"]))
+                   facilities={**facilities_from(tags, keep_unknown, skip=osm_keys), **osm_facilities(tags)})
     return result
 
 

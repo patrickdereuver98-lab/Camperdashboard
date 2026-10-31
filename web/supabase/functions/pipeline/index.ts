@@ -26,7 +26,7 @@ import { addressFrom, reverseUrl } from "./pdok.ts";
 import { verify, type QuoteAnswer } from "./quote.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 import { OIDC_AUDIENCE, OIDC_ISSUER, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan, workflowClaimsOk, workflowForAction } from "./stealth.ts";
-import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, pdfMax, FOCUS_PDFS, rankLinks, sitemapsFromRobots } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -273,26 +273,27 @@ async function fetchHome(website: string): Promise<{ home: URL; html: string }> 
   throw first;
 }
 
-async function collectPages(website: string) {
+async function collectPages(website: string, focus = false) {
   const { home, html } = await fetchHome(website);
   const links = extractLinks(html, home);
-  let picked = rankLinks(links, home);
+  let picked = rankLinks(links, home, undefined, focus);
   // Site van één pagina (menu met "#prijzen"): de sitemap proberen mag, maar de tien vaste adressen raden is zinloos
   const single = onePage(html) && links.length <= 2;
   // Menu in JavaScript (geen bruikbare links)? Dan de sitemap erbij, en anders vaste adressen proberen. Dit beoordeelt
   // alleen de herkende pagina's: de kleine-site-regel hieronder mag de sitemap en de vaste adressen niet overslaan
   // (parser 42, eerste versie: 21 plekken raakten daardoor hun vertrektijd kwijt)
   const viaSitemap = needsSitemap(picked);
-  if (viaSitemap) picked = rankLinks([...links, ...(await sitemapPages(home))], home);
+  if (viaSitemap) picked = rankLinks([...links, ...(await sitemapPages(home))], home, undefined, focus);
   picked = addExtraPages(picked, links, home, needsSitemap(picked), single);
   const failed: string[] = [];
   const subs = await fetchPages(picked, failed);
   const read = subs.filter((x): x is string => !!x);
   // Tweede laag: vanaf de FAQ en huisregels de links die naar aankomst en vertrek wijzen
-  const deeper = deeperLinks([html, ...read], home, [home.href, ...picked]);
+  const deeper = deeperLinks([html, ...read], home, [home.href, ...picked], focus ? 4 : 3, focus);
   const more = await fetchPages(deeper, failed);
   // PDF's met het reglement of de tarieven: alleen de adressen; lezen gebeurt pas als de pagina's niets opleveren
-  const pdfs = [...new Set([html, ...read].flatMap((h) => pdfLinks(h, home)))].slice(0, 2);
+  const max = pdfMax(focus);
+  const pdfs = [...new Set([html, ...read].flatMap((h) => pdfLinks(h, home, max)))].slice(0, max);
   return { home, html, links: links.length, picked: [...picked, ...deeper], pdfs, viaSitemap, subs: [...subs, ...more], failed };
 }
 
@@ -356,8 +357,9 @@ async function verifyFinding(f: Finding) {
   return { id: f.id, ok: true, applied: "inzending" };
 }
 
-async function scrapeOne(place: { id: string; website: string }) {
-  const { home, html, subs, pdfs, failed, links } = await collectPages(place.website);
+async function scrapeOne(place: { id: string; website: string; focus?: boolean | null }) {
+  // Zonder vertrekregel: huisregels, FAQ, reglement en voorwaarden eerst, en meer PDF's (B1, B2)
+  const { home, html, subs, pdfs, failed, links } = await collectPages(place.website, !!place.focus);
   const pages = [html];
   for (const sub of subs) if (sub) pages.push(sub);
   return extractAll(pages, home, () => Promise.all(pdfs.map((href) => fetchPdf(new URL(href)).catch(() => null))), failed.length, links);
@@ -419,7 +421,7 @@ async function stealthApply(body: Record<string, unknown>) {
   const home = homeUrl(body.home);
   const pages = stealthPages(body.pages);
   if (!pages.length) throw new Error("Geen pagina's");
-  const pdfs = Array.isArray(body.pdfs) ? (body.pdfs as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 2) : [];
+  const pdfs = Array.isArray(body.pdfs) ? (body.pdfs as unknown[]).filter((x): x is string => typeof x === "string").slice(0, FOCUS_PDFS) : [];
   const data = await extractAll(
     pages,
     home,
@@ -552,9 +554,9 @@ Deno.serve(async (req) => {
       if (error) throw error;
       result = data;
     } else if (body.action === "stealth_plan")
-      result = stealthPlan(homeUrl(body.home), String(body.html ?? ""), Array.isArray(body.sitemaps) ? body.sitemaps.map(String) : []);
+      result = stealthPlan(homeUrl(body.home), String(body.html ?? ""), Array.isArray(body.sitemaps) ? body.sitemaps.map(String) : [], body.focus === true);
     else if (body.action === "stealth_deeper")
-      result = stealthDeeper(homeUrl(body.home), stealthPages(body.pages), Array.isArray(body.seen) ? body.seen.map(String) : []);
+      result = stealthDeeper(homeUrl(body.home), stealthPages(body.pages), Array.isArray(body.seen) ? body.seen.map(String) : [], body.focus === true);
     else if (body.action === "stealth_apply") result = await stealthApply(body);
     else if (body.action === "inspect") result = await inspect(String(body.url), body.field ? String(body.field) : undefined);
     else if (body.action === "verify")
