@@ -23,6 +23,24 @@ export const SUBPAGES: { re: RegExp; max: number }[] = [
 
 export const MAX_SUBPAGES = 10;
 
+/**
+ * Kernfeit-focus (opdracht 31 oktober 2026, B1): voor een plek zonder vertrekregel gaan huisregels, FAQ, reglement,
+ * praktisch en voorwaarden vóór alles, met meer pagina's per soort. Tarieven en de rest komen daarna.
+ */
+export const FOCUS_SUBPAGES: { re: RegExp; max: number }[] = [
+  {
+    re: /aankomst|vertrek|check-?in|check-?out|inchecken|uitchecken|huisregel|huishoudelijk|reglement|voorwaarden|anreise|abreise|platzordnung|hausordnung|house-?rules|terms/i,
+    max: 4,
+  },
+  { re: /regels|praktisch|praktische|faq|veelgestelde|vragen/i, max: 3 },
+  ...SUBPAGES.slice(2),
+];
+
+/** PDF's per plek: 2, en 4 voor een plek zonder vertrekregel (B2) */
+export const MAX_PDFS = 2;
+export const FOCUS_PDFS = 4;
+export const pdfMax = (focus = false) => (focus ? FOCUS_PDFS : MAX_PDFS);
+
 /** Een kleine site (weinig eigen pagina's): dan lezen we ze allemaal, ook zonder herkenbaar trefwoord ("/over") */
 export const SMALL_SITE = 8;
 
@@ -56,8 +74,8 @@ export function pdfLinks(html: string, home: URL, max = 2): string[] {
 }
 
 /** Tweede laag: vanaf al gelezen pagina's (FAQ, huisregels) de links die sterk naar vertrektijden wijzen */
-export function deeperLinks(htmls: string[], home: URL, visited: string[], max = 3): string[] {
-  const strong = SUBPAGES[0].re;
+export function deeperLinks(htmls: string[], home: URL, visited: string[], max = 3, focus = false): string[] {
+  const strong = (focus ? FOCUS_SUBPAGES : SUBPAGES)[0].re;
   const out: string[] = [];
   for (const html of htmls)
     for (const l of extractLinks(html, home)) {
@@ -132,7 +150,8 @@ export function sitemapsFromRobots(robots: string): string[] {
  * De beste subpagina's: per soort een maximum, vertrekpagina's eerst, en binnen een soort de kortste adressen
  * (meestal de hoofdpagina van dat onderwerp, niet een blogbericht erover).
  */
-export function rankLinks(links: Link[], home: URL, max = MAX_SUBPAGES): string[] {
+export function rankLinks(links: Link[], home: URL, max = MAX_SUBPAGES, focus = false): string[] {
+  const table = focus ? FOCUS_SUBPAGES : SUBPAGES;
   const perRank = new Map<number, number>();
   const ranked = links
     .filter((l) => {
@@ -145,14 +164,14 @@ export function rankLinks(links: Link[], home: URL, max = MAX_SUBPAGES): string[
     })
     .map((l) => {
       const path = decodeURIComponent(new URL(l.url).pathname);
-      return { url: l.url, rank: SUBPAGES.findIndex((s) => s.re.test(path) || s.re.test(l.text)), len: path.length };
+      return { url: l.url, rank: table.findIndex((s) => s.re.test(path) || s.re.test(l.text)), len: path.length };
     })
     .filter((l) => l.rank >= 0)
     .sort((a, b) => a.rank - b.rank || a.len - b.len);
   const out: string[] = [];
   for (const l of ranked) {
     const n = perRank.get(l.rank) ?? 0;
-    if (n >= SUBPAGES[l.rank].max || out.includes(l.url)) continue;
+    if (n >= table[l.rank].max || out.includes(l.url)) continue;
     perRank.set(l.rank, n + 1);
     out.push(l.url);
     if (out.length >= max) break;

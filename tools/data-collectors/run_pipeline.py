@@ -65,7 +65,10 @@ def resolve_secrets(value: Any, env: dict[str, str]) -> Any:
     return value
 
 
-FILE_TYPES = {"file_csv": (".csv", ".tsv", ".txt"), "file_gpx": (".gpx",), "file_kml": (".kml", ".kmz")}
+FILE_TYPES = {"file_csv": (".csv", ".tsv", ".txt"), "file_gpx": (".gpx",), "file_kml": (".kml", ".kmz"),
+              "file_geojson": (".geojson", ".json")}
+# Gesloten databanken: nooit in bulk overnemen (Databankenwet, bronnenbeleid §1). Ook niet als iemand ze toevoegt.
+VERBODEN = {"campercontact", "park4night", "nkc", "acsi", "anwb", "promobil", "camperstop"}
 TYPES = {"api", "api_overpass", "bestanden", *FILE_TYPES}
 MARKDOWN_LINK = re.compile(r"^\[([^\]]*)\]\((https?://[^)\s]+)\)$")
 
@@ -108,6 +111,8 @@ def load_config(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]
             raise ConfigError(f"bron {name!r}: alleen a-z, 0-9 en _ (2–40 tekens), zoals in geo_bronnen")
         if name in seen:
             raise ConfigError(f"bron {name} staat er twee keer in")
+        if name in VERBODEN:
+            raise ConfigError(f"bron {name}: gesloten databank, niet toegestaan (Databankenwet, bronnenbeleid §1)")
         seen.add(name)
         kind = raw.get("type")
         if kind not in TYPES:

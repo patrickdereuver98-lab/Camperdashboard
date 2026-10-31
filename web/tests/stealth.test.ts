@@ -78,3 +78,14 @@ test("OIDC: elke actie hoort bij precies één workflow", () => {
   assert.equal(workflowClaimsOk(claims("data_pipeline.yml"), "stealth-lezer.yml"), false);
   assert.equal(workflowClaimsOk({ ...claims("data_pipeline.yml"), ref: "refs/heads/acceptatie" }, "data_pipeline.yml"), false);
 });
+
+test("kernfeit-focus: tot 4 PDF's, maar alleen in de ruimte die de 7 subpagina's overlaten (§3a)", () => {
+  const pdfs = [1, 2, 3, 4, 5].map((n) => `/reglement-${n}.pdf`);
+  const page = menu(pdfs);
+  // Nog niets gelezen behalve de startpagina: ruimte genoeg
+  assert.equal(stealthDeeper(home, [page], [home.href], true).pdfs.length, 4);
+  assert.equal(stealthDeeper(home, [page], [home.href]).pdfs.length, 2);
+  // Alle 7 subpagina's al gebruikt: niet meer dan de gewone 2
+  const seen = [home.href, ...[1, 2, 3, 4, 5, 6, 7].map((n) => `https://www.camping.nl/p${n}`)];
+  assert.equal(stealthDeeper(home, [page], seen, true).pdfs.length, 2);
+});

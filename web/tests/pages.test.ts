@@ -1,7 +1,7 @@
 // Welke pagina's de scraper leest: vertrekpagina's eerst, op adres én linktekst, met de sitemap als terugval.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addExtraPages, decodeHtml, emptySite, deeperLinks, extractLinks, homeCandidates, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
+import { addExtraPages, decodeHtml, emptySite, deeperLinks, extractLinks, homeCandidates, needsSitemap, onePage, parseSitemap, pdfLinks, pdfMax, rankLinks, sitemapsFromRobots } from "../supabase/functions/pipeline/pages.ts";
 
 const home = new URL("https://camping-dewei.nl/");
 
@@ -138,4 +138,20 @@ test("lege startpagina (geen links, geen velden) telt als haperende site; één 
   assert.equal(emptySite(0, 0), true);
   assert.equal(emptySite(1, 0), false);
   assert.equal(emptySite(0, 3), false);
+});
+
+test("kernfeit-focus (B1): zonder vertrekregel gaan voorwaarden, FAQ en praktisch vóór tarieven, met meer per soort", () => {
+  const links = ["/tarieven", "/prijzen", "/kosten", "/algemene-voorwaarden", "/huisregels", "/reglement", "/faq", "/veelgestelde-vragen",
+    "/praktisch", "/contact"].map((p) => ({ url: `https://camping-dewei.nl${p}`, text: "" }));
+  const gewoon = rankLinks(links, home).map((u) => new URL(u).pathname);
+  const focus = rankLinks(links, home, undefined, true).map((u) => new URL(u).pathname);
+  assert.ok(!gewoon.includes("/algemene-voorwaarden"), "zonder focus geen voorwaarden");
+  assert.deepEqual(focus.slice(0, 7), ["/reglement", "/huisregels", "/algemene-voorwaarden", "/faq", "/praktisch", "/veelgestelde-vragen", "/kosten"]);
+});
+
+test("kernfeit-focus (B2): 4 PDF's in plaats van 2", () => {
+  const html = [1, 2, 3, 4, 5].map((n) => `<a href="/docs/reglement-${n}.pdf">Reglement ${n}</a>`).join("");
+  assert.equal(pdfLinks(html, home).length, 2);
+  assert.equal(pdfLinks(html, home, pdfMax(true)).length, 4);
+  assert.equal(pdfMax(false), 2);
 });

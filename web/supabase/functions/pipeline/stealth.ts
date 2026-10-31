@@ -6,7 +6,7 @@
 //   3. stealth_deeper → gelezen pagina's in, tweede laag en PDF-links uit
 //   4. stealth_apply  → alle pagina's in, extractie en apply_stealth
 
-import { addExtraPages, deeperLinks, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, rankLinks } from "./pages.ts";
+import { addExtraPages, deeperLinks, extractLinks, MAX_PDFS, needsSitemap, onePage, parseSitemap, pdfLinks, pdfMax, rankLinks } from "./pages.ts";
 
 /** Hoogstens 7 subpagina's per site per ronde (bronnenbeleid §3a), plus de startpagina en 2 PDF's */
 export const STEALTH_SUBPAGES = 7;
@@ -18,24 +18,26 @@ export const STEALTH_PAGE_CHARS = 1_200_000;
 export type StealthPlan = { links: number; picked: string[]; wantSitemap: boolean };
 
 /** Subpagina's van de eerste laag. Zonder bruikbare links vraagt de lezer de sitemap op en roept dit opnieuw aan. */
-export function stealthPlan(home: URL, html: string, sitemaps: string[] = []): StealthPlan {
+export function stealthPlan(home: URL, html: string, sitemaps: string[] = [], focus = false): StealthPlan {
   const links = extractLinks(html, home);
-  let picked = rankLinks(links, home);
+  let picked = rankLinks(links, home, undefined, focus);
   const single = onePage(html) && links.length <= 2;
   const weak = needsSitemap(picked);
   const fromSitemap = sitemaps.flatMap((xml) => parseSitemap(xml).pages).map((url) => ({ url, text: "" }));
-  if (weak && fromSitemap.length) picked = rankLinks([...links, ...fromSitemap], home);
+  if (weak && fromSitemap.length) picked = rankLinks([...links, ...fromSitemap], home, undefined, focus);
   picked = addExtraPages(picked, links, home, needsSitemap(picked), single);
   return { links: links.length, picked: picked.slice(0, STEALTH_FIRST), wantSitemap: weak && !sitemaps.length && !single };
 }
 
-/** Tweede laag en PDF's, binnen wat er van de 7 subpagina's over is */
-export function stealthDeeper(home: URL, pages: string[], seen: string[]): { deeper: string[]; pdfs: string[] } {
+/**
+ * Tweede laag en PDF's, binnen wat er van de 7 subpagina's over is. Zonder vertrekregel (focus) mogen er tot 4 PDF's
+ * mee, maar alleen in de ruimte die de 7 subpagina's overlaten: het totaal per site blijft wat bronnenbeleid §3a toelaat.
+ */
+export function stealthDeeper(home: URL, pages: string[], seen: string[], focus = false): { deeper: string[]; pdfs: string[] } {
   const room = Math.max(0, STEALTH_SUBPAGES - Math.max(0, seen.length - 1));
-  return {
-    deeper: deeperLinks(pages, home, seen).slice(0, room),
-    pdfs: [...new Set(pages.flatMap((h) => pdfLinks(h, home)))].slice(0, 2),
-  };
+  const deeper = deeperLinks(pages, home, seen, 3, focus).slice(0, room);
+  const nPdf = focus ? Math.min(pdfMax(true), MAX_PDFS + room - deeper.length) : MAX_PDFS;
+  return { deeper, pdfs: [...new Set(pages.flatMap((h) => pdfLinks(h, home, nPdf)))].slice(0, nPdf) };
 }
 
 /** Pagina's van de lezer: alleen tekst, ingekort, en hoogstens startpagina + 7 subpagina's */

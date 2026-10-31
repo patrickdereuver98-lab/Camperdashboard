@@ -319,8 +319,14 @@ def parse_gpx(data: bytes, bron: str, keep_unknown: bool = False) -> ParseResult
 
 # ── Bestanden ────────────────────────────────────────────────────────────────
 
+def parse_geojson(data: bytes, bron: str, keep_unknown: bool) -> ParseResult:
+    """GeoJSON (zoals gemeentelijke open data van data.overheid.nl): zelfde omzetting als de API-respons."""
+    from map_api_data import map_raw  # hier pas: map_api_data gebruikt zelf parse_statics
+    return map_raw(json.loads(data.decode("utf-8-sig")), bron, keep_unknown)
+
+
 PARSERS = {".csv": parse_csv, ".tsv": parse_csv, ".txt": parse_csv, ".kml": parse_kml, ".kmz": parse_kml,
-           ".gpx": parse_gpx}
+           ".gpx": parse_gpx, ".geojson": parse_geojson, ".json": parse_geojson}
 
 
 def parse_file(path: str | Path, bron: str | None = None, keep_unknown: bool = False) -> ParseResult:

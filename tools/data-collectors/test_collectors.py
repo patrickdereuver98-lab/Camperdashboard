@@ -548,3 +548,43 @@ def test_archies_nederland_op_rechthoek_en_landcode():
     assert in_nl(52.1, 5.2, None)
     assert not in_nl(50.76, 4.62, "+3216474286")  # binnen de rechthoek, maar België
     assert not in_nl(42.5, 1.5, "+376843718")
+
+
+def test_osm_lozen_prijs_lengte():
+    """D1 en D2: zelfde regels als osm.ts; onbekende waarden blijven leeg."""
+    from map_api_data import map_overpass, osm_price
+    tags = {"tourism": "caravan_site", "name": "De Wei", "sanitary_dump_station": "customers", "maxlength": "7,5 m",
+            "charge": "€ 12,50", "fee": "yes"}
+    r = map_overpass([{"type": "node", "id": 1, "lat": 52.1, "lon": 5.1, "tags": tags}], "osm", False)
+    assert r.records[0]["faciliteiten"] == {"lozing": True, "prijs_eur": 12.5, "max_lengte_m": 7.5}
+    gratis = {"tourism": "caravan_site", "name": "Wei 2", "fee": "no", "maxlength": "40", "sanitary_dump_station": "maybe"}
+    r = map_overpass([{"type": "node", "id": 2, "lat": 52.1, "lon": 5.1, "tags": gratis}], "osm", False)
+    assert r.records[0]["faciliteiten"] == {"prijs_eur": 0.0}
+    assert osm_price("2 EUR/hour") is None and osm_price("10 € per persoon") is None and osm_price("gratis") == 0.0
+
+
+def test_gesloten_databank_wordt_geweigerd(tmp_path):
+    """E3: Campercontact, park4night, NKC en dergelijke nooit als bron (Databankenwet)."""
+    for name in ("campercontact", "park4night", "nkc"):
+        with pytest.raises(rp.ConfigError, match="Databankenwet"):
+            rp.load_config(_config(tmp_path, [{"bron": name, "type": "file_csv", "pad": "aanlevering/x.csv", "status": "uit"}]))
+
+
+def test_geojson_van_een_gemeente(tmp_path):
+    """E1: gemeentelijke open data als GeoJSON-bestand."""
+    from parse_statics import parse_file
+    f = tmp_path / "zwolle.geojson"
+    f.write_text(json.dumps({"type": "FeatureCollection", "features": [
+        {"type": "Feature", "id": "cp1", "geometry": {"type": "Point", "coordinates": [6.08, 52.51]},
+         "properties": {"naam": "Camperplaats Katerveer", "stroom": "ja"}}]}), encoding="utf-8")
+    r = parse_file(f, "gemeenten_nl")
+    assert len(r.records) == 1 and r.records[0]["naam"] == "Camperplaats Katerveer"
+    assert r.records[0]["lat"] == 52.51 and r.records[0]["faciliteiten"].get("stroom") is True
+
+
+def test_bronnen_json_klopt():
+    """E1, E2: voorbereide bronnen staan uit; alleen OSM en Archies draaien."""
+    active, inactive = rp.load_config(rp.DEFAULT_CONFIG)
+    assert [b["bron"] for b in active] == ["osm", "archies"]
+    assert {b["bron"]: b["status"] for b in inactive} == {
+        "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand", "partner_2": "wacht_op_bestand", "svr": "geblokkeerd"}
