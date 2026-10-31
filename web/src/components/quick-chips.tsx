@@ -50,12 +50,12 @@ export function QuickChips({ filters, onChange }: { filters: Filters; onChange: 
               }
               onChange(c.toggle());
             }}
-            className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold whitespace-nowrap transition-colors duration-150 disabled:opacity-60 ${
+            className={`flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-150 disabled:opacity-60 ${
               c.on
                 ? "border-forest bg-forest text-on-forest"
                 : c.brand
-                  ? "border-forest/40 bg-forest-tint text-forest hover:border-forest"
-                  : "border-line bg-surface text-ink hover:border-forest"
+                  ? "border-forest bg-forest-tint text-forest"
+                  : "border-line bg-surface text-ink-2 hover:border-ink-2/40 hover:text-ink"
             }`}
           >
             {icon[c.key]}

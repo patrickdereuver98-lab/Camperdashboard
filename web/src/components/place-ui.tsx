@@ -374,11 +374,12 @@ function PlaceRow({
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      className={`lift group relative flex min-h-[6.5rem] overflow-hidden rounded-xl bg-surface outline has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest ${
-        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent"
+      // Rand in plaats van schaduw (besluit eigenaar 30 oktober 2026): scherp en rustig, ook in een lange lijst
+      className={`group relative flex min-h-[6.5rem] overflow-hidden rounded-lg border bg-surface transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest ${
+        active ? "border-forest" : "border-line hover:border-ink-2/40"
       }`}
     >
-      <div className="relative w-24 shrink-0 self-stretch sm:w-36">
+      <div className="relative w-24 shrink-0 self-stretch border-r border-line sm:w-36">
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
         </ViewTransition>
@@ -386,7 +387,7 @@ function PlaceRow({
       <div className="flex min-w-0 flex-1 gap-2 py-2 pr-2 pl-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <DepartureChip place={place} compact />
-          <h3 className="truncate font-display text-base leading-snug font-semibold text-ink sm:text-lg">
+          <h3 className="truncate font-display text-base leading-snug font-semibold text-ink">
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
@@ -397,7 +398,7 @@ function PlaceRow({
           <div className="mt-auto flex min-w-0 items-center gap-2 text-sm">
             {place.ratingCount > 0 && place.ratingAvg ? (
               <span className="inline-flex shrink-0 items-center gap-1" aria-label={`Score ${scoreLabel(place.ratingAvg)} uit ${place.ratingCount} reviews`}>
-                <span className="rounded-md rounded-bl-none bg-forest px-1.5 font-display font-semibold text-on-forest">{scoreLabel(place.ratingAvg)}</span>
+                <span className="rounded-sm bg-forest px-1.5 font-display font-semibold text-on-forest tabular-nums">{scoreLabel(place.ratingAvg)}</span>
                 <span className="text-muted">({place.ratingCount})</span>
               </span>
             ) : null}
@@ -430,7 +431,7 @@ function RowPrice({ place }: { place: PlaceSummary }) {
           : undefined;
   return (
     <div className="text-right leading-tight">
-      <p className="font-display text-lg leading-none font-semibold text-ink">{price.value}</p>
+      <p className="font-display text-lg leading-none font-semibold text-ink tabular-nums">{price.value}</p>
       {sub && <p className="mt-0.5 text-sm whitespace-nowrap text-muted">{sub}</p>}
     </div>
   );
@@ -438,8 +439,8 @@ function RowPrice({ place }: { place: PlaceSummary }) {
 
 export function CardSkeleton() {
   return (
-    <div className="flex overflow-hidden rounded-xl bg-surface shadow-low">
-      <div className="h-36 w-[34%] max-w-36 shrink-0 animate-pulse bg-sunken sm:h-48 sm:w-60 sm:max-w-none" />
+    <div className="flex overflow-hidden rounded-lg border border-line bg-surface">
+      <div className="h-[6.5rem] w-24 shrink-0 animate-pulse bg-sunken sm:w-36" />
       <div className="flex-1 space-y-3 p-3 sm:p-4">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
         <div className="h-6 w-3/4 animate-pulse rounded bg-sunken" />

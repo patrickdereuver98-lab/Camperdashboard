@@ -376,7 +376,7 @@ function DecisionDetails({ place }: { place: Place }) {
   const priceDetails = !!price && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0 || nightTotal(place).total !== undefined);
   const known = !departureKind(place) || isIncomplete(place);
   return (
-    <section aria-label="Details over tijden en prijs" className="divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low">
+    <section aria-label="Details over tijden en prijs" className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
       {(note || times.length > 0 || known) && (
         <div className="space-y-1 px-4 py-3 text-ink-2">
           {note && <p className="text-sm">{note}</p>}

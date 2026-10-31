@@ -36,22 +36,22 @@ function Tile({
   extra?: React.ReactNode;
 }) {
   const bg = tone === "forest" ? "bg-forest-tint" : tone === "lake" ? "bg-lake-tint" : "bg-surface";
-  const head = tone === "forest" ? "text-forest" : tone === "lake" ? "text-lake" : "text-ink-2";
+  const head = tone === "forest" ? "text-forest" : tone === "lake" ? "text-lake" : "text-muted";
   return (
-    <div className={`flex min-h-28 flex-col rounded-xl p-3 shadow-low ${bg}`}>
-      <dt className={`flex items-center gap-1.5 text-sm font-semibold ${head}`}>
-        <Sign name={sign} size={20} state={known ? "on" : "unknown"} tone={tone === "lake" ? "lake" : "forest"} />
+    <div className={`flex min-h-24 flex-col p-3 ${bg}`}>
+      <dt className={`flex items-center gap-1.5 text-sm font-medium ${head}`}>
+        <Sign name={sign} size={18} state={known ? "on" : "unknown"} tone={tone === "lake" ? "lake" : "forest"} />
         {label}
       </dt>
-      <dd className={`mt-1 font-display text-[1.0625rem] leading-snug font-semibold text-balance ${known ? "text-ink" : "text-muted"}`}>{children}</dd>
+      <dd className={`mt-1 font-display text-[1.0625rem] leading-snug font-semibold text-balance tabular-nums ${known ? "text-ink" : "text-muted"}`}>{children}</dd>
       {extra && <dd className="mt-auto pt-1 text-sm">{extra}</dd>}
     </div>
   );
 }
 
 /**
- * Beslisblok (redesign 30 oktober 2026, UX-audit): vier tegels die samen de vraag "kan ik hier vannacht staan?"
- * beantwoorden. Vertrekken is het kernfeit en de enige tegel met kleur (bosgroen zonder vaste tijd, meerblauw voor
+ * Beslisblok (redesign 30 oktober 2026, UX-audit): vier cellen die samen de vraag "kan ik hier vannacht staan?"
+ * beantwoorden. Vertrekken is het kernfeit en de enige cel met kleur (bosgroen zonder vaste tijd, meerblauw voor
  * uitslapers). Onbekend staat er eerlijk als "Onbekend", met "Weet jij dit?" om het meteen door te geven.
  */
 export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?: number }) {
@@ -82,7 +82,8 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
   return (
     <section aria-labelledby="kort">
       <h2 id="kort" className="sr-only">In het kort</h2>
-      <dl className="grid grid-cols-2 gap-2">
+      {/* Eén blok met haarlijnen tussen de cellen (gap-px op de lijnkleur), geen losse kaartjes met schaduw */}
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line">
         <Tile
           sign="clock"
           label={free ? "Zonder vertrektijd" : late ? "Voor uitslapers" : "Vertrekken"}

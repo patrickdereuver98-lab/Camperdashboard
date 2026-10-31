@@ -38,7 +38,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
         <div
           // Waren er foto's maar laadde geen enkele, dan blijft het vak even groot: anders springt de pagina omhoog
-          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-xl ${photos.length ? "aspect-[2/1] sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
+          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-lg ${photos.length ? "h-[200px] sm:h-auto sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
           role="img"
           aria-label={`Nog geen foto van ${name}`}
         >
@@ -52,7 +52,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <div
         ref={track_}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="no-scrollbar flex aspect-[2/1] snap-x snap-mandatory overflow-x-auto bg-sunken sm:aspect-[21/9] sm:rounded-xl"
+        className="no-scrollbar flex h-[200px] snap-x snap-mandatory overflow-x-auto bg-sunken sm:h-auto sm:aspect-[21/9] sm:rounded-lg"
         // Scrollbaar vak: met Tab bereikbaar, dan bladeren met de pijltjes (WCAG 2.1.1)
         tabIndex={0}
         role="region"
@@ -91,16 +91,16 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       </div>
       {visible.length > 1 && (
         <>
-          <span className="animate-fade-in-late absolute right-2 bottom-2 rounded-full bg-black/50 px-2.5 py-0.5 text-sm font-semibold text-white tabular-nums">
+          <span className="animate-fade-in-late absolute right-2 bottom-2 rounded-sm bg-black/60 px-2.5 py-0.5 text-sm font-semibold text-white tabular-nums">
             {Math.min(index, visible.length - 1) + 1} / {visible.length}
           </span>
           <div className="absolute inset-y-0 left-2 hidden items-center sm:flex">
-            <button type="button" onClick={() => go(Math.max(0, index - 1))} aria-label="Vorige foto" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-lift">
+            <button type="button" onClick={() => go(Math.max(0, index - 1))} aria-label="Vorige foto" className="grid h-11 w-11 place-items-center rounded-md border border-line bg-surface">
               <Icon name="chevronLeft" />
             </button>
           </div>
           <div className="absolute inset-y-0 right-2 hidden items-center sm:flex">
-            <button type="button" onClick={() => go(Math.min(visible.length - 1, index + 1))} aria-label="Volgende foto" className="grid h-11 w-11 place-items-center rounded-full bg-surface shadow-lift">
+            <button type="button" onClick={() => go(Math.min(visible.length - 1, index + 1))} aria-label="Volgende foto" className="grid h-11 w-11 place-items-center rounded-md border border-line bg-surface">
               <Icon name="chevronRight" />
             </button>
           </div>

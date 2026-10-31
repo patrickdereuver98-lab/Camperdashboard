@@ -65,51 +65,55 @@ export function FacilityGrid({ placeId, placeName, values }: { placeId: string; 
 
   return (
     <>
-      <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {/* Eén raster met haarlijnen (gap-px op de lijnkleur). De laatste cel vult de rij, zodat er nooit een leeg grijs vak
+          staat; een geopende vraag maakt alleen de eigen cel hoger, de volgorde blijft gelijk. */}
+      <ul className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
         {FACILITIES.map((f) => {
           const v = values[f.key];
           const sign = f.icon as SignName;
           const isOpen = open === f.key;
           const st = state[f.key];
+          // Bovenaan uitgelijnd: wordt een buurcel hoger door een open vraag, dan blijft de tekst op dezelfde regel staan
+          const cell = "flex min-h-12 items-start gap-2 px-3 py-3.5 text-sm leading-5 last:col-span-full";
           if (v !== undefined)
             return (
-              <li key={f.key} className={`flex min-h-12 items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-semibold ${v ? "bg-forest-tint text-forest" : "bg-sunken text-ink-2"}`}>
-                <Sign name={sign} size={24} state={v ? "on" : "off"} />
+              <li key={f.key} className={`${cell} bg-surface ${v ? "font-semibold text-ink" : "text-muted"}`}>
+                <Sign name={sign} size={18} state={v ? "on" : "off"} />
                 {v ? f.label : NO[f.key]}
               </li>
             );
           if (st === "bedankt")
             return (
-              <li key={f.key} className="flex min-h-12 items-center gap-2 rounded-lg border border-dashed border-forest px-2.5 py-1.5 text-sm" role="status">
-                <Sign name={sign} size={24} state="unknown" />
-                <span>
+              <li key={f.key} className={`${cell} bg-forest-tint`} role="status">
+                <Sign name={sign} size={18} state="on" />
+                <span className="min-w-0">
                   <span className="block font-semibold text-ink">{f.label}: {answer[f.key] ? "ja" : "nee"}</span>
                   <span className="block text-muted">Bedankt, we controleren het</span>
                 </span>
               </li>
             );
           return (
-            <li key={f.key} className={`rounded-lg border border-line bg-surface ${isOpen ? "col-span-2 sm:col-span-3" : ""}`}>
-              <div className="flex min-h-12 items-center gap-2 py-1 pr-1 pl-2.5">
-                <Sign name={sign} size={24} state="unknown" />
-                <span className="min-w-0 flex-1 text-sm font-semibold text-ink-2">
+            <li key={f.key} className={`text-sm last:col-span-full ${isOpen ? "bg-forest-tint" : "bg-surface"}`}>
+              <div className="flex min-h-12 items-center gap-2 py-0.5 pr-0.5 pl-3">
+                <Sign name={sign} size={18} state="unknown" />
+                <span className="min-w-0 flex-1 leading-tight text-ink-2">
                   {f.label}
-                  <span className="block font-normal text-muted">Onbekend</span>
+                  <span className="block text-muted">Onbekend</span>
                 </span>
                 <button
                   type="button"
                   aria-expanded={isOpen}
                   aria-label={`${QUESTION[f.key]} Geef het door`}
                   onClick={() => setOpen(isOpen ? null : f.key)}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-forest-tint font-display text-lg font-semibold text-forest transition-transform active:scale-95 aria-expanded:bg-forest aria-expanded:text-on-forest"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line bg-surface font-display text-base font-semibold text-forest hover:border-forest aria-expanded:border-forest aria-expanded:bg-forest aria-expanded:text-on-forest"
                 >
                   ?
                 </button>
               </div>
               {isOpen && (
-                <div className="animate-fade-in border-t border-line px-2.5 pt-2 pb-2.5">
-                  <p className="text-sm text-ink-2">{QUESTION[f.key]}</p>
-                  <div role="group" aria-label={QUESTION[f.key]} className="mt-1.5 grid grid-cols-3 gap-2">
+                <div className="animate-fade-in px-3 pb-3">
+                  <p className="text-ink-2">{QUESTION[f.key]}</p>
+                  <div role="group" aria-label={QUESTION[f.key]} className="mt-1.5 grid grid-cols-2 gap-1.5">
                     {(
                       [
                         ["Ja", true],
@@ -122,7 +126,9 @@ export function FacilityGrid({ placeId, placeName, values }: { placeId: string; 
                         type="button"
                         disabled={st === "versturen"}
                         onClick={() => (value === null ? setOpen(null) : send(f.key, value))}
-                        className="min-h-11 rounded-lg border border-line px-2 text-sm font-semibold hover:border-forest disabled:opacity-60"
+                        className={`min-h-11 rounded-md border px-2 font-semibold disabled:opacity-60 ${
+                          value === null ? "col-span-2 border-transparent text-muted underline hover:text-ink" : "border-line bg-surface text-ink hover:border-forest"
+                        }`}
                       >
                         {label}
                       </button>
@@ -135,7 +141,7 @@ export function FacilityGrid({ placeId, placeName, values }: { placeId: string; 
         })}
       </ul>
       {err && (
-        <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert">
+        <p role="alert" className="mt-2 rounded-md border border-alert/40 bg-alert-tint px-3 py-2 text-sm text-alert">
           {err}
         </p>
       )}
