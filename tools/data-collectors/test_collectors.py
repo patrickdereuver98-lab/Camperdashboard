@@ -348,11 +348,32 @@ def test_bestanden_dan_merge_dan_promote_in_volgorde(tmp_path, monkeypatch):
         assert lists == [[{"naam": "De Hoeve", "lat": 52.1, "lon": 5.2, "bron_id": "partner_y:1", "faciliteiten": {"stroom": True}}]]
         assert fake.calls[0][1]["dry_run"] is False and fake.calls[1][1] == {"dry_run": False, "n": 5000}
         assert out["bronnen"] == [{"bron": "partner_y", "plekken": 1, "overgeslagen": {}}]
-        assert "geen toegestane bron: 1" in summary.read_text()
+        text = summary.read_text()
+        assert "geen toegestane bron: 1" in text
+        # Er ging er één door: geen waarschuwing
+        assert "[!WARNING]" not in text and out["waarschuwingen"] == []
     finally:
         for f in folder.iterdir():
             f.unlink()
         folder.rmdir()
+
+
+def test_waarschuwingen():
+    assert rp.warnings_for([{"bron": "a", "plekken": 3}, {"bron": "b", "plekken": 0, "wacht_op_bestand": "x.gpx"}],
+                           {"bekeken": 4, "nieuw": 0, "gekoppeld": 0, "gekoppeld_zonder_promotie": 2}) == [
+        "bron b leverde 0 plekken (wacht op bestand x.gpx)"]
+    assert rp.warnings_for([], {"bekeken": 0}) == []
+    assert rp.warnings_for([], {"bekeken": 3598, "nieuw": 0, "gekoppeld": 0, "geweigerd": 3598}) == [
+        "alle 3598 bekeken masters zijn geweigerd door de bronregels (100%)"]
+    assert "> [!WARNING]\n> x\n" in rp.summary_markdown([], {}, {"nieuw": 0}, False, ["x"])
+
+
+def test_mislukte_run_schrijft_samenvatting(tmp_path, monkeypatch):
+    summary = tmp_path / "s.md"
+    cfg = _config(tmp_path, [{"bron": "px", "type": "api", "url": "http://niet-https"}])
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    assert rp.main(["--config", str(cfg)]) == 1
+    assert "Dataketen mislukt" in summary.read_text() and "[!CAUTION]" in summary.read_text()
 
 
 def test_een_bron_faalt_dan_geen_merge(tmp_path):

@@ -243,14 +243,29 @@ class Pipeline:
         return self.client.post_json(self.url, {"action": action, **body}, headers=headers)
 
 
-def summary_markdown(report: list[dict[str, Any]], merged: Any, promoted: Any, dry_run: bool) -> str:
+def warnings_for(report: list[dict[str, Any]], promoted: Any) -> list[str]:
+    """Harde waarschuwingen voor de samenvatting: een bron zonder plekken, of een promotie die alles weigert."""
+    out = []
+    for r in report:
+        if not r.get("plekken"):
+            why = f" (wacht op bestand {r['wacht_op_bestand']})" if r.get("wacht_op_bestand") else ""
+            out.append(f"bron {r['bron']} leverde 0 plekken{why}")
+    if isinstance(promoted, dict) and promoted.get("bekeken"):
+        door = sum(int(promoted.get(k) or 0) for k in ("nieuw", "gekoppeld", "gekoppeld_zonder_promotie"))
+        if door == 0:
+            out.append(f"alle {promoted['bekeken']} bekeken masters zijn geweigerd door de bronregels (100%)")
+    return out
+
+
+def summary_markdown(report: list[dict[str, Any]], merged: Any, promoted: Any, dry_run: bool, warnings: list[str] = ()) -> str:
     rows = "\n".join(
         f"| {r['bron']} | {'wacht op bestand ' + r['wacht_op_bestand'] if r.get('wacht_op_bestand') else r['plekken']} | {sum(r['overgeslagen'].values())} |"
         for r in report
     )
     redenen = "\n".join(f"- {k}: {v}" for k, v in (promoted or {}).get("redenen", {}).items()) or "- geen"
+    alert = "".join(f"> [!WARNING]\n> {w}\n\n" for w in warnings)
     return (
-        f"## Dataketen{' (proef)' if dry_run else ''}\n\n| Bron | Plekken | Overgeslagen |\n|---|---|---|\n{rows}\n\n"
+        f"## Dataketen{' (proef)' if dry_run else ''}\n\n{alert}| Bron | Plekken | Overgeslagen |\n|---|---|---|\n{rows}\n\n"
         f"**merge_master**: {json.dumps(merged, ensure_ascii=False)}\n\n"
         f"**promote**: nieuw {promoted.get('nieuw')}, gekoppeld {promoted.get('gekoppeld')}, "
         f"alleen gekoppeld (niet door de bronregels) {promoted.get('gekoppeld_zonder_promotie', 0)}, "
@@ -275,11 +290,16 @@ def run(config: Path, dry_run: bool, env: dict[str, str], pipeline: Pipeline | N
     # Bij een proef staat er niets nieuws in geo_master; de promotie-proef laat zien wat er nu al door zou gaan
     promoted = pipeline.call("promote", dry_run=dry_run, n=5000)
     log.info("promote: %s", promoted)
+    warnings = warnings_for(report, promoted)
+    for w in warnings:
+        log.warning("%s", w)
+        # Annotatie bovenaan de run in GitHub Actions
+        print(f"::warning title=Dataketen::{w}", flush=True)
     out = {"bronnen": report, "niet_actief": [{"bron": b["bron"], "status": b.get("status")} for b in inactive],
-           "merge_master": merged, "promote": promoted, "dry_run": dry_run}
+           "merge_master": merged, "promote": promoted, "dry_run": dry_run, "waarschuwingen": warnings}
     if env.get("GITHUB_STEP_SUMMARY"):
         with open(env["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
-            f.write(summary_markdown(report, merged, promoted, dry_run))
+            f.write(summary_markdown(report, merged, promoted, dry_run, warnings))
     return out
 
 
@@ -299,6 +319,10 @@ def main(argv: list[str] | None = None) -> int:
         out = run(Path(args.config), args.dry_run, env)
     except (ConfigError, RuntimeError, OSError, ValueError, requests.RequestException) as e:
         log.error("%s", e)
+        # Ook een mislukte run laat in de samenvatting zien wat er misging
+        if env.get("GITHUB_STEP_SUMMARY"):
+            with open(env["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+                f.write(f"## Dataketen mislukt\n\n> [!CAUTION]\n> {str(e)[:1500]}\n\nNiets samengevoegd of gepromoveerd.\n")
         return 1
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0
