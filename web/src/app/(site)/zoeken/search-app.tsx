@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   applyFilters,
@@ -25,6 +25,7 @@ import { useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
 import { DestinationSearch } from "@/components/destination-search";
 import { FilterSheet } from "@/components/filter-sheet";
+import { QuickChips } from "@/components/quick-chips";
 import { Legend } from "@/components/legend";
 import { CardSkeleton, MapPick, PlaceCard } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
@@ -44,17 +45,17 @@ const SORTS: { key: SortKey; label: string; needsCenter?: boolean }[] = [
 /** Verwijderbare chips voor elke actieve verfijning (Baymard: gekozen filters zichtbaar houden) */
 function activeChips(f: Filters & { lengthFromVehicle?: boolean }): { label: string; without: Filters }[] {
   const chips: { label: string; without: Filters }[] = [];
+  // Stroom, lozen, gratis en 8+ staan al als snelle chip aan; hier alleen wat in de filtersheet is gekozen
   for (const fac of FACILITIES)
-    if (f.facilities.includes(fac.key)) chips.push({ label: fac.label, without: { ...f, facilities: f.facilities.filter((x) => x !== fac.key) } });
+    if (f.facilities.includes(fac.key) && fac.key !== "power" && fac.key !== "dumpStation") chips.push({ label: fac.label, without: { ...f, facilities: f.facilities.filter((x) => x !== fac.key) } });
   for (const k of f.kinds) chips.push({ label: KIND_LABEL[k], without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
-  if (f.free) chips.push({ label: "Gratis", without: { ...f, free: false } });
   if (f.maxPrice) chips.push({ label: `Tot € ${f.maxPrice}`, without: { ...f, maxPrice: undefined } });
   // Uitzetten blijft uit, ook als het camperprofiel een lengte heeft (lengte=0 in het adres)
   const len = String(f.minLength).replace(".", ",");
   if (f.minLength) chips.push({ label: f.lengthFromVehicle ? `Mijn camper (${len} m)` : `Camper ${len} m`, without: { ...f, minLength: undefined, lengthOff: true } });
   if (f.openNow) chips.push({ label: "Zonder gesloten plekken", without: { ...f, openNow: false } });
   if (f.priceUnknown && (f.free || f.maxPrice)) chips.push({ label: "Ook onbekende prijs", without: { ...f, priceUnknown: false } });
-  if (f.minScore) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
+  if (f.minScore && f.minScore !== 8) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
   return chips;
 }
 
@@ -122,9 +123,12 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <div className="min-w-0">
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
-        <DepartureTabs page={page} filters={filters} places={places} />
+        <DepartureIntro page={page} filters={filters} />
         <div className="sticky top-14 z-30 border-b border-line bg-surface px-3 pt-2 pb-1 sm:top-16 sm:px-6 sm:pt-3 sm:pb-3 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} />
+          <div className="mt-2 sm:mt-3">
+            <QuickChips filters={filters} onChange={update} />
+          </div>
           {/* Mobiel: één rustige rij zoals bij Booking (filters, sorteren, kaart); groter scherm: knoppen met rand */}
           <div className="mt-1 flex min-w-0 items-center divide-x divide-line sm:mt-3 sm:gap-2 sm:divide-x-0">
             <button
@@ -290,57 +294,14 @@ const INTRO: Record<DeparturePage, string> = {
   overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet zeker weten.",
 };
 
-/** De drie pagina's als tabbladen, met het aantal plekken bij de huidige zoekopdracht */
-function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filters: Filters; places: PlaceSummary[] | null }) {
-  const counts = useMemo(() => {
-    if (!places) return null;
-    const base = { ...filters, departure: undefined };
-    return {
-      alle: applyFilters(places, base).length,
-      vrij: applyFilters(places, { ...base, departure: "vrij" }).length,
-      uitslapers: applyFilters(places, { ...base, departure: "uitslapers" }).length,
-      overig: applyFilters(places, { ...base, departure: "overig" }).length,
-    };
-  }, [places, filters]);
-  const tabs: { key: DeparturePage | "alle"; label: string; href: string }[] = [
-    { key: "alle", label: "Alle", href: searchHref({ ...filters, departure: undefined }) },
-    ...(Object.keys(DEPARTURE_PAGES) as DeparturePage[]).map((k) => ({
-      key: k,
-      label: DEPARTURE_PAGES[k].tab,
-      href: searchHref({ ...filters, departure: k }),
-    })),
-  ];
-  const active = page ?? "alle";
-  const list = useRef<HTMLUListElement>(null);
-  useEffect(() => {
-    // Actief tabblad in beeld schuiven, alleen horizontaal
-    const ul = list.current;
-    const el = ul?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (ul && el && (el.offsetLeft < ul.scrollLeft || el.offsetLeft + el.offsetWidth > ul.scrollLeft + ul.clientWidth)) {
-      ul.scrollLeft = el.offsetLeft - ul.offsetLeft - 12;
-    }
-  }, [active, counts]);
+/**
+ * Kop en uitleg van de vertrekpagina's (Zonder vertrektijd, Uitslapers, Overige). De tabbladen zijn vervangen door de
+ * snelle chip "Zonder vertrektijd" (redesign 30 oktober 2026); de pagina's zelf blijven, met hun eigen kop.
+ */
+function DepartureIntro({ page, filters }: { page?: DeparturePage; filters: Filters }) {
+  if (!page) return null;
   return (
-    <nav aria-label="Vertrektijden" className="border-b border-line bg-surface px-3 pt-1 sm:px-6 sm:pt-3 lg:border-0 lg:bg-transparent lg:pt-6">
-      <ul ref={list} className="no-scrollbar -mx-3 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
-        {tabs.map((t) => (
-          <li key={t.key} className="shrink-0">
-            <Link
-              href={t.href}
-              replace
-              scroll={false}
-              aria-current={active === t.key ? "page" : undefined}
-              className={`flex h-11 items-center whitespace-nowrap gap-1.5 rounded-t-lg border-b-[3px] px-2.5 font-semibold sm:px-3 sm:text-base ${
-                active === t.key ? "border-forest text-forest" : "border-transparent text-ink-2 hover:text-forest"
-              }`}
-            >
-              {t.label}
-              {counts && <span className="text-sm font-normal text-muted">{counts[t.key].toLocaleString("nl-NL")}</span>}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      {page && (
+    <div className="border-b border-line bg-surface px-3 sm:px-6 lg:border-0 lg:bg-transparent lg:pt-6">
         <div className="pt-3 pb-1">
           <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
           <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
@@ -368,8 +329,7 @@ function DepartureTabs({ page, filters, places }: { page?: DeparturePage; filter
             </div>
           )}
         </div>
-      )}
-    </nav>
+    </div>
   );
 }
 

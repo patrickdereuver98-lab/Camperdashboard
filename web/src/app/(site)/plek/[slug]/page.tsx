@@ -4,10 +4,9 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getDepartureVisitors, getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
-import { arrivalText, cardPrice, departureLong, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, websiteLabel } from "@/lib/format";
+import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
 import { isIncomplete, lastChecked } from "@/lib/place-status";
-import { GiveDepartureButton } from "@/components/departure-form";
 import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
@@ -17,7 +16,7 @@ import { areaPath, breadcrumbLd, ISLANDS, ldJson, provinceSlug } from "@/lib/seo
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
-import { OpenChip, PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
+import { PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { pickFacilities } from "@/lib/facility-update";
 import { Legend } from "@/components/legend";
@@ -26,6 +25,9 @@ import { OwnerUpdate } from "./owner-update";
 import { ownerValues } from "@/lib/owner-update";
 import { PhotoUpload } from "./photo-upload";
 import { CrowdStatusCard } from "./crowd-status";
+import { DecisionGrid } from "./decision-grid";
+import { FacilityGrid } from "./facility-grid";
+import { DistanceFromMe } from "./live-facts";
 
 // Alleen de top-100 tijdens de build: alle plekken prerenderen liep op Vercel stuk (RangeError). De rest wordt bij het
 // eerste bezoek gerenderd ("blocking": params worden buiten <Suspense> afgewacht) en daarna uit de cache geserveerd.
@@ -44,12 +46,6 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
     alternates: { canonical: `/plek/${place.slug}` },
     openGraph: { ...OPEN_GRAPH, images: place.imageUrl ? [{ url: upgradePhotoUrl(place.imageUrl) }] : OPEN_GRAPH.images },
   };
-}
-
-type Row = { sign: SignName; label: string; value: string; known: boolean; tone?: "free" | "late" };
-
-function facilityText(f: (typeof FACILITY_ROWS)[number], v: boolean) {
-  return v ? f.yes : f.no;
 }
 
 const FACILITY_ROWS: { key: keyof Place; sign: SignName; label: string; yes: string; no: string }[] = [
@@ -146,30 +142,36 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        {/* Kop: wat en waar, in één blik */}
-        <header className="flex flex-col gap-3 pt-4 md:flex-row md:items-start md:justify-between md:pt-6">
+        {/* Kop (redesign 30 oktober 2026): naam, plaats, score en afstand in één blik; de rest staat in het beslisblok */}
+        <header className="flex flex-col gap-2 pt-3 md:flex-row md:items-start md:justify-between md:pt-6">
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-sm text-ink-2">
+            <h1 className="font-display text-[1.625rem] leading-tight font-semibold text-balance sm:text-4xl">{place.name}</h1>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-ink-2">
               <Sign name={KIND_SIGN[place.kind ?? "camperplaats"]} size={20} />
-              {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"}
-            </p>
-            <h1 className="mt-1 font-display text-[1.625rem] leading-tight font-semibold text-balance sm:text-4xl">{place.name}</h1>
-            <p className="mt-1 text-ink-2">
-              {address || place.town}, {place.province}{" "}
+              {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {address || place.town}, {place.province}
               <a href="#ligging" className="-mx-1 -my-3 inline-block px-1 py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
                 Kaart
               </a>
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-              <OpenChip place={place} />
-              {place.ratingCount > 0 && <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />}
-              {lastUpdate && (
-                <span className="text-sm text-muted">
-                  Laatste update: {formatDate(lastUpdate)}
-                  <OutdatedNote verifiedAt={place.verifiedAt} departureCheckedAt={place.departureCheckedAt} />
-                </span>
+              {place.ratingCount > 0 && place.ratingAvg ? (
+                <a href="#reviews" className="-my-2 inline-flex items-center gap-2 py-2">
+                  <span className="rounded-md rounded-bl-none bg-forest px-2 py-0.5 font-display font-semibold text-on-forest">{scoreLabel(place.ratingAvg)}</span>
+                  <span className="text-sm font-semibold text-ink-2 underline-offset-2 hover:underline">
+                    uit {pluralize(place.ratingCount, "review", "reviews")}
+                  </span>
+                </a>
+              ) : (
+                <a href="#reviews" className="-my-3 inline-block py-3 text-sm text-muted underline-offset-2 hover:underline">Nog geen reviews</a>
               )}
+              <DistanceFromMe place={place} />
             </div>
+            {lastUpdate && (
+              <p className="mt-1 text-sm text-muted">
+                Laatste update: {formatDate(lastUpdate)}
+                <OutdatedNote verifiedAt={place.verifiedAt} departureCheckedAt={place.departureCheckedAt} />
+              </p>
+            )}
           </div>
           <div className="hidden shrink-0 gap-2 md:flex">
             <SaveButton slug={place.slug} variant="full" />
@@ -180,7 +182,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {/* Mobiel: beslissen, voorzieningen, beschrijving, ligging, ervaringen, praktisch. Groot scherm: zijkolom. */}
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
-            <Decision place={place} visitors={visitors} />
+            <DecisionGrid place={place} visitors={visitors} />
+            <DecisionDetails place={place} />
             {/* Foto toevoegen staat onder het kernblok: eerst beslissen, dan bijdragen */}
             <div className="-mt-4 min-h-11">
               <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
@@ -193,7 +196,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                 <h2 id="voorzieningen" className="font-display text-xl font-semibold sm:text-2xl">Voorzieningen</h2>
                 <Legend />
               </div>
-              <Facilities place={place} />
+              <FacilityGrid placeId={place.id} placeName={place.name} values={pickFacilities(place)} />
             </section>
 
             {/* Over deze plek: alleen hele zinnen uit de eigen tekst van de plek (zie lib/description.ts) */}
@@ -347,136 +350,74 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
  * Het beslisblok: de vier dingen die een camperaar eerst wil weten, als rustige lijst. Vertrekken staat bovenaan
  * en is het enige dat mag opvallen (bosgroen bij geen vaste vertrektijd, meerblauw bij uitslapers).
  */
-function Decision({ place, visitors = 0 }: { place: Place; visitors?: number }) {
-  const kind = departureKind(place);
-  // Groen bij geen vaste vertrektijd: een bron is genoeg (besluit eigenaar 18 oktober 2026). Met voorwaarde of
-  // afgewezen door beheer is het geen "vrij" meer.
-  const free = kind === "vrij";
-  const late = kind === "uitslapers";
+/**
+ * Wat niet in de tegels van het beslisblok past: voorwaarden bij de vertrektijd, de andere tijden, de prijs in detail
+ * (totaal voor 2 personen, toeristenbelasting, extra kosten) en de maximale lengte. Alleen wat we weten.
+ */
+function DecisionDetails({ place }: { place: Place }) {
   const claimed = place.departure === "vrij" || place.departure === "per24";
-  const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
-  const departure = departureLong(place);
-  const incomplete = isIncomplete(place);
   // De bronzin staat alleen in beheer, niet op de site (besluit eigenaar 23 oktober 2026)
   const note =
     claimed && place.departureCheck === "voorwaardelijk"
       ? "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na."
-      : free && place.departureCheck === "bevestigd" && place.departureCheckedAt
-          ? `Gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
+      : departureKind(place) === "vrij" && place.departureCheck === "bevestigd" && place.departureCheckedAt
+          ? `Vertrektijd gecontroleerd ${place.departureCheckedBy === "eigenaar" ? "bij de eigenaar" : "door ons"} op ${formatDate(place.departureCheckedAt)}.`
           : undefined;
   // Later vertrekken tegen betaling hoort bij de vertrektijd, niet tussen de extra kosten
   const lateOption = place.priceExtras?.find((x) => x.label.startsWith("Later vertrekken"));
   const times = [
     lateOption && `${lateOption.label} kan voor ${eur(lateOption.amount)}`,
-    arrivalText(place),
-    place.accessHours && `Slagboom of poort open ${place.accessHours}`,
-    place.access24h && !place.accessHours && "24 uur per dag toegankelijk",
+    place.accessHours && place.checkinFrom && `Slagboom of poort open ${place.accessHours}`,
     place.maxStayNights && `Maximaal ${pluralize(place.maxStayNights, "nacht", "nachten")}`,
     reservationRuleOf(place) && RESERVATION_TEXT[reservationRuleOf(place)!],
   ].filter(Boolean) as string[];
   const price = cardPrice(place);
   const extras = (place.priceExtras ?? []).filter((x) => x !== lateOption);
-  const rows: Row[] = [
-    {
-      sign: "euro",
-      label: price?.perPerson ? (price.perNight ? "Per persoon per nacht" : "Per persoon") : "Per nacht",
-      value: price?.value ?? "Onbekend",
-      known: !!price,
-    },
-    {
-      sign: "calendar",
-      label: "Open",
-      value: place.openAllYear ? "Hele jaar" : (place.season?.replace(" – ", " t/m ") ?? "Onbekend"),
-      known: place.openAllYear === true || !!place.season,
-    },
-    {
-      sign: "length",
-      label: "Max. lengte",
-      value: place.maxLengthM ? `${String(place.maxLengthM).replace(".", ",")} m` : "Onbekend",
-      known: !!place.maxLengthM,
-    },
-  ];
+  const priceDetails = !!price && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0 || nightTotal(place).total !== undefined);
+  const known = !departureKind(place) || isIncomplete(place);
   return (
-    <section aria-labelledby="kort" className="overflow-hidden rounded-xl bg-surface shadow-low">
-      <h2 id="kort" className="sr-only">In het kort</h2>
-      <dl className="divide-y divide-line">
-        {/* Vertrekken: het kernfeit, als antwoord bovenaan (concept "Eén vraag", 29 oktober 2026). Label klein en in
-            de kleur van de vertrekgroep, het antwoord groot, daaronder aankomst en de andere tijden. */}
-        <div className={`px-4 py-4 sm:px-5 ${known ? (late ? "bg-lake-tint" : "bg-forest-tint") : ""}`}>
-          <dt className={`flex items-center gap-2 text-sm font-semibold ${free ? "text-forest" : late ? "text-lake" : "text-ink-2"}`}>
-            <Sign name="clock" size={24} state={free || (known && !claimed) ? "on" : "unknown"} tone={late ? "lake" : "forest"} />
-            {free ? "Zonder vertrektijd" : late ? "Voor uitslapers" : "Vertrekken"}
-          </dt>
-          <dd className={`mt-1.5 font-display text-[1.625rem] leading-tight font-semibold tracking-tight text-balance sm:text-3xl ${known ? "text-ink" : "text-muted"}`}>
-            {departure}
-          </dd>
-          {note && <dd className="mt-1 text-sm text-ink-2">{note}</dd>}
-          {/* Bevestigd door bezoekers met een account die dezelfde regel doorgaven (RPC departure_visitors) */}
-          {known && visitors > 0 && (
-            <dd className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-ink-2" data-testid="departure-visitors">
-              <Icon name="check" size={16} className={late ? "text-lake" : "text-forest"} />
-              Volgens {pluralize(visitors, "bezoeker", "bezoekers")} klopt dit
-            </dd>
+    <section aria-label="Details over tijden en prijs" className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+      {(note || times.length > 0 || known) && (
+        <div className="space-y-1 px-4 py-3 text-ink-2">
+          {note && <p className="text-sm">{note}</p>}
+          {times.length > 0 && <p>{times.join(". ")}.</p>}
+          {/* Eigenaren vullen het zelf in: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026) */}
+          {known && <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de tijden in" />}
+        </div>
+      )}
+      {priceDetails && (
+        <div className="space-y-1 px-4 py-3 text-sm text-ink-2">
+          <NightTotalLine place={place} />
+          {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}
+          {place.touristTaxIncluded !== undefined && !onlyTaxOpen(place) && (
+            <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>
           )}
-          {times.length > 0 && <dd className="mt-1 text-ink-2">{times.join(". ")}.</dd>}
-          {incomplete && (
-            <dd className="mt-2">
-              <p className="text-sm text-ink-2">
-                We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten
-                andere camperaars hoe laat ze weg moeten.
-              </p>
-              <div className="mt-2">
-                <GiveDepartureButton placeId={place.id} placeName={place.name} />
-              </div>
-              {/* Eigenaren vullen het zelf in: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026) */}
-              <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de vertrektijd in" />
-            </dd>
-          )}
-          {!known && !incomplete && (
-            <dd className="mt-1 text-sm text-ink-2">
-              Bel even voor je gaat.
-              <ReportProblem placeId={place.id} placeName={place.name} topic="vertrektijd" label="Weet jij de vertrektijd?" />
-              <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de vertrektijd in" />
-            </dd>
+          {extras.length > 0 && (
+            <details className="group">
+              <summary className="-my-2 flex h-11 cursor-pointer list-none items-center gap-1 font-semibold text-forest [&::-webkit-details-marker]:hidden">
+                Extra kosten ({extras.length})
+                <Icon name="chevronDown" size={16} className="transition-transform group-open:rotate-180" />
+              </summary>
+              <ul className="divide-y divide-line">
+                {extras.map((x) => (
+                  <li key={x.label} className="flex justify-between gap-4 py-1.5">
+                    <span>{x.label}</span>
+                    <span className="text-right font-semibold text-ink">{extraLabel(x)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-muted">Prijzen kunnen per seizoen verschillen.</p>
+            </details>
           )}
         </div>
-
-        {rows.map((r) => (
-          <div key={r.label} className="grid grid-cols-[auto_1fr] items-center gap-x-3 px-4 py-3 [&>dd~dd]:col-span-2">
-            <dt className="flex items-center gap-3 text-ink-2">
-              <Sign name={r.sign} size={28} state={r.known ? "on" : "unknown"} />
-              {r.label}
-            </dt>
-            <dd className={`ml-auto text-right font-display text-[1.0625rem] leading-snug font-semibold ${r.known ? "" : "text-muted"}`}>{r.value}</dd>
-            {r.sign === "euro" && (price || place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0) && (
-              <dd className="mt-1 pl-10 text-sm text-ink-2">
-                <NightTotalLine place={place} />
-                {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}
-                {place.touristTaxIncluded !== undefined && !onlyTaxOpen(place) && (
-                  <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>
-                )}
-                {extras.length > 0 && (
-                  <details className="group mt-1">
-                    <summary className="-my-2 flex h-11 cursor-pointer list-none items-center gap-1 font-semibold text-forest [&::-webkit-details-marker]:hidden">
-                      Extra kosten ({extras.length})
-                      <Icon name="chevronDown" size={16} className="transition-transform group-open:rotate-180" />
-                    </summary>
-                    <ul className="divide-y divide-line">
-                      {extras.map((x) => (
-                        <li key={x.label} className="flex justify-between gap-4 py-1.5">
-                          <span>{x.label}</span>
-                          <span className="text-right font-semibold text-ink">{extraLabel(x)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-1 text-muted">Prijzen kunnen per seizoen verschillen.</p>
-                  </details>
-                )}
-              </dd>
-            )}
-          </div>
-        ))}
-      </dl>
+      )}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Sign name="length" size={26} state={place.maxLengthM ? "on" : "unknown"} />
+        <span className="text-ink-2">Max. lengte</span>
+        <span className={`ml-auto font-display font-semibold ${place.maxLengthM ? "" : "text-muted"}`}>
+          {place.maxLengthM ? `${String(place.maxLengthM).replace(".", ",")} m` : "Onbekend"}
+        </span>
+      </div>
     </section>
   );
 }
@@ -518,36 +459,6 @@ function NightTotalLine({ place }: { place: Place }) {
       {t.parts.length > 1 && ` (${t.parts.map((x) => `${x.label.toLowerCase()} ${eur(x.amount)}`).join(", ")})`}.
       {noPower && " Geen stroomtoeslag genoemd."}
     </p>
-  );
-}
-
-/** Voorzieningen als labels: aanwezig en niet aanwezig zichtbaar, onbekend samen in één regel */
-function Facilities({ place }: { place: Place }) {
-  const known = FACILITY_ROWS.filter((f) => place[f.key] !== undefined);
-  const unknown = FACILITY_ROWS.filter((f) => place[f.key] === undefined);
-  if (!known.length) return <p className="mt-2 text-ink-2">We weten nog niet welke voorzieningen er zijn.</p>;
-  return (
-    <>
-      <ul className="mt-3 flex flex-wrap gap-2">
-        {known.map((f) => {
-          const v = place[f.key] as boolean;
-          return (
-            <li
-              key={f.key}
-              className={`inline-flex items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-sm font-semibold ${v ? "bg-forest-tint text-forest" : "bg-sunken text-ink-2"}`}
-            >
-              <Sign name={f.sign} size={24} state={v ? "on" : "off"} />
-              {facilityText(f, v)}
-            </li>
-          );
-        })}
-      </ul>
-      {unknown.length > 0 && (
-        <p className="mt-2 text-sm text-muted">
-          Nog onbekend: {listNl(unknown.map((f) => f.label))}.
-        </p>
-      )}
-    </>
   );
 }
 

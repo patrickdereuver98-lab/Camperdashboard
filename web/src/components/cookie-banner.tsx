@@ -49,71 +49,85 @@ export function CookieBanner() {
     setDetails(false);
   };
 
-  // Klein en onderaan, zodat het zoekveld en de resultaten zichtbaar blijven. Met "Zelf instellen" klapt de uitleg open.
+  // Eén smalle rij boven de navigatiebalk (redesign 30 oktober 2026): de resultaten blijven zichtbaar. Met "Zelf instellen"
+  // klapt de uitleg open.
   return (
     <div
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-titel"
-      className={`fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-xl rounded-xl bg-surface shadow-float md:bottom-6 ${details ? "p-4" : "px-3 py-2.5"}`}
+      // Een balk over de volle breedte met een haarlijn, direct boven de navigatie; geen zwevend kaartje (besluit eigenaar
+      // 30 oktober 2026)
+      className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-50 max-h-[70vh] overflow-y-auto border-t border-line bg-surface md:bottom-0"
     >
-      {details ? (
-        <>
-          <h2 id="cookie-titel" className="font-display text-lg font-semibold">
-            Cookies en statistieken
-          </h2>
-          <p className="mt-1.5 text-ink-2">
-            We slaan alleen op wat nodig is om de site te laten werken. Geef je toestemming, dan tellen we ook hoe de site
-            wordt gebruikt. <Link href="/cookies" className="font-semibold text-forest underline">Meer weten</Link>
-          </p>
-          <div className="mt-4 space-y-3 rounded-xl bg-sunken p-4">
-            <label className="flex items-start gap-3">
-              <input type="checkbox" checked disabled className="mt-1 h-5 w-5 accent-[var(--forest)]" />
-              <span>
-                <span className="font-semibold">Noodzakelijk</span>
-                <span className="block text-sm text-muted">Je bewaarde reis, je cookiekeuze en inloggen voor beheerders. Altijd aan.</span>
-              </span>
-            </label>
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={analytics}
-                onChange={(e) => setAnalytics(e.target.checked)}
-                className="mt-1 h-5 w-5 accent-[var(--forest)]"
-              />
-              <span>
-                <span className="font-semibold">Statistieken</span>
-                <span className="block text-sm text-muted">
-                  We tellen welke pagina&apos;s en zoekopdrachten veel worden gebruikt. Dat staat in onze eigen database in de EU,
-                  zonder IP-adres.
+      <div className={`mx-auto max-w-3xl ${details ? "p-4" : "py-1.5 pr-1.5 pl-4"}`}>
+        {details ? (
+          <>
+            <h2 id="cookie-titel" className="font-display text-lg font-semibold">
+              Cookies en statistieken
+            </h2>
+            <p className="mt-1.5 text-ink-2">
+              We slaan alleen op wat nodig is om de site te laten werken. Geef je toestemming, dan tellen we ook hoe de site
+              wordt gebruikt. <Link href="/cookies" className="font-semibold text-forest underline">Meer weten</Link>
+            </p>
+            <div className="mt-4 space-y-3 rounded-lg border border-line p-4">
+              <label className="flex items-start gap-3">
+                <input type="checkbox" checked disabled className="mt-1 h-5 w-5 accent-[var(--forest)]" />
+                <span>
+                  <span className="font-semibold">Noodzakelijk</span>
+                  <span className="block text-sm text-muted">Je bewaarde reis, je cookiekeuze en inloggen voor beheerders. Altijd aan.</span>
                 </span>
-              </span>
-            </label>
-          </div>
-          <button type="button" onClick={() => close(analytics)} className="mt-4 min-h-12 w-full rounded-lg bg-forest px-5 font-semibold text-on-forest">
-            Keuze opslaan
-          </button>
-        </>
-      ) : (
-        <>
-          {/* Een smalle balk: bij het eerste bezoek blijft de pagina zelf zichtbaar (review 23 oktober 2026) */}
-          <p id="cookie-titel" className="text-[0.9375rem] leading-snug text-ink-2">
-            Mogen we tellen hoe de site wordt gebruikt, zonder cookies van derden?{" "}
-            <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
-              Zelf instellen
+              </label>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={analytics}
+                  onChange={(e) => setAnalytics(e.target.checked)}
+                  className="mt-1 h-5 w-5 accent-[var(--forest)]"
+                />
+                <span>
+                  <span className="font-semibold">Statistieken</span>
+                  <span className="block text-sm text-muted">
+                    We tellen welke pagina&apos;s en zoekopdrachten veel worden gebruikt. Dat staat in onze eigen database in de EU,
+                    zonder IP-adres.
+                  </span>
+                </span>
+              </label>
+            </div>
+            <button type="button" onClick={() => close(analytics)} className="mt-4 min-h-12 w-full rounded-md bg-forest px-5 font-semibold text-on-forest">
+              Keuze opslaan
             </button>
-          </p>
-          {/* Accepteren en weigeren zijn even zwaar (richtlijn Autoriteit Persoonsgegevens) */}
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => close(true)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
-              Toestaan
-            </button>
-            <button type="button" onClick={() => close(false)} className="min-h-11 rounded-lg border border-forest bg-forest-tint px-3 font-semibold text-forest">
-              Alleen nodig
-            </button>
-          </div>
-        </>
-      )}
+          </>
+        ) : (
+          <>
+            {/* Eén rij: vraag links, twee even zware knoppen rechts (richtlijn Autoriteit Persoonsgegevens) */}
+            <div className="flex items-center gap-2">
+              <p id="cookie-titel" className="min-w-0 flex-1 text-sm leading-snug text-ink-2">
+                Mogen we bezoek tellen, zonder cookies van derden?{" "}
+                <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
+                  Zelf instellen
+                </button>
+              </p>
+              <button
+                type="button"
+                onClick={() => close(true)}
+                aria-label="Ja, tel mijn bezoek"
+                className="min-h-11 shrink-0 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint"
+              >
+                Ja
+              </button>
+              <button
+                type="button"
+                onClick={() => close(false)}
+                aria-label="Nee, alleen wat nodig is"
+                className="min-h-11 shrink-0 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint"
+              >
+                Nee
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
