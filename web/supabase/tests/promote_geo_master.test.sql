@@ -1,4 +1,4 @@
--- Tests voor public.promote_geo_master (migratie 20261031090000). Draai met web/supabase/tests/run.sh.
+-- Tests voor public.promote_geo_master (migraties 20261031090000 en 20261031170000). Draai met web/supabase/tests/run.sh.
 -- Elke controle is een assert: één fout stopt het script (ON_ERROR_STOP) met de melding.
 
 -- Bestaande plek in places: De Bosrand in Utrecht, met een website (beheer of scraper vulde die)
@@ -137,6 +137,52 @@ declare r jsonb := public.promote_geo_master(false);
 begin
   assert (select promotie from public.geo_master where master_id = 'partner_a:12') = 'nieuw', format('Steiger 14: %s', r);
   assert not private.geo_nummers_botsen('Steiger 12', 'Steiger') and private.geo_nummers_botsen('Weide 2', 'Weide 3');
+end $$;
+
+-- ── Koppelen zonder promotie (A3, besluit 31 oktober): één tier-4-bron naast een bestaande plek ───────────────
+
+insert into public.places (slug, name, lat, lng, power) values ('de-kolk-zwolle', 'Camperplaats De Kolk', 52.5100, 6.0800, true);
+insert into public.geo_master (master_id, geohash, naam, namen, lat, lon, bron_ids, faciliteiten, match_score) values
+  -- 30 m van De Kolk, alleen gids_b (tier 4): niet promoveren, wel koppelen
+  ('gids_b:20', 'u1kc', 'De Kolk', '{De Kolk}', 52.51027, 6.0800, '{gids_b:20}', '{"stroom": false}', 1),
+  -- Ver van alles, alleen gids_b: gewoon geweigerd, geen koppeling
+  ('gids_b:21', 'u1kc', 'Het Hoge Veld', '{Het Hoge Veld}', 52.48, 6.02, '{gids_b:21}', '{}', 1);
+
+do $$
+declare r jsonb := public.promote_geo_master(true);
+begin
+  assert (r ->> 'gekoppeld_zonder_promotie')::int = 1, format('proef: %s', r);
+  assert (select place_id from public.geo_master where master_id = 'gids_b:20') is null, 'proef schreef een koppeling';
+end $$;
+
+do $$
+declare r jsonb := public.promote_geo_master(false);
+begin
+  assert (r ->> 'nieuw')::int = 0, format('niets nieuws: %s', r);
+  assert r -> 'redenen_gekoppeld' = '{"één bron uit tier 3–5: een tweede toegestane bron is nodig": 1}'::jsonb, format('%s', r);
+  assert (select place_id from public.geo_master where master_id = 'gids_b:20') = (select id from public.places where slug = 'de-kolk-zwolle'), 'koppeling ontbreekt';
+  assert (select promotie || ' / ' || promotie_reden from public.geo_master where master_id = 'gids_b:20') like 'gekoppeld / één bron%', 'reden van de koppeling';
+  assert (select power from public.places where slug = 'de-kolk-zwolle') is true, 'gekoppelde plek gewijzigd';
+  assert (select place_id from public.geo_master where master_id = 'gids_b:21') is null and
+         (select promotie from public.geo_master where master_id = 'gids_b:21') = 'geweigerd', 'Het Hoge Veld';
+  -- Een gekoppelde master wordt niet steeds opnieuw bekeken
+  assert (public.promote_geo_master(true) ->> 'gekoppeld_zonder_promotie')::int = 0, 'opnieuw gekoppeld';
+end $$;
+
+-- ── Opgeruimde plek komt niet terug (open punt 73) ──────────────────────────────────────────────
+
+insert into private.verwijderde_plekken (id, name, reden, gegevens)
+values (gen_random_uuid(), 'Camperplaats Het Ven', 'geen website', '{"lat": 52.2000, "lng": 5.6000}');
+insert into public.geo_master (master_id, geohash, naam, namen, lat, lon, bron_ids, faciliteiten, match_score) values
+  ('partner_a:30', 'u1kc', 'Het Ven', '{Het Ven}', 52.20040, 5.6000, '{partner_a:30}', '{}', 1),
+  ('partner_a:31', 'u1kc', 'De Lange Akker', '{De Lange Akker}', 52.2100, 5.6000, '{partner_a:31}', '{}', 1);
+do $$
+declare r jsonb := public.promote_geo_master(false);
+begin
+  assert (select promotie_reden from public.geo_master where master_id = 'partner_a:30') like 'eerder opgeruimd%', format('Het Ven: %s', r);
+  assert not exists (select 1 from public.places where name = 'Het Ven'), 'opgeruimde plek opnieuw aangemaakt';
+  assert (select promotie from public.geo_master where master_id = 'partner_a:31') = 'nieuw', '1,1 km verderop is een andere plek';
+  assert not has_function_privilege('anon', 'private.geo_eerder_verwijderd(public.geo_master)', 'execute');
 end $$;
 
 select 'promote_geo_master: alle tests geslaagd' as uitkomst;

@@ -86,16 +86,23 @@ neutraal en goed leesbaar op kleine schermen; vervangt Fraunces + Inter.
 
 ## 6. Hoeken (één schaal, overal)
 
+Besluit eigenaar 30 oktober 2026 ("anti-AI-slop"): maximaal 8 px. Nieuwe en herziene onderdelen volgen deze schaal;
+oudere blokken met 12 of 16 px gaan mee bij hun volgende ronde (zie `docs/specs/README.md`, punt 75).
+
 | Element | Hoek |
 |---|---|
-| Knoppen, invoervelden, kleine panelen | 8 px (`rounded-lg`) |
-| Kaarten, blokken, kaartweergave | 12 px (`rounded-xl`) |
-| Sheets, grote vlakken | 16 px (`rounded-2xl`), alleen aan de bovenkant bij een sheet |
-| Chips en badges | rond (`rounded-full`) of 6 px (`rounded-md`) voor vertrekbadges |
+| Kaarten, blokken, rasters, plekrij | 8 px (`rounded-lg`) |
+| Knoppen, invoervelden, snelle chips, "?"-knop | 6 px (`rounded-md`) |
+| Score en kleine labels | 2–6 px (`rounded-sm` of `rounded-md`) |
+| Sheets | 16 px (`rounded-2xl`), alleen aan de bovenkant |
+| Rond (`rounded-full`) | alleen kleine pictogramknoppen (hartje) en stipjes |
 
 ## 7. Diepte en schaduw
 
-Drie lagen, warm getint (geen grijze schaduw op zandpapier), altijd met een haarlijn in plaats van een rand:
+Besluit eigenaar 30 oktober 2026: randen in plaats van zachte schaduwen. Kaarten, rasters en balken hebben een
+1 px rand (`border-line`); actief = `border-forest`, hover = iets donkerdere rand. Een raster met cellen is één blok
+met haarlijnen ertussen (`gap-px` op `bg-line`), geen losse tegels. Schaduw alleen nog voor wat echt boven de pagina
+zweeft (sheets, toast, kaartpop-up). De tokens hieronder blijven bestaan voor oudere onderdelen tot hun volgende ronde:
 
 | Token | Gebruik |
 |---|---|
@@ -123,7 +130,7 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 | Pagina-overgang (foto morpht) | ±380 ms | `cubic-bezier(0.2, 0, 0, 1)` |
 
 - Alleen `transform` en `opacity` animeren. Nooit `top`, `width`, `height` of `transition: all`.
-- Kaarten: bij hover 1 px omhoog + `shadow-raised`; bij indrukken `scale(0.985)`.
+- Kaarten: bij hover alleen een iets donkerdere rand; geen sprong, geen schaduw.
 - Knoppen: bij indrukken `scale(0.98)`.
 - `prefers-reduced-motion`: alles direct in eindstand.
 
@@ -135,7 +142,7 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 - **Invoerveld**: 44 px, 8 px hoek, 1 px haarlijn, focus = bosgroene ring (`focus:ring-2 focus:ring-forest`, nooit
   alleen een andere randkleur).
 - **Plekkaart (rij)**: foto ±⅓ links, rechts: naam, "Soort in plaats", afstand, vertrekbadge + aankomst,
-  voorzieningen + prijs onderaan. 12 px hoek, `shadow-low`.
+  voorzieningen + prijs onderaan. 8 px hoek, 1 px rand, geen schaduw; foto recht afgesneden met een haarlijn ernaast.
 - **Vertrekbadge**: 6 px hoek, klein klokje, getint vlak (groen/blauw/grijs). Het enige gekleurde element op een kaart.
 - **Lege foto**: zandkleurig vlak met een klein lijnicoon van het soort plek; geen tekening.
 - **Lege staat, fout, laden**: zie Design Brief; laden altijd met skeletvormen van de echte layout.
