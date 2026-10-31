@@ -133,6 +133,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
 | `private.stealth_queue` | place_id*, reason* (`onleesbaar`, `weinig`, `kernfeit`, `herlezen`), attempts*, next_attempt_at*, done_at, last_error, created_at* | Lease van een uur (`next_stealth_batch`); wegschrijven via `apply_stealth` → `apply_scrape` |
 | `private.verwijderde_plekken` | id*, osm_type, osm_id (uniek met osm_type), slug, name, website, reden*, gegevens* (hele rij), removed_at* | Gevuld door `private.verwijder_onbereikbare_plekken()` (cron `onbereikbaar-opruimen`, 06:13): niet gepubliceerd, niet vastgezet, geen prijs of vertrektijd, geen Beheer-velden, en geen website of een website die ook de stealth-lezer niet kon lezen. Trigger `weiger_verwijderde_plek` slaat een nieuwe rij met hetzelfde OSM-nummer over. Terugzetten: rij hier weghalen en de plek uit `gegevens` opnieuw invoegen |
+| `manual_review` | place_id* (pk, → places, cascade), requires_manual_review* (standaard true), reden*, sinds* | Migratie `20261031180000_kernfeit_booster.sql` (B3). Alleen `service_role`; beheer leest via `admin_manual_review()`. Gevuld door `private.markeer_handmatig()` (cron `handmatig-markeren`, 06:23): website ook met de stealth-lezer onleesbaar en nog geen Beheer-velden. Eigen tabel, want een update van `places` zet `updated_at` en de status |
 
 ### Bronnenlaag (schema `bron`, dataplan Fase 0)
 
@@ -215,6 +216,9 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `apply_scrape`, `next_scrape_batch`, `enqueue_scrape`, `ingest_osm`, `ingest_osm_points`, `process_osm_staging`, `osm_response`, `export_snapshot` | pipeline/systeem | Data-import |
 | `place_completeness(p)`, `place_meets_must_haves(p)` | trigger | Score en harde eisen voor publicatie |
 | `promote_geo_master(p_dry_run, p_limit)` | `service_role` (pipeline-actie `promote`) | `geo_master` → `places`: alleen bij een toegestane bron (tier 1–2, of twee uit 3–5), binnen Nederland (rechthoek en ≤ 16 km van `nl_towns`), een echte naam en geen wild- of paalkamperen. Bestaande plek (≤ 60 m, of ≤ 150 m met lijkende naam) → alleen koppelen, ook als de master niet door de bronregels komt (migratie `20261031170000_koppelen_zonder_promotie.sql`, besluit 31 okt: dan `gekoppeld` met het bezwaar als reden, `places` blijft gelijk); niets nieuws op een plek uit `private.verwijderde_plekken`; anders een nieuwe plek met alleen de waarden die de bron noemt (status via de trigger, meestal concept). Standaard een proef |
+| `admin_manual_review()` | beheerder | Plekken voor handmatig nakijken (B3), bovenaan in Beheer, Plekken |
+| `admin_concept_redenen()` | beheerder, `service_role` | Concepten per hoofdreden (C1): geen contact, te weinig kernfeiten (met of zonder vertrekregel), onder de drempel, vastgezet. Regel in `private.concept_reden(p)`, gelijk aan `places_before_write` |
+| `next_scrape_batch(n)`, `next_stealth_batch(…)` | `service_role` | Geven sinds 31 okt ook `focus` (= geen vertrekregel): de scraper leest dan eerst huisregels, FAQ, reglement, praktisch en voorwaarden, en tot 4 PDF's (B1, B2). `enqueue_stale_scrape` en `enqueue_stealth` lezen plekken zonder vertrekregel na 14 in plaats van 30 dagen, en eerst. `private.forceer_kernfeit_scrape()` zet concepten met website en zonder regel eenmalig in de wachtrij (C2). `ingest_osm_points` koppelt een servicepunt alleen aan de dichtstbijzijnde plek binnen 150 m (D3) |
 
 ## Datavalidatie en bedrijfsregels
 

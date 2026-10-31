@@ -216,7 +216,9 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
     except Exception:  # noqa: BLE001 - geen robots.txt is ook goed
         pass
 
-    plan = pipe.call("stealth_plan", home=home, html=html)
+    # Zonder vertrekregel (next_stealth_batch.focus): huisregels, FAQ, reglement en voorwaarden eerst, meer PDF's
+    focus = bool(place.get("focus"))
+    plan = pipe.call("stealth_plan", home=home, html=html, focus=focus)
     if plan.get("wantSitemap"):
         xmls = []
         for sm in (sitemaps_from_robots(robots) + [urljoin(origin, "/sitemap.xml")])[:2]:
@@ -229,7 +231,7 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
             except Exception:  # noqa: BLE001
                 continue
         if xmls:
-            plan = pipe.call("stealth_plan", home=home, html=html, sitemaps=xmls)
+            plan = pipe.call("stealth_plan", home=home, html=html, sitemaps=xmls, focus=focus)
 
     pages, failed, seen = [html], 0, [home]
 
@@ -248,7 +250,7 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
                 pages.append(h)
 
     read_all(plan.get("picked", []))
-    deeper = pipe.call("stealth_deeper", home=home, pages=pages, seen=seen)
+    deeper = pipe.call("stealth_deeper", home=home, pages=pages, seen=seen, focus=focus)
     read_all(deeper.get("deeper", []))
 
     pdfs = []

@@ -27,6 +27,7 @@ create table public.places (
   power boolean, water boolean, dump_station boolean, toilet boolean, shower boolean, wifi boolean, dogs boolean,
   open_all_year boolean, reservation boolean,
   max_length_m numeric,
+  price_eur numeric,
   capacity integer check (capacity > 0 and capacity < 2000),
   website text, phone text,
   status text not null default 'draft' check (status in ('draft', 'published', 'hidden')),

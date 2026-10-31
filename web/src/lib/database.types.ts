@@ -1141,6 +1141,10 @@ export type Database = {
         Args: { p_fields: string[]; p_place_id: string }
         Returns: undefined
       }
+      admin_manual_review: {
+        Args: never
+        Returns: { place_id: string; reden: string; sinds: string }[]
+      }
       admin_merge_places: {
         Args: { p_keep: string; p_remove: string }
         Returns: Json

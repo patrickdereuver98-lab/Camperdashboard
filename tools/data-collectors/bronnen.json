@@ -15,5 +15,41 @@
     "pad": "aanlevering/archies_nl.gpx",
     "betrouwbaarheid": 3,
     "status": "actief"
+  },
+  {
+    "bron_id": "gemeenten_nl",
+    "naam": "Gemeentelijke open data (data.overheid.nl): camperplaatsen",
+    "type": "bestanden",
+    "map": "aanlevering/gemeenten",
+    "betrouwbaarheid": 1,
+    "status": "voorbereid",
+    "notitie": "Per gemeente een GeoJSON- of CSV-download van data.overheid.nl in aanlevering/gemeenten/ (open licentie, geen versleuteling nodig). Daarna in geo_bronnen op toegestaan en hier status actief."
+  },
+  {
+    "bron_id": "partner_1",
+    "naam": "Partnerexport 1",
+    "type": "file_csv",
+    "pad": "aanlevering/partner_1.csv",
+    "betrouwbaarheid": 3,
+    "status": "wacht_op_bestand",
+    "notitie": "Versleuteld aanleveren als aanlevering/partner_1.csv.enc (secret AANLEVERING_SLEUTEL); geo_bronnen staat op geblokkeerd tot de licentie rond is."
+  },
+  {
+    "bron_id": "partner_2",
+    "naam": "Partnerexport 2",
+    "type": "file_gpx",
+    "pad": "aanlevering/partner_2.gpx",
+    "betrouwbaarheid": 4,
+    "status": "wacht_op_bestand",
+    "notitie": "Versleuteld aanleveren als aanlevering/partner_2.gpx.enc; geo_bronnen staat op geblokkeerd tot de licentie rond is."
+  },
+  {
+    "bron_id": "svr",
+    "naam": "SVR (Stichting Vrije Recreatie)",
+    "type": "file_gpx",
+    "pad": "aanlevering/svr.gpx",
+    "betrouwbaarheid": 4,
+    "status": "geblokkeerd",
+    "notitie": "Geblokkeerd: geen bestand en geen toestemming (README 74). Niet aanzetten zonder schriftelijke toestemming."
   }
 ]

@@ -182,6 +182,17 @@ begin
   assert (select promotie_reden from public.geo_master where master_id = 'partner_a:30') like 'eerder opgeruimd%', format('Het Ven: %s', r);
   assert not exists (select 1 from public.places where name = 'Het Ven'), 'opgeruimde plek opnieuw aangemaakt';
   assert (select promotie from public.geo_master where master_id = 'partner_a:31') = 'nieuw', '1,1 km verderop is een andere plek';
+end $$;
+
+-- Prijs uit de bron: alleen een getal tussen 0 en 150
+insert into public.geo_master (master_id, geohash, naam, namen, lat, lon, bron_ids, faciliteiten, match_score) values
+  ('partner_a:40', 'u1kc', 'De Prijsweide', '{De Prijsweide}', 52.2600, 5.4500, '{partner_a:40}', '{"prijs_eur": 12.5}', 1),
+  ('partner_a:41', 'u1kc', 'De Tekstweide', '{De Tekstweide}', 52.2700, 5.4500, '{partner_a:41}', '{"prijs_eur": "12 euro"}', 1);
+do $$
+begin
+  perform public.promote_geo_master(false);
+  assert (select price_eur from public.places where name = 'De Prijsweide') = 12.5, 'prijs niet overgenomen';
+  assert (select price_eur from public.places where name = 'De Tekstweide') is null, 'tekst mag geen prijs worden';
   assert not has_function_privilege('anon', 'private.geo_eerder_verwijderd(public.geo_master)', 'execute');
 end $$;
 
