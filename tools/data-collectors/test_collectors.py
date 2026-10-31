@@ -7,7 +7,7 @@ import io
 import pytest
 import requests
 
-from api_client import ApiClient, ApiError, RetryableHTTPError, parse_retry_after, write_json
+from api_client import ApiClient, ApiError, RetryableHTTPError, USER_AGENT, parse_retry_after, write_json
 from parse_statics import dedupe_ids, parse_csv, parse_file, parse_gpx, parse_kml, parse_value
 
 
@@ -438,7 +438,7 @@ def test_config_in_lijstvorm_met_status_en_markdown_url(tmp_path):
             rp.load_config(cfg)
 
 
-def test_overpass_get_zonder_accept_en_mirror_bij_406(tmp_path, monkeypatch):
+def test_overpass_get_met_accept_alles_en_mirror_bij_406(tmp_path, monkeypatch):
     """406 van overpass-api.de (zoals vanaf GitHub Actions op 30 oktober): door naar de volgende server."""
     monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
     calls = []
@@ -456,8 +456,16 @@ def test_overpass_get_zonder_accept_en_mirror_bij_406(tmp_path, monkeypatch):
 
     res = rp.collect_api({"bron": "osm", "type": "api_overpass", "url": "https://overpass-api.de/api/interpreter", "query": "Q"}, {}, client_factory=Fake)
     assert [c[1].split("/")[2] for c in calls] == ["overpass-api.de", "overpass.private.coffee"]
-    assert all(c[0] == "GET" and c[2] == {"data": "Q"} and c[3] is None for c in calls)
+    assert all(c[0] == "GET" and c[2] == {"data": "Q"} and c[3] == "*/*" for c in calls)
     assert res.records[0]["bron_id"] == "osm:node/7"
+
+
+def test_eigen_user_agent_gaat_echt_mee():
+    """requests.Session heeft al "python-requests/…": setdefault liet die staan, en Overpass weigerde hem (31 oktober)."""
+    c = ApiClient()
+    assert c.session.headers["User-Agent"] == USER_AGENT
+    assert c.session.headers["Accept"] == "application/json"
+    assert ApiClient(headers={"User-Agent": "Partner/2"}).session.headers["User-Agent"] == "Partner/2"
 
 
 def test_overpass_alle_servers_weg_is_een_fout(tmp_path):

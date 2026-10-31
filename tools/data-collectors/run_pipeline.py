@@ -145,10 +145,10 @@ def fetch_overpass(b: dict[str, Any], client_factory: Callable[..., ApiClient] =
     """Query als ?data= (GET, zoals index.ts), eerst op de url uit bronnen.json en dan op de mirrors. Per server de
     gewone retries (429/5xx); een 4xx (zoals 406) gaat meteen door naar de volgende."""
     client = client_factory(timeout=240, max_attempts=3, initial_wait=10, max_wait=120)
-    # Geen Accept-header: overpass-api.de antwoordt op Accept: application/json met 406 (zie overpass() in index.ts)
+    # Accept */* zoals fetch in index.ts: overpass-api.de antwoordt op Accept: application/json met 406
     session = getattr(client, "session", None)
     if session is not None:
-        session.headers.pop("Accept", None)
+        session.headers["Accept"] = "*/*"
     errors = []
     for url in dict.fromkeys([b["url"], *OVERPASS_MIRRORS]):
         try:

@@ -126,8 +126,10 @@ class ApiClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.session = session or requests.Session()
-        self.session.headers.setdefault("User-Agent", USER_AGENT)
-        self.session.headers.setdefault("Accept", "application/json")
+        # Gewoon zetten, niet setdefault: een nieuwe Session heeft al "python-requests/…" en "*/*", en Overpass weigert
+        # die algemene User-Agent (406 en 429, run 3 van 31 oktober 2026). Eigen headers hieronder gaan wel voor.
+        self.session.headers["User-Agent"] = USER_AGENT
+        self.session.headers["Accept"] = "application/json"
         if headers:
             self.session.headers.update(headers)
         stop = stop_after_attempt(max_attempts)
