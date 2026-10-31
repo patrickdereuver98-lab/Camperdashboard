@@ -7,7 +7,7 @@ import io
 import pytest
 import requests
 
-from api_client import ApiClient, ApiError, RetryableHTTPError, parse_retry_after, write_json
+from api_client import ApiClient, ApiError, RetryableHTTPError, USER_AGENT, parse_retry_after, write_json
 from parse_statics import dedupe_ids, parse_csv, parse_file, parse_gpx, parse_kml, parse_value
 
 
@@ -348,11 +348,32 @@ def test_bestanden_dan_merge_dan_promote_in_volgorde(tmp_path, monkeypatch):
         assert lists == [[{"naam": "De Hoeve", "lat": 52.1, "lon": 5.2, "bron_id": "partner_y:1", "faciliteiten": {"stroom": True}}]]
         assert fake.calls[0][1]["dry_run"] is False and fake.calls[1][1] == {"dry_run": False, "n": 5000}
         assert out["bronnen"] == [{"bron": "partner_y", "plekken": 1, "overgeslagen": {}}]
-        assert "geen toegestane bron: 1" in summary.read_text()
+        text = summary.read_text()
+        assert "geen toegestane bron: 1" in text
+        # Er ging er één door: geen waarschuwing
+        assert "[!WARNING]" not in text and out["waarschuwingen"] == []
     finally:
         for f in folder.iterdir():
             f.unlink()
         folder.rmdir()
+
+
+def test_waarschuwingen():
+    assert rp.warnings_for([{"bron": "a", "plekken": 3}, {"bron": "b", "plekken": 0, "wacht_op_bestand": "x.gpx"}],
+                           {"bekeken": 4, "nieuw": 0, "gekoppeld": 0, "gekoppeld_zonder_promotie": 2}) == [
+        "bron b leverde 0 plekken (wacht op bestand x.gpx)"]
+    assert rp.warnings_for([], {"bekeken": 0}) == []
+    assert rp.warnings_for([], {"bekeken": 3598, "nieuw": 0, "gekoppeld": 0, "geweigerd": 3598}) == [
+        "alle 3598 bekeken masters zijn geweigerd door de bronregels (100%)"]
+    assert "> [!WARNING]\n> x\n" in rp.summary_markdown([], {}, {"nieuw": 0}, False, ["x"])
+
+
+def test_mislukte_run_schrijft_samenvatting(tmp_path, monkeypatch):
+    summary = tmp_path / "s.md"
+    cfg = _config(tmp_path, [{"bron": "px", "type": "api", "url": "http://niet-https"}])
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    assert rp.main(["--config", str(cfg)]) == 1
+    assert "Dataketen mislukt" in summary.read_text() and "[!CAUTION]" in summary.read_text()
 
 
 def test_een_bron_faalt_dan_geen_merge(tmp_path):
@@ -438,7 +459,7 @@ def test_config_in_lijstvorm_met_status_en_markdown_url(tmp_path):
             rp.load_config(cfg)
 
 
-def test_overpass_get_zonder_accept_en_mirror_bij_406(tmp_path, monkeypatch):
+def test_overpass_get_met_accept_alles_en_mirror_bij_406(tmp_path, monkeypatch):
     """406 van overpass-api.de (zoals vanaf GitHub Actions op 30 oktober): door naar de volgende server."""
     monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
     calls = []
@@ -456,8 +477,16 @@ def test_overpass_get_zonder_accept_en_mirror_bij_406(tmp_path, monkeypatch):
 
     res = rp.collect_api({"bron": "osm", "type": "api_overpass", "url": "https://overpass-api.de/api/interpreter", "query": "Q"}, {}, client_factory=Fake)
     assert [c[1].split("/")[2] for c in calls] == ["overpass-api.de", "overpass.private.coffee"]
-    assert all(c[0] == "GET" and c[2] == {"data": "Q"} and c[3] is None for c in calls)
+    assert all(c[0] == "GET" and c[2] == {"data": "Q"} and c[3] == "*/*" for c in calls)
     assert res.records[0]["bron_id"] == "osm:node/7"
+
+
+def test_eigen_user_agent_gaat_echt_mee():
+    """requests.Session heeft al "python-requests/…": setdefault liet die staan, en Overpass weigerde hem (31 oktober)."""
+    c = ApiClient()
+    assert c.session.headers["User-Agent"] == USER_AGENT
+    assert c.session.headers["Accept"] == "application/json"
+    assert ApiClient(headers={"User-Agent": "Partner/2"}).session.headers["User-Agent"] == "Partner/2"
 
 
 def test_overpass_alle_servers_weg_is_een_fout(tmp_path):

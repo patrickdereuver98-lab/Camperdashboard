@@ -134,19 +134,23 @@ body {
   overflow-x: clip;
 }
 
-/* Koppen: zelfde lettertype, strakker gespatieerd en evenwichtig afgebroken */
-.font-display {
-  font-family: var(--font-display);
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
-p {
-  text-wrap: pretty;
+/* Koppen: zelfde lettertype, strakker gespatieerd en evenwichtig afgebroken. In @layer base, zodat utilities als
+   `truncate` voorgaan: `text-wrap` en `white-space` zetten allebei text-wrap-mode, en een regel buiten een laag won
+   altijd (waardoor `truncate` op koppen en alinea's niets deed; gevonden bij het redesign van 30 oktober 2026). */
+@layer base {
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
 }
 
 /* Prijzen en aantallen: cijfers even breed, zodat ze rustig onder elkaar staan */

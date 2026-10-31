@@ -43,3 +43,26 @@ test("voorzieningen doorgeven: alleen wat anders is gaat mee, met de oude waarde
   });
   expect(Object.keys((sent!.p_payload as { voorzieningen: object }).voorzieningen)).toEqual(["dump_station"]);
 });
+
+test("voorzieningenraster: '?' vraagt in de cel zelf, één tik op Ja stuurt het naar beheer", async ({ page }) => {
+  type Snap2 = { slug: string; power?: boolean; water?: boolean; dumpStation?: boolean; toilet?: boolean; shower?: boolean; wifi?: boolean; dogs?: boolean };
+  const p = (snapshot as unknown as { places: Snap2[] }).places.find((x) => top.has(x.slug) && x.wifi === undefined);
+  test.skip(!p, "geen plek met onbekende wifi in de snapshot");
+  let sent: Record<string, unknown> | null = null;
+  await page.route(`${SUPABASE}/rest/v1/**`, async (r) => {
+    const name = new URL(r.request().url()).pathname.split("/").pop();
+    if (name === "submit_place") {
+      sent = r.request().postDataJSON();
+      return r.fulfill({ json: "44444444-4444-4444-8444-444444444444" });
+    }
+    if (name === "crowd_status") return r.fulfill({ json: { level: null, reports: 0, last_at: null, counts: {} } });
+    await r.fulfill(r.request().method() === "GET" ? { json: [] } : { json: null });
+  });
+  await page.goto(`/plek/${p!.slug}`);
+  const ask = page.getByRole("button", { name: "Is hier wifi? Geef het door" });
+  await ask.click();
+  await expect(ask).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("group", { name: "Is hier wifi?" }).getByRole("button", { name: "Ja" }).click();
+  await expect(page.getByText("Wifi: ja")).toBeVisible();
+  expect(sent).toMatchObject({ p_kind: "correctie", p_payload: { onderwerp: "voorzieningen", voorzieningen: { wifi: { was: null, nieuw: true } } } });
+});

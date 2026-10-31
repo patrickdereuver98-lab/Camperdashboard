@@ -97,13 +97,13 @@ export function DepartureForm({
 }
 
 /** Knop op de plekpagina van een onvolledige plek: opent het formulier van Doe mee voor deze ene plek */
-export function GiveDepartureButton({ placeId, placeName }: { placeId: string; placeName: string }) {
+export function GiveDepartureButton({ placeId, placeName, label }: { placeId: string; placeName: string; label?: string }) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   if (sent)
     return (
       <p role="status" className="flex min-h-11 items-center gap-1.5 font-semibold text-forest">
-        <Icon name="check" size={18} /> Bedankt. We controleren het en zetten het daarna op de site.
+        <Icon name="check" size={18} /> {label ? "Bedankt, we controleren het." : "Bedankt. We controleren het en zetten het daarna op de site."}
       </p>
     );
   return (
@@ -111,9 +111,14 @@ export function GiveDepartureButton({ placeId, placeName }: { placeId: string; p
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold text-forest transition-colors hover:border-forest"
+        className={
+          label
+            ? "-my-1 flex min-h-11 items-center gap-1.5 font-semibold text-forest underline underline-offset-2"
+            : "flex h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold text-forest transition-colors hover:border-forest"
+        }
       >
-        <Icon name="clock" size={18} /> Vertrektijd doorgeven
+        <Icon name="clock" size={18} /> {label ?? "Vertrektijd doorgeven"}
+        {label && <span className="sr-only"> De vertrektijd doorgeven</span>}
       </button>
       <DepartureForm
         place={open ? { id: placeId, name: placeName } : null}
