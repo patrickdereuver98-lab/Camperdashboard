@@ -253,6 +253,7 @@ def summary_markdown(report: list[dict[str, Any]], merged: Any, promoted: Any, d
         f"## Dataketen{' (proef)' if dry_run else ''}\n\n| Bron | Plekken | Overgeslagen |\n|---|---|---|\n{rows}\n\n"
         f"**merge_master**: {json.dumps(merged, ensure_ascii=False)}\n\n"
         f"**promote**: nieuw {promoted.get('nieuw')}, gekoppeld {promoted.get('gekoppeld')}, "
+        f"alleen gekoppeld (niet door de bronregels) {promoted.get('gekoppeld_zonder_promotie', 0)}, "
         f"geweigerd {promoted.get('geweigerd')}\n\nRedenen:\n{redenen}\n"
     )
 

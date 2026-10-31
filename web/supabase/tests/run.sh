@@ -21,5 +21,6 @@ psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/stub_schema.sql
 \i $migrations/20261030120000_geo_master.sql
 \i $migrations/20261031090000_promote_geo_master.sql
+\i $migrations/20261031170000_koppelen_zonder_promotie.sql
 \i $here/promote_geo_master.test.sql
 SQL
