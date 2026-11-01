@@ -37,10 +37,12 @@ Niet doen (dit verraadt een tekstgenerator):
 - Kleuren vast: zandpapier, bosgroen, avondzon, meerblauw, bosachtige donkere modus. Lettertype: Geist voor alles
   (geen Fraunces of andere sierletters). Eén accent per scherm; kleur betekent iets.
 - Professioneel en rustig, niet speels: geen getekende landschappen op kaarten, geen gevulde icoonblokjes, geen dikke
-  randen (1 px of een schaduw), hoeken volgens de schaal (knop 8, kaart 12, sheet 16 px).
-- Diepte met schaduw in lagen (`shadow-low`, `shadow-raised`, `shadow-float` uit `globals.css`), niet met randen om alles heen.
-  Belangrijk ligt hoger: zoekkaart en sheets het hoogst, kaarten laag, achtergrondvlakken plat.
-- Afronding volgt de stijlgids: sheets 16 px, kaarten 12 px, knoppen en velden 8 px, chips rond.
+  randen (1 px), hoeken volgens de stijlgids.
+- Randen van 1 px in plaats van zachte schaduwen (besluit eigenaar 30 oktober 2026, README 75): blokken en rasters
+  met `border-line`, lijsten met een lijn onder elke rij. Schaduw (`shadow-float`) alleen voor wat echt zweeft:
+  sheets, toast, kaartpop-up, en een knop op een foto.
+- Afronding maximaal `rounded-lg` (8 px) voor blokken, `rounded-md` voor knoppen in een blok; sheets 16 px; chips
+  volgens de stijlgids.
 - Beweging kort en vloeiend (`--ease-out`, 150–300 ms): als antwoord op een handeling, en content die rustig
   binnenkomt (`.enter`, `.lift`). Alleen `transform` en `opacity`; respecteer `prefers-reduced-motion`.
 - Tikdoelen minstens 44 px, tekst minstens 14 px, contrast minstens 4,5:1 in licht en donker.
