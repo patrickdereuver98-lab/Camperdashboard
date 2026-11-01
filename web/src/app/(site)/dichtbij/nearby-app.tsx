@@ -9,7 +9,7 @@ import { usePlaces, useVehicle } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
 import { useMediaQuery } from "@/lib/use-media";
 import type { PlaceSummary } from "@/lib/types";
-import { CardSkeleton, MapPick, PlaceCard } from "@/components/place-ui";
+import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { Landscape } from "@/components/landscape";
@@ -131,13 +131,13 @@ export function NearbyApp() {
           {status === "locating" ? "Locatie bepalen…" : "Gebruik mijn locatie"}
         </button>
         {(status === "denied" || status === "unavailable") && (
-          <div role="alert" className="mt-5 rounded-xl bg-alert-tint p-4 text-alert">
+          <div role="alert" className="mt-5 rounded-lg border border-alert/40 bg-alert-tint p-4 text-alert">
             <p>
               {status === "denied"
                 ? "Je hebt geen toegang tot je locatie gegeven. Sta het toe in de instellingen van je browser, of zoek op plaatsnaam."
                 : "Je locatie kon niet worden bepaald. Probeer het opnieuw of zoek op plaatsnaam."}
             </p>
-            <Link href="/zoeken" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-surface px-4 font-semibold text-ink shadow-low">
+            <Link href="/zoeken" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold text-ink hover:border-forest">
               <Icon name="search" size={18} /> Zoek op plaats
             </Link>
           </div>
@@ -262,7 +262,7 @@ export function NearbyApp() {
           {arriveNow && list.length > 0 && " Ook niet waar je vandaag niet meer kunt aankomen."}
         </p>
         {!places && <CardSkeleton />}
-        <ul className="mt-2 space-y-2.5 sm:mt-3 sm:space-y-3">
+        <ul className={`mt-2 sm:mt-3 ${RESULT_LIST}`}>
           {list.map(({ place, km }) => (
             <li key={place.id}>
               <PlaceCard place={place as PlaceSummary} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />

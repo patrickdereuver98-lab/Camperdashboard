@@ -102,7 +102,8 @@ oudere blokken met 12 of 16 px gaan mee bij hun volgende ronde (zie `docs/specs/
 Besluit eigenaar 30 oktober 2026: randen in plaats van zachte schaduwen. Kaarten, rasters en balken hebben een
 1 px rand (`border-line`); actief = `border-forest`, hover = iets donkerdere rand. Een raster met cellen is één blok
 met haarlijnen ertussen (`gap-px` op `bg-line`), geen losse tegels. Schaduw alleen nog voor wat echt boven de pagina
-zweeft (sheets, toast, kaartpop-up). De tokens hieronder blijven bestaan voor oudere onderdelen tot hun volgende ronde:
+zweeft (sheets, toast, kaartpop-up) en voor een knop op een foto. Sinds ronde 2 (1 november 2026) gebruiken de
+plekpagina, de zoekpagina en Dichtbij geen `shadow-low` of `shadow-raised` meer. De tokens:
 
 | Token | Gebruik |
 |---|---|
@@ -142,7 +143,9 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 - **Invoerveld**: 44 px, 8 px hoek, 1 px haarlijn, focus = bosgroene ring (`focus:ring-2 focus:ring-forest`, nooit
   alleen een andere randkleur).
 - **Plekkaart (rij)**: foto ±⅓ links, rechts: naam, "Soort in plaats", afstand, vertrekbadge + aankomst,
-  voorzieningen + prijs onderaan. 8 px hoek, 1 px rand, geen schaduw; foto recht afgesneden met een haarlijn ernaast.
+  voorzieningen + prijs onderaan. Geen kaartje: de resultaten zijn één lijst met een lijn onder elke rij
+  (`RESULT_LIST`, besluit eigenaar 1 november 2026). Foto met 6 px hoek; de actieve rij (kaart) krijgt een bosgroen
+  vlak met een streep links. Geen schaduw.
 - **Vertrekbadge**: 6 px hoek, klein klokje, getint vlak (groen/blauw/grijs). Het enige gekleurde element op een kaart.
 - **Lege foto**: zandkleurig vlak met een klein lijnicoon van het soort plek; geen tekening.
 - **Lege staat, fout, laden**: zie Design Brief; laden altijd met skeletvormen van de echte layout.

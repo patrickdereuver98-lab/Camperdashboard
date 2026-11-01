@@ -27,7 +27,7 @@ import { DestinationSearch } from "@/components/destination-search";
 import { FilterSheet } from "@/components/filter-sheet";
 import { QuickChips } from "@/components/quick-chips";
 import { Legend } from "@/components/legend";
-import { CardSkeleton, MapPick, PlaceCard } from "@/components/place-ui";
+import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { FACILITIES } from "@/lib/search";
@@ -245,15 +245,15 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           </div>
 
           {error && (
-            <div className="mt-4 rounded-xl bg-alert-tint p-5 text-alert">
+            <div className="mt-4 rounded-lg border border-alert/40 bg-alert-tint p-4 text-alert">
               <p>De plekken konden niet worden geladen. Controleer je verbinding en probeer het opnieuw.</p>
-              <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg bg-surface px-4 font-semibold text-ink shadow-low">
+              <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-md border border-line bg-surface px-4 font-semibold text-ink hover:border-forest">
                 Opnieuw proberen
               </button>
             </div>
           )}
           {!results && !error && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 border-t border-line">
               {[0, 1, 2, 3].map((i) => (
                 <CardSkeleton key={i} />
               ))}
@@ -352,7 +352,7 @@ function Results({
   const [animate] = useState(!fromServer);
   return (
     <>
-      <ul className="mt-2 space-y-2.5 sm:mt-4 sm:space-y-3">
+      <ul className={`mt-2 sm:mt-4 ${RESULT_LIST}`}>
         {results.slice(0, limit).map((r, i) => (
           <li key={r.place.id} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
             <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} eager={i < 2} />
@@ -381,7 +381,7 @@ function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceS
   // Concrete alternatieven met het aantal plekken dat ze opleveren
   const options = relaxations(places, filters).slice(0, 4);
   return (
-    <div className="mt-6 rounded-xl bg-surface p-6 shadow-low">
+    <div className="mt-6 rounded-lg border border-line bg-surface p-5">
       <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
       <p className="mt-2 text-ink-2">{options.length ? "Met één aanpassing vind je wel iets:" : "Probeer een andere plaats of streek."}</p>
       <div className="mt-4 flex flex-wrap gap-2">

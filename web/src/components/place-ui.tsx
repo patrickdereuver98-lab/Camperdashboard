@@ -173,7 +173,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
 
 // ── Bewaren ─────────────────────────────────────────────────────────────────
 
-export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?: "icon" | "full" | "plain" }) {
+export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?: "icon" | "full" | "plain" | "bar" }) {
   const trip = useTrip();
   const saved = trip.has(slug);
   const toggle = (e: React.MouseEvent) => {
@@ -203,7 +203,10 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
       onClick={toggle}
       aria-pressed={saved}
       aria-label={saved ? "Verwijderen uit mijn reis" : "Bewaren in mijn reis"}
-      className={`grid h-11 w-11 place-items-center rounded-full transition-transform active:scale-90 ${variant === "plain" ? "" : "bg-surface/95 shadow-lift"}`}
+      // "bar": zelfde vierkant met rand als bellen en website in de actiebalk; "icon": op een foto, daar helpt de schaduw
+      className={`grid h-11 w-11 place-items-center transition-transform active:scale-90 ${
+        variant === "bar" ? "rounded-lg border border-line bg-surface" : variant === "plain" ? "rounded-full" : "rounded-full bg-surface/95 shadow-lift"
+      }`}
     >
       <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop text-alert" : "text-ink"} />
     </button>
@@ -297,8 +300,9 @@ export function PlaceCard({
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      className={`lift group relative flex overflow-hidden rounded-xl bg-surface ${
-        active ? "shadow-raised outline-2 outline-forest" : "shadow-low outline-0 outline-transparent"
+      // Rand van 1 px, geen schaduw (besluit eigenaar 30 oktober 2026, README 75)
+      className={`group relative flex overflow-hidden rounded-lg border bg-surface transition-colors duration-150 ${
+        active ? "border-forest" : "border-line hover:border-ink-2/40"
       } has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest outline ${stack ? "flex-col" : "flex-row"}`}
     >
       <div
@@ -374,17 +378,18 @@ function PlaceRow({
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      // Rand in plaats van schaduw (besluit eigenaar 30 oktober 2026): scherp en rustig, ook in een lange lijst
-      className={`group relative flex min-h-[6.5rem] overflow-hidden rounded-lg border bg-surface transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest ${
-        active ? "border-forest" : "border-line hover:border-ink-2/40"
+      // Eén lijst met een lijn onder elke rij (besluit eigenaar 30 oktober en 1 november 2026): geen kaartjes, geen schaduw.
+      // De lijn tekent de lijst (ResultList); de actieve rij (kaart) krijgt een bosgroene streep links.
+      className={`group relative flex min-h-[6.5rem] gap-3 py-2.5 transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:-outline-offset-3 has-[a:focus-visible]:outline-forest ${
+        active ? "bg-forest-tint shadow-[inset_3px_0_0_var(--color-forest)]" : "hover:bg-sunken/50"
       }`}
     >
-      <div className="relative w-24 shrink-0 self-stretch border-r border-line sm:w-36">
+      <div className="relative w-24 shrink-0 self-stretch overflow-hidden rounded-md sm:w-36">
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
         </ViewTransition>
       </div>
-      <div className="flex min-w-0 flex-1 gap-2 py-2 pr-2 pl-3">
+      <div className="flex min-w-0 flex-1 gap-2 pr-1">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <DepartureChip place={place} compact />
           <h3 className="truncate font-display text-base leading-snug font-semibold text-ink">
@@ -439,9 +444,9 @@ function RowPrice({ place }: { place: PlaceSummary }) {
 
 export function CardSkeleton() {
   return (
-    <div className="flex overflow-hidden rounded-lg border border-line bg-surface">
-      <div className="h-[6.5rem] w-24 shrink-0 animate-pulse bg-sunken sm:w-36" />
-      <div className="flex-1 space-y-3 p-3 sm:p-4">
+    <div className="flex gap-3 border-b border-line py-2.5">
+      <div className="h-[5.75rem] w-24 shrink-0 animate-pulse rounded-md bg-sunken sm:w-36" />
+      <div className="flex-1 space-y-3 py-1">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
         <div className="h-6 w-3/4 animate-pulse rounded bg-sunken" />
         <div className="h-4 w-1/2 animate-pulse rounded bg-sunken" />
@@ -551,3 +556,6 @@ export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () =
     </section>
   );
 }
+
+/** Resultaten als één lijst: een lijn boven de eerste en onder elke rij, geen ruimte ertussen (README 75) */
+export const RESULT_LIST = "border-t border-line [&>li]:border-b [&>li]:border-line";

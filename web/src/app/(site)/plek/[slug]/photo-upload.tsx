@@ -19,7 +19,7 @@ export function PhotoUpload({ placeId, slug, placeName }: { placeId: string; slu
   const [err, setErr] = useState<string | null>(null);
 
   const button =
-    "inline-flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold transition-colors hover:border-forest";
+    "inline-flex h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold transition-colors hover:border-forest";
 
   if (loading) return null;
   if (!session)
@@ -111,9 +111,9 @@ export function PhotoUpload({ placeId, slug, placeName }: { placeId: string; slu
       )}
 
       {step.kind === "form" && (
-        <form onSubmit={submit} className="mt-2 space-y-3 rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+        <form onSubmit={submit} className="mt-2 space-y-3 rounded-lg border border-line bg-surface p-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={step.preview} alt="Gekozen foto" className="max-h-60 w-full rounded-xl object-cover" />
+          <img src={step.preview} alt="Gekozen foto" className="max-h-60 w-full rounded-md object-cover" />
           <label className="block">
             <span className="mb-1.5 block font-semibold">Wat zie je op de foto? (optioneel)</span>
             <input name="caption" maxLength={140} className={field} placeholder="Bijvoorbeeld: uitzicht vanaf plek 4" />
@@ -130,8 +130,8 @@ export function PhotoUpload({ placeId, slug, placeName }: { placeId: string; slu
             </span>
           </label>
           <div className="flex gap-3">
-            <button type="submit" className="h-12 flex-1 rounded-xl bg-forest font-semibold text-on-forest">Foto versturen</button>
-            <button type="button" className="h-12 rounded-xl px-4 font-semibold" onClick={() => setStep({ kind: "idle" })}>
+            <button type="submit" className="h-12 flex-1 rounded-md bg-forest font-semibold text-on-forest">Foto versturen</button>
+            <button type="button" className="h-12 rounded-md px-4 font-semibold" onClick={() => setStep({ kind: "idle" })}>
               Annuleren
             </button>
           </div>
@@ -143,7 +143,7 @@ export function PhotoUpload({ placeId, slug, placeName }: { placeId: string; slu
       )}
 
       {step.kind === "done" && (
-        <p role="status" className="mt-2 flex items-center gap-2 rounded-xl bg-forest-tint px-3 py-2 font-semibold text-forest">
+        <p role="status" className="mt-2 flex items-center gap-2 rounded-md bg-forest-tint px-3 py-2 font-semibold text-forest">
           <Icon name="check" size={20} />
           {step.approved ? "Bedankt. Je foto staat binnen een paar minuten online." : "Bedankt. We bekijken je foto en zetten hem daarna online."}
         </p>
