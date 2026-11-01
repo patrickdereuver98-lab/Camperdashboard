@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import type { PlaceSummary, Town } from "./types";
+import type { PlaceListItem, Town } from "./types";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
 
@@ -156,7 +156,7 @@ export const writeConsent = (c: Consent) => consentStore.write(c);
 
 // ── Dataset voor zoeken (één keer per sessie) ──────────────────────────────
 
-let placesPromise: Promise<PlaceSummary[]> | null = null;
+let placesPromise: Promise<PlaceListItem[]> | null = null;
 let townsPromise: Promise<Town[]> | null = null;
 
 function once<T>(url: string, slot: "places" | "towns"): Promise<T> {
@@ -186,7 +186,7 @@ function useLoader<T>(get: () => Promise<T>) {
   return state;
 }
 
-const getPlaces = () => (placesPromise ??= once<PlaceSummary[]>("/api/places", "places"));
+const getPlaces = () => (placesPromise ??= once<PlaceListItem[]>("/api/places", "places"));
 const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 
 export const usePlaces = () => useLoader(getPlaces);
@@ -196,7 +196,7 @@ export const useTowns = () => useLoader(getTowns);
 
 const TRIP_PLACES = "vrijstaan:reis-plekken";
 
-export function rememberTripPlaces(places: PlaceSummary[], slugs: string[]) {
+export function rememberTripPlaces(places: PlaceListItem[], slugs: string[]) {
   try {
     localStorage.setItem(TRIP_PLACES, JSON.stringify(places.filter((p) => slugs.includes(p.slug))));
   } catch {
@@ -204,10 +204,10 @@ export function rememberTripPlaces(places: PlaceSummary[], slugs: string[]) {
   }
 }
 
-export function readTripPlaces(): PlaceSummary[] {
+export function readTripPlaces(): PlaceListItem[] {
   try {
     const v = JSON.parse(localStorage.getItem(TRIP_PLACES) ?? "[]");
-    return Array.isArray(v) ? (v as PlaceSummary[]) : [];
+    return Array.isArray(v) ? (v as PlaceListItem[]) : [];
   } catch {
     return [];
   }

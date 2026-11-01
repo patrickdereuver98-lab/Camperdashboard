@@ -1,5 +1,6 @@
 import { bboxKey, parseBbox, snapBbox } from "@/lib/bbox";
 import { getSummaries, getSummariesInBbox } from "@/lib/places";
+import { toListItem } from "@/lib/list-item";
 
 const CACHE = { "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=86400" };
 
@@ -11,7 +12,7 @@ const CACHE = { "Cache-Control": "public, max-age=300, s-maxage=300, stale-while
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const raw = url.searchParams.get("bbox");
-  if (raw === null) return Response.json(await getSummaries(), { headers: CACHE });
+  if (raw === null) return Response.json((await getSummaries()).map(toListItem), { headers: CACHE });
 
   const bbox = parseBbox(raw);
   if (!bbox) return Response.json({ error: "bbox moet west,zuid,oost,noord zijn" }, { status: 400 });
@@ -20,5 +21,5 @@ export async function GET(request: Request) {
     url.searchParams.set("bbox", bboxKey(snapped));
     return Response.redirect(url, 308);
   }
-  return Response.json(await getSummariesInBbox(snapped), { headers: CACHE });
+  return Response.json((await getSummariesInBbox(snapped)).map(toListItem), { headers: CACHE });
 }

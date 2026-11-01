@@ -13,7 +13,7 @@ import { isIncomplete } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
-import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
+import { KIND_LABEL, type PlaceListItem } from "@/lib/types";
 import { Icon } from "./icons";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
 import { NavigateButton } from "./navigate";
@@ -215,7 +215,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
 
 // ── Voorzieningen als bordjes ───────────────────────────────────────────────
 
-function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max?: number; size?: number }) {
+function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceListItem; max?: number; size?: number }) {
   const present = FACILITIES.filter((f) => place[f.key] === true);
   const shown = present.slice(0, max);
   if (!shown.length) return null;
@@ -234,7 +234,7 @@ function FacilitySigns({ place, max = 5, size = 28 }: { place: PlaceSummary; max
 // ── Resultaatkaart ──────────────────────────────────────────────────────────
 
 /** Seizoensstatus als klein label; alleen als het seizoen bekend is */
-export function OpenChip({ place, onlyClosed = false }: { place: Pick<PlaceSummary, "openAllYear" | "season">; onlyClosed?: boolean }) {
+export function OpenChip({ place, onlyClosed = false }: { place: Pick<PlaceListItem, "openAllYear" | "season">; onlyClosed?: boolean }) {
   // "Nu open" hangt af van de datum van de bezoeker: pas na hydratatie berekenen
   const hydrated = useHydrated();
   const status = hydrated ? openStatus(place) : undefined;
@@ -248,7 +248,7 @@ export function OpenChip({ place, onlyClosed = false }: { place: Pick<PlaceSumma
 }
 
 /** Aankomst of toegang in een paar woorden, alleen wat de bron noemt */
-function arrivalShort(p: Pick<PlaceSummary, "checkinFrom" | "checkinUntil" | "access24h" | "accessHours">): string | undefined {
+function arrivalShort(p: Pick<PlaceListItem, "checkinFrom" | "checkinUntil" | "access24h" | "accessHours">): string | undefined {
   const arrival = arrivalText(p);
   if (arrival) return arrival;
   if (p.access24h) return "Dag en nacht open";
@@ -265,7 +265,7 @@ export function PlaceCard({
   layout = "row",
   eager,
 }: {
-  place: PlaceSummary;
+  place: PlaceListItem;
   km?: number;
   /** Eigen afstandstekst (bijv. echte rijtijd); vervangt de hemelsbrede afstand */
   distanceLabel?: React.ReactNode;
@@ -367,7 +367,7 @@ function PlaceRow({
   onHover,
   eager,
 }: {
-  place: PlaceSummary;
+  place: PlaceListItem;
   distance: React.ReactNode;
   active?: boolean;
   onHover?: (slug: string | null) => void;
@@ -421,7 +421,7 @@ function PlaceRow({
 }
 
 /** Prijs in de rij: het bedrag en één regel eronder (totaal voor 2 personen, toeslagen of per nacht) */
-function RowPrice({ place }: { place: PlaceSummary }) {
+function RowPrice({ place }: { place: PlaceListItem }) {
   const price = cardPrice(place);
   if (!price) return <p className="max-w-16 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
   const t = nightTotal(place);
@@ -484,7 +484,7 @@ export function DepartureChip({ place, compact = false }: { place: DepartureFact
   );
 }
 
-function CardPrice({ place }: { place: PlaceSummary }) {
+function CardPrice({ place }: { place: PlaceListItem }) {
   const price = cardPrice(place);
   if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
   // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina.
@@ -513,7 +513,7 @@ function CardPrice({ place }: { place: PlaceSummary }) {
  * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route en Bekijk plek. Vervangt op de
  * telefoon de kleine popup van de kaart.
  */
-export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () => void }) {
+export function MapPick({ place, onClose }: { place: PlaceListItem; onClose: () => void }) {
   const arrival = arrivalShort(place);
   return (
     <section aria-label={`Gekozen plek: ${place.name}`} className="animate-rise absolute inset-x-2 bottom-2 z-20 rounded-2xl bg-surface p-3 shadow-float">

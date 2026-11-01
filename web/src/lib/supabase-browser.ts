@@ -45,3 +45,13 @@ export function errorMessage(err: unknown): string {
   if (/check constraint|violates/i.test(msg)) return "Niet alle velden zijn goed ingevuld.";
   return msg.replace(/^.*?ERROR:\s*/i, "");
 }
+
+/**
+ * Id van één plek bij de slug. `/api/places` stuurt geen ids mee (audit 1 november 2026); wie iets over een plek
+ * instuurt (submit_place), zoekt het hier op. Null als de plek niet (meer) gepubliceerd is.
+ */
+export async function placeIdBySlug(slug: string): Promise<string | null> {
+  const { data, error } = await supabase().from("places").select("id").eq("slug", slug).maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}

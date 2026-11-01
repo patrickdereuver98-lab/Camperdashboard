@@ -8,7 +8,7 @@ import { applyFilters, arrivalClosed, confirmedFirst, DEFAULT_FILTERS, FACILITIE
 import { usePlaces, useVehicle } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
 import { useMediaQuery } from "@/lib/use-media";
-import type { PlaceSummary } from "@/lib/types";
+import type { PlaceListItem } from "@/lib/types";
 import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
@@ -242,7 +242,7 @@ export function NearbyApp() {
               popup={false}
               className="h-full w-full"
             />
-            {pickedPlace && <MapPick key={pickedPlace.slug} place={pickedPlace as PlaceSummary} onClose={() => setPicked(null)} />}
+            {pickedPlace && <MapPick key={pickedPlace.slug} place={pickedPlace as PlaceListItem} onClose={() => setPicked(null)} />}
           </div>
         )}
 
@@ -264,8 +264,8 @@ export function NearbyApp() {
         {!places && <CardSkeleton />}
         <ul className={`mt-2 sm:mt-3 ${RESULT_LIST}`}>
           {list.map(({ place, km }) => (
-            <li key={place.id}>
-              <PlaceCard place={place as PlaceSummary} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />
+            <li key={place.slug}>
+              <PlaceCard place={place as PlaceListItem} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />
             </li>
           ))}
         </ul>
