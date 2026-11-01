@@ -80,6 +80,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
+| ✅ Bètaronde soft-launch (1 november 2026): frictieloze onboarding (drie schermen, `components/onboarding.tsx`, alleen startpagina, één keer per toestel via `vrijstaan:welkom`); zoeklijst toont de vertrekregel over de hele breedte (werd op 390 px afgekapt achter de prijs); Plekpuls-basis klaar maar uit (`components/plekpuls.tsx`, `lib/plekpuls.ts`, README 88); cookiebeleid noemt `vrijstaan:welkom`; de cookiebalk wacht op de startpagina tot de uitleg weg is | Agent | Masterplan fase 1, README 87 en 88 | `onboarding.tsx`, `plekpuls.tsx`, `lib/plekpuls.ts`, `lib/store.ts`, `place-ui.tsx`, startpagina, plekpagina, `cookies/page.tsx` | `e2e/onboarding.spec.ts`, a11y-test van de welkomstsheet (licht en donker), `tests/plekpuls.test.ts`; huisregels (14 px, 44 px) groen op alle pagina's; CLS op 390 px gemeten bij trage verbinding: zoeken 0, plekpagina < 0,001, startpagina 0, Zonder vertrektijd 0,018 (lettertype laadt, ruim onder 0,1) | — |
 | ✅ Plekpagina rustiger op mobiel: beslisblok, voorzieningen als labels, niets dubbel, kleinere koppen en header, basis 16 px op de telefoon | Agent | Verzoek Patrick, UX-onderzoek | `plek/[slug]/page.tsx`, `chrome.tsx`, `globals.css` | Vertrekken, prijs, open en lengte in één scherm op iPhone-formaat | — |
 | ✅ Plekkaart opnieuw ingedeeld: waar (plaats, afstand vanaf je locatie), wanneer (vertrek + aankomst), wat en hoeveel (voorzieningen, prijs + toeslagen) | Agent | Verzoek Patrick | `place-ui.tsx`, `lib/my-location.ts`, samenvattingen met aankomsttijden | Afstand, vertrek, aankomst en prijs op elke kaart zonder doortikken | — |
 | ✅ Zoekscherm compacter op mobiel (Booking als voorbeeld): kleinere tabbladen en zoekveld, één rij Filters/Sorteren/Kaart, kleinere kop, compactere kaarten, prijs past altijd | Agent | Verzoek Patrick | `search-app.tsx`, `destination-search.tsx`, `place-ui.tsx` | Eerste plek direct in beeld op iPhone | — |
@@ -145,6 +146,19 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 ## Mijlpaal 6: release ⬜
 
+### Checklist livegang v1.0.0-beta (soft-launch, 1 november 2026)
+
+- [ ] Vercel, omgeving Production: `NEXT_PUBLIC_PLEKPULS` niet gezet of `0` (Plekpuls uit, README 88); geen
+  `VRIJSTAAN_OFFLINE`.
+- [ ] Vercel: `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_ANON_KEY` wijzen naar het productieproject
+  (`qkrmthrhwmmmwswmfgwc`), `NEXT_PUBLIC_SITE_URL` = `https://vrijstaan.nl`, `ORS_API_KEY` aanwezig.
+- [ ] Supabase: Auth → URL Configuration heeft `https://vrijstaan.nl` als Site URL en in de redirect-lijst.
+- [ ] Supabase: `list_migrations` gelijk aan `web/supabase/migrations/`; advisors zonder security-fouten.
+- [ ] Na de deploy: startpagina in een privévenster op de telefoon (welkomstuitleg, daarna cookiebalk), een plek
+  openen, een zoekopdracht met filter; geen fouten in de Vercel-logs.
+- [ ] Tag `v1.0.0-beta` op `main`; terugdraaien = vorige deploy promoten in Vercel.
+
+
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
 | ⬜ Alle plekken zonder vertrektijd vinden, allemaal groen (doel livegang 1 januari 2027) | Agent + Patrick | PRD Databronnen | Zoekagenten over eigen sites, reviews en fora; bevestiging in Beheer → Vertrektijden | Elke plek op Zonder vertrektijd groen; 90% van de gepubliceerde plekken met vertrekregel | README #41 |
@@ -200,7 +214,7 @@ Leidraad: [README, VrijStaan 2.0](README.md#vrijstaan-20---visie-strategie--toek
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
 | ⬜ H1: versheid per feit zichtbaar (datum en telling bij vertrektijd en prijs) | Agent | Visie §3 en §5 | Plekpagina, rij, `lastChecked` per feit | Elk kernfeit toont zijn leeftijd of "onbekend" | Brondatabase (M6) |
-| ⬜ H1: Plekpuls v1, één vraag na een overnachting op een bewaarde plek | Agent | Visie §4A | Vraag in Mijn reis, claim in `bron.claims` met vertrouwensgewicht | 30% van de bezochte plekken bevestigd in 90 dagen | Bronnenlaag live (README 71), README 86 |
+| ⬜ H1: Plekpuls v1, één vraag na een overnachting op een bewaarde plek (UI-basis 🔄: `PlekpulsVraag` staat klaar achter `NEXT_PUBLIC_PLEKPULS`, README 88) | Agent | Visie §4A | Vraag in Mijn reis, claim in `bron.claims` met vertrouwensgewicht | 30% van de bezochte plekken bevestigd in 90 dagen | Bronnenlaag live (README 71), README 86 |
 | ⬜ H1: eigenarenportaal v1 (claimen en zelf bijwerken als tier 1-bron) | Agent + Patrick | Visie §4C | Portaal, rol eigenaar, beheerstroom | 50 eigenaren actief | Plek claimen (PRD) |
 | ⬜ H1: offline pakket v1 (hele dataset op het toestel) | Agent | Visie §4B | Service worker, IndexedDB, versie per pakket | Zoeken en plekpagina werken zonder bereik | — |
 | ⬜ H2: Vannacht-knop met plan B en camperprofiel met hoogte | Agent | Visie §4B | Knop, rangschikking op rijtijd, `maxheight` uit OSM | Mediaan open app tot doorklik < 60 s | Offline pakket |
