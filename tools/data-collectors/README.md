@@ -75,7 +75,10 @@ Bron `pdok` (type `api_wfs`, tier 2) in `bronnen.json` heeft een lijst `lagen`, 
   zwaartepunt van de buitenrand; lijnen worden overgeslagen.
 - `velden` koppelt standaardnamen (naam, id, gemeente, capaciteit, stroom, water, lozing, …) aan kolommen. `gemeente`
   (kolom of vast per laag) staat in `faciliteiten.gemeente`; geo_master heeft er geen eigen kolom voor.
+- `srs`: `EPSG:4326` (standaard) of `EPSG:28992` (de server levert RD, wij rekenen om; nauwkeuriger dan sommige
+  servers). `params`: extra parameters zoals `cql_filter` (GeoServer). `filter`: per kolom de toegestane waarden.
 - bron_id: `pdok:<laag>/<id>`.
+- Datasets zoeken: `python tools/data-collectors/zoek_ckan.py camperplaatsen camping verblijfsrecreatie`.
 - `pdok` staat al op `actief` en in `geo_bronnen` op `toegestaan` (31 oktober 2026). Zonder lagen slaat de run de bron
   over met een waarschuwing; een laag toevoegen is genoeg.
 

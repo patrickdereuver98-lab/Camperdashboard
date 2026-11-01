@@ -20,10 +20,34 @@
     "bron_id": "pdok",
     "naam": "PDOK / gemeentelijke open data (data.overheid.nl): camperplaatsen",
     "type": "api_wfs",
-    "lagen": [],
+    "lagen": [
+      {
+        "id": "zuid_holland",
+        "naam": "Provincie Zuid-Holland: Kampeervoorzieningen voor de samenlevingsatlas (VOORZIENINGEN_PUNT, verblijfsrecreatie)",
+        "bron": "https://data.overheid.nl/dataset/32507-parkeervoorzieningen-voor-de-samenlevingsatlas",
+        "licentie": "Public Domain Mark 1.0",
+        "url": "https://geodata.zuid-holland.nl/geoserver/samenleving/wfs",
+        "typename": "samenleving:VOORZIENINGEN_PUNT",
+        "srs": "EPSG:28992",
+        "params": {
+          "cql_filter": "voorziening = 'verblijfsrecreatie'"
+        },
+        "filter": {
+          "type": [
+            "Camping",
+            "Minicamping",
+            "Camperplaatsen",
+            "Natuurkampeerterrein"
+          ]
+        },
+        "velden": {
+          "gemeente": "gemeente"
+        }
+      }
+    ],
     "betrouwbaarheid": 2,
     "status": "actief",
-    "notitie": "Tier 2 (besluit eigenaar 31 oktober 2026). Per dataset een laag: {id, url, typename (WFS 2.0) of zonder typename een GeoJSON- of OGC API Features-adres, gemeente, velden}. Zie pdok.py. Actief en in geo_bronnen toegestaan sinds 31 oktober 2026 (besluit eigenaar). Zolang lagen leeg is, slaat de run de bron over met een waarschuwing; een endpoint toevoegen is genoeg. Staat na OSM en Archies, zodat bij samenvoegen hun naam voorgaat (gemeentelijke data noemt vaak geen naam)."
+    "notitie": "Tier 2 (besluit eigenaar 31 oktober 2026), actief en in geo_bronnen toegestaan. Per dataset een laag: {id, url, typename (WFS 2.0) of zonder typename een GeoJSON- of OGC API Features-adres, srs, params, filter, gemeente, velden}. Zie pdok.py. Laag zuid_holland (1 november 2026): 74 kampeerplekken (camping, minicamping, camperplaatsen, natuurkampeerterrein) zonder naam; ze voegen alleen samen binnen 25 m. Staat na OSM en Archies, zodat bij samenvoegen hun naam voorgaat."
   },
   {
     "bron_id": "gemeenten_nl",

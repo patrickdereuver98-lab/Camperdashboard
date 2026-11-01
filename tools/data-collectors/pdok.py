@@ -11,6 +11,8 @@ Bron `pdok` in bronnen.json (type `api_wfs`, tier 2, besluit eigenaar 31 oktober
 - Zonder `typename`: een GeoJSON-adres, zoals een download van data.overheid.nl of OGC API Features van PDOK
   (`.../collections/<naam>/items?f=json`). Een `next`-link op dezelfde host volgen we.
 - Meer dan `max_paginas` pagina's (standaard 50) is een fout, geen stil afgekapte lijst.
+- `params`: extra parameters voor de server (bv. `cql_filter` bij GeoServer), `srs`: EPSG:4326 (standaard) of
+  EPSG:28992 (RD; dan rekent deze module om), `filter`: per kolom de toegestane waarden; de rest slaan we over.
 
 Omzetten (onbekend blijft leeg, nooit verzinnen):
 - Coördinaten in RD (EPSG:28992, de standaard van PDOK) worden WGS84 via pyproj. Een server die bij EPSG:4326
@@ -78,6 +80,18 @@ def check_lagen(b: dict[str, Any], clean_url: Callable[[Any, str], str]) -> list
         onbekend = sorted(set(velden) - VELD_NAMEN)
         if onbekend:
             raise PdokError(f"bron {b['bron']}, laag {lid}: onbekende standaardnamen {onbekend}")
+        params = laag.get("params", {})
+        if not isinstance(params, dict) or not all(isinstance(k, str) and isinstance(v, (str, int)) for k, v in params.items()):
+            raise PdokError(f"bron {b['bron']}, laag {lid}: params is een object met tekst of getallen")
+        vast = sorted({"service", "version", "request", "typenames", "outputformat", "count", "startindex"}
+                      & {k.lower() for k in params})
+        if vast:
+            raise PdokError(f"bron {b['bron']}, laag {lid}: params mag {vast} niet overschrijven")
+        filt = laag.get("filter", {})
+        if not isinstance(filt, dict) or not all(isinstance(v, list) and v for v in filt.values()):
+            raise PdokError(f"bron {b['bron']}, laag {lid}: filter is een object van kolom naar een lijst toegestane waarden")
+        if "srs" in laag and laag["srs"] not in ("EPSG:4326", "EPSG:28992"):
+            raise PdokError(f"bron {b['bron']}, laag {lid}: srs is EPSG:4326 of EPSG:28992")
         for key in ("pagina", "max_paginas"):
             if key in laag and (not isinstance(laag[key], int) or isinstance(laag[key], bool) or laag[key] < 1):
                 raise PdokError(f"bron {b['bron']}, laag {lid}: {key} moet een positief geheel getal zijn")
@@ -114,8 +128,8 @@ def fetch_laag(client: Any, laag: dict[str, Any]) -> dict[str, Any]:
         for n in range(max_pages):
             page = client.get_json(laag["url"], params={
                 "service": "WFS", "version": "2.0.0", "request": "GetFeature", "typeNames": laag["typename"],
-                "outputFormat": "application/json", "srsName": "EPSG:4326", "count": page_size,
-                "startIndex": n * page_size})
+                "outputFormat": "application/json", "srsName": laag.get("srs", "EPSG:4326"), "count": page_size,
+                "startIndex": n * page_size, **laag.get("params", {})})
             got = _features(page, where)
             crs = crs or page.get("crs")
             feats.extend(got)
@@ -219,9 +233,14 @@ def map_features(collection: dict[str, Any], bron: str, laag: dict[str, Any], ke
     rd = _crs_is_rd(collection.get("crs"))
     velden: dict[str, str] = laag.get("velden", {})
     vaste_gemeente = clean_name(laag.get("gemeente"))
+    filt: dict[str, list[Any]] = laag.get("filter", {})
     for f in collection.get("features") or []:
         if not isinstance(f, dict):
             result.skip("geen object")
+            continue
+        fprops = f.get("properties") if isinstance(f.get("properties"), dict) else {}
+        if any(fprops.get(col) not in allowed for col, allowed in filt.items()):
+            result.skip("buiten het filter van de laag (geen kampeerplek)")
             continue
         pos, why = position(f.get("geometry"))
         if pos is None:

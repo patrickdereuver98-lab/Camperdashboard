@@ -770,3 +770,35 @@ def test_velden_alleen_bij_csv(tmp_path):
                 {"bron_id": "partner_1", "type": "file_csv", "pad": "aanlevering/p.csv", "velden": {"prijs": "x"}}):
         with pytest.raises(rp.ConfigError):
             rp.load_config(_config(tmp_path, [bad]))
+
+
+def test_pdok_params_filter_en_rd_van_de_server(tmp_path):
+    """Laag zuid_holland (1 november 2026): cql_filter op de server, filter op type hier, RD-antwoord omgerekend."""
+    laag = {"id": "zuid_holland", "url": "https://geodata.zuid-holland.nl/geoserver/samenleving/wfs",
+            "typename": "samenleving:VOORZIENINGEN_PUNT", "srs": "EPSG:28992",
+            "params": {"cql_filter": "voorziening = 'verblijfsrecreatie'"},
+            "filter": {"type": ["Camping", "Camperplaatsen"]}, "velden": {"gemeente": "gemeente"}}
+    page = _fc([{"type": "Feature", "id": "VOORZIENINGEN_PUNT.1", "geometry": {"type": "Point", "coordinates": [155000, 463000]},
+                 "properties": {"voorziening": "verblijfsrecreatie", "type": "Camping", "gemeente": "Amersfoort"}},
+                {"type": "Feature", "id": "VOORZIENINGEN_PUNT.2", "geometry": {"type": "Point", "coordinates": [155100, 463100]},
+                 "properties": {"voorziening": "verblijfsrecreatie", "type": "Bungalow- en villapark", "gemeente": "Amersfoort"}}],
+              crs="urn:ogc:def:crs:EPSG::28992")
+    client = FakeWfs([page])
+    coll = pdok.fetch_laag(client, laag)
+    params = client.calls[0][1]
+    assert params["srsName"] == "EPSG:28992" and params["cql_filter"] == "voorziening = 'verblijfsrecreatie'"
+    r = pdok.map_features(coll, "pdok", laag)
+    (rec,) = r.records
+    assert rec["bron_id"] == "pdok:zuid_holland/VOORZIENINGEN_PUNT.1" and rec["naam"] is None
+    assert abs(rec["lat"] - 52.15517) < 1e-4 and rec["faciliteiten"] == {"gemeente": "Amersfoort"}
+    assert r.skipped == {"buiten het filter van de laag (geen kampeerplek)": 1}
+    ok = {"bron_id": "pdok", "type": "api_wfs", "status": "actief"}
+    for bad in ({**laag, "params": {"request": "x"}}, {**laag, "srs": "EPSG:3857"}, {**laag, "filter": {"type": "Camping"}}):
+        with pytest.raises(rp.ConfigError):
+            rp.load_config(_config(tmp_path, [{**ok, "lagen": [bad]}]))
+
+
+def test_pdok_laag_in_bronnen_json():
+    active, _ = rp.load_config(rp.DEFAULT_CONFIG)
+    (b,) = [x for x in active if x["bron"] == "pdok"]
+    assert [l["id"] for l in b["lagen"]] == ["zuid_holland"] and b["lagen"][0]["srs"] == "EPSG:28992"
