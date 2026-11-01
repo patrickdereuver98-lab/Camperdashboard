@@ -199,10 +199,10 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
-| ✅ Audit en verbeterplan, `web/.env.example` met alle geheimen | Agent | Live project, code, Actions | `docs/beveiliging/verbeterplan.md` | 15 bevindingen met aanpak | — |
+| ✅ Audit en verbeterplan, `web/.env.example` met alle geheimen | Agent | Live project, code, Actions | `docs/beveiliging/verbeterplan.md` | 20 bevindingen met aanpak, checklist van 20 punten getoetst | — |
 | ⬜ B2 en B4: Google-account beveiligen, wachtwoord minimaal 10 tekens in Supabase | Patrick | Verbeterplan | Instellingen | Advisor meldt geen zwak wachtwoordbeleid meer | — |
-| ⬜ B1 en B12: e-mailadres, beheernotitie en `user_id` van reviews afschermen, `admin_reviews()` | Agent | Verbeterplan | Migratie, beheerpagina, test | Publieke sleutel krijgt geen `author_email` | Vóór de eerste goedgekeurde review |
-| ⬜ B5, B6, B7, B11: rechten opruimen, bewaartermijnen live, Actions vastzetten | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
+| ⬜ B1, B12 en B19: e-mailadres, beheernotitie en `user_id` van reviews afschermen, `admin_reviews()`, oude `submit_review` weg | Agent | Verbeterplan | Migratie, beheerpagina, test | Publieke sleutel krijgt geen `author_email` | Vóór de eerste goedgekeurde review |
+| ⬜ B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
 | ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 87 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
 
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
