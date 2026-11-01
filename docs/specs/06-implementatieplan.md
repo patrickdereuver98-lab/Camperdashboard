@@ -193,6 +193,19 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Pipeline v45, parser 42 (23 okt; v44 = ebcfc8d, v45 voegt de wisseltijd onder een kopje en "tussen 13.00 en voor 17.00" toe): `/?page_id=`-pagina's, kleine sites helemaal lezen, reserveren/boeken als subpagina, geen geraden adressen bij sites van één pagina, wisseltijd "aankomst/vertrek 11.00 … wisselen", vertrekvenster met toeslag, "iedere 24 uur … nieuwe nacht", aankomstvensters "vanaf 13:00 tot 18:00" en "15.00 - 17.30". Uit een steekproef van 20 plekken zonder vertrektijd | Agent | Steekproef 23 okt | Edge function `pipeline` | Tests per regel groen | — |
 | ✅ Terugdraaien | Agent | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/draaiboek.md` | Vercel |
 
+## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
+
+Leidraad: [README, VrijStaan 2.0](README.md#vrijstaan-20---visie-strategie--toekomstige-roadmap). Geen werk vóór de livegang; open punten 82 tot 86.
+
+| Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
+|---|---|---|---|---|---|
+| ⬜ H1: versheid per feit zichtbaar (datum en telling bij vertrektijd en prijs) | Agent | Visie §3 en §5 | Plekpagina, rij, `lastChecked` per feit | Elk kernfeit toont zijn leeftijd of "onbekend" | Brondatabase (M6) |
+| ⬜ H1: Plekpuls v1, één vraag na een overnachting op een bewaarde plek | Agent | Visie §4A | Vraag in Mijn reis, claim in `bron.claims` met vertrouwensgewicht | 30% van de bezochte plekken bevestigd in 90 dagen | Bronnenlaag live (README 71), README 86 |
+| ⬜ H1: eigenarenportaal v1 (claimen en zelf bijwerken als tier 1-bron) | Agent + Patrick | Visie §4C | Portaal, rol eigenaar, beheerstroom | 50 eigenaren actief | Plek claimen (PRD) |
+| ⬜ H1: offline pakket v1 (hele dataset op het toestel) | Agent | Visie §4B | Service worker, IndexedDB, versie per pakket | Zoeken en plekpagina werken zonder bereik | — |
+| ⬜ H2: Vannacht-knop met plan B en camperprofiel met hoogte | Agent | Visie §4B | Knop, rangschikking op rijtijd, `maxheight` uit OSM | Mediaan open app tot doorklik < 60 s | Offline pakket |
+| ⬜ H3: gemeentedashboard (pilot) en VrijStaan Inside | Agent + Patrick | Visie §4C en §6 | Geaggregeerde views, widget of API | Eén betalende klant | README 83 |
+
 ## Voor je verdergaat (bij elke mijlpaal)
 
 1. Draai de app (`cd web && npm run dev`) en bekijk de wijziging op iPhone-formaat, licht en donker.

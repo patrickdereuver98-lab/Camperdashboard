@@ -129,6 +129,9 @@ Could-functies blijven bestaan, maar krijgen geen nieuw werk zolang de kern niet
 
 ## Buiten scope voor versie 1
 
+Wat na versie 1 komt, staat als leidraad in [VrijStaan 2.0](README.md#vrijstaan-20---visie-strategie--toekomstige-roadmap) (1 november 2026). Tot een besluit van de eigenaar blijft deze lijst gelden.
+
+
 - Boeken en betalen via VrijStaan (we verwijzen naar de plek zelf)
 - Plekken buiten Nederland (strikt Nederland, bevestigd 18 oktober 2026)
 - Wildkamperen of plekken zonder toestemming om te overnachten
