@@ -1,0 +1,59 @@
+/* Eigen stijl voor MapLibre. Staat hier en niet in globals.css: deze CSS en die van maplibre-gl laden alleen op
+   pagina's met een kaart (audit 1 november 2026, punt 22). place-map.tsx importeert eerst maplibre-gl.css en dan
+   dit bestand, zodat deze regels voorgaan. */
+.maplibregl-popup-content {
+  background: var(--surface) !important;
+  color: var(--ink);
+  border-radius: 14px !important;
+  padding: 0 !important;
+  box-shadow: var(--lift) !important;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--surface) !important;
+  border-bottom-color: var(--surface) !important;
+}
+.maplibregl-popup-close-button {
+  color: var(--ink);
+  font-size: 24px;
+  /* Tikdoel 44 × 44 px (docs/stijlgids.md §5) */
+  width: 44px;
+  height: 44px;
+  right: 0;
+  top: 0;
+  background: var(--surface);
+  border-radius: 999px;
+}
+.maplibregl-ctrl-group {
+  background: var(--surface) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--lift) !important;
+}
+.maplibregl-ctrl-group button {
+  width: 44px !important;
+  height: 44px !important;
+}
+/* Kaartbronvermelding (© OpenStreetMap e.d.): de enige tekst onder 14 px, een verplichte vermelding van derden
+   (docs/stijlgids.md §4). Dezelfde vermelding staat op 14 px in de footer. */
+.maplibregl-ctrl-attrib {
+  font-size: 12px;
+}
+/* Het "i"-knopje van de bronvermelding is 24 px; een onzichtbare rand maakt het tikvlak 44 × 44 px */
+.maplibregl-ctrl-attrib-button::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+@media (prefers-color-scheme: dark) {
+  .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+    filter: invert(1);
+  }
+  .maplibregl-ctrl-attrib {
+    background: rgb(24 32 27 / 0.85) !important;
+    color: var(--muted);
+  }
+  .maplibregl-ctrl-attrib a {
+    color: var(--ink-2);
+  }
+}

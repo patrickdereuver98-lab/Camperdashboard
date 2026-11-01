@@ -17,7 +17,10 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <Announcement />
-      <main className="flex-1">{children}</main>
+      {/* Minstens één scherm hoog: bij Partial Prerender staat eerst alleen de schil (header en footer) en komt de inhoud
+          later binnen. Zonder deze hoogte staat de footer even in beeld en springt hij weg (CLS 0,10 op zoeken en 0,15 op
+          de plekpagina, gemeten op een trage telefoon, audit 1 november 2026). */}
+      <main className="min-h-dvh flex-1">{children}</main>
       <Footer />
     </>
   );
