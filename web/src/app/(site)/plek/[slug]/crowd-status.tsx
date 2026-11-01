@@ -47,7 +47,7 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
   const summary = loaded ? crowdSummary(status) : null;
 
   return (
-    <section aria-labelledby="drukte" className="mt-3 rounded-2xl bg-surface p-4 shadow-low" data-testid="crowd">
+    <section aria-labelledby="drukte" className="mt-3 rounded-lg border border-line bg-surface p-4" data-testid="crowd">
       <h2 id="drukte" className="font-semibold">Hoe druk is het nu?</h2>
       <div className="mt-2 flex min-h-12 items-center gap-3" aria-live="polite">
         {summary ? (
@@ -74,7 +74,7 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
                 onClick={() => report(l)}
                 disabled={busy !== null}
                 aria-pressed={mine === l}
-                className="flex h-11 items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold transition-colors hover:border-forest disabled:opacity-60 aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                className="flex h-11 items-center justify-center gap-2 rounded-md border border-line font-semibold transition-colors hover:border-forest disabled:opacity-60 aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
               >
                 <span className={`h-2.5 w-2.5 rounded-full ${DOT[l]}`} aria-hidden="true" />
                 {busy === l ? "…" : CROWD_LABEL[l]}
@@ -85,7 +85,7 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
       ) : (
         <Link
           href={`/inloggen?next=${encodeURIComponent(`/plek/${slug}#drukte`)}`}
-          className="mt-3 inline-flex h-11 items-center rounded-xl border-2 border-line px-4 font-semibold hover:border-forest"
+          className="mt-3 inline-flex h-11 items-center rounded-md border border-line px-4 font-semibold hover:border-forest"
         >
           Log in om de drukte door te geven
         </Link>
@@ -147,7 +147,7 @@ function WatchToggle({ placeId, userId }: { placeId: string; userId: string }) {
         onClick={toggle}
         disabled={busy}
         aria-pressed={on}
-        className="flex min-h-11 w-full items-center justify-center rounded-xl border-2 border-line px-4 font-semibold hover:border-forest disabled:opacity-60 aria-pressed:border-forest aria-pressed:text-forest"
+        className="flex min-h-11 w-full items-center justify-center rounded-md border border-line px-4 font-semibold hover:border-forest disabled:opacity-60 aria-pressed:border-forest aria-pressed:text-forest"
       >
         {busy ? "Even geduld…" : on ? "Melding uitzetten" : "Laat het me weten als het hier rustig is"}
       </button>

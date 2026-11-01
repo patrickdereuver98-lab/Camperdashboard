@@ -150,7 +150,7 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
   }
 
   return (
-    <div className="rounded-xl bg-surface p-4 shadow-low">
+    <div className="rounded-lg border border-line bg-surface p-4">
       {state.s === "ok" ? (
         <p>
           <span className="font-display text-2xl font-semibold">{formatDuration(state.seconds)}</span>
@@ -218,9 +218,10 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
   const shown = all ? reviews : reviews.slice(0, 3);
   return (
     <>
-      <ul className="space-y-3">
+      {/* Eén lijst met lijnen ertussen, geen kaartjes met schaduw (README 75) */}
+      <ul className="divide-y divide-line border-y border-line">
         {shown.map((r) => (
-          <li key={r.id} className="rounded-xl bg-surface p-5 shadow-low">
+          <li key={r.id} className="py-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold">{r.authorName}</p>
@@ -520,7 +521,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                 Je verstuurt deze review vanuit je account{session.user.email ? ` (${session.user.email})` : ""}. Je e-mailadres is niet zichtbaar.
               </p>
             ) : sentTo ? (
-              <div className="rounded-xl bg-forest-tint p-4" role="status">
+              <div className="rounded-lg bg-forest-tint p-4" role="status">
                 <p className="font-semibold text-forest">Check je mail</p>
                 <p className="mt-1 text-ink-2">
                   We hebben een code gestuurd naar <strong>{sentTo}</strong>. Vul hem hieronder in, dan versturen we je review. Geen
@@ -559,7 +560,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl bg-sunken p-4" data-testid="review-confirm">
+              <div className="rounded-lg bg-sunken p-4" data-testid="review-confirm">
                 <label className="block">
                   <span className="mb-1.5 block font-semibold">
                     Je e-mailadres <span className="text-alert">*</span>

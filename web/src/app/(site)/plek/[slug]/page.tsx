@@ -165,13 +165,14 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                 <a href="#reviews" className="-my-3 inline-block py-3 text-sm text-muted underline-offset-2 hover:underline">Nog geen reviews</a>
               )}
               <DistanceFromMe place={place} />
+              {/* Op dezelfde regel als score en afstand: een compacte kop, het beslisblok komt eerder in beeld */}
+              {lastUpdate && (
+                <p className="text-sm text-muted">
+                  Laatste update: {formatDate(lastUpdate)}
+                  <OutdatedNote verifiedAt={place.verifiedAt} departureCheckedAt={place.departureCheckedAt} />
+                </p>
+              )}
             </div>
-            {lastUpdate && (
-              <p className="mt-1 text-sm text-muted">
-                Laatste update: {formatDate(lastUpdate)}
-                <OutdatedNote verifiedAt={place.verifiedAt} departureCheckedAt={place.departureCheckedAt} />
-              </p>
-            )}
           </div>
           <div className="hidden shrink-0 gap-2 md:flex">
             <SaveButton slug={place.slug} variant="full" />
@@ -267,7 +268,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <p className={`font-display leading-none font-semibold ${price ? "text-lg" : "text-sm text-muted"}`}>{price?.value ?? "Prijs onbekend"}</p>
             {price?.perNight && <p className="mt-0.5 truncate text-sm leading-tight text-muted">per nacht{price.extras ? " + extra's" : ""}</p>}
           </div>
-          <SaveButton slug={place.slug} />
+          <SaveButton slug={place.slug} variant="bar" />
           {tel && (
             <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="phone" size={19} />
@@ -292,7 +293,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
   const missing = facts.filter((f) => !f.known).map((f) => f.label);
   return (
     <>
-      <div className="hidden rounded-xl bg-surface p-5 shadow-low md:block">
+      <div className="hidden rounded-lg border border-line bg-surface p-5 md:block">
         <p className="font-display text-3xl font-semibold">
           {cardPrice(place)?.value ?? "Prijs onbekend"}
           {cardPrice(place)?.perNight ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
@@ -324,12 +325,12 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
           highlight={place.slug}
           fitKey={place.slug}
           cluster={false}
-          className="h-52 rounded-xl shadow-low lg:h-72"
+          className="h-52 overflow-hidden rounded-lg border border-line lg:h-72"
         />
         <RouteCard to={{ lat: place.lat, lng: place.lng }} name={place.name} />
       </section>
 
-      <div className="rounded-xl bg-sunken/60 p-4 text-sm text-ink-2">
+      <div className="rounded-lg bg-sunken/60 p-4 text-sm text-ink-2">
         <p className="flex items-center gap-2 font-semibold text-ink">
           <Icon name="shield" size={17} className="text-forest" /> {facts.filter((f) => f.known).length} van {facts.length} gegevens bekend
         </p>
@@ -507,7 +508,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   return (
     <section aria-labelledby="praktisch">
       <h2 id="praktisch" className="font-display text-xl font-semibold sm:text-2xl">Praktisch en contact</h2>
-      <dl className="mt-3 divide-y divide-line rounded-xl bg-surface shadow-low">
+      <dl className="mt-3 divide-y divide-line rounded-lg border border-line bg-surface">
         {rows.map((r) => (
           <div key={r.label} className="flex justify-between gap-4 px-4 py-2.5">
             <dt className="shrink-0 text-ink-2">{r.label}</dt>
