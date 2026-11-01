@@ -102,6 +102,9 @@ Een websitewaarde die bij een volgende lezing niet meer op de site staat, wordt 
 
 ## Beveiliging en privacy
 
+Audit, open bevindingen en aanpak: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). Alle
+omgevingsvariabelen en waar elk geheim staat: `web/.env.example`.
+
 - Row Level Security op alle tabellen in `public`; bezoekers lezen alleen gepubliceerde plekken, goedgekeurde reviews,
   gepubliceerde FAQ, woonplaatsen, instellingen en de routecache.
 - Schrijven door bezoekers alleen via RPC's met validatie: `submit_review`, `submit_place`, `create_ticket`,
