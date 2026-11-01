@@ -142,6 +142,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Websites eens per 30 dagen opnieuw lezen | Agent | Besluit B12 | Cron `scrape-refresh`, `private.enqueue_stale_scrape` | Geen website ouder dan ±31 dagen | Scraper |
 | 🔄 Acceptatieomgeving: branch `acceptatie`, PR's eerst daarheen, Vercel-preview | Agent + Patrick | `plan.md` E5 | Branch + CI; Vercel en branch protection door Patrick | Niets gaat meer direct naar `main` | CI |
 | 🔄 Kernbelofte 100% zeker: bevestiging door mens vóór Zonder vertrektijd. Bijgesteld 18 okt (eigenaar): een bron is genoeg voor de weergave, geen label "nog niet bevestigd" meer; bevestigen in beheer blijft voor de controle en sortering | Agent | `plan.md` K1–K3 | Migratie `20261015120000_vertrektijd_bevestiging.sql` (live sinds 16 oktober), Beheer → Vertrektijden | Eerste ronde gecontroleerd | Beheeraccount |
+| ✅ Payload `/api/places` kleiner (1 nov): `ApiPlace` (`web/src/lib/api-place.ts`) laat `imageCredit` weg, `ratingCount` bij 0 en `capacity` (ook uit `SUMMARY_COLUMNS`), coördinaten op 5 decimalen. Gemeten op de live database, 2.195 plekken: 1.420.578 → 1.294.710 bytes ruw (−9%), 279.778 → 259.633 bytes gzip (−7%). `priceExtras` en `id` blijven (README 87) | Agent | Opdracht eigenaar | Route, `store.ts`, test `api-place.test.ts` | Zoeklijst, prijzen en build ongewijzigd | — |
 
 ## Mijlpaal 6: release ⬜
 

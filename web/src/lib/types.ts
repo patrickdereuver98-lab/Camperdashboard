@@ -106,7 +106,6 @@ export type PlaceSummary = Pick<
   | "shower"
   | "wifi"
   | "dogs"
-  | "capacity"
   | "maxLengthM"
   | "openAllYear"
   | "season"

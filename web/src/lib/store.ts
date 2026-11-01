@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { PlaceSummary, Town } from "./types";
+import { fromApiPlace, type ApiPlace } from "./api-place";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
 
@@ -186,7 +187,8 @@ function useLoader<T>(get: () => Promise<T>) {
   return state;
 }
 
-const getPlaces = () => (placesPromise ??= once<PlaceSummary[]>("/api/places", "places"));
+const getPlaces = () =>
+  (placesPromise ??= once<ApiPlace[]>("/api/places", "places").then((list) => list.map(fromApiPlace)));
 const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 
 export const usePlaces = () => useLoader(getPlaces);
