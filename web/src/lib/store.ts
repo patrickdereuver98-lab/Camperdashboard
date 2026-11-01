@@ -212,3 +212,28 @@ export function readTripPlaces(): PlaceSummary[] {
     return [];
   }
 }
+
+// ── Welkom (onboarding) ─────────────────────────────────────────────────────
+
+/** Verhoog de versie alleen als de uitleg echt anders wordt; dan ziet iedereen hem één keer opnieuw */
+export const WELCOME_VERSION = "2026-11";
+const welcomeStore = createStore<string | null>("vrijstaan:welkom", null, (v): v is string | null => v === null || typeof v === "string");
+export const readWelcome = () => welcomeStore.read();
+export const markWelcomeSeen = () => welcomeStore.write(WELCOME_VERSION);
+
+// ── Plekpuls (één vraag na een bezoek) ─────────────────────────────────────
+
+export type PulseAnswer = "ja" | "nee" | "weet-niet";
+export type PulseRecord = { answer: PulseAnswer; at: string };
+const EMPTY_PULSE: Record<string, PulseRecord> = {};
+const pulseStore = createStore<Record<string, PulseRecord>>("vrijstaan:plekpuls", EMPTY_PULSE, (v): v is Record<string, PulseRecord> =>
+  typeof v === "object" && v !== null && !Array.isArray(v),
+);
+/** Antwoorden blijven op dit toestel tot de koppeling met de bronnenlaag er is (README 2.0, concept A) */
+export function usePulse() {
+  const answers = pulseStore.use();
+  return {
+    answers,
+    answer: (key: string, answer: PulseAnswer) => pulseStore.write({ ...answers, [key]: { answer, at: new Date().toISOString() } }),
+  };
+}

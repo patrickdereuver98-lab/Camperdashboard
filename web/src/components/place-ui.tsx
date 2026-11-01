@@ -389,9 +389,20 @@ function PlaceRow({
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
         </ViewTransition>
       </div>
-      <div className="flex min-w-0 flex-1 gap-2 pr-1">
+      {/* Vertrektijd is het kernfeit: de regel krijgt de hele breedte naast de foto, alleen het hartje staat ernaast.
+          Zo valt "Geen vaste vertrektijd" op een telefoon van 390 px niet meer weg achter de prijs (bètaronde 1 november 2026). */}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 pr-1">
+        <div className="flex min-h-6 min-w-0 items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <DepartureChip place={place} compact />
+          </div>
+          {/* Tikvlak 44 px, met negatieve marge zodat de regel niet hoger wordt */}
+          <div className="relative z-10 -my-2.5 shrink-0">
+            <SaveButton slug={place.slug} variant="plain" />
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-1 gap-2">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <DepartureChip place={place} compact />
           <h3 className="truncate font-display text-base leading-snug font-semibold text-ink">
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
@@ -411,9 +422,9 @@ function PlaceRow({
             <OpenChip place={place} onlyClosed />
           </div>
         </div>
-        <div className="relative z-10 flex shrink-0 flex-col items-end justify-between">
-          <SaveButton slug={place.slug} variant="plain" />
+        <div className="relative z-10 flex shrink-0 flex-col items-end justify-end">
           <RowPrice place={place} />
+        </div>
         </div>
       </div>
     </article>

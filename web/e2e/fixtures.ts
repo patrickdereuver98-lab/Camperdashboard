@@ -9,7 +9,24 @@ export const PRERENDERED = PLACES.filter((p) => top.has(p.slug));
 export const ON_DEMAND = PLACES.filter((p) => !top.has(p.slug));
 
 /** Faalt de test bij onafgevangen JavaScript-fouten in de pagina */
-export const test = base.extend<{ pageErrors: Error[] }>({
+export const test = base.extend<{ pageErrors: Error[]; welcomeSeen: boolean; welcome: void }>({
+  // De welkomstuitleg op de startpagina staat standaard als gezien, zodat hij andere tests niet in de weg zit.
+  // e2e/onboarding.spec.ts zet dit uit met test.use({ welcomeSeen: false }).
+  welcomeSeen: [true, { option: true }],
+  welcome: [
+    async ({ page, welcomeSeen }, use) => {
+      if (welcomeSeen)
+        await page.addInitScript(() => {
+          try {
+            localStorage.setItem("vrijstaan:welkom", JSON.stringify("e2e"));
+          } catch {
+            /* geen opslag */
+          }
+        });
+      await use();
+    },
+    { auto: true },
+  ],
   pageErrors: [
     async ({ page }, use) => {
       const errors: Error[] = [];
