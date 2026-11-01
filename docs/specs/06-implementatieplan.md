@@ -47,7 +47,7 @@
 | ✅ Reisstatistieken (dashboard) | Agent | Opdracht Patrick (Fase 5) | `/mijn-reis/statistieken`, `trip-stats.ts` | Alleen berekend uit bekende gegevens; tabel bij elke grafiek | Mijn reis, uitgaven |
 | ✅ Samen een reis plannen (realtime) | Agent | Opdracht Patrick (Fase 5) | `shared_trips`, `/samen/<code>`, `SharedCard` | Leden zien wijzigingen direct; buitenstaanders niet | Accounts |
 | ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
-| ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
+| ⬜ Testtabellen `private.probe*` verwijderen (1 november 2026: `probe` 11 en `probe2` 198 rijen, nergens gebruikt; het verwijderen via de Supabase-koppeling vraagt een bevestiging die niet is gegeven, dus 👤 Patrick: `drop table private.probe, private.probe2;`) | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 
 ## Mijlpaal 3: hoofdroute ✅
 
@@ -146,6 +146,22 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 ## Mijlpaal 6: release ⬜
 
+### Stand bij de bevriezing van v1.0.0-beta (1 november 2026)
+
+De code voor de soft-launch is af en bevroren: alles op `main`, CI groen, geen `console.log` of TODO's in `web/src`,
+`NEXT_PUBLIC_PLEKPULS=0` in `web/.env.example`. De taken hieronder met ⬜ of 🔄 zijn **niet** afgevinkt, omdat ze niet
+klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze horen bij de livegang van
+1 januari 2027, niet bij de soft-launch:
+
+- **Data (Agent):** vertrekregel bij 1.448 van 2.195 gepubliceerde plekken (66%) en prijs bij 1.260 (57%), doel 90%
+  (telling 1 november 2026). Zoekagenten, stealth-lezer en dataketen lopen door.
+- **Alleen Patrick:** domein en `NEXT_PUBLIC_SITE_URL`, Supabase Auth (Site URL, redirects, SMTP, OAuth-sleutels,
+  mailsjablonen), contactgegevens in `company.ts`, juridische teksten laten nalezen, bewaartermijnen activeren,
+  testtabellen `private.probe*` weghalen.
+- **Na de soft-launch (Agent):** rol support beperken, `delete_my_account`, `schema.sql` opnieuw genereren, testplan
+  met de bètagebruikers, monitoring van serverfouten.
+- **Mijlpaal 7:** Plekpuls-backend, versheid per feit, eigenarenportaal, offline pakket.
+
 ### Checklist livegang v1.0.0-beta (soft-launch, 1 november 2026)
 
 - [ ] Vercel, omgeving Production: `NEXT_PUBLIC_PLEKPULS` niet gezet of `0` (Plekpuls uit, README 88); geen
@@ -165,9 +181,8 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ⬜ Brondatabase: bron, datum en letterlijke zin per gegeven, terug te vinden in beheer | Agent | PRD Databronnen | Tabel of uitbreiding van `sources`, beheerscherm | Bij elke vertrekregel en prijs is de bron te openen | — |
 | ✅ Onvolledige plekken grijs met oproep om de vertrektijd door te geven (22 okt, branch `claude/onvolledig-verouderd`): onvolledig = gepubliceerd zonder vertrekregel (`isIncomplete`). Kaart: grijze stip (`muted`) onder de gekleurde, popup "Vertrektijd onbekend"; lijst: grijs label "Vertrektijd onbekend"; plekpagina: oproep met knop **Vertrektijd doorgeven**, die het formulier van Doe mee opent (nu gedeeld: `components/departure-form.tsx`, inzending `correctie`/`vertrektijd`); legenda bijgewerkt. Plekken onder de drempel blijven verborgen | Agent | PRD, README #42 | `lib/place-status.ts`, `place-map.tsx`, `place-ui.tsx`, `legend.tsx`, `departure-form.tsx`, plekpagina | `tests/place-status.test.ts`; check, test en offline build groen. Nog te doen: screenshots iPhone licht/donker (browser niet te installeren in de bouwomgeving) | — |
 | ✅ "Mogelijk verouderd" bij gegevens ouder dan 12 maanden (22 okt, branch `claude/onvolledig-verouderd`): laatste controle = de jongste van `verified_at` en `departure_checked_at` (`lastChecked`); ouder dan 12 kalendermaanden geeft ", mogelijk verouderd" achter "Laatste update" op de plekpagina (na hydratatie, met de datum van de bezoeker). Zonder die datums geen melding. `last_scraped_at` en `updated_at` tellen bewust niet: die veranderen ook als er niets is gecontroleerd. Per gegeven (brondatabase) volgt later | Agent | PRD, README #45 | `lib/place-status.ts`, plekpagina (`OutdatedNote`) | `tests/place-status.test.ts`; check, test en offline build groen | Brondatabase (voor een datum per gegeven) |
-| ⬜ Reviews alleen met account of code per mail | Agent | PRD open vraag 6 | Reviewformulier, RPC | Review zonder bevestiging niet zichtbaar | — |
+| ✅ Reviews alleen met account of code per mail (gecontroleerd 1 november 2026: migratie `reviews_met_account` live, formulier in `plek/[slug]/client.tsx` op `main`) | Agent | PRD open vraag 6 | Reviewformulier, RPC | Review zonder bevestiging niet zichtbaar | — |
 | ⬜ Rol support beperken | Agent | PRD Rollen, README #1 | Policies per rol | Support kan geen instellingen, beheerders of verwijderingen | — |
-| ⬜ SEO-pagina's per provincie en plaats, structured data, sitemap | Agent | PRD | Pagina's, JSON-LD, `sitemap.xml` | Pagina's geïndexeerd in Search Console | Domein |
 | ⬜ Domein vrijstaan.nl registreren | Patrick | — | Domein | Domein op naam van Patrick | — |
 | ⬜ Prijzen naar 90% van de gepubliceerde plekken | Agent | PRD | Scraper en zoekagenten | 90% met nachtprijs | — |
 | ⬜ Contactgegevens invullen (hobby, nog geen KvK) | Patrick | Naam, contactadres | `web/src/lib/company.ts` | Geen "[… nog invullen]" meer op de site | — |
