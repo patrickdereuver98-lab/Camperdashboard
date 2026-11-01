@@ -3,3 +3,7 @@
 *
 !.gitignore
 !*.enc
+# Uitzondering: open data van gemeenten (bron gemeenten_nl, open licentie) mag onversleuteld in aanlevering/gemeenten/
+!gemeenten/
+!gemeenten/*.geojson
+!gemeenten/*.csv
