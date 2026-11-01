@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
-import "maplibre-gl/dist/maplibre-gl.css";
+import { preconnect } from "react-dom";
 import "./globals.css";
 import { Header, Runtime, SaveToast, TabBar } from "@/components/chrome";
 import { TripSync } from "@/components/trip-sync";
@@ -32,6 +32,9 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // Foto's gaan via de beeldproxy wsrv.nl (verkleind, WebP): de verbinding alvast openen scheelt een rondgang vóór het
+  // grootste beeld van zoeken en de plekpagina (LCP, audit 1 november 2026). Zonder crossOrigin: <img> laadt zonder CORS.
+  preconnect("https://wsrv.nl");
   return (
     <html lang="nl" className={`${geist.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">

@@ -18,7 +18,7 @@
 | Kaart | MapLibre GL 5 met tegels van OpenFreeMap (`tiles.openfreemap.org`) |
 | Taal | TypeScript 5, ESLint 9 (`eslint-config-next`) |
 | Runtime | Node.js ≥ 20.9 (22 LTS aanbevolen) |
-| Hosting | **Vercel** (Hobby, gratis), Root Directory `web`. Elke push naar `main` gaat live |
+| Hosting | **Vercel** (Hobby, gratis), Root Directory `web`. Elke push naar `main` gaat live. Functies in **fra1 (Frankfurt)**, naast de database (`web/vercel.json`, 1 november 2026) |
 | Offline build | `VRIJSTAAN_OFFLINE=1` bouwt uit `web/src/data/snapshot.json` (voor CI of afgeschermde omgevingen) |
 
 ## Backend en database

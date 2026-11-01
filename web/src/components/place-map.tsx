@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+// Alleen op pagina's met een kaart (niet meer in de root-layout); eerst maplibre, dan onze aanpassingen
+import "maplibre-gl/dist/maplibre-gl.css";
+import "./place-map.css";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { LatLng } from "@/lib/geo";
 import { byClusterSize, CLUSTER_RADIUS, clusterColors, popupProps, toGeoJSON, type MapPlace, type PinProps, type PopupProps } from "@/lib/map-data";
