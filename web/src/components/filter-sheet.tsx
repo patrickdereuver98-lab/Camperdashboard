@@ -3,7 +3,7 @@ import { pluralize } from "@/lib/format";
 
 import { useMemo, useState } from "react";
 import { applyFilters, DEFAULT_FILTERS, FACILITIES, pageOf, relaxations, type DepartureGroup, type Filters } from "@/lib/search";
-import { KIND_LABEL, type PlaceKind, type PlaceSummary } from "@/lib/types";
+import { KIND_LABEL, type PlaceKind, type PlaceListItem } from "@/lib/types";
 import Link from "next/link";
 import { useVehicle } from "@/lib/store";
 import { Sheet } from "./sheet";
@@ -63,7 +63,7 @@ export function FilterSheet({
   open: boolean;
   onClose: () => void;
   filters: Filters;
-  places: PlaceSummary[] | null;
+  places: PlaceListItem[] | null;
   onApply: (f: Filters) => void;
   showScore?: boolean;
 }) {

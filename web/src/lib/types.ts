@@ -125,6 +125,14 @@ export type PlaceSummary = Pick<
   | "accessHours"
 >;
 
+/**
+ * Wat `/api/places` naar de browser stuurt: de samenvatting zonder `id` en `imageCredit` (audit 1 november 2026).
+ * Een UUID is niet samen te drukken (57 kB van de 266 kB gzip); lijsten gebruiken `slug` als sleutel, en wie een id
+ * nodig heeft om iets in te sturen, zoekt het op bij die ene plek (`placeIdBySlug`). De fotovermelding staat alleen op
+ * de startpagina, die zijn plekken op de server ophaalt.
+ */
+export type PlaceListItem = Omit<PlaceSummary, "id" | "imageCredit">;
+
 export interface Review {
   id: string;
   authorName: string;

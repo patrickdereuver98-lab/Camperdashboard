@@ -9,7 +9,7 @@ import { eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
 import { readTripPlaces, rememberTripPlaces, usePlaces, useTrip, useTripDate, useTripSettings, type TripStop } from "@/lib/store";
 import { closedText, dayValue, parseDay, shortDay, tripDates } from "@/lib/trip-dates";
 import { tripCosts } from "@/lib/trip-extras";
-import type { PlaceSummary } from "@/lib/types";
+import type { PlaceListItem } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
@@ -19,7 +19,7 @@ import { ExpensesPanel } from "./expenses-panel";
 import { SharedCard } from "./shared-card";
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
-type Stop = TripStop & { place: PlaceSummary };
+type Stop = TripStop & { place: PlaceListItem };
 
 /** Simpele "dichtstbijzijnde eerst"-volgorde vanaf het eerste punt */
 function optimize(stops: Stop[], start?: LatLng | null): Stop[] {

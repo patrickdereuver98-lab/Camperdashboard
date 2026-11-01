@@ -31,7 +31,7 @@ import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/plac
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { FACILITIES } from "@/lib/search";
-import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
+import { KIND_LABEL, type PlaceListItem } from "@/lib/types";
 
 const PAGE = 20;
 
@@ -354,7 +354,7 @@ function Results({
     <>
       <ul className={`mt-2 sm:mt-4 ${RESULT_LIST}`}>
         {results.slice(0, limit).map((r, i) => (
-          <li key={r.place.id} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
+          <li key={r.place.slug} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
             <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} eager={i < 2} />
           </li>
         ))}
@@ -377,7 +377,7 @@ function Results({
   );
 }
 
-function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceSummary[]; onChange: (f: Filters) => void }) {
+function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceListItem[]; onChange: (f: Filters) => void }) {
   // Concrete alternatieven met het aantal plekken dat ze opleveren
   const options = relaxations(places, filters).slice(0, 4);
   return (

@@ -3,7 +3,7 @@ import { timeToMinutes } from "./format";
 import { perPersonPrice } from "./trip-extras";
 
 export { timeToMinutes };
-import type { PlaceKind, PlaceSummary } from "./types";
+import type { PlaceKind, PlaceListItem, PlaceSummary } from "./types";
 
 // ── Filters ─────────────────────────────────────────────────────────────────
 
@@ -268,14 +268,14 @@ export function openStatus(p: Pick<PlaceSummary, "openAllYear" | "season">, date
 // ── Toepassen ───────────────────────────────────────────────────────────────
 
 export interface Result {
-  place: PlaceSummary;
+  place: PlaceListItem;
   km?: number;
 }
 
 // "Aanbevolen": volledigheid van de gegevens, reviews (pas zwaar vanaf 5), een foto, geen vaste vertrektijd (0,3)
 // of uitslapen (0,15).
 // Bij een bestemming telt de afstand mee. Betaalde plaatsing bestaat niet.
-function recommendScore(p: PlaceSummary): number {
+function recommendScore(p: PlaceListItem): number {
   const rating = p.ratingAvg ? (p.ratingAvg / 10) * Math.min(1, p.ratingCount / 5) : 0;
   const kind = departureKind(p);
   // Door beheer bevestigd staat boven een regel die alleen uit de bron komt (+10); zichtbaar verschil is er niet meer
@@ -283,7 +283,7 @@ function recommendScore(p: PlaceSummary): number {
   return confirmed + p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0) + (kind === "vrij" ? 0.3 : kind === "uitslapers" ? 0.15 : 0);
 }
 
-export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
+export function applyFilters(places: PlaceListItem[], f: Filters): Result[] {
   const now = new Date();
   let results: Result[] = [];
   for (const p of places) {
@@ -336,7 +336,7 @@ export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
 }
 
 /** Welke ene verfijning weghalen levert de meeste plekken op? Voor lege resultaten en de filtersheet. */
-export function relaxations(places: PlaceSummary[], f: Filters): { label: string; next: Filters; count: number }[] {
+export function relaxations(places: PlaceListItem[], f: Filters): { label: string; next: Filters; count: number }[] {
   const options: { label: string; next: Filters }[] = [
     ...f.facilities.map((k) => ({ label: `Zonder "${FACILITIES.find((x) => x.key === k)!.label}"`, next: { ...f, facilities: f.facilities.filter((x) => x !== k) } })),
     ...f.kinds.map((k) => ({ label: `Ook andere soorten dan ${k}`, next: { ...f, kinds: f.kinds.filter((x) => x !== k) } })),
