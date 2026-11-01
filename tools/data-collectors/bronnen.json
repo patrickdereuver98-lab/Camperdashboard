@@ -22,8 +22,8 @@
     "type": "api_wfs",
     "lagen": [],
     "betrouwbaarheid": 2,
-    "status": "voorbereid",
-    "notitie": "Tier 2 (besluit eigenaar 31 oktober 2026). Per dataset een laag: {id, url, typename (WFS 2.0) of zonder typename een GeoJSON- of OGC API Features-adres, gemeente, velden}. Zie pdok.py. Endpoints volgen na overleg; daarna in geo_bronnen op toegestaan en hier status actief. Staat na OSM en Archies, zodat bij samenvoegen hun naam voorgaat (gemeentelijke data noemt vaak geen naam)."
+    "status": "actief",
+    "notitie": "Tier 2 (besluit eigenaar 31 oktober 2026). Per dataset een laag: {id, url, typename (WFS 2.0) of zonder typename een GeoJSON- of OGC API Features-adres, gemeente, velden}. Zie pdok.py. Actief en in geo_bronnen toegestaan sinds 31 oktober 2026 (besluit eigenaar). Zolang lagen leeg is, slaat de run de bron over met een waarschuwing; een endpoint toevoegen is genoeg. Staat na OSM en Archies, zodat bij samenvoegen hun naam voorgaat (gemeentelijke data noemt vaak geen naam)."
   },
   {
     "bron_id": "gemeenten_nl",

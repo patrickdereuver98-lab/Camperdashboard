@@ -57,12 +57,11 @@ class PdokError(Exception):
 # ── Configuratie ─────────────────────────────────────────────────────────────
 
 def check_lagen(b: dict[str, Any], clean_url: Callable[[Any, str], str]) -> list[dict[str, Any]]:
-    """Lagen van een api_wfs-bron, gecontroleerd. Een actieve bron zonder lagen is een fout."""
+    """Lagen van een api_wfs-bron, gecontroleerd. Zonder lagen (nog geen endpoints) slaat run_pipeline de bron over en
+    meldt dat; de andere bronnen draaien door."""
     lagen = b.get("lagen", [])
     if not isinstance(lagen, list):
         raise PdokError(f"bron {b['bron']}: lagen moet een lijst zijn")
-    if not lagen and b.get("status", "actief") == "actief":
-        raise PdokError(f"bron {b['bron']}: actief zonder lagen (geen enkel endpoint)")
     out, seen = [], set()
     for laag in lagen:
         if not isinstance(laag, dict):

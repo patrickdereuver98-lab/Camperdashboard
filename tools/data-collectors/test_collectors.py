@@ -585,9 +585,9 @@ def test_geojson_van_een_gemeente(tmp_path):
 def test_bronnen_json_klopt():
     """E1, E2: voorbereide bronnen staan uit; alleen OSM en Archies draaien."""
     active, inactive = rp.load_config(rp.DEFAULT_CONFIG)
-    assert [b["bron"] for b in active] == ["osm", "archies"]
+    assert [b["bron"] for b in active] == ["osm", "archies", "pdok"]
     assert {b["bron"]: b["status"] for b in inactive} == {
-        "pdok": "voorbereid", "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand",
+        "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand",
         "partner_2": "wacht_op_bestand", "svr": "geblokkeerd"}
     tiers = {b["bron"]: b["betrouwbaarheid"] for b in active + inactive}
     assert tiers["pdok"] == 2 and tiers["gemeenten_nl"] == 2
@@ -689,8 +689,7 @@ def test_pdok_config_controle(tmp_path):
     good_laag = {"id": "zwolle", "url": "https://service.pdok.nl/wfs", "typename": "t", "velden": {"naam": "N"}}
     active, _ = rp.load_config(_config(tmp_path, [{**ok, "status": "actief", "lagen": [good_laag]}]))
     assert active[0]["lagen"][0]["url"] == "https://service.pdok.nl/wfs"
-    for bad in ({**ok, "status": "actief"},                                                  # actief zonder lagen
-                {**ok, "lagen": [{**good_laag, "url": "http://onveilig"}]},                  # geen https
+    for bad in ({**ok, "lagen": [{**good_laag, "url": "http://onveilig"}]},                  # geen https
                 {**ok, "lagen": [{**good_laag, "id": "Zwolle!"}]},                           # laag-id
                 {**ok, "lagen": [good_laag, good_laag]},                                     # dubbele laag
                 {**ok, "lagen": [{**good_laag, "velden": {"prijs": "P"}}]},                  # onbekende standaardnaam
@@ -713,6 +712,26 @@ def test_pdok_in_de_hele_keten(tmp_path, monkeypatch):
     rp.run(cfg, True, {}, pipeline=fake, client_factory=Client)
     (rec,), = fake.calls[0][1]["lists"]
     assert rec["bron_id"] == "pdok:zwolle/k1" and (tmp_path / "raw_pdok_zwolle.json").is_file()
+
+
+def test_pdok_actief_zonder_lagen_stopt_de_run_niet(tmp_path, monkeypatch):
+    """Besluit 31 oktober: pdok actief vóór er endpoints zijn. OSM draait door; pdok staat als waarschuwing in het verslag."""
+    monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
+
+    class Fake:
+        def __init__(self, **kw):
+            self.session = requests.Session()
+
+        def request_json(self, *a, **kw):
+            return {"elements": [{"type": "node", "id": 1, "lat": 52.1, "lon": 5.2, "tags": {"tourism": "camp_site", "name": "De Wei"}}]}
+
+    fake = FakePipeline()
+    cfg = _config(tmp_path, [{"bron_id": "osm", "type": "api_overpass", "url": "https://o.example/api", "query": "Q"},
+                             {"bron_id": "pdok", "type": "api_wfs", "status": "actief", "lagen": []}])
+    out = rp.run(cfg, True, {}, pipeline=fake, client_factory=Fake)
+    assert [len(x) for x in fake.calls[0][1]["lists"]] == [1]
+    assert out["bronnen"][1] == {"bron": "pdok", "plekken": 0, "overgeslagen": {}, "geen_lagen": True}
+    assert "bron pdok leverde 0 plekken (nog geen lagen in bronnen.json)" in out["waarschuwingen"]
 
 
 # ── Partnerexports: versleuteld aanleveren, ontsleutelen zoals de workflow, koppelen ──

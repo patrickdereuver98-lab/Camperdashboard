@@ -76,7 +76,8 @@ Bron `pdok` (type `api_wfs`, tier 2) in `bronnen.json` heeft een lijst `lagen`, 
 - `velden` koppelt standaardnamen (naam, id, gemeente, capaciteit, stroom, water, lozing, …) aan kolommen. `gemeente`
   (kolom of vast per laag) staat in `faciliteiten.gemeente`; geo_master heeft er geen eigen kolom voor.
 - bron_id: `pdok:<laag>/<id>`.
-- Aanzetten: lagen invullen, `status` op `actief`, en in `geo_bronnen` `pdok` op `toegestaan`.
+- `pdok` staat al op `actief` en in `geo_bronnen` op `toegestaan` (31 oktober 2026). Zonder lagen slaat de run de bron
+  over met een waarschuwing; een laag toevoegen is genoeg.
 
 ## Partnerexports
 

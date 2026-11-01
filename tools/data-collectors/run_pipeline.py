@@ -229,6 +229,11 @@ def collect_all(bronnen: list[dict[str, Any]], env: dict[str, str], **kw: Any) -
     """Alle lijsten in volgorde van voorrang, plus een verslag per bron. Eén fout = uitzondering (geen halve run)."""
     lists, report = [], []
     for b in bronnen:
+        if b["type"] == "api_wfs" and not b["lagen"]:
+            # Actief, maar nog geen endpoint: melden (waarschuwing in de samenvatting), niet de hele run stoppen
+            log.warning("%s: actief zonder lagen, overgeslagen", b["bron"])
+            report.append({"bron": b["bron"], "plekken": 0, "overgeslagen": {}, "geen_lagen": True})
+            continue
         try:
             res = collect_api(b, env, **kw) if b["type"] in API_TYPES else collect_files(b)
         except MissingFile as e:
@@ -277,7 +282,8 @@ def warnings_for(report: list[dict[str, Any]], promoted: Any) -> list[str]:
     out = []
     for r in report:
         if not r.get("plekken"):
-            why = f" (wacht op bestand {r['wacht_op_bestand']})" if r.get("wacht_op_bestand") else ""
+            why = (f" (wacht op bestand {r['wacht_op_bestand']})" if r.get("wacht_op_bestand")
+                   else " (nog geen lagen in bronnen.json)" if r.get("geen_lagen") else "")
             out.append(f"bron {r['bron']} leverde 0 plekken{why}")
     if isinstance(promoted, dict) and promoted.get("bekeken"):
         door = sum(int(promoted.get(k) or 0) for k in ("nieuw", "gekoppeld", "gekoppeld_zonder_promotie"))
@@ -288,7 +294,7 @@ def warnings_for(report: list[dict[str, Any]], promoted: Any) -> list[str]:
 
 def summary_markdown(report: list[dict[str, Any]], merged: Any, promoted: Any, dry_run: bool, warnings: list[str] = ()) -> str:
     rows = "\n".join(
-        f"| {r['bron']} | {'wacht op bestand ' + r['wacht_op_bestand'] if r.get('wacht_op_bestand') else r['plekken']} | {sum(r['overgeslagen'].values())} |"
+        f"| {r['bron']} | {'wacht op bestand ' + r['wacht_op_bestand'] if r.get('wacht_op_bestand') else 'nog geen lagen' if r.get('geen_lagen') else r['plekken']} | {sum(r['overgeslagen'].values())} |"
         for r in report
     )
     redenen = "\n".join(f"- {k}: {v}" for k, v in (promoted or {}).get("redenen", {}).items()) or "- geen"
