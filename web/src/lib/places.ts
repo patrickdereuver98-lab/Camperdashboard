@@ -21,7 +21,7 @@ const PLACE_COLUMNS =
 /** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten of beschrijvingen */
 const SUMMARY_COLUMNS =
   "id,slug,name,kind,lat,lng,town,province,price_eur,price_note,tourist_tax_included,power,water,dump_station,toilet," +
-  "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
+  "shower,wifi,dogs,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
   "completeness,departure,checkout_until,price_extras,departure_check,checkin_from,checkin_until,access_24h,access_hours";
 
 class SupabaseError extends Error {
@@ -154,7 +154,7 @@ function normalize(p: Place, websitePhotos = false): Place {
 
 const SUMMARY_KEYS: (keyof PlaceSummary)[] = [
   "id", "slug", "name", "kind", "lat", "lng", "town", "province", "priceEur", "power", "water", "dumpStation",
-  "toilet", "shower", "wifi", "dogs", "capacity", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
+  "toilet", "shower", "wifi", "dogs", "maxLengthM", "openAllYear", "season", "imageUrl", "ratingAvg",
   "ratingCount", "completeness", "priceFrom", "touristTaxIncluded", "departure", "checkoutUntil", "departureCheck", "priceExtras", "imageCredit",
   "checkinFrom", "checkinUntil", "access24h", "accessHours",
 ];
