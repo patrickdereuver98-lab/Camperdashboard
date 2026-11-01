@@ -25,6 +25,19 @@ test.describe("welkomstuitleg", () => {
     await expect(page.getByRole("dialog", { name: "Welkom bij VrijStaan" })).toHaveCount(0);
   });
 
+  test("de cookiebalk wacht tot de uitleg weg is", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("dialog", { name: "Welkom bij VrijStaan" })).toBeVisible();
+    await expect(page.getByText("Mogen we bezoek tellen")).toHaveCount(0);
+    await page.getByRole("button", { name: "Overslaan" }).click();
+    await expect(page.getByText("Mogen we bezoek tellen")).toBeVisible();
+  });
+
+  test("op een andere pagina staat de cookiebalk er meteen", async ({ page }) => {
+    await page.goto("/zoeken");
+    await expect(page.getByText("Mogen we bezoek tellen")).toBeVisible();
+  });
+
   test("overslaan en Escape tellen ook als gezien", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("dialog", { name: "Welkom bij VrijStaan" }).getByRole("button", { name: "Overslaan" }).click();

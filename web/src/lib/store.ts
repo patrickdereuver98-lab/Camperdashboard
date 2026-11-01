@@ -218,8 +218,17 @@ export function readTripPlaces(): PlaceSummary[] {
 /** Verhoog de versie alleen als de uitleg echt anders wordt; dan ziet iedereen hem één keer opnieuw */
 export const WELCOME_VERSION = "2026-11";
 const welcomeStore = createStore<string | null>("vrijstaan:welkom", null, (v): v is string | null => v === null || typeof v === "string");
-export const readWelcome = () => welcomeStore.read();
-export const markWelcomeSeen = () => welcomeStore.write(WELCOME_VERSION);
+// Ook in het geheugen: werkt de opslag niet (geblokkeerd), dan geldt "gezien" in elk geval voor dit bezoek
+let welcomeDone = false;
+export const readWelcome = () => (welcomeDone ? WELCOME_VERSION : welcomeStore.read());
+export const markWelcomeSeen = () => {
+  welcomeDone = true;
+  welcomeStore.write(WELCOME_VERSION);
+};
+/** true zolang de welkomstuitleg nog moet komen of open staat; de cookiebalk wacht daarop */
+export function useWelcomeSeen(): boolean {
+  return welcomeStore.use() !== null || welcomeDone;
+}
 
 // ── Plekpuls (één vraag na een bezoek) ─────────────────────────────────────
 

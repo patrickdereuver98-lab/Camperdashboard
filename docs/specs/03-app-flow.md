@@ -154,7 +154,7 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
   (filteren op wat telt). Knoppen **Volgende**, **Terug**, **Overslaan**, op het laatste scherm **Aan de slag**; sluiten,
   Escape, omlaag vegen of op de achtergrond tikken telt ook als gezien. Daarna nooit meer (`vrijstaan:welkom` in de
   browser). Niet voor wie al een cookiekeuze had en niet op andere pagina's (wie via Google op een plek landt, ziet
-  meteen de plek). Onder de sheet staat de cookiebanner (weigeren en toestaan even zwaar), daarna direct zoeken.
+  meteen de plek). Pas als de uitleg weg is, komt de cookiebanner (weigeren en toestaan even zwaar), daarna direct zoeken.
 - Installeren als app: uitleg in de FAQ ("Hoe zet ik VrijStaan op mijn beginscherm?").
 - **Beheerder:** `/admin` → **Nog geen account? Aanmaken** met het uitgenodigde e-mailadres → bevestigingsmail →
   inloggen → Overzicht.

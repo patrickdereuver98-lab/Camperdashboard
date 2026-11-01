@@ -80,7 +80,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
-| ✅ Bètaronde soft-launch (1 november 2026): frictieloze onboarding (drie schermen, `components/onboarding.tsx`, alleen startpagina, één keer per toestel via `vrijstaan:welkom`); zoeklijst toont de vertrekregel over de hele breedte (werd op 390 px afgekapt achter de prijs); Plekpuls-basis klaar maar uit (`components/plekpuls.tsx`, `lib/plekpuls.ts`, README 88); cookiebeleid noemt `vrijstaan:welkom` | Agent | Masterplan fase 1, README 87 en 88 | `onboarding.tsx`, `plekpuls.tsx`, `lib/plekpuls.ts`, `lib/store.ts`, `place-ui.tsx`, startpagina, plekpagina, `cookies/page.tsx` | `e2e/onboarding.spec.ts`, a11y-test van de welkomstsheet (licht en donker), `tests/plekpuls.test.ts`; huisregels (14 px, 44 px) groen op alle pagina's; CLS op 390 px gemeten bij trage verbinding: zoeken 0, plekpagina < 0,001, startpagina 0, Zonder vertrektijd 0,018 (lettertype laadt, ruim onder 0,1) | — |
+| ✅ Bètaronde soft-launch (1 november 2026): frictieloze onboarding (drie schermen, `components/onboarding.tsx`, alleen startpagina, één keer per toestel via `vrijstaan:welkom`); zoeklijst toont de vertrekregel over de hele breedte (werd op 390 px afgekapt achter de prijs); Plekpuls-basis klaar maar uit (`components/plekpuls.tsx`, `lib/plekpuls.ts`, README 88); cookiebeleid noemt `vrijstaan:welkom`; de cookiebalk wacht op de startpagina tot de uitleg weg is | Agent | Masterplan fase 1, README 87 en 88 | `onboarding.tsx`, `plekpuls.tsx`, `lib/plekpuls.ts`, `lib/store.ts`, `place-ui.tsx`, startpagina, plekpagina, `cookies/page.tsx` | `e2e/onboarding.spec.ts`, a11y-test van de welkomstsheet (licht en donker), `tests/plekpuls.test.ts`; huisregels (14 px, 44 px) groen op alle pagina's; CLS op 390 px gemeten bij trage verbinding: zoeken 0, plekpagina < 0,001, startpagina 0, Zonder vertrektijd 0,018 (lettertype laadt, ruim onder 0,1) | — |
 | ✅ Plekpagina rustiger op mobiel: beslisblok, voorzieningen als labels, niets dubbel, kleinere koppen en header, basis 16 px op de telefoon | Agent | Verzoek Patrick, UX-onderzoek | `plek/[slug]/page.tsx`, `chrome.tsx`, `globals.css` | Vertrekken, prijs, open en lengte in één scherm op iPhone-formaat | — |
 | ✅ Plekkaart opnieuw ingedeeld: waar (plaats, afstand vanaf je locatie), wanneer (vertrek + aankomst), wat en hoeveel (voorzieningen, prijs + toeslagen) | Agent | Verzoek Patrick | `place-ui.tsx`, `lib/my-location.ts`, samenvattingen met aankomsttijden | Afstand, vertrek, aankomst en prijs op elke kaart zonder doortikken | — |
 | ✅ Zoekscherm compacter op mobiel (Booking als voorbeeld): kleinere tabbladen en zoekveld, één rij Filters/Sorteren/Kaart, kleinere kop, compactere kaarten, prijs past altijd | Agent | Verzoek Patrick | `search-app.tsx`, `destination-search.tsx`, `place-ui.tsx` | Eerste plek direct in beeld op iPhone | — |
@@ -145,6 +145,19 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | 🔄 Kernbelofte 100% zeker: bevestiging door mens vóór Zonder vertrektijd. Bijgesteld 18 okt (eigenaar): een bron is genoeg voor de weergave, geen label "nog niet bevestigd" meer; bevestigen in beheer blijft voor de controle en sortering | Agent | `plan.md` K1–K3 | Migratie `20261015120000_vertrektijd_bevestiging.sql` (live sinds 16 oktober), Beheer → Vertrektijden | Eerste ronde gecontroleerd | Beheeraccount |
 
 ## Mijlpaal 6: release ⬜
+
+### Checklist livegang v1.0.0-beta (soft-launch, 1 november 2026)
+
+- [ ] Vercel, omgeving Production: `NEXT_PUBLIC_PLEKPULS` niet gezet of `0` (Plekpuls uit, README 88); geen
+  `VRIJSTAAN_OFFLINE`.
+- [ ] Vercel: `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_ANON_KEY` wijzen naar het productieproject
+  (`qkrmthrhwmmmwswmfgwc`), `NEXT_PUBLIC_SITE_URL` = `https://vrijstaan.nl`, `ORS_API_KEY` aanwezig.
+- [ ] Supabase: Auth → URL Configuration heeft `https://vrijstaan.nl` als Site URL en in de redirect-lijst.
+- [ ] Supabase: `list_migrations` gelijk aan `web/supabase/migrations/`; advisors zonder security-fouten.
+- [ ] Na de deploy: startpagina in een privévenster op de telefoon (welkomstuitleg, daarna cookiebalk), een plek
+  openen, een zoekopdracht met filter; geen fouten in de Vercel-logs.
+- [ ] Tag `v1.0.0-beta` op `main`; terugdraaien = vorige deploy promoten in Vercel.
+
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|

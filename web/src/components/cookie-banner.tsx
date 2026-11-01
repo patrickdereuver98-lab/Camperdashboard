@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useHydrated } from "@/lib/use-media";
-import { CONSENT_VERSION, readConsent, useConsent, writeConsent } from "@/lib/store";
+import { CONSENT_VERSION, readConsent, useConsent, useWelcomeSeen, writeConsent } from "@/lib/store";
 import { supabase } from "@/lib/supabase-browser";
 
 const OPEN_EVENT = "vrijstaan:cookie-instellingen";
@@ -40,8 +40,13 @@ export function CookieBanner() {
     return () => window.removeEventListener(OPEN_EVENT, open);
   }, []);
 
+  const welcomeSeen = useWelcomeSeen();
   const needed = !consent || consent.version !== CONSENT_VERSION;
-  if (!mounted || (!needed && !forced)) return null;
+  // Nieuwe bezoeker op de startpagina: eerst de welkomstuitleg, daarna pas de cookievraag. Niet twee lagen over elkaar
+  // (zie components/onboarding.tsx; dezelfde voorwaarde: geen eerdere cookiekeuze en uitleg nog niet gezien).
+  // window pas na hydratatie (mounted); usePathname zou de prerender blokkeren
+  const waitForWelcome = mounted && window.location.pathname === "/" && !consent && !welcomeSeen;
+  if (!mounted || waitForWelcome || (!needed && !forced)) return null;
 
   const close = (a: boolean) => {
     save(a);
