@@ -213,7 +213,13 @@ def read_text(data: bytes) -> str:
         return data.decode("cp1252", errors="replace")
 
 
-def parse_csv(data: bytes, bron: str, keep_unknown: bool = False) -> ParseResult:
+# Standaardnamen die `velden` in bronnen.json aan een kolom mag koppelen (CSV van een partner met eigen kolomnamen)
+CSV_VELDEN = {"naam", "id", "lat", "lon", *set(FACILITY_ALIASES.values())}
+
+
+def parse_csv(data: bytes, bron: str, keep_unknown: bool = False, velden: dict[str, str] | None = None) -> ParseResult:
+    """CSV/TSV. `velden` ({"naam": "Plaatsnaam", "lat": "GPS N"}) zet een kolom op een standaardnaam; die gaat dan
+    voor een kolom die toevallig al zo heet."""
     text = read_text(data)
     sample = text[:8192]
     try:
@@ -226,6 +232,10 @@ def parse_csv(data: bytes, bron: str, keep_unknown: bool = False) -> ParseResult
     for row in reader:
         if not any((v or "").strip() for v in row.values() if isinstance(v, str)):
             continue
+        if velden:
+            mapped = {std: row.get(col) for std, col in velden.items()}
+            row = {k: v for k, v in row.items() if k not in velden.values() and norm_key(str(k)) not in velden}
+            row.update(mapped)
         name_key, name = _pick(row, NAME_KEYS)
         lat_key, lat = _pick(row, LAT_KEYS)
         lon_key, lon = _pick(row, LON_KEYS)
@@ -329,11 +339,16 @@ PARSERS = {".csv": parse_csv, ".tsv": parse_csv, ".txt": parse_csv, ".kml": pars
            ".gpx": parse_gpx, ".geojson": parse_geojson, ".json": parse_geojson}
 
 
-def parse_file(path: str | Path, bron: str | None = None, keep_unknown: bool = False) -> ParseResult:
+def parse_file(path: str | Path, bron: str | None = None, keep_unknown: bool = False,
+               velden: dict[str, str] | None = None) -> ParseResult:
     p = Path(path)
     parser = PARSERS.get(p.suffix.lower())
     if parser is None:
         raise ValueError(f"Onbekend bestandstype {p.suffix!r} ({p.name}); kan: {', '.join(sorted(PARSERS))}")
+    if velden:
+        if parser is not parse_csv:
+            raise ValueError(f"{p.name}: velden koppelen kan alleen bij CSV (GPX en KML hebben vaste namen)")
+        return parse_csv(p.read_bytes(), bron or norm_key(p.stem), keep_unknown, velden)
     return parser(p.read_bytes(), bron or norm_key(p.stem), keep_unknown)
 
 

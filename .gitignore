@@ -9,3 +9,8 @@ Thumbs.db
 
 # Tijdelijke worktrees van agents
 .claude/worktrees/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
