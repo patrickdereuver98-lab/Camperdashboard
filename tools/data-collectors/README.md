@@ -7,6 +7,7 @@ Partnerdata en open data samenvoegen tot één masterlijst (`geo_master` in Supa
 | 1 | `api_client.py` | JSON ophalen van partner-API's, met exponential backoff bij 429, 5xx en netwerkfouten |
 | 2 | `parse_statics.py` | Aangeleverde KML/KMZ, GPX en CSV omzetten naar de standaardvorm |
 | 2b | `map_api_data.py` | Ruwe API-respons (GeoJSON, Overpass of een lijst objecten) omzetten naar de standaardvorm |
+| 2c | `pdok.py` | PDOK en gemeentelijke open data (WFS 2.0, OGC API Features of GeoJSON) ophalen per laag en omzetten |
 | 3 | `web/supabase/functions/pipeline/merge_master.ts` | Lijsten ontdubbelen en in stukken van 500 upserten (pipeline-actie `merge_master`) |
 | 4 | `promote_geo_master` (migratie `20261031090000`) | `geo_master` → `places` volgens de bronregels (pipeline-actie `promote`) |
 | alles | `run_pipeline.py` + `bronnen.json` | De hele keten in één run; wekelijks via de workflow `data_pipeline.yml` |
@@ -57,6 +58,37 @@ naam en coördinaten). Eerst met `"dry_run": true` om te zien wat er gebeurt:
 jq -s '{action: "merge_master", dry_run: true, lists: .}' uit/partner_x.json uit/osm.json \
   | curl -sS -X POST "$PIPELINE_URL" -H "x-pipeline-key: $PIPELINE_KEY" -H "Content-Type: application/json" -d @-
 ```
+
+## PDOK en gemeentelijke open data
+
+Bron `pdok` (type `api_wfs`, tier 2) in `bronnen.json` heeft een lijst `lagen`, één per dataset:
+
+```json
+{ "id": "zwolle", "url": "https://service.pdok.nl/…/wfs/v1_0", "typename": "ns:camperplaatsen", "gemeente": "Zwolle",
+  "velden": { "naam": "OBJECTNAAM", "id": "OBJECTID", "capaciteit": "AANTAL_PLAATSEN", "stroom": "ELEKTRA" } }
+```
+
+- Met `typename`: WFS 2.0 GetFeature als GeoJSON in EPSG:4326, per `pagina` (1000) met startIndex. Zonder: een
+  GeoJSON- of OGC API Features-adres; `next`-links op dezelfde host worden gevolgd. Meer dan `max_paginas` (50) is
+  een fout.
+- RD (EPSG:28992) wordt WGS84 (pyproj). Omgedraaide assen herkent de parser aan Nederland. Een vlak wordt het
+  zwaartepunt van de buitenrand; lijnen worden overgeslagen.
+- `velden` koppelt standaardnamen (naam, id, gemeente, capaciteit, stroom, water, lozing, …) aan kolommen. `gemeente`
+  (kolom of vast per laag) staat in `faciliteiten.gemeente`; geo_master heeft er geen eigen kolom voor.
+- bron_id: `pdok:<laag>/<id>`.
+- Aanzetten: lagen invullen, `status` op `actief`, en in `geo_bronnen` `pdok` op `toegestaan`.
+
+## Partnerexports
+
+`partner_1` (CSV) en `partner_2` (GPX) staan op `wacht_op_bestand`. Aanleveren alleen versleuteld:
+
+```bash
+openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -in partner_1.csv -out tools/data-collectors/aanlevering/partner_1.csv.enc -pass env:AANLEVERING_SLEUTEL
+```
+
+De workflow ontsleutelt elk `aanlevering/*.enc` met het secret `AANLEVERING_SLEUTEL` naar dezelfde naam zonder `.enc`.
+Kolommen met een eigen naam koppel je bij CSV met `velden` (`{"naam": "Plaatsnaam", "lat": "GPS N", "lon": "GPS E"}`).
+Aanzetten: `status` op `actief` en in `geo_bronnen` op `toegestaan`, pas als de licentie rond is.
 
 ## Hoe het samenvoegen werkt
 

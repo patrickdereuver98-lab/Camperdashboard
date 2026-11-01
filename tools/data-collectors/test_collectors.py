@@ -587,4 +587,167 @@ def test_bronnen_json_klopt():
     active, inactive = rp.load_config(rp.DEFAULT_CONFIG)
     assert [b["bron"] for b in active] == ["osm", "archies"]
     assert {b["bron"]: b["status"] for b in inactive} == {
-        "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand", "partner_2": "wacht_op_bestand", "svr": "geblokkeerd"}
+        "pdok": "voorbereid", "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand",
+        "partner_2": "wacht_op_bestand", "svr": "geblokkeerd"}
+    tiers = {b["bron"]: b["betrouwbaarheid"] for b in active + inactive}
+    assert tiers["pdok"] == 2 and tiers["gemeenten_nl"] == 2
+
+
+# ── PDOK en gemeentelijke open data (pdok.py) ────────────────────────────────
+
+import pdok  # noqa: E402
+
+
+class FakeWfs:
+    """Geeft per aanroep de volgende pagina; onthoudt url en params."""
+
+    def __init__(self, pages):
+        self.pages, self.calls = list(pages), []
+
+    def get_json(self, url, params=None, **kw):
+        self.calls.append((url, params))
+        return self.pages.pop(0)
+
+
+def _fc(features, crs=None, links=None):
+    out = {"type": "FeatureCollection", "features": features}
+    if crs:
+        out["crs"] = {"type": "name", "properties": {"name": crs}}
+    if links:
+        out["links"] = links
+    return out
+
+
+def _pt(x, y, **props):
+    return {"type": "Feature", "geometry": {"type": "Point", "coordinates": [x, y]}, "properties": props}
+
+
+def test_pdok_wfs_pagineert_met_startindex():
+    laag = {"id": "zwolle", "url": "https://service.pdok.nl/x/wfs", "typename": "ns:cp", "pagina": 2}
+    client = FakeWfs([_fc([_pt(6.08, 52.51), _pt(6.09, 52.52)]), _fc([_pt(6.10, 52.53)])])
+    coll = pdok.fetch_laag(client, laag)
+    assert len(coll["features"]) == 3
+    assert [c[1]["startIndex"] for c in client.calls] == [0, 2]
+    p = client.calls[0][1]
+    assert p["request"] == "GetFeature" and p["typeNames"] == "ns:cp" and p["outputFormat"] == "application/json"
+    assert p["srsName"] == "EPSG:4326" and p["count"] == 2
+
+
+def test_pdok_te_veel_paginas_is_een_fout_geen_afgekapte_lijst():
+    laag = {"id": "x1", "url": "https://s.example/wfs", "typename": "t", "pagina": 1, "max_paginas": 2}
+    with pytest.raises(pdok.PdokError, match="max_paginas"):
+        pdok.fetch_laag(FakeWfs([_fc([_pt(6, 52)]), _fc([_pt(6, 52)])]), laag)
+
+
+def test_pdok_ogc_api_volgt_next_alleen_op_dezelfde_host():
+    laag = {"id": "x1", "url": "https://api.pdok.nl/c/items?f=json"}
+    client = FakeWfs([
+        _fc([_pt(6.08, 52.51)], links=[{"rel": "next", "href": "https://api.pdok.nl/c/items?f=json&offset=1"}]),
+        _fc([_pt(6.09, 52.52)], links=[{"rel": "next", "href": "https://elders.example/items"}]),
+    ])
+    assert len(pdok.fetch_laag(client, laag)["features"]) == 2
+    assert [c[0] for c in client.calls] == ["https://api.pdok.nl/c/items?f=json", "https://api.pdok.nl/c/items?f=json&offset=1"]
+
+
+def test_pdok_rd_omgedraaide_assen_en_vlakken():
+    # RD-punt van Amersfoort (155000, 463000) ligt op 52,1552 N, 5,3872 O
+    coll = _fc([_pt(155000, 463000, OBJECTID=1, OBJECTNAAM="Camperplaats De Haven")], crs="urn:ogc:def:crs:EPSG::28992")
+    r = pdok.map_features(coll, "pdok", {"id": "amersfoort", "velden": {"naam": "OBJECTNAAM", "id": "OBJECTID"}})
+    rec = r.records[0]
+    assert abs(rec["lat"] - 52.15517) < 1e-4 and abs(rec["lon"] - 5.38720) < 1e-4
+    assert rec["bron_id"] == "pdok:amersfoort/1" and rec["naam"] == "Camperplaats De Haven"
+    # Server die bij EPSG:4326 [lat, lon] geeft
+    r = pdok.map_features(_fc([_pt(52.51, 6.08)]), "pdok", {"id": "z"})
+    assert (r.records[0]["lat"], r.records[0]["lon"]) == (52.51, 6.08)
+    # Vlak: zwaartepunt; lijn en punt buiten Nederland worden overgeslagen met reden
+    square = {"type": "Polygon", "coordinates": [[[6.0, 52.0], [6.2, 52.0], [6.2, 52.2], [6.0, 52.2], [6.0, 52.0]]]}
+    line = {"type": "LineString", "coordinates": [[6, 52], [6.1, 52.1]]}
+    r = pdok.map_features(_fc([{"type": "Feature", "geometry": square, "properties": {}},
+                               {"type": "Feature", "geometry": line, "properties": {}},
+                               _pt(2.35, 48.85)]), "pdok", {"id": "z"})
+    assert len(r.records) == 1 and abs(r.records[0]["lat"] - 52.1) < 1e-9 and abs(r.records[0]["lon"] - 6.1) < 1e-9
+    assert r.skipped == {"geen punt of vlak (lijn of iets anders)": 1, "buiten Nederland of onbekend coördinatenstelsel": 1}
+
+
+def test_pdok_velden_gemeente_en_capaciteit_zonder_verzinnen():
+    laag = {"id": "zwolle", "gemeente": "Zwolle", "velden": {"capaciteit": "AANTAL_PLAATSEN", "stroom": "ELEKTRA"}}
+    coll = _fc([_pt(6.08, 52.51, naam="Katerveer", AANTAL_PLAATSEN="12", ELEKTRA="ja", water="nee"),
+                _pt(6.09, 52.52, AANTAL_PLAATSEN="")])
+    a, b = pdok.map_features(coll, "pdok", laag).records
+    assert a["faciliteiten"] == {"capaciteit": 12, "stroom": True, "water": False, "gemeente": "Zwolle"}
+    assert a["naam"] == "Katerveer"
+    # Geen naam en geen capaciteit: leeg, niet "Onbekend" of 0; zonder id een vaste hash
+    assert b["naam"] is None and b["faciliteiten"] == {"gemeente": "Zwolle"} and b["bron_id"].startswith("pdok:")
+    # Gemeente uit een kolom gaat voor de vaste waarde
+    r = pdok.map_features(_fc([_pt(6.1, 52.5, GM="Dalfsen")]), "pdok", {"id": "z", "gemeente": "Zwolle", "velden": {"gemeente": "GM"}})
+    assert r.records[0]["faciliteiten"]["gemeente"] == "Dalfsen"
+
+
+def test_pdok_config_controle(tmp_path):
+    ok = {"bron_id": "pdok", "type": "api_wfs", "status": "voorbereid", "lagen": []}
+    assert rp.load_config(_config(tmp_path, [ok]))[1][0]["lagen"] == []
+    good_laag = {"id": "zwolle", "url": "https://service.pdok.nl/wfs", "typename": "t", "velden": {"naam": "N"}}
+    active, _ = rp.load_config(_config(tmp_path, [{**ok, "status": "actief", "lagen": [good_laag]}]))
+    assert active[0]["lagen"][0]["url"] == "https://service.pdok.nl/wfs"
+    for bad in ({**ok, "status": "actief"},                                                  # actief zonder lagen
+                {**ok, "lagen": [{**good_laag, "url": "http://onveilig"}]},                  # geen https
+                {**ok, "lagen": [{**good_laag, "id": "Zwolle!"}]},                           # laag-id
+                {**ok, "lagen": [good_laag, good_laag]},                                     # dubbele laag
+                {**ok, "lagen": [{**good_laag, "velden": {"prijs": "P"}}]},                  # onbekende standaardnaam
+                {**ok, "lagen": [{**good_laag, "pagina": 0}]}):
+        with pytest.raises(rp.ConfigError):
+            rp.load_config(_config(tmp_path, [bad]))
+
+
+def test_pdok_in_de_hele_keten(tmp_path, monkeypatch):
+    monkeypatch.setattr(rp, "DATA_DIR", tmp_path)
+    pages = [_fc([_pt(6.08, 52.51, naam="Katerveer", id="k1")])]
+
+    class Client(FakeWfs):
+        def __init__(self, **kw):
+            super().__init__(pages)
+
+    fake = FakePipeline()
+    cfg = _config(tmp_path, [{"bron_id": "pdok", "type": "api_wfs", "status": "actief",
+                              "lagen": [{"id": "zwolle", "url": "https://service.pdok.nl/wfs", "typename": "t"}]}])
+    rp.run(cfg, True, {}, pipeline=fake, client_factory=Client)
+    (rec,), = fake.calls[0][1]["lists"]
+    assert rec["bron_id"] == "pdok:zwolle/k1" and (tmp_path / "raw_pdok_zwolle.json").is_file()
+
+
+# ── Partnerexports: versleuteld aanleveren, ontsleutelen zoals de workflow, koppelen ──
+
+def test_partner_csv_versleuteld_ontsleuteld_en_gekoppeld(tmp_path):
+    """Zelfde openssl-opdracht als de stap "Aangeleverde bestanden ontsleutelen" in data_pipeline.yml."""
+    import os
+    import shutil
+    import subprocess
+    if not shutil.which("openssl"):
+        pytest.skip("openssl ontbreekt")
+    plain = tmp_path / "bron.csv"
+    plain.write_text("Plaatsnaam;GPS N;GPS E;Nr;Stroom\nDe Wei;52,1;5,2;77;ja\n", encoding="utf-8")
+    env = {**os.environ, "AANLEVERING_SLEUTEL": "test-sleutel"}
+    args = ["-aes-256-cbc", "-pbkdf2", "-iter", "200000", "-pass", "env:AANLEVERING_SLEUTEL"]
+    enc = tmp_path / "partner_1.csv.enc"
+    subprocess.run(["openssl", "enc", *args, "-in", str(plain), "-out", str(enc)], check=True, env=env)
+    folder = rp.HERE / "aanlevering_test_partner"
+    folder.mkdir()
+    try:
+        out = folder / "partner_1.csv"
+        subprocess.run(["openssl", "enc", "-d", *args, "-in", str(enc), "-out", str(out)], check=True, env=env)
+        b = {"bron_id": "partner_1", "type": "file_csv", "pad": "aanlevering_test_partner/partner_1.csv", "status": "actief",
+             "velden": {"naam": "Plaatsnaam", "lat": "GPS N", "lon": "GPS E", "id": "Nr"}}
+        (src,), _ = rp.load_config(_config(tmp_path, [b]))
+        (rec,) = rp.collect_files(src).records
+        assert rec == {"naam": "De Wei", "lat": 52.1, "lon": 5.2, "bron_id": "partner_1:77", "faciliteiten": {"stroom": True}}
+    finally:
+        for f in folder.iterdir():
+            f.unlink()
+        folder.rmdir()
+
+
+def test_velden_alleen_bij_csv(tmp_path):
+    for bad in ({"bron_id": "partner_2", "type": "file_gpx", "pad": "aanlevering/p.gpx", "velden": {"naam": "x"}},
+                {"bron_id": "partner_1", "type": "file_csv", "pad": "aanlevering/p.csv", "velden": {"prijs": "x"}}):
+        with pytest.raises(rp.ConfigError):
+            rp.load_config(_config(tmp_path, [bad]))

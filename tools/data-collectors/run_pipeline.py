@@ -2,7 +2,8 @@
 
 1. Elke bron uit `bronnen.json` (in volgorde van voorrang) wordt een lijst in de standaardvorm:
    - type "api": ophalen met api_client.py (retries, backoff) en omzetten met map_api_data.py;
-   - type "bestanden": alle KML/KMZ/GPX/CSV in de opgegeven map, via parse_statics.py.
+   - type "bestanden": alle KML/KMZ/GPX/CSV in de opgegeven map, via parse_statics.py;
+   - type "api_wfs": PDOK en gemeentelijke open data (WFS 2.0, OGC API Features of GeoJSON), per laag, via pdok.py.
 2. Lukt één bron niet, dan stopt de run vóór het samenvoegen: merge_master hoort álle lijsten tegelijk te krijgen
    (een ontbrekende lijst laat zijn oude masters staan en verwart de vaste ids).
 3. merge_master (pipeline) zet de lijsten in geo_master; promote zet wat aan de bronregels voldoet in places
@@ -31,7 +32,8 @@ import requests
 
 from api_client import DATA_DIR, ApiClient, ApiError, RetryableHTTPError, write_json
 from map_api_data import map_raw
-from parse_statics import PARSERS, ParseResult, dedupe_ids, parse_file
+from parse_statics import CSV_VELDEN, PARSERS, ParseResult, dedupe_ids, parse_file
+import pdok
 
 log = logging.getLogger("run_pipeline")
 
@@ -69,7 +71,8 @@ FILE_TYPES = {"file_csv": (".csv", ".tsv", ".txt"), "file_gpx": (".gpx",), "file
               "file_geojson": (".geojson", ".json")}
 # Gesloten databanken: nooit in bulk overnemen (Databankenwet, bronnenbeleid §1). Ook niet als iemand ze toevoegt.
 VERBODEN = {"campercontact", "park4night", "nkc", "acsi", "anwb", "promobil", "camperstop"}
-TYPES = {"api", "api_overpass", "bestanden", *FILE_TYPES}
+API_TYPES = ("api", "api_overpass", "api_wfs")
+TYPES = {*API_TYPES, "bestanden", *FILE_TYPES}
 MARKDOWN_LINK = re.compile(r"^\[([^\]]*)\]\((https?://[^)\s]+)\)$")
 
 
@@ -128,8 +131,21 @@ def load_config(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]
             if not str(raw["pad"]).lower().endswith(FILE_TYPES[kind]):
                 raise ConfigError(f"bron {name}: {raw['pad']} past niet bij {kind}")
             inside(raw["pad"], name)
+        if "velden" in raw and kind != "api_wfs":
+            velden = raw["velden"]
+            if kind not in ("file_csv", "bestanden") or not isinstance(velden, dict) \
+                    or not all(isinstance(v, str) and v for v in velden.values()):
+                raise ConfigError(f"bron {name}: velden alleen bij CSV, als object van standaardnaam naar kolomnaam")
+            onbekend = sorted(set(velden) - CSV_VELDEN)
+            if onbekend:
+                raise ConfigError(f"bron {name}: onbekende standaardnamen in velden {onbekend}")
         if kind == "bestanden" and not raw.get("map"):
             raise ConfigError(f"bron {name}: type bestanden zonder map")
+        if kind == "api_wfs":
+            try:
+                b["lagen"] = pdok.check_lagen(b, clean_url)
+            except pdok.PdokError as e:
+                raise ConfigError(str(e)) from e
         (active if raw.get("status", "actief") == "actief" else inactive).append(b)
     for b in inactive:
         log.info("%s staat op %r: overgeslagen", b["bron"], b.get("status"))
@@ -170,6 +186,12 @@ def fetch_overpass(b: dict[str, Any], client_factory: Callable[..., ApiClient] =
 
 
 def collect_api(b: dict[str, Any], env: dict[str, str], client_factory: Callable[..., ApiClient] = ApiClient) -> ParseResult:
+    if b["type"] == "api_wfs":
+        try:
+            return pdok.collect(b, b["lagen"], client_factory(timeout=120),
+                                write_raw=lambda data, name: write_json(data, DATA_DIR / name))
+        except pdok.PdokError as e:
+            raise ConfigError(f"bron {b['bron']}: {e}") from e
     if b["type"] == "api_overpass":
         raw: Any = fetch_overpass(b, client_factory)
     else:
@@ -190,14 +212,16 @@ def collect_files(b: dict[str, Any]) -> ParseResult:
         f = inside(b["pad"], b["bron"])
         if not f.is_file():
             raise MissingFile(f"bron {b['bron']}: bestand {b['pad']} ontbreekt")
-        return parse_file(f, b["bron"], b.get("alle_velden", False))
+        return parse_file(f, b["bron"], b.get("alle_velden", False), b.get("velden"))
     folder = inside(b["map"], b["bron"]) if b["map"] not in (".", "") else HERE
     files = sorted(p for p in folder.glob("*") if p.suffix.lower() in PARSERS)
     if not files:
         raise ConfigError(f"bron {b['bron']}: geen bestanden in {folder}")
     total = ParseResult()
     for f in files:
-        total.extend(parse_file(f, b["bron"], b.get("alle_velden", False)))
+        # velden alleen voor de CSV's in de map; GeoJSON en GPX hebben hun eigen namen
+        total.extend(parse_file(f, b["bron"], b.get("alle_velden", False),
+                                b.get("velden") if PARSERS[f.suffix.lower()].__name__ == "parse_csv" else None))
     return total
 
 
@@ -206,7 +230,7 @@ def collect_all(bronnen: list[dict[str, Any]], env: dict[str, str], **kw: Any) -
     lists, report = [], []
     for b in bronnen:
         try:
-            res = collect_api(b, env, **kw) if b["type"] in ("api", "api_overpass") else collect_files(b)
+            res = collect_api(b, env, **kw) if b["type"] in API_TYPES else collect_files(b)
         except MissingFile as e:
             # Nog niet aangeleverd: overslaan en melden, niet de hele run stoppen. Een bron die eerder wel data gaf en nu
             # ontbreekt, laat zijn records in geo_master staan (merge_master ruimt alleen op wat in een andere groep viel).

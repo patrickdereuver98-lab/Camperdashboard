@@ -17,13 +17,22 @@
     "status": "actief"
   },
   {
+    "bron_id": "pdok",
+    "naam": "PDOK / gemeentelijke open data (data.overheid.nl): camperplaatsen",
+    "type": "api_wfs",
+    "lagen": [],
+    "betrouwbaarheid": 2,
+    "status": "voorbereid",
+    "notitie": "Tier 2 (besluit eigenaar 31 oktober 2026). Per dataset een laag: {id, url, typename (WFS 2.0) of zonder typename een GeoJSON- of OGC API Features-adres, gemeente, velden}. Zie pdok.py. Endpoints volgen na overleg; daarna in geo_bronnen op toegestaan en hier status actief. Staat na OSM en Archies, zodat bij samenvoegen hun naam voorgaat (gemeentelijke data noemt vaak geen naam)."
+  },
+  {
     "bron_id": "gemeenten_nl",
     "naam": "Gemeentelijke open data (data.overheid.nl): camperplaatsen",
     "type": "bestanden",
     "map": "aanlevering/gemeenten",
-    "betrouwbaarheid": 1,
+    "betrouwbaarheid": 2,
     "status": "voorbereid",
-    "notitie": "Per gemeente een GeoJSON- of CSV-download van data.overheid.nl in aanlevering/gemeenten/ (open licentie, geen versleuteling nodig). Daarna in geo_bronnen op toegestaan en hier status actief."
+    "notitie": "Tier 2, zelfde als pdok (besluit eigenaar 31 oktober 2026). Losse downloads van data.overheid.nl (GeoJSON of CSV) in aanlevering/gemeenten/ (open licentie, mag onversleuteld). Een dataset met een vast adres hoort als laag bij pdok. Daarna in geo_bronnen op toegestaan en hier status actief."
   },
   {
     "bron_id": "partner_1",
@@ -32,7 +41,7 @@
     "pad": "aanlevering/partner_1.csv",
     "betrouwbaarheid": 3,
     "status": "wacht_op_bestand",
-    "notitie": "Versleuteld aanleveren als aanlevering/partner_1.csv.enc (secret AANLEVERING_SLEUTEL); geo_bronnen staat op geblokkeerd tot de licentie rond is."
+    "notitie": "Versleuteld aanleveren als aanlevering/partner_1.csv.enc (openssl aes-256-cbc, pbkdf2, 200000 iteraties, secret AANLEVERING_SLEUTEL; de workflow ontsleutelt het naar aanlevering/partner_1.csv). Wijken de kolomnamen af, koppel ze dan met velden (bv. {\"naam\": \"Plaatsnaam\", \"lat\": \"GPS N\", \"lon\": \"GPS E\"}). Aanzetten: status actief hier en toegestaan in geo_bronnen, pas als de licentie rond is."
   },
   {
     "bron_id": "partner_2",
@@ -41,7 +50,7 @@
     "pad": "aanlevering/partner_2.gpx",
     "betrouwbaarheid": 4,
     "status": "wacht_op_bestand",
-    "notitie": "Versleuteld aanleveren als aanlevering/partner_2.gpx.enc; geo_bronnen staat op geblokkeerd tot de licentie rond is."
+    "notitie": "Versleuteld aanleveren als aanlevering/partner_2.gpx.enc (openssl aes-256-cbc, pbkdf2, 200000 iteraties, secret AANLEVERING_SLEUTEL; de workflow ontsleutelt het naar aanlevering/partner_2.gpx). GPX: naam en coördinaten uit de waypoints, faciliteiten uit eenvoudige extensies. Aanzetten: status actief hier en toegestaan in geo_bronnen, pas als de licentie rond is."
   },
   {
     "bron_id": "svr",
