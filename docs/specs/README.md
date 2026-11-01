@@ -19,6 +19,8 @@ Verwante documenten: `docs/HANDLEIDING.md` (draaien, online zetten, beheren), `d
 oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md` (terugdraaien, back-up, bewaking) en
 [`plan.md`](../../plan.md) (wat nog openstaat).
 
+**Lange termijn:** zie het hoofdstuk [VrijStaan 2.0 - Visie, Strategie & Toekomstige Roadmap](#vrijstaan-20---visie-strategie--toekomstige-roadmap) verderop.
+
 ## Zo gebruik je ze
 
 1. De **PRD** is leidend. Elke nieuwe functie begint daar: functie, user story, acceptatiecriteria.
@@ -42,6 +44,123 @@ oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md`
   Lettertype Geist, vormen en beweging volgens `docs/stijlgids.md` (besluit eigenaar 12 oktober 2026).
 - **Nederlands eerst**; Engels en Duits later.
 - **Geen cookies of tracking van derden**; statistieken alleen met toestemming.
+
+## VrijStaan 2.0 - Visie, Strategie & Toekomstige Roadmap
+
+> Opgesteld 1 november 2026 (opdracht Patrick: "denk 100% out-of-the-box, het ultieme camperplatform"). Dit is de
+> leidraad voor de sprints **na de livegang van 1 januari 2027**. Tot die datum gaat alle bouwtijd naar de Must-functies
+> uit de PRD. De vaste spelregels hierboven blijven gelden. Waar een idee botst met de PRD of het bronnenbeleid, staat het
+> als open punt in de tabel hieronder (nummers 82 tot 86) en wacht het op een besluit van de eigenaar.
+
+### 1. De markt, eerlijk bekeken
+
+Bronnen: App Store-pagina's, eigen pagina's van de aanbieders, prijsoverzichten en camperforum.nl (geraadpleegd
+1 november 2026). Prijzen verschillen per land en datum. "Trodbox" uit de opdracht hebben we nergens kunnen vinden.
+
+| Speler | Sterk | Zwak | Onze kans |
+|---|---|---|---|
+| park4night | Grootste community, veel plekken in heel Europa, gratis basis. Premium ±€ 10 per jaar: filters, offline kaarten, geen advertenties ([App Store](https://apps.apple.com/gb/app/park4night-com/id430946556), [prijzen](https://www.wandernundmehr.at/faq/wie-teuer-ist-park4night)) | Klachten over offline modus en betalen, advertenties ook voor betalers ([reviews](https://appshunter.io/ios/app/430946556/reviews/6)). Reviews zijn "zin en onzin", correcties gaan via de data en niet via de reviews ([camperforum.nl](https://camperforum.nl/viewtopic.php?p=2453439)) | Feiten in plaats van meningen: vertrektijd en prijs als veld, met datum |
+| Campercontact (NKC) | Sterk in Nederland, ±50.000 plekken, 800.000 reviews, 70+ filters, routes ([PRO+](https://campercontact.com/en/content/features-pro)) | De filters en alle reviews zitten achter PRO+ (±€ 18 tot 20 per jaar). Oude reviews blijven staan. Forumklachten over de app ([camperforum.nl](https://camperforum.nl/viewtopic.php?p=2320188)) | Alle filters gratis, en het filter dat zij niet hebben: vertrektijd |
+| Stellplatz-Radar (Promobil) | Redactioneel gecontroleerd, groot in Duitsland, 250.000 beoordelingen ([App Store](https://apps.apple.com/DE/app/id360686968)) | Offline en filters in Plus, app voelt verouderd, steeds opnieuw inloggen ([overzicht](https://worldsapps.com/de/reviews-stellplatz-radar-von-promobil)) | Snelle webapp zonder installatie |
+| iOverlander | Gratis, wereldwijd, alles door reizigers | Sinds versie 2.0 offline achter een betaalmuur, valse tips over vrij kamperen ([Mountain Gazette](https://mountaingazette.com/blogs/mountain-notes/here-there-43-ioverlander), [review](https://www.pilotplans.com/blog/ioverlander-review)) | Niet onze markt (wildkamperen valt buiten scope), wel een les: offline mag geen premium zijn |
+
+**Het patroon:** iedereen verkoopt dezelfde drie dingen achter een betaalmuur (filters, offline, alle reviews). En
+iedereen leunt op reviews als bron van waarheid, die verouderen zonder dat de lezer het ziet. Niemand toont hoe oud een
+feit is, en niemand heeft vertrektijd als veld.
+
+**Onze voorsprong:** vertrektijd als kernfeit met eigen filter en pagina's, prijs met toeslagen, alles gratis zonder
+advertenties of tracking, een snelle webapp, en een dataketen met bron en tier per gegeven (OSM, PDOK/WFS, gemeenten,
+websites).
+
+**Onze blinde vlek:** we hebben nog geen gebruikers en geen reviews (live 0 accounts, zie nummer 12). Alles leunt op
+scrapers en open data, en voor veel plekken staat de vertrektijd nergens online (nummer 59). Daarnaast zijn we strikt
+Nederland, terwijl een camperaar ook over de grens rijdt, en vinden mensen ons niet zonder app store. De concurrent wint
+niet op data maar op gewoonte.
+
+### 2. Visie
+
+**De gids die laat zien wat nú klopt.** Elk feit heeft een bron en een leeftijd, en de community houdt die leeftijd
+laag. Vertrouwen is het product, en dat geven we niet weg aan advertenties of betaalde plaatsing.
+
+### 3. UX-filosofie
+
+1. **Eén vraag per scherm.** De hoofdvraag is "waar sta ik vannacht, en hoe laat moet ik weg?". Alles wat daar niet bij
+   helpt, gaat een laag dieper.
+2. **Versheid is zichtbaar.** Bij elk kernfeit staat hoe oud het is en waar het vandaan komt ("bevestigd 3 dagen
+   geleden"), rustig en klein. Onbekend blijft onbekend.
+3. **De basis is nooit premium.** Filters, kaart, offline en alle reviews zijn gratis. Betalen kan alleen voor iets
+   dat ons echt geld kost.
+4. **Meedoen kost tien seconden.** Eén vraag, één tik, op het moment dat je er bent. Geen formulieren, geen punten
+   najagen.
+5. **Offline is de standaard.** Op een dijk in Zeeland zonder bereik werkt de gids gewoon.
+
+### 4. De drie concepten
+
+**A. Plekpuls: versheid door bevestigen (community).**
+Na een overnachting stelt de app één vraag: "Klopt het: vertrek uiterlijk 12:00?" met Ja, Nee of Weet ik niet. De
+locatie blijft op het toestel; het toestel weet zelf dat je bij een bewaarde plek stond. Een antwoord wordt een claim in
+de bronnenlaag (`bron.claims`, zodra die live staat, nummer 71), gewogen met de bestaande vertrouwensscore per gebruiker (nummer 68). Zo krijgt elk feit
+een datum en een telling zonder dat iemand een review hoeft te schrijven.
+Gamification zonder spam: geen publieke ranglijsten of badges. Wel **Plekhoeders**: wie een plek of gemeente
+"adopteert", krijgt een seintje als een feit ouder wordt dan 12 maanden, ziet zijn bijdrage terug ("dankzij jou 41
+plekken actueel") en krijgt vroege toegang tot nieuwe functies. Doe mee (per provincie) wordt het vertrekpunt.
+
+**B. Vannacht-motor: offline, met je eigen camper (product).**
+De hele Nederlandse dataset staat versleuteld op het toestel (een paar MB) en wordt bijgewerkt zodra er bereik is. Het
+camperprofiel (lengte, later hoogte en gewicht uit OSM `maxheight`/`maxweight`) filtert stilletjes mee. Eén knop
+"Vannacht" geeft drie plekken op rijtijd, met vertrektijd, prijs en hoe vers de gegevens zijn, plus een automatisch
+**plan B** als een plek als vol wordt gemeld. Een **drukteverwachting** per plek en dag rekent alleen met echte meldingen
+en seizoen, en staat er altijd als verwachting, met onderbouwing (nummer 84).
+
+**C. VrijStaan voor eigenaren en gemeenten (B2B).**
+- **Eigenarenportaal (gratis):** een eigenaar claimt de plek en werkt zelf vertrektijd, prijs en seizoen bij. Dat is
+  een tier 1-bron en maakt de data beter voor iedereen. Eigenaren krijgen in ruil inzicht: hoe vaak hun plek is bekeken
+  en doorgeklikt (geaggregeerd, alleen met toestemming gemeten).
+- **Gemeentedashboard (betaald):** geaggregeerde, anonieme vraag per regio: waar zoeken camperaars en is er geen plek,
+  hoe verhouden prijzen zich, wat doet een nieuwe camperplaats met de vraag. Gemeenten en citymarketing beslissen nu op
+  gevoel; wij hebben de vraagkant. Aanbod uit PDOK en gemeentelijke WFS staat al in onze keten.
+- **VrijStaan Inside (betaald):** een widget of API voor verhuurbedrijven en camperdealers, zodat hun klanten de
+  vertrektijd en de echte prijs zien. Geen betaalde ranking: de volgorde in de gids is nooit te koop.
+
+**Wilde ideeën die we bewaren, niet bouwen:** een AI-agent die eigenaren mailt of belt om de vertrektijd te vragen (de
+mailronde uit de PRD is de eerste stap), sensoren bij loospunten, AR-pijlen naar het loospunt, een rit-uitleg via de
+OBD-poort van de camper.
+
+**Afgewezen:** de databanken van concurrenten overnemen. Dat botst met de Databankenwet en het bronnenbeleid §3a
+(nummer 74), en het is ook geen strategie: wie hun data kopieert, kopieert hun verouderde reviews. Onze kracht is dat
+wij weten waar elk feit vandaan komt.
+
+### 5. Hoe dit de dataketen aanvult
+
+De WFS/OSM-dataketen (`tools/data-collectors`, `geo_master`, de koppelregels en tiers) blijft de basis en verandert
+niet. Er komen bronnen bij, er gaat niets af:
+
+| Laag | Nu | Erbij in 2.0 |
+|---|---|---|
+| Aanbod | OSM, PDOK/WFS, gemeenten, Archie's (beperkt), websites via scraper en stealth-lezer | Eigenarenportaal als tier 1-bron per plek |
+| Feiten | Scraper en zoekagenten, bevestiging in beheer | Plekpuls-claims (gewogen op vertrouwen) als extra bron in `bron.claims` (zodra de bronnenlaag live staat, nummer 71) |
+| Versheid | `verified_at`, `departure_checked_at`, "mogelijk verouderd" na 12 maanden | Datum en telling per feit zichtbaar; Plekhoeders krijgen een seintje bij oude feiten |
+| Uitgaand | Site en SEO-pagina's | Offline pakket voor de app; geaggregeerde, anonieme views voor B2B; eigen waarnemingen terug naar OSM als de eigenaar dat wil (licentie ODbL eerst nalopen) |
+
+### 6. Verdienmodel
+
+- **Camperaar:** de gids blijft gratis, inclusief filters, offline en reviews.
+- **Vriend van VrijStaan (vrijwillig, ±€ 15 per jaar):** extra's die ons geld kosten, zoals routeplanning met
+  voertuigafmetingen via een externe dienst, synchronisatie van meerdere reizen en pushmeldingen bij plan B.
+- **B2B betaalt de rekening:** gemeentedashboard en VrijStaan Inside. Eerst een gratis pilot met één of twee gemeenten.
+- Advertenties en betaalde plaatsing blijven uitgesloten (nummer 22).
+
+### 7. Roadmap
+
+| Horizon | Wanneer | Wat | Klaar als |
+|---|---|---|---|
+| H0 | Nu tot 1 januari 2027 | Livegang volgens de PRD; niets uit dit hoofdstuk | Lanceervoorwaarden gehaald |
+| H1 | Eerste kwartaal 2027 | Versheid zichtbaar per feit; Plekpuls v1 (vraag na bewaarde plek); eigenarenportaal v1; offline pakket v1 | 30% van de bezochte plekken bevestigd in de laatste 90 dagen; 50 eigenaren actief |
+| H2 | Tweede en derde kwartaal 2027 | Vannacht-knop met plan B; camperprofiel met hoogte; Engels en Duits; grensstrook België en Duitsland (besluit nodig, nummer 85) | Mediaan van "open app tot doorklik" onder 60 seconden |
+| H3 | Vanaf vierde kwartaal 2027 | Gemeentedashboard (pilot); VrijStaan Inside; drukteverwachting | Eén betalende klant; inkomsten dekken Vercel Pro en Supabase |
+
+Succes meten we zoals in de PRD (doorkliks per week), aangevuld met **de mediane leeftijd van een vertrektijd** op de
+site. Dat getal moet elk kwartaal dalen.
 
 ## Gevonden tegenstrijdigheden en open punten (11 oktober 2026)
 
@@ -125,3 +244,8 @@ oktober zijn samengevoegd), `docs/stijlgids.md` (uiterlijk), `docs/draaiboek.md`
 | 79 | Opdracht 31 oktober: de 3.107 masters die "alleen gekoppeld" zijn, "wachten op een tweede bron om naar `places` te promoveren". Die masters horen al bij een bestaande plek in `places` (≤ 60 m, of ≤ 150 m met een lijkende naam): een tweede bron voegt geen plek toe, de koppeling wordt alleen volledig (`promotie_reden` leeg). Wat een tweede bron wel opent, zijn de 1.236 geweigerde masters (geen bestaande plek, één bron uit tier 3–5) | `promote_geo_master` (migratie `20261031170000`), Dataketen run #8 | Gemeld aan de eigenaar 31 oktober. Een PDOK-record telt alleen als `merge_master` het met de OSM- of Archies-record samenvoegt: binnen 100 m met een lijkende naam, of binnen 25 m als één van beide geen naam heeft |
 | 80 | Een proefrun van de Dataketen laat de impact van een nieuwe bron niet zien: `merge_master` schrijft bij een proef niets, dus de promotie-proef bekijkt de bestaande masters zonder de nieuwe records. Ook staat `geo_master.promotie` nog op de uitkomst van de laatste echte run (#5, vóór koppelen bij één bron): op 1 november stonden 28 masters op geweigerd die inmiddels gekoppeld zouden worden | `run_pipeline.py`, `merge_master.ts`, Dataketen runs #6–#10 | Deels opgelost: echte run #11 (1 november 2026) zette `geo_master.promotie` weer goed. Open blijft de proef. Impact van een nieuwe bron tot dan narekenen op het live schema (25 m-regel en `geo_promotie_bezwaar`, in een transactie die wordt teruggedraaid), of een echte run draaien. Mogelijke oplossing: de proef van `merge_master` de voorgestelde masters laten teruggeven en `promote` daarop laten rekenen |
 | 81 | Overijssel (Recreatieterreinen verblijfsrecreatie, B5.verblijfsrecreatie_polygon) heeft geen openbare download of WFS; de eigenaar vraagt het bestand aan bij kennishub@overijssel.nl. Het wordt een vlakkenbestand in RD (EPSG:28992), maar de bron `gemeenten_nl` (type `bestanden`, `parse_statics.parse_geojson`) neemt alleen punten in WGS84 aan | `tools/data-collectors/parse_statics.py`, `pdok.py` | **TODO:** zodra de Overijssel-GeoJSON binnenkomt via `aanlevering/gemeenten`, de parser uitbreiden met de omrekening van RD naar WGS84 en het zwaartepunt van vlakken (zoals `pdok.map_features`), en zo nodig `filter` op het soort (camping, camperplaats). Daarna `gemeenten_nl` op actief en een echte run |
+| 82 | Opdracht 1 november 2026 (visie 2.0): "laat de gidsen, de restricties in `bronnen.json` en de Databankenwet los" | Bronnenbeleid §3a, nummer 74, CLAUDE.md (specs leidend) | **Afgehandeld door agent (1 november 2026):** vrij gebrainstormd, maar de roadmap neemt geen databanken van concurrenten over en verandert niets aan `bronnen.json` of de koppelregels. De visie is een leidraad na de livegang, geen besluit dat de PRD vervangt |
+| 83 | Visie 2.0: "Vriend van VrijStaan" en betaalde B2B-diensten (gemeentedashboard, VrijStaan Inside) | PRD Organisatie en geld (versie 1 gratis, eventueel donatie), nummer 6 (Vercel Hobby is niet-commercieel) | Besluit eigenaar na de livegang. Bij de eerste inkomsten eerst KvK, Vercel Pro en de juridische teksten |
+| 84 | Visie 2.0: drukteverwachting per plek en dag | Nummer 24 (niets tonen zonder meldingen van de laatste 3 uur), spelregel "nooit verzinnen" | Voorstel: alleen tonen met het label "verwachting" en de onderbouwing (aantal meldingen, seizoen); zonder genoeg meldingen niets. Besluit eigenaar |
+| 85 | Visie 2.0: grensstrook België en Duitsland in H2 | PRD Buiten scope ("strikt Nederland", 18 oktober 2026) | Besluit eigenaar vóór H2; de dataketen accepteert nu al plekken tot ±16 km over de grens (nummer 71) |
+| 86 | Visie 2.0: Plekpuls stelt een vraag na een overnachting op een bewaarde plek | Spelregel "geen tracking", privacyverklaring | Locatie alleen op het toestel, nooit naar de server; alleen het antwoord gaat mee. Privacyverklaring bijwerken vóór de bouw |
