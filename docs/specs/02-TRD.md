@@ -41,6 +41,7 @@
   bij bevestigen), zodat een publiek account nooit vanzelf beheerder wordt.
 - **Beheerders:** Supabase Auth (e-mail en wachtwoord, minstens 10 tekens). Toegang alleen als het e-mailadres in
   `private.admin_invites` staat; bij aanmelden komt de gebruiker in `public.admins` met rol `admin` of `support`.
+- **Rol per account (1 november 2026):** `profiles.role` (`user`, `support`, `admin`) volgt `admins` via een trigger en is niet door de gebruiker te wijzigen. Mission Control (`admin_logs`, `updates_queue`, `dependency_updates`) vraagt `role = 'admin'` (`has_admin_role()`).
 - **Rechten:** `public.is_admin()` geeft `true` voor elke rij in `admins`. Er is nog **geen verschil** tussen `admin`
   en `support` (zie Open punten in `docs/specs/README.md`).
 - **Support-klanten:** geen account. Elk ticket heeft een geheim `access_token`; de klant leest en antwoordt via
@@ -60,6 +61,7 @@
 | Openbare bronnen: gemeentesites, directories (Campercontact, park4night, ACSI, ANWB, Camping.info), fora, reviewsites | Tweede bron voor bestaan en feiten van plekken (dataplan, [bronnenbeleid](../bronnenbeleid.md)) | `robots.txt` gerespecteerd, wachttijd per host 5–20 s (`bron.sources.min_delay_s`), 15 s timeout, max. 2 MB per pagina, alleen openbare hostnamen, user-agent `VrijStaanBot/1.0`; geen inlogpagina's; Facebook, Instagram en Google Maps geblokkeerd | n.v.t. |
 | Stealth-lezer (Scrapling 0.4.15, `tools/stealth-lezer`, GitHub Actions: acht lezers tegelijk, elk op eigen hosts, in runs van 50 minuten die zichzelf opnieuw starten tot de wachtrij leeg is, plus uurrooster als vangnet) | Alle openbare bronnen, ook achter botbeveiliging (Cloudflare, captcha, 403), openbare Google Maps- en Facebook-pagina's | Zie [bronnenbeleid §3a](../bronnenbeleid.md): omzeilt botbeveiliging en `robots.txt`, wisselende proxy's toegestaan; geen inlog- of betaalmuren, geen bulk uit databanken, hoogstens 1 verzoek per 5 s per host, stoppen op verzoek | Geen geheim: GitHub-OIDC-token van `stealth-lezer.yml` op `main`, alleen voor de stealth-acties. Optioneel `STEALTH_PROXIES` (proxydienst nog te kiezen) |
 | MCP-server `vrijstaan-bronnen` (edge function `bronnen-mcp`) | Gedeelde ingang voor sessies die bronnen lezen: werk pakken, pagina's ophalen, claims en kandidaten insturen | Zonder JWT; eigen sleutel `BRONNEN_MCP_KEY` (edge-secret), vergelijking in constante tijd | Account van Patrick |
+| Google Gemini (`gemini-2.5-flash`, instelbaar met `GEMINI_MODEL`) | AI-advies bij Dependabot-PR's (workflow `ai-dependency-triage.yml`) en, na akkoord, bij de update-inbox van Mission Control | Alleen pakketnamen, versies en release notes; bij de inbox alleen veld, oude en nieuwe waarde, nooit contactgegevens. Gratis laag: Google mag invoer gebruiken om het product te verbeteren. Zonder sleutel een vaste regel | `GEMINI_API_KEY` (Dependabot-secret) |
 | OpenFreeMap | Kaarttegels | Gratis, geen sleutel | Geen; IP van bezoeker gaat naar hun server (staat in privacyverklaring) |
 | Google Maps | "Open in navigatie" (uitgaande link) | n.v.t. | Geen |
 | GitHub Actions | Dagelijkse ping tegen pauzeren (`.github/workflows/keepalive.yml`) | Gratis | Repository |

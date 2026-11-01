@@ -193,6 +193,16 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Pipeline v45, parser 42 (23 okt; v44 = ebcfc8d, v45 voegt de wisseltijd onder een kopje en "tussen 13.00 en voor 17.00" toe): `/?page_id=`-pagina's, kleine sites helemaal lezen, reserveren/boeken als subpagina, geen geraden adressen bij sites van één pagina, wisseltijd "aankomst/vertrek 11.00 … wisselen", vertrekvenster met toeslag, "iedere 24 uur … nieuwe nacht", aankomstvensters "vanaf 13:00 tot 18:00" en "15.00 - 17.30". Uit een steekproef van 20 plekken zonder vertrektijd | Agent | Steekproef 23 okt | Edge function `pipeline` | Tests per regel groen | — |
 | ✅ Terugdraaien | Agent | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/draaiboek.md` | Vercel |
 
+## Mission Control (opdracht 1 november 2026) 🟡
+
+| Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
+|---|---|---|---|---|---|
+| ✅ Stap 1: migratie `20261101130000_mission_control.sql` (rol, `admin_logs`, `updates_queue`, `dependency_updates`, accepteren/afwijzen, `log_dependency`, cron `ops-probe`) | Agent | Opdracht, README 88 | Migratie + SQL-tests (`web/supabase/tests/mission_control*.sql`, in `run.sh`) | Tests groen; live na samenvoegen | — |
+| ✅ Dependency-radar: `/api/admin/log-dependency`, `.github/workflows/ai-dependency-triage.yml`, `tools/ops/dependency_triage.py` (Gemini, vaste regel zonder sleutel) | Agent | Opdracht, README 90 en 91 | Route met unit tests, workflow, script met tests | Eerste Dependabot-PR staat in `dependency_updates` | Migratie live, secrets `GEMINI_API_KEY` en `DEPENDENCY_LOG_KEY` (Dependabot) |
+| ⬜ Stap 2: route en toegang | Agent | README 89 | Mission Control in beheer | Niet-admins zien niets | Besluit eigenaar |
+| ⬜ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | Stap 2 |
+| ⬜ Stap 4: SystemLogs en SystemUpdates | Agent | Opdracht | Logboek met kleurcodes, update-radar | Rood bij falende API of cron | Stap 2 |
+
 ## Beveiliging (audit 1 november 2026) 🟡
 
 Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA in de app: niet bouwen (besluit eigenaar).
