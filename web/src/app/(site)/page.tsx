@@ -8,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 import { CreditedPhoto, PlaceCard } from "@/components/place-ui";
 import { looksLikeGraphic } from "@/lib/photos";
+import { Onboarding } from "@/components/onboarding";
 
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
@@ -73,6 +74,7 @@ export default async function Home() {
 
   return (
     <>
+      <Onboarding />
       {/* Kop: één vraag, daaronder de hoofdactie (dichtbij) en het zoekveld (docs/specs/04-ui-ux-brief.md) */}
       <section className="mx-auto w-full max-w-6xl px-3 pt-5 sm:px-6 sm:pt-10">
         <h1 className="animate-rise font-display text-[1.75rem] leading-[1.1] font-semibold tracking-tight text-ink sm:text-5xl">

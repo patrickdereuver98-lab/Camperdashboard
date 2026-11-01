@@ -130,6 +130,20 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
+test.describe("welkomstuitleg", () => {
+  test.use({ welcomeSeen: false });
+  for (const scheme of ["light", "dark"] as const)
+    test(`geen WCAG 2.1 AA-fouten en huisregels in orde (${scheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await prepare(page, { consent: false, trip: false });
+      await page.goto("/");
+      await expect(page.getByRole("dialog", { name: "Welkom bij VrijStaan" })).toBeVisible();
+      await page.waitForTimeout(500);
+      expect(await axe(page)).toEqual([]);
+      expect(await houseRules(page, "[role=dialog][aria-modal=true]")).toEqual([]);
+    });
+});
+
 test.describe("huisregels: tekst ≥ 14 px, tikdoelen ≥ 44 px", () => {
   for (const path of PAGES) {
     test(path, async ({ page }) => {
