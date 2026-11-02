@@ -42,6 +42,7 @@ test("prompt bevat de vaste opdracht en alleen feiten, geen telefoon of e-mail",
   const t = marketingText({ ...base, power: true, dogs: false }, "https://example.nl/plek/de-proef-ede");
   assert.match(t, /Schrijf 2 Facebook-posts en 2 Google Ads teksten voor camperplaats De Proef/);
   assert.match(t, /Geen emojis/);
+  assert.match(t, /je en jij, nooit met u/);
   assert.match(t, /- Wel: stroom/);
   assert.match(t, /- Niet: honden welkom/);
   assert.match(t, /- Prijs: onbekend/);

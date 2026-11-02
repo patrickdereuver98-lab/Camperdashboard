@@ -233,18 +233,18 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 | ✅ AI Outreach Loop, stap 1: `/api/webhooks/inbound-email` (Resend Inbound, Gemini), migratie `20261102120000_eigenaar_inbox.sql` (`owner_replies`, `log_owner_reply`) | Agent | Opdracht 2 november, README 94 | Route, unit tests, SQL-test | Antwoord van een eigenaar staat als voorstel in de Triage Inbox | Deze migratie live (Mission Control staat live); Vercel: `RESEND_WEBHOOK_SECRET`, `RESEND_API_KEY`, `OWNER_INBOX_KEY`, `GEMINI_API_KEY`; `internal_secrets.owner_inbox_key`; Inbound-domein in Resend |
 | ⬜ AI Outreach Loop, stap 2: uitgaande mail naar eigenaren met `[VS-<id>]` in het onderwerp, en `owner_replies` zichtbaar in Mission Control | Agent | README 94 | — | — | Stap 1 |
 
-## Marketing en rebrand (opdracht 2 november 2026) 🟡
+## Marketing (opdracht 2 november 2026) ✅
 
 Plan in [document 7](07-marketing-en-rebrand.md).
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
-| ⬜ Rebrand: naam, domein, globale vervanging, `public/logo.svg` | Agent | Naam en domein (README 97) | Code, teksten, logo | Geen zichtbare "VrijStaan" meer; 301 vanaf het oude domein | Besluit eigenaar |
+| ~~Rebrand~~ geannuleerd: naam blijft VrijStaan, domein vrijstaan.nl, huidig logo (besluit eigenaar 2 november 2026) | — | — | — | — | — |
 | ✅ SEO-titel en omschrijving per plek met all-in prijs en vertrektijd (`lib/marketing.ts`) | Agent | Opdracht | `generateMetadata`, tests `tests/marketing.test.ts` | Onbekend valt weg; "incl. toeslagen" alleen bij een vast totaal | — |
 | ✅ JSON-LD Campground aangevuld (`checkoutTime`, `checkinTime`, `priceRange`) | Agent | Opdracht | Plekpagina | Rich Results Test zonder fouten | — |
 | ✅ Sitemap met alleen gepubliceerde plekken | Agent | Opdracht | Bestond al (`app/sitemap.ts`) | — | — |
 | ✅ Deelafbeelding `/api/og?slug=` (Satori, grote letters) | Agent | Opdracht | Route, `og:image` van de plekpagina | PNG 1200 × 630 met naam, prijs, vertrektijd | — |
-| ✅ Mission Control → Marketing, `/api/admin/generate-marketing` (Gemini) | Agent | Opdracht | Tabblad met zoeken, teksten, kopiëren, afbeelding downloaden | 2 posts en 2 advertenties zonder emoji | `GEMINI_API_KEY` in Vercel |
+| ✅ Mission Control → Marketing, `/api/admin/generate-marketing` (Gemini via gedeelde helper `lib/gemini.ts`) | Agent | Opdracht | Tabblad met zoeken, teksten, kopiëren, afbeelding downloaden | 2 posts en 2 advertenties zonder emoji | `GEMINI_API_KEY` in Vercel |
 | ⬜ Search Console en Bing Webmaster aanmelden, sitemap insturen | Eigenaar | Document 7 | — | Sitemap verwerkt | Livegang |
 
 ## Beveiliging (audit 1 november 2026) 🟡

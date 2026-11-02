@@ -1,6 +1,7 @@
 /**
  * Gemini via de REST-API, zonder SDK (één fetch, geen extra pakket). Gebruikt door de Triage Inbox
- * (update-triage.ts) en de inbox voor antwoorden van eigenaren (owner-inbox.ts). GEMINI_API_KEY staat alleen op de
+ * (update-triage.ts), de inbox voor antwoorden van eigenaren (owner-inbox.ts) en Marketing in Mission Control
+ * (api/admin/generate-marketing). GEMINI_API_KEY staat alleen op de
  * server; het model is instelbaar met GEMINI_MODEL, omdat Google oudere Flash-modellen uitfaseert.
  */
 
@@ -10,6 +11,8 @@ type Options = {
   schema: Record<string, unknown>;
   system?: string;
   maxOutputTokens?: number;
+  /** Standaard 0 (vast antwoord); hoger voor teksten die bij opnieuw vragen mogen verschillen */
+  temperature?: number;
 };
 
 /** Eén aanroep met een JSON-schema; geeft de ruwe JSON-tekst terug of gooit een fout */
@@ -21,7 +24,7 @@ export async function geminiJson(key: string, model: string, text: string, o: Op
       ...(o.system ? { systemInstruction: { parts: [{ text: o.system }] } } : {}),
       contents: [{ role: "user", parts: [{ text }] }],
       generationConfig: {
-        temperature: 0,
+        temperature: o.temperature ?? 0,
         maxOutputTokens: o.maxOutputTokens ?? 300,
         responseMimeType: "application/json",
         responseSchema: o.schema,

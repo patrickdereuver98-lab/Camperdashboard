@@ -125,7 +125,8 @@ export const MARKETING_PROMPT =
   "Schrijf 2 Facebook-posts en 2 Google Ads teksten voor camperplaats {naam}. Doelgroep: Nederlandse camperaars van " +
   "55+. Tone of voice: Nuchter, feitelijk, betrouwbaar. Benadruk de exacte prijs, vertrektijd en sfeer. Geen emojis, " +
   "geen hippe marketing-jargon, gebruik uitsluitend feiten. Gebruik alleen de feiten hieronder; wat 'onbekend' is " +
-  "noem je niet en vul je niet zelf in. Schrijf in gewoon Nederlands in de je-vorm, met korte zinnen. Google Ads: kop " +
+  "noem je niet en vul je niet zelf in. Spreek de lezer aan met je en jij, nooit met u. Schrijf gewoon Nederlands " +
+  "met korte zinnen, zonder uitroeptekens en zonder superlatieven als 'de beste' of 'uniek'. Google Ads: kop " +
   "hoogstens 30 tekens, omschrijving hoogstens 90 tekens. Retourneer strict JSON: " +
   "{ facebook: [tekst, tekst], googleAds: [{ headline, description }, { headline, description }] }.";
 
@@ -160,36 +161,15 @@ export function parseMarketing(raw: string): MarketingCopy | null {
   return { facebook: posts.slice(0, 2), googleAds: ads.slice(0, 2) };
 }
 
-/** Eén aanroep naar Gemini (REST) met een JSON-schema; gooit een fout bij een onbruikbaar antwoord */
-export async function askGeminiMarketing(key: string, model: string, text: string): Promise<MarketingCopy> {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text }] }],
-      generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 2000,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            facebook: { type: "ARRAY", items: { type: "STRING" } },
-            googleAds: {
-              type: "ARRAY",
-              items: { type: "OBJECT", properties: { headline: { type: "STRING" }, description: { type: "STRING" } }, required: ["headline", "description"] },
-            },
-          },
-          required: ["facebook", "googleAds"],
-        },
-      },
-    }),
-    signal: AbortSignal.timeout(45_000),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Gemini antwoordde ${res.status}`);
-  const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const out = parseMarketing(data.candidates?.[0]?.content?.parts?.[0]?.text ?? "");
-  if (!out) throw new Error("Gemini gaf geen bruikbaar antwoord");
-  return out;
-}
+/** JSON-schema voor geminiJson (lib/gemini.ts): 2 posts en 2 advertenties */
+export const MARKETING_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    facebook: { type: "ARRAY", items: { type: "STRING" } },
+    googleAds: {
+      type: "ARRAY",
+      items: { type: "OBJECT", properties: { headline: { type: "STRING" }, description: { type: "STRING" } }, required: ["headline", "description"] },
+    },
+  },
+  required: ["facebook", "googleAds"],
+};

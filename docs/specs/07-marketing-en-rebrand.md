@@ -1,47 +1,39 @@
-# 7. Marketing en rebrand
+# 7. Marketing
 
-Opdracht eigenaar, 2 november 2026: rebrand en een geautomatiseerde SEO- en marketingmachine met een micro-budget
-(€ 50 tot € 100). Dit document is het plan; de status staat in het [implementatieplan](06-implementatieplan.md#marketing-en-rebrand-opdracht-2-november-2026-).
+Opdracht eigenaar, 2 november 2026: een geautomatiseerde SEO- en marketingmachine met een micro-budget (€ 50 tot
+€ 100). Dit document is het plan; de status staat in het [implementatieplan](06-implementatieplan.md#marketing-opdracht-2-november-2026-).
+
+**Geen rebrand (besluit eigenaar 2 november 2026):** de naam blijft **VrijStaan**, het domein **vrijstaan.nl**. Het
+huidige logo, de huisstijl en de technische namen blijven zoals ze zijn. Er komt geen nieuw logo en geen globale
+vervanging. Nieuwe code leest naam en domein uit `web/src/lib/brand.ts`.
 
 ## Stand
 
 | Onderdeel | Status |
 |---|---|
-| Merknaam | **Open.** De opdracht noemt de naam letterlijk "[NAAM]" (een invulplek). Zonder echte naam en domein is er niets om naar te vervangen (README 97) |
-| Globale vervanging VrijStaan → nieuwe naam | **Wacht op de naam.** Voorbereid: nieuwe code leest `BRAND_NAME` en `BRAND_DOMAIN` uit `web/src/lib/brand.ts` |
-| Logo (`web/public/logo.svg`) | **Wacht op de naam.** Ontwerpregels staan hieronder |
+| Naam, domein en logo | Blijven VrijStaan, vrijstaan.nl en het huidige logo |
 | SEO-titels en omschrijvingen per plek | ✅ Gebouwd (`lib/marketing.ts`, plekpagina) |
 | JSON-LD Campground | ✅ Bestond al; aangevuld met `checkoutTime`, `checkinTime` en `priceRange` |
 | Sitemap met alleen gepubliceerde plekken | ✅ Bestond al (`app/sitemap.ts`, `getSlugs` filtert op `status=published`) |
 | Deelafbeelding per plek (`/api/og`) | ✅ Gebouwd |
-| Mission Control → Marketing (Gemini) | ✅ Gebouwd (`/api/admin/generate-marketing`) |
+| Mission Control → Marketing (Gemini) | ✅ Gebouwd (`/api/admin/generate-marketing`, gedeelde helper `lib/gemini.ts`) |
 
-## Merkidentiteit
+## Doelgroep en aanspreekvorm
 
-**Karakter:** nuchter, betrouwbaar, praktisch. Zoals een goede pechhulp of een degelijke reisgids: je weet wat je
-krijgt, er wordt niets mooier gemaakt dan het is. We lenen het gevoel van een vertrouwde Nederlandse
-reisorganisatie, niet het uiterlijk: geen geel-blauw, geen huisstijl of beeldmerk dat op een bestaand merk lijkt.
+- **De hele site en de codebase:** doelgroep 40+ (README 65) en de je/jij-vorm uit de stijlgids en de skill
+  `vrijstaan-stijl`. Dat verandert niet.
+- **Alleen de advertentieteksten** (Facebook-posts en Google Ads uit Mission Control) richten zich inhoudelijk op
+  camperaars van 55+, ook in de leeftijdsinstelling van de campagne. Ook die teksten gebruiken je/jij.
 
-**Doelgroep van de campagnes:** camperaars van 55+. Het product zelf richt zich op 40+ (README 65); de campagnes
-mikken op de oudere, kapitaalkrachtige kern daarvan. Ontwerpregels blijven getoetst aan de oudere lezer (README 96).
+## Toon
 
-**Toon (sluit aan op de stijlgids en `vrijstaan-stijl`):**
+Nuchter, betrouwbaar, praktisch: je weet wat je krijgt, er wordt niets mooier gemaakt dan het is.
+
 - Feiten eerst: prijs met alle toeslagen, vertrektijd, voorzieningen. Wat we niet weten, zeggen we niet.
 - Gewoon Nederlands, je-vorm, korte zinnen. Geen Engelse vaktermen ("app" mag, "seamless", "smart", "AI-powered" niet).
 - Geen emoji, geen uitroeptekens, geen superlatieven ("de beste", "uniek", "verborgen parel").
 - Getallen exact: "€ 22,70 per nacht voor 2 personen, inclusief toeslagen", niet "rond de 20 euro".
-
-**Kleur en letter:** het thema "natuur & vrijheid" staat vast (UI/UX-brief): zandpapier, bosgroen, inkt. De
-rebrand verandert naam en logo, niet het thema.
-
-**Logo, ontwerpregels (zodra de naam er is):**
-- Alleen typografisch: de naam in één schreefloze letter met open vormen (zoals de huidige lettertypen van de site),
-  halfvet, geen hoofdletters-alleen, geen afgekapte of in elkaar geschoven letters.
-- Bosgroen `#2d5a43` op licht, `#fffcf6` op donker; contrast minstens 7:1 (AAA) op zandpapier.
-- Leesbaar vanaf 16 px hoog; geen dunne lijnen onder 2 px bij 32 px hoogte.
-- Tekst als paden in de SVG (geen afhankelijkheid van een lettertype), met `<title>` voor schermlezers.
-- Optioneel één eenvoudig teken vóór de naam (bijvoorbeeld een stip of een open hoek als "vrij staan"), nooit een
-  camper-icoon dat op een bestaand merk lijkt.
+- Kleur en letter volgen het vaste thema "natuur & vrijheid" (UI/UX-brief): zandpapier, bosgroen, inkt.
 
 ## Programmatische SEO
 
@@ -80,12 +72,12 @@ Niets wordt opgeslagen; de beheerder leest na en plaatst zelf.
 
 **Techniek:** `POST /api/admin/generate-marketing { slug }` met het sessietoken van de beheerder. De route controleert
 `has_admin_role` met dat token (RLS beslist, geen service-role-sleutel), haalt de openbare plekgegevens en stuurt
-alleen bekende feiten naar Gemini (`GEMINI_MODEL`, standaard `gemini-2.5-flash`, sleutel `GEMINI_API_KEY` alleen op
+alleen bekende feiten naar Gemini via `geminiJson` uit `lib/gemini.ts` (`GEMINI_MODEL`, standaard `gemini-2.5-flash`, sleutel `GEMINI_API_KEY` alleen op
 de server). Geen telefoonnummers, e-mailadressen of gebruikersgegevens. Het antwoord wordt gecontroleerd
 (`parseMarketing`): precies 2 + 2, emoji eruit, lengtes begrensd. Rate limit 20 per minuut per IP.
 
 **Prompt (vast, `MARKETING_PROMPT`):** de opdracht van de eigenaar letterlijk, aangevuld met "gebruik alleen de
-feiten hieronder, wat onbekend is noem je niet", de je-vorm uit de huisstijl en de lengtes van Google Ads.
+feiten hieronder, wat onbekend is noem je niet", je/jij (nooit u), geen uitroeptekens of superlatieven, en de lengtes van Google Ads.
 
 ## Budget (€ 50 tot € 100)
 
@@ -99,15 +91,3 @@ feiten hieronder, wat onbekend is noem je niet", de je-vorm uit de huisstijl en 
 
 Meten zonder tracking van derden: geen Facebook-pixel of Google-tag op de site. We gebruiken UTM-parameters in de
 links en de eigen, cookieloze statistieken van Beheer → Statistieken.
-
-## Rebrand: wat er verandert zodra de naam er is
-
-1. Naam en domein in `web/src/lib/brand.ts`.
-2. Zichtbare teksten, metadata (`layout.tsx`, `lib/meta.ts`, `manifest.ts`), juridische pagina's, e-mailsjablonen,
-   `og.png` en iconen. Telling 2 november 2026: 119 bestanden, ± 400 vermeldingen.
-3. Niet blind vervangen: technische namen die gebruikers niet zien en die bestaande data of koppelingen dragen
-   (`vrijstaan:`-sleutels in localStorage, header `x-vrijstaan-key`, `VRIJSTAAN_OFFLINE`, pakketnaam, Supabase-project,
-   edge functions, GitHub-workflows). Die blijven, of gaan over met een migratiepad.
-4. Nieuw domein: 301 van het oude domein, Search Console "adreswijziging", `NEXT_PUBLIC_SITE_URL` in Vercel, de
-   redirect-URL's in Supabase Auth en de afzender van de mail.
-5. Logo als `web/public/logo.svg` volgens de regels hierboven; skill `vrijstaan-stijl` en stijlgids bijwerken.
