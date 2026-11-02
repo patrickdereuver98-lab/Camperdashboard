@@ -11,7 +11,7 @@ import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
-import { allInPrice, ogImagePath, seoDescription, seoTitle } from "@/lib/marketing";
+import { allInPrice, ogImagePath, seoDescription, seoTitle } from "@/lib/place-seo";
 import { inBbox } from "@/lib/bbox";
 import { areaPath, breadcrumbLd, ISLANDS, ldJson, provinceSlug } from "@/lib/seo-pages";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";

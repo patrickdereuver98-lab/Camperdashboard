@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { BRAND_DOMAIN, BRAND_NAME } from "@/lib/brand";
-import { allInPrice, departureFact, labeledName } from "@/lib/marketing";
+import { allInPrice, departureFact, labeledName } from "@/lib/place-seo";
 import { getPlace } from "@/lib/places";
 
 // Kleuren uit het thema "natuur & vrijheid" (globals.css): zandpapier, bosgroen, inkt
@@ -28,7 +28,12 @@ export async function GET(request: Request) {
   const price = allInPrice(place);
   const dep = departureFact(place);
   const facts = [
-    price && { label: price.allIn ? "Prijs, alles inbegrepen" : "Prijs per nacht", value: price.amount, note: price.allIn && place.priceEur !== 0 ? "voor 2 personen" : undefined },
+    price && {
+      label: price.allIn && place.priceEur !== 0 ? "Prijs, alles inbegrepen" : "Prijs per nacht",
+      value: price.amount,
+      // Vanaf-prijs: het laagste tarief, toeslagen komen erbij (geen "alles inbegrepen", zie lib/place-seo.ts)
+      note: price.allIn && place.priceEur !== 0 ? "voor 2 personen" : place.priceFrom ? "plus toeslagen" : undefined,
+    },
     dep && { label: "Vertrektijd", value: dep[0].toUpperCase() + dep.slice(1), note: undefined },
   ].filter(Boolean) as { label: string; value: string; note?: string }[];
   const name = labeledName(place);

@@ -3,6 +3,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database as Generated, Json } from "./database.types";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
+import type { MarketingFunctions, MarketingTables } from "./marketing/db-types";
 
 // De generator maakt functieargumenten nooit nullable, maar de formulieren sturen `null` voor lege velden en
 // Postgres accepteert dat. Daarom mag elk argument hier ook `null` zijn.
@@ -10,10 +11,14 @@ type NullableArgs<F> = {
   [K in keyof F]: F[K] extends { Args: infer A } ? Omit<F[K], "Args"> & { Args: { [P in keyof A]: A[P] | null } } : F[K];
 };
 // Staat in migrations/20261012_user_accounts.sql maar nog niet live (besluit B5); weg zodra de types opnieuw gegenereerd zijn
-type NotYetLive = { delete_my_account: { Args: { p_confirm: string }; Returns: undefined } };
+// Marketingdashboard: migratie 20261102180000, live na samenvoegen (lib/marketing/db-types.ts)
+type NotYetLive = { delete_my_account: { Args: { p_confirm: string }; Returns: undefined } } & MarketingFunctions;
 type PublicSchema = Generated["public"];
 export type Database = Omit<Generated, "public"> & {
-  public: Omit<PublicSchema, "Functions"> & { Functions: NullableArgs<PublicSchema["Functions"] & NotYetLive> };
+  public: Omit<PublicSchema, "Functions" | "Tables"> & {
+    Tables: PublicSchema["Tables"] & MarketingTables;
+    Functions: NullableArgs<PublicSchema["Functions"] & NotYetLive>;
+  };
 };
 
 /** Eigen types (reis, camper, uitgaven) als JSON-kolom opslaan; de generator kent alleen `Json` */
