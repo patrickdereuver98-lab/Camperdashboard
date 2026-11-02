@@ -104,6 +104,11 @@ test("parseOwnerReply: waarden controleren, twijfel wordt leeg", () => {
     departure_time: "11:00",
     checkin_from: null,
     departure_rule: "vast",
+    power: null,
+    water: null,
+    dump_station: null,
+    open_all_year: null,
+    season: null,
     summary: "Nieuwe prijs.",
   });
   // Komma, 9:30 en 10.30 worden genormaliseerd
@@ -112,7 +117,7 @@ test("parseOwnerReply: waarden controleren, twijfel wordt leeg", () => {
   assert.equal(parseOwnerReply('{"intent":"update","price":null,"departure_time":"10.30","summary":""}')?.departure_time, "10:30");
   // Onzin wordt null; een update zonder waarde is 'unknown'
   const bad = parseOwnerReply('{"intent":"update","price":9999,"departure_time":"rond de middag","summary":"x"}');
-  assert.deepEqual(bad, { intent: "unknown", price: null, departure_time: null, checkin_from: null, departure_rule: null, summary: "x" });
+  assert.deepEqual(bad, { intent: "unknown", price: null, departure_time: null, checkin_from: null, departure_rule: null, power: null, water: null, dump_station: null, open_all_year: null, season: null, summary: "x" });
   assert.equal(parseOwnerReply('{"intent":"hack","summary":"x"}')?.intent, "unknown");
   assert.equal(parseOwnerReply('{"intent":"confirm","price":null,"departure_time":null,"summary":"Klopt"}')?.intent, "confirm");
   assert.equal(parseOwnerReply("geen json"), null);
@@ -160,4 +165,22 @@ test("isAutomatedSender: bounces, noreply en afwezigheidsmeldingen", () => {
   assert.ok(isAutomatedSender("info@camping.nl", "Re: Afwezig tot 12 november"));
   assert.ok(!isAutomatedSender("info@camping.nl", "Re: Klopt dit nog? [VS-1]"));
   assert.ok(!isAutomatedSender("jan@camping.nl"));
+});
+
+test("parseOwnerReply: voorzieningen en openingsperiode", () => {
+  const r = parseOwnerReply('{"intent":"update","power":true,"water":false,"dump_station":true,"open_all_year":false,"season":"  1 april   tot en met 31 oktober ","summary":"x"}');
+  assert.equal(r?.intent, "update");
+  assert.deepEqual([r?.power, r?.water, r?.dump_station, r?.open_all_year], [true, false, true, false]);
+  assert.equal(r?.season, "1 april tot en met 31 oktober");
+  // Alleen een voorziening is genoeg voor een update
+  assert.equal(parseOwnerReply('{"intent":"update","water":true,"summary":"x"}')?.intent, "update");
+  // Tekst in plaats van ja/nee wordt leeg, en dan is er niets te doen
+  const bad = parseOwnerReply('{"intent":"update","power":"ja","water":"misschien","summary":"x"}');
+  assert.equal(bad?.power, null);
+  assert.equal(bad?.intent, "unknown");
+  // Tegenspraak: het hele jaar open en een periode met data
+  const both = parseOwnerReply('{"intent":"update","price":18,"open_all_year":true,"season":"april tot oktober","summary":"x"}');
+  assert.equal(both?.open_all_year, null);
+  assert.equal(both?.season, null);
+  assert.equal(parseOwnerReply('{"intent":"update","season":"' + "x".repeat(200) + '","summary":"x"}')?.season?.length, 60);
 });

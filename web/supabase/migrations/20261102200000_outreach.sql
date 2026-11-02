@@ -70,15 +70,33 @@ create table if not exists private.outreach_suppressions (
 
 revoke all on private.outreach_config, private.outreach_log, private.outreach_suppressions from public, anon, authenticated;
 
+-- ── Welke belangrijke gegevens missen we ─────────────────────────────────────────────────────────────────────────
+-- Alleen wat een camperaar nodig heeft om te kiezen (geen nice-to-have): vertrekregel, aankomst, openingsperiode,
+-- prijs, stroom, water en lozen. De mail vraagt precies naar wat hier terugkomt, en laat de rest zien als "dit weten we al".
+create or replace function private.outreach_missing(p public.places) returns text[]
+ language sql stable set search_path to ''
+as $$
+  select array_remove(array[
+    case when p.departure is null or (p.departure = 'vast' and p.checkout_until is null) then 'vertrek' end,
+    case when p.checkin_from is null then 'aankomst' end,
+    case when p.open_all_year is null and p.season is null then 'seizoen' end,
+    case when p.price_eur is null then 'prijs' end,
+    case when p.power is null then 'stroom' end,
+    case when p.water is null then 'water' end,
+    case when p.dump_station is null then 'lozen' end], null)
+$$;
+revoke all on function private.outreach_missing(public.places) from public, anon, authenticated;
+
 -- ── Wie komt in aanmerking ───────────────────────────────────────────────────────────────────────────────────────
--- Een plek met een geldig adres op een eigen domein, waarvan we de aankomst- of vertrektijd niet kennen. Per adres één
--- plek (ketens krijgen één mail). Niemand die al een mail kreeg of zich afmeldde.
+-- Een plek met een geldig adres op een eigen domein, waarvan we de vertrekregel of aankomst niet kennen, of minstens twee
+-- andere belangrijke gegevens missen. Per adres één plek (ketens krijgen één mail). Niemand die al een mail kreeg of zich
+-- afmeldde.
 create or replace function private.outreach_candidates() returns table (place_id uuid, email_hash text)
  language sql stable set search_path to ''
 as $$
   select distinct on (h.hash) p.id, h.hash
     from public.places p
-   cross join lateral (select private.email_hash(p.email) as hash) h
+   cross join lateral (select private.email_hash(p.email) as hash, private.outreach_missing(p) as missing) h
    where p.email ~* '^[^@\s]+@[^@\s]+\.[^@\s]{2,}$'
      and char_length(p.email) <= 254
      and split_part(lower(trim(p.email)), '@', 2) <> all (private.outreach_free_domains())
@@ -86,11 +104,10 @@ as $$
      and p.merged_into is null
      and p.kind is distinct from 'parkeerplaats'
      and coalesce(p.sources #>> '{stealth,error}', '') not like 'geblokkeerd%'
-     and (p.verified_at is null or p.verified_at < now() - interval '12 months')
-     and (p.departure is null or (p.departure = 'vast' and p.checkout_until is null) or p.checkin_from is null)
+     and ('vertrek' = any (h.missing) or 'aankomst' = any (h.missing) or cardinality(h.missing) >= 2)
      and not exists (select 1 from private.outreach_log l where l.place_id = p.id or l.email_hash = h.hash)
      and not exists (select 1 from private.outreach_suppressions s where s.email_hash = h.hash)
-   order by h.hash, (p.departure is null) desc, p.id
+   order by h.hash, ('vertrek' = any (h.missing)) desc, cardinality(h.missing) desc, p.id
 $$;
 revoke all on function private.outreach_candidates() from public, anon, authenticated;
 
@@ -121,7 +138,7 @@ revoke all on function private.outreach_pause(text) from public, anon, authentic
 
 -- ── outreach_next: de volgende plekken om te mailen ──────────────────────────────────────────────────────────────
 -- Geeft { enabled, reason, items: [{ token, place_id, name, kind, town, email, departure, checkout_until, checkin_from,
--- checkin_until }] }. Een plek in `items` is geclaimd; blijft de verzending hangen, dan komt hij na 30 minuten opnieuw
+-- checkin_until, slug, open_all_year, season, price_eur, power, water, dump_station, missing }] }. Een plek in `items` is geclaimd; blijft de verzending hangen, dan komt hij na 30 minuten opnieuw
 -- (Resend krijgt dezelfde Idempotency-Key, dus er gaat nooit twee keer dezelfde mail uit). Na 20 uur geeft hij het op.
 create or replace function public.outreach_next(p_secret text, p_limit integer default 10) returns jsonb
  language plpgsql security definer set search_path to ''
@@ -189,7 +206,7 @@ begin
       select c.place_id, c.email_hash
         from private.outreach_candidates() c
         join public.places p on p.id = c.place_id
-       order by (p.departure is null) desc, p.id
+       order by ('vertrek' = any (private.outreach_missing(p))) desc, cardinality(private.outreach_missing(p)) desc, p.id
        limit v_n
       on conflict do nothing
       returning place_id)
@@ -203,9 +220,11 @@ begin
     returning l.place_id, l.token
   )
   select coalesce(jsonb_agg(jsonb_build_object(
-           'token', d.token, 'place_id', p.id, 'name', p.name, 'kind', p.kind, 'town', p.town, 'email', trim(p.email),
-           'departure', p.departure, 'checkout_until', p.checkout_until, 'checkin_from', p.checkin_from,
-           'checkin_until', p.checkin_until)), '[]'::jsonb)
+           'token', d.token, 'place_id', p.id, 'slug', p.slug, 'name', p.name, 'kind', p.kind, 'town', p.town,
+           'email', trim(p.email), 'departure', p.departure, 'checkout_until', p.checkout_until,
+           'checkin_from', p.checkin_from, 'checkin_until', p.checkin_until, 'open_all_year', p.open_all_year,
+           'season', p.season, 'price_eur', p.price_eur, 'power', p.power, 'water', p.water,
+           'dump_station', p.dump_station, 'missing', to_jsonb(private.outreach_missing(p)))), '[]'::jsonb)
     into v_items
     from due d join public.places p on p.id = d.place_id;
 
@@ -227,9 +246,11 @@ end $$;
 revoke all on function public.outreach_sent(text, uuid, text) from public;
 grant execute on function public.outreach_sent(text, uuid, text) to anon, authenticated;
 
--- p_permanent: Resend wees het adres af (ongeldig). Dan nooit meer proberen. Anders blijft de plek geclaimd en komt hij
--- na 30 minuten opnieuw.
-create or replace function public.outreach_failed(p_secret text, p_token uuid, p_error text, p_permanent boolean default false) returns void
+-- p_permanent: opgeven voor deze plek. p_suppress (standaard gelijk aan p_permanent): ook het adres uitsluiten; dat is
+-- alleen voor een adres dat Resend afwees, niet voor een fout aan onze kant (bijvoorbeeld niets om te vragen).
+-- Zonder p_permanent blijft de plek geclaimd en komt hij na 30 minuten opnieuw.
+create or replace function public.outreach_failed(p_secret text, p_token uuid, p_error text, p_permanent boolean default false,
+                                                  p_suppress boolean default null) returns void
  language plpgsql security definer set search_path to ''
 as $$
 declare v_hash text;
@@ -238,15 +259,15 @@ begin
   if p_permanent then
     update private.outreach_log set status = 'failed', error = left(p_error, 300), updated_at = now()
      where token = p_token and status = 'claimed' returning email_hash into v_hash;
-    if v_hash is not null then
+    if v_hash is not null and coalesce(p_suppress, true) then
       insert into private.outreach_suppressions (email_hash, reason) values (v_hash, 'geweigerd') on conflict do nothing;
     end if;
   else
     update private.outreach_log set error = left(p_error, 300), updated_at = now() where token = p_token and status = 'claimed';
   end if;
 end $$;
-revoke all on function public.outreach_failed(text, uuid, text, boolean) from public;
-grant execute on function public.outreach_failed(text, uuid, text, boolean) to anon, authenticated;
+revoke all on function public.outreach_failed(text, uuid, text, boolean, boolean) from public;
+grant execute on function public.outreach_failed(text, uuid, text, boolean, boolean) to anon, authenticated;
 
 -- Gebeurtenis van Resend: delivered, bounced (alleen permanente), complained
 create or replace function public.outreach_event(p_secret text, p_resend_id text, p_type text) returns jsonb
@@ -339,6 +360,11 @@ alter table public.owner_replies add column if not exists checkin_from text
   check (checkin_from ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$');
 alter table public.owner_replies add column if not exists departure_rule text
   check (departure_rule in ('vast', 'vrij', 'per24'));
+alter table public.owner_replies add column if not exists power boolean;
+alter table public.owner_replies add column if not exists water boolean;
+alter table public.owner_replies add column if not exists dump_station boolean;
+alter table public.owner_replies add column if not exists open_all_year boolean;
+alter table public.owner_replies add column if not exists season text check (char_length(season) <= 60);
 alter table public.owner_replies drop constraint if exists owner_replies_intent_check;
 alter table public.owner_replies add constraint owner_replies_intent_check
   check (intent in ('confirm', 'update', 'unsubscribe', 'unknown'));
@@ -358,6 +384,11 @@ declare
   v_time text := p_reply ->> 'departure_time';
   v_in text := p_reply ->> 'checkin_from';
   v_rule text := p_reply ->> 'departure_rule';
+  v_power boolean := case jsonb_typeof(p_reply -> 'power') when 'boolean' then (p_reply ->> 'power')::boolean end;
+  v_water boolean := case jsonb_typeof(p_reply -> 'water') when 'boolean' then (p_reply ->> 'water')::boolean end;
+  v_dump boolean := case jsonb_typeof(p_reply -> 'dump_station') when 'boolean' then (p_reply ->> 'dump_station')::boolean end;
+  v_open boolean := case jsonb_typeof(p_reply -> 'open_all_year') when 'boolean' then (p_reply ->> 'open_all_year')::boolean end;
+  v_season text := nullif(left(regexp_replace(trim(coalesce(p_reply ->> 'season', '')), '\s+', ' ', 'g'), 60), '');
   v_place public.places;
   v_matched text;
   v_n integer;
@@ -392,6 +423,8 @@ begin
   -- Een tijd hoort bij een vaste vertrektijd; "vrij" of "per 24 uur" met een tijd spreekt zichzelf tegen
   if v_time is not null then v_rule := 'vast'; end if;
   if v_rule = 'vast' and v_time is null then v_rule := null; end if;
+  -- Een openingsperiode met data en "het hele jaar open" spreken elkaar tegen: dan geldt niets
+  if v_season is not null and v_open is true then v_season := null; v_open := null; end if;
 
   -- Plek: eerst het id uit het onderwerp, anders het e-mailadres (alleen als precies één plek dat adres heeft)
   if p_reply ->> 'place_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
@@ -412,9 +445,11 @@ begin
   v_outcome := case when v_matched is not null then 'logged' when v_n > 1 then 'ambiguous' else 'no_place' end;
 
   insert into public.owner_replies (email_id, from_email, subject, place_id, matched_by, sender_matches, intent,
-    price_eur, departure_time, checkin_from, departure_rule, summary, ai_model, outcome)
+    price_eur, departure_time, checkin_from, departure_rule, power, water, dump_station, open_all_year, season,
+    summary, ai_model, outcome)
   values (v_email_id, left(v_from, 254), left(p_reply ->> 'subject', 300), v_place.id, v_matched, v_sender, v_intent,
-          v_price, v_time, v_in, v_rule, left(p_reply ->> 'summary', 500), left(p_reply ->> 'ai_model', 80), v_outcome)
+          v_price, v_time, v_in, v_rule, v_power, v_water, v_dump, v_open, v_season,
+          left(p_reply ->> 'summary', 500), left(p_reply ->> 'ai_model', 80), v_outcome)
   returning id into v_reply;
 
   if v_intent = 'unsubscribe' then
@@ -458,6 +493,32 @@ begin
     if v_in is not null and v_place.checkin_from is distinct from v_in then
       insert into public.updates_queue (place_id, field_changed, old_value, new_value, source, owner_reply_id)
       values (v_place.id, 'checkin_from', to_jsonb(v_place.checkin_from), to_jsonb(v_in), 'eigenaar', v_reply);
+      v_queued := v_queued + 1;
+    end if;
+    -- Voorzieningen en openingsperiode: alleen als de eigenaar ze noemt en ze verschillen van wat we hebben
+    if v_power is not null and v_place.power is distinct from v_power then
+      insert into public.updates_queue (place_id, field_changed, old_value, new_value, source, owner_reply_id)
+      values (v_place.id, 'power', to_jsonb(v_place.power), to_jsonb(v_power), 'eigenaar', v_reply);
+      v_queued := v_queued + 1;
+    end if;
+    if v_water is not null and v_place.water is distinct from v_water then
+      insert into public.updates_queue (place_id, field_changed, old_value, new_value, source, owner_reply_id)
+      values (v_place.id, 'water', to_jsonb(v_place.water), to_jsonb(v_water), 'eigenaar', v_reply);
+      v_queued := v_queued + 1;
+    end if;
+    if v_dump is not null and v_place.dump_station is distinct from v_dump then
+      insert into public.updates_queue (place_id, field_changed, old_value, new_value, source, owner_reply_id)
+      values (v_place.id, 'dump_station', to_jsonb(v_place.dump_station), to_jsonb(v_dump), 'eigenaar', v_reply);
+      v_queued := v_queued + 1;
+    end if;
+    if v_open is not null and v_place.open_all_year is distinct from v_open then
+      insert into public.updates_queue (place_id, field_changed, old_value, new_value, source, owner_reply_id)
+      values (v_place.id, 'open_all_year', to_jsonb(v_place.open_all_year), to_jsonb(v_open), 'eigenaar', v_reply);
+      v_queued := v_queued + 1;
+    end if;
+    if v_season is not null and v_place.season is distinct from v_season then
+      insert into public.updates_queue (place_id, field_changed, old_value, new_value, source, owner_reply_id)
+      values (v_place.id, 'season', to_jsonb(v_place.season), to_jsonb(v_season), 'eigenaar', v_reply);
       v_queued := v_queued + 1;
     end if;
     if v_queued > 0 then v_outcome := 'queued'; end if;

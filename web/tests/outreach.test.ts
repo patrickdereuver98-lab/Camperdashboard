@@ -12,9 +12,11 @@ import {
   sendViaResend,
 } from "../src/lib/outreach.ts";
 
+const ALL = ["vertrek", "aankomst", "seizoen", "prijs", "stroom", "water", "lozen"];
 const item = (over: Partial<OutreachItem> = {}): OutreachItem => ({
   token: "11111111-1111-4111-8111-111111111111",
   place_id: "22222222-2222-4222-8222-222222222222",
+  slug: "camping-de-vlinder",
   name: "Camping De Vlinder",
   kind: "camping",
   town: "Leek",
@@ -23,18 +25,47 @@ const item = (over: Partial<OutreachItem> = {}): OutreachItem => ({
   checkout_until: null,
   checkin_from: null,
   checkin_until: null,
+  open_all_year: null,
+  season: null,
+  price_eur: null,
+  power: null,
+  water: null,
+  dump_station: null,
+  missing: ALL,
   ...over,
 });
 
-test("de mail noemt wat we weten en verzint niets", () => {
-  const m = composeOutreach(item({ departure: "vast", checkout_until: "11:00", checkin_from: "14:00" }), "https://site.test");
-  assert.match(m.text, /Aankomst: vanaf 14:00/);
-  assert.match(m.text, /Vertrek: uiterlijk 11:00/);
+test("de mail noemt wat we weten, vraagt wat we missen en verzint niets", () => {
+  const m = composeOutreach(
+    item({ departure: "vast", checkout_until: "11:00", checkin_from: "14:00", price_eur: 22.5, power: true, missing: ["seizoen", "water", "lozen"] }),
+    "https://site.test",
+  );
+  const [weten, missen] = m.text.split("Dit missen we nog:");
+  assert.match(weten, /- Vertrek: uiterlijk 11:00/);
+  assert.match(weten, /- Aankomst: vanaf 14:00/);
+  assert.match(weten, /- Prijs: vanaf € 22,50 per nacht/);
+  assert.match(weten, /- Stroom: ja/);
+  // Wat we weten wordt niet nog eens gevraagd
+  assert.doesNotMatch(missen, /- Vertrek:|- Aankomst:|- Prijs:|- Stroom:/);
+  assert.match(missen, /- Open: het hele jaar open, of in welke periode\?/);
+  assert.match(missen, /- Water: /);
+  assert.match(missen, /- Lozen: /);
+  // De voorbeeldantwoorden volgen de gestelde vragen
+  assert.match(m.text, /\nOpen: van … tot … \(of: het hele jaar\)\nWater: ja of nee\nLozen: ja of nee\n/);
+  // Geen voorbeeldwaarden die iemand kan overtypen: alleen invulregels met puntjes
+  for (const regel of m.text.split("\n").filter((l) => /^(Open|Water|Lozen): /.test(l))) assert.match(regel, /…|ja of nee/);
   const leeg = composeOutreach(item(), "https://site.test");
-  assert.match(leeg.text, /Aankomst: onbekend/);
-  assert.match(leeg.text, /Vertrek: onbekend/);
+  assert.doesNotMatch(leeg.text, /Dit weten we al/, "niets bekend: geen lijst met wat we weten");
+  for (const f of ["Vertrek", "Aankomst", "Open", "Prijs", "Stroom", "Water", "Lozen"]) assert.match(leeg.text, new RegExp(`- ${f}: `));
+  assert.match(leeg.text, /Camping De Vlinder in Leek/);
+  assert.match(leeg.text, /https:\/\/site\.test\/plek\/camping-de-vlinder/);
+  // Eén gegeven: eenvoudige kop
+  assert.match(composeOutreach(item({ missing: ["lozen"], departure: "vrij", checkin_from: "14:00" }), "https://site.test").text, /Dit ene gegeven missen we nog:/);
+  // Niets te vragen is een fout, geen lege mail
+  assert.throws(() => composeOutreach(item({ missing: [] })), /Niets te vragen/);
+  // Vast zonder tijd telt als onbekend; de database zegt dan ook dat het mist
+  assert.equal(departureLine({ departure: "vast", checkout_until: null }), "onbekend");
   assert.equal(arrivalLine({ checkin_from: "14:00", checkin_until: "18:00" }), "tussen 14:00 en 18:00");
-  assert.equal(departureLine({ departure: "vast", checkout_until: null }), "onbekend", "vast zonder tijd is onbekend");
   assert.equal(departureLine({ departure: "vrij", checkout_until: null }), "vrij, geen vaste tijd");
   assert.equal(departureLine({ departure: "vast", checkout_until: "ongeldig" }), "onbekend");
 });
@@ -47,6 +78,7 @@ test("onderwerp bevat [VS-<id>] zodat het antwoord aan de plek hangt; afmeldlink
   assert.equal(m.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
   assert.match(m.text, /https:\/\/site\.test\/afmelden\/11111111-1111-4111-8111-111111111111/);
   assert.match(m.html, /Meld je af/);
+  assert.match(m.html, /Zo ziet de pagina er nu uit/);
   assert.match(m.text, /privacy/);
 });
 
@@ -109,6 +141,19 @@ test("runOutreach: meldt elke uitkomst en stopt bij een instellingsfout", async 
   );
   assert.deepEqual(log, ["sent 11 re_a", "pauze", "failed 33 adres true", "pauze", "failed 44 domein false"]);
   assert.deepEqual({ sent: out.sent, rejected: out.rejected, postponed: out.postponed, stopped: out.stopped }, { sent: 1, rejected: 1, postponed: 1, stopped: "domein" });
+});
+
+test("runOutreach: een mail zonder iets te vragen geeft de plek op, zonder het adres uit te sluiten", async () => {
+  const log: string[] = [];
+  const out = await runOutreach({
+    next: async () => ({ enabled: true, items: [item({ missing: [] })] }),
+    send: async () => ({ kind: "sent", id: "x" }),
+    sent: async () => void log.push("sent"),
+    failed: async (_t, e, permanent, suppress) => void log.push(`failed ${e} ${permanent} ${suppress}`),
+    sleep: async () => {},
+  });
+  assert.deepEqual(log, ["failed Niets te vragen true false"]);
+  assert.equal(out.rejected, 1);
 });
 
 test("runOutreach: campagne uit of leeg doet niets", async () => {

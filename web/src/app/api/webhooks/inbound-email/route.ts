@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   const body = cleanBody(content);
 
   const model = process.env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
-  let reply: OwnerReply = { intent: "unknown", price: null, departure_time: null, checkin_from: null, departure_rule: null, summary: "Lege mail" };
+  let reply: OwnerReply = { intent: "unknown", price: null, departure_time: null, checkin_from: null, departure_rule: null, power: null, water: null, dump_station: null, open_all_year: null, season: null, summary: "Lege mail" };
   let usedAi = false;
   if (body && looksLikeOptOut(body)) {
     // Afmelden hangt nooit van een AI-antwoord af

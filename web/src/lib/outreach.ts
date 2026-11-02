@@ -6,9 +6,14 @@ import { SITE_URL } from "./env";
  * hier staat de mailtekst, de verzending en de lus eromheen. De route heeft geen service-role-sleutel.
  */
 
+/** De belangrijke gegevens waar de mail naar vraagt (geen nice-to-have); zelfde volgorde als private.outreach_missing */
+export const FACTS = ["vertrek", "aankomst", "seizoen", "prijs", "stroom", "water", "lozen"] as const;
+export type Fact = (typeof FACTS)[number];
+
 export type OutreachItem = {
   token: string;
   place_id: string;
+  slug: string | null;
   name: string;
   kind: string | null;
   town: string | null;
@@ -17,6 +22,14 @@ export type OutreachItem = {
   checkout_until: string | null;
   checkin_from: string | null;
   checkin_until: string | null;
+  open_all_year: boolean | null;
+  season: string | null;
+  price_eur: number | null;
+  power: boolean | null;
+  water: boolean | null;
+  dump_station: boolean | null;
+  /** Uit de database (private.outreach_missing): waar de mail naar vraagt */
+  missing: string[];
 };
 
 export type Mail = {
@@ -29,6 +42,7 @@ export type Mail = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+const SLUG = /^[a-z0-9][a-z0-9-]{0,120}$/;
 
 /** Naam van de plek voor in een onderwerp of tekst: één regel, geen stuurtekens, hoogstens 80 tekens */
 export function cleanName(name: string): string {
@@ -55,29 +69,121 @@ export function departureLine(i: Pick<OutreachItem, "departure" | "checkout_unti
   return "onbekend";
 }
 
-export function outreachUrls(token: string, base = process.env.OUTREACH_BASE_URL || SITE_URL) {
-  const root = base.replace(/\/+$/, "");
-  return { unsubscribe: `${root}/api/afmelden/${token}`, page: `${root}/afmelden/${token}`, privacy: `${root}/privacy` };
+const yesNo = (v: boolean | null) => (v === true ? "ja" : v === false ? "nee" : null);
+
+/** Wat we al weten van één gegeven, in woorden; null als we het niet weten */
+export function knownValue(i: OutreachItem, fact: Fact): string | null {
+  switch (fact) {
+    case "vertrek": {
+      const v = departureLine(i);
+      return v === "onbekend" ? null : v;
+    }
+    case "aankomst": {
+      const v = arrivalLine(i);
+      return v === "onbekend" ? null : v;
+    }
+    case "seizoen":
+      return i.open_all_year === true ? "het hele jaar open" : i.season?.trim() ? i.season.trim().slice(0, 60) : null;
+    case "prijs":
+      return typeof i.price_eur === "number" && i.price_eur >= 0 && i.price_eur <= 500
+        ? `vanaf € ${i.price_eur.toLocaleString("nl-NL", { minimumFractionDigits: Number.isInteger(i.price_eur) ? 0 : 2 })} per nacht`
+        : null;
+    case "stroom":
+      return yesNo(i.power);
+    case "water":
+      return yesNo(i.water);
+    case "lozen":
+      return yesNo(i.dump_station);
+  }
 }
 
-/** De mail. Je-vorm, korte zinnen, geen verkooppraat (stijlgids). Afzender is VrijStaan, zonder persoonsnaam. */
+const LABEL: Record<Fact, string> = {
+  vertrek: "Vertrek",
+  aankomst: "Aankomst",
+  seizoen: "Open",
+  prijs: "Prijs",
+  stroom: "Stroom",
+  water: "Water",
+  lozen: "Lozen",
+};
+
+/**
+ * De vraag per gegeven, en een invulregel zodat reageren één regel per gegeven kost. De invulregel heeft "…" in plaats van
+ * een voorbeeldwaarde: wie hem ongewijzigd terugstuurt, levert niets op in plaats van een verzonnen tijd.
+ */
+const ASK: Record<Fact, { question: string; example: string }> = {
+  vertrek: { question: "tot hoe laat moeten gasten weg, of mogen ze blijven zo lang ze willen?", example: "uiterlijk … uur (of: vrij vertrek)" },
+  aankomst: { question: "vanaf hoe laat mogen gasten komen?", example: "vanaf … uur" },
+  seizoen: { question: "het hele jaar open, of in welke periode?", example: "van … tot … (of: het hele jaar)" },
+  prijs: {
+    question: "wat kost een nacht voor een camper met twee personen, inclusief toeristenbelasting, stroom en andere toeslagen?",
+    example: "€ … per nacht, alles inbegrepen",
+  },
+  stroom: { question: "is er stroom op de plek?", example: "ja of nee" },
+  water: { question: "kunnen gasten water tanken?", example: "ja of nee" },
+  lozen: { question: "kunnen gasten afvalwater en toilet lozen?", example: "ja of nee" },
+};
+
+/** Welke gegevens we vragen: wat de database mist, in vaste volgorde, en alleen wat we echt niet weten */
+export function askedFacts(i: OutreachItem): Fact[] {
+  const missing = new Set(i.missing);
+  return FACTS.filter((f) => missing.has(f) && knownValue(i, f) === null);
+}
+
+export function outreachUrls(token: string, base = process.env.OUTREACH_BASE_URL || SITE_URL, slug?: string | null) {
+  const root = base.replace(/\/+$/, "");
+  return {
+    unsubscribe: `${root}/api/afmelden/${token}`,
+    page: `${root}/afmelden/${token}`,
+    privacy: `${root}/privacy`,
+    place: slug && SLUG.test(slug) ? `${root}/plek/${slug}` : null,
+  };
+}
+
+/**
+ * De mail. Per plek: de naam en woonplaats, wat we al weten en precies de belangrijke gegevens die we missen, met een
+ * voorbeeldantwoord. Je-vorm, korte zinnen, geen verkooppraat (stijlgids). De tekst is vast, geen AI: zo staat er nooit
+ * iets in wat we niet weten. Afzender is VrijStaan, zonder persoonsnaam.
+ */
 export function composeOutreach(i: OutreachItem, base?: string): Mail {
   if (!UUID.test(i.token) || !UUID.test(i.place_id)) throw new Error("Ongeldig token of plek-id");
   const name = cleanName(i.name);
-  const url = outreachUrls(i.token, base);
-  const arrival = arrivalLine(i);
-  const departure = departureLine(i);
+  const town = i.town ? cleanName(i.town) : null;
+  const where = town ? `${name} in ${town}` : name;
+  const url = outreachUrls(i.token, base, i.slug);
+  const asked = askedFacts(i);
+  if (!asked.length) throw new Error("Niets te vragen");
+  const known = FACTS.map((f) => [f, knownValue(i, f)] as const).filter((x): x is readonly [Fact, string] => x[1] !== null);
+
+  const intro = `Wij maken VrijStaan, een gratis gids voor camperaars. ${where} staat erin, op basis van gegevens die openbaar zijn.${url.place ? ` Zo ziet de pagina er nu uit: ${url.place}` : ""}`;
+  const knownTitle = "Dit weten we al:";
+  const askedTitle = asked.length === 1 ? "Dit ene gegeven missen we nog:" : "Dit missen we nog:";
+  const why = "Camperaars kiezen op een paar vaste punten. Daarom willen we die bij elke plek goed hebben.";
+  const how = "Antwoord gerust op deze mail, ook als je maar een deel weet. Vul gewoon de puntjes in:";
+  const fix = known.length ? "Klopt iets van wat we al weten niet? Zet dan de juiste gegevens erbij." : "";
+  const after = `Zodra je antwoordt, kijken wij het na en zetten we het op de pagina van ${name}.`;
+
+  const knownLines = known.map(([f, v]) => `${LABEL[f]}: ${v}`);
+  const askedLines = asked.map((f) => `${LABEL[f]}: ${ASK[f].question}`);
+  const exampleLines = asked.map((f) => `${LABEL[f]}: ${ASK[f].example}`);
 
   const text = [
     "Hallo,",
     "",
-    `Wij maken VrijStaan, een gratis gids voor camperaars. ${name} staat erin, op basis van gegevens die openbaar zijn. Camperaars willen vooral weten hoe laat ze mogen komen en hoe laat ze weg moeten.`,
+    intro,
     "",
-    "Dit weten we nu:",
-    `Aankomst: ${arrival}`,
-    `Vertrek: ${departure}`,
+    why,
+    ...(known.length ? ["", knownTitle, ...knownLines.map((l) => `- ${l}`)] : []),
     "",
-    'Klopt dit? Antwoord met één zin op deze mail, bijvoorbeeld: "Aankomst vanaf 14:00, vertrek uiterlijk 11:00." Is het anders, zet dan de juiste tijden erbij. Wisselen de tijden per seizoen of per dag, dan mag je dat erbij zetten.',
+    askedTitle,
+    ...askedLines.map((l) => `- ${l}`),
+    "",
+    how,
+    "",
+    ...exampleLines,
+    ...(fix ? ["", fix] : []),
+    "",
+    after,
     "",
     "Alvast bedankt.",
     "VrijStaan",
@@ -87,17 +193,24 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
     `Geen mail meer van ons? Meld je af: ${url.page}`,
   ].join("\n");
 
-  const p = (s: string) => `<p style="margin:0 0 14px">${s}</p>`;
+  const p = (x: string) => `<p style="margin:0 0 14px">${x}</p>`;
+  const list = (rows: string[]) =>
+    `<ul style="margin:0 0 14px;padding-left:20px">${rows.map((r) => `<li style="margin:0 0 6px">${r}</li>`).join("")}</ul>`;
   const html =
     `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:16px;line-height:1.55;color:#1f2a24;max-width:560px">` +
     p("Hallo,") +
     p(
-      `Wij maken VrijStaan, een gratis gids voor camperaars. ${esc(name)} staat erin, op basis van gegevens die openbaar zijn. Camperaars willen vooral weten hoe laat ze mogen komen en hoe laat ze weg moeten.`,
+      `Wij maken VrijStaan, een gratis gids voor camperaars. ${esc(where)} staat erin, op basis van gegevens die openbaar zijn.` +
+        (url.place ? ` <a href="${esc(url.place)}">Zo ziet de pagina er nu uit.</a>` : ""),
     ) +
-    p(`Dit weten we nu:<br>Aankomst: <strong>${esc(arrival)}</strong><br>Vertrek: <strong>${esc(departure)}</strong>`) +
-    p(
-      "Klopt dit? Antwoord met één zin op deze mail, bijvoorbeeld: &ldquo;Aankomst vanaf 14:00, vertrek uiterlijk 11:00.&rdquo; Is het anders, zet dan de juiste tijden erbij. Wisselen de tijden per seizoen of per dag, dan mag je dat erbij zetten.",
-    ) +
+    p(esc(why)) +
+    (known.length ? p(`<strong>${knownTitle}</strong>`) + list(known.map(([f, v]) => `${LABEL[f]}: ${esc(v)}`)) : "") +
+    p(`<strong>${askedTitle}</strong>`) +
+    list(asked.map((f) => `${LABEL[f]}: ${esc(ASK[f].question)}`)) +
+    p(esc(how)) +
+    `<p style="margin:0 0 14px;padding:10px 12px;background:#f4f1ea;border-radius:8px">${exampleLines.map((l) => esc(l)).join("<br>")}</p>` +
+    (fix ? p(esc(fix)) : "") +
+    p(esc(after)) +
     p("Alvast bedankt.<br>VrijStaan") +
     `<p style="margin:24px 0 0;font-size:14px;color:#5b6b61">Je krijgt deze mail één keer, omdat dit e-mailadres openbaar bij ${esc(name)} staat. ` +
     `Wat we met gegevens doen, lees je in de <a href="${esc(url.privacy)}">privacyverklaring</a>. ` +
@@ -106,7 +219,7 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
   return {
     to: i.email.trim(),
     // [VS-<id>] in het onderwerp: zo koppelt de inbox een antwoord aan de plek (placeIdFromSubject)
-    subject: `Klopt dit nog? Aankomst en vertrek bij ${name} [VS-${i.place_id.toLowerCase()}]`,
+    subject: `Klopt dit nog? Gegevens van ${name} op VrijStaan [VS-${i.place_id.toLowerCase()}]`,
     text,
     html,
     headers: {
@@ -171,7 +284,7 @@ export type OutreachDeps = {
   next: (limit: number) => Promise<{ enabled: boolean; reason?: string; items: OutreachItem[] }>;
   send: (mail: Mail, idempotencyKey: string) => Promise<SendResult>;
   sent: (token: string, resendId: string) => Promise<void>;
-  failed: (token: string, error: string, permanent: boolean) => Promise<void>;
+  failed: (token: string, error: string, permanent: boolean, suppress?: boolean) => Promise<void>;
   sleep: (ms: number) => Promise<void>;
 };
 
@@ -192,12 +305,16 @@ export async function runOutreach(d: OutreachDeps, limit = 10, base?: string): P
   const out: OutreachSummary = { enabled: next.enabled, reason: next.reason, sent: 0, rejected: 0, postponed: 0 };
   for (const [idx, item] of next.items.entries()) {
     if (idx > 0) await d.sleep(SEND_GAP_MS);
-    let result: SendResult;
+    let mail: Mail;
     try {
-      result = await d.send(composeOutreach(item, base), `outreach-${item.token}`);
+      mail = composeOutreach(item, base);
     } catch (e) {
-      result = { kind: "permanent", error: e instanceof Error ? e.message : "mail samenstellen mislukt" };
+      // Aan onze kant (bijvoorbeeld niets meer te vragen): deze plek opgeven, maar het adres niet uitsluiten
+      await d.failed(item.token, e instanceof Error ? e.message : "mail samenstellen mislukt", true, false);
+      out.rejected += 1;
+      continue;
     }
+    const result = await d.send(mail, `outreach-${item.token}`);
     if (result.kind === "sent") {
       await d.sent(item.token, result.id);
       out.sent += 1;

@@ -43,7 +43,8 @@ export async function POST(request: Request) {
       },
       send: (mail, idempotencyKey) => sendViaResend(apiKey, from, replyTo, mail, idempotencyKey),
       sent: async (token, resendId) => void (await rpc("outreach_sent", { p_token: token, p_resend_id: resendId })),
-      failed: async (token, error, permanent) => void (await rpc("outreach_failed", { p_token: token, p_error: error, p_permanent: permanent })),
+      failed: async (token, error, permanent, suppress) =>
+        void (await rpc("outreach_failed", { p_token: token, p_error: error, p_permanent: permanent, p_suppress: suppress ?? permanent })),
       sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
     });
     return Response.json(summary, { status: summary.stopped ? 502 : 200 });

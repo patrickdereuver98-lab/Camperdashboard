@@ -4,6 +4,7 @@
 reset role;
 alter table public.places add column if not exists kind text;
 alter table public.places add column if not exists town text;
+alter table public.places add column if not exists slug text;
 alter table public.places add column if not exists merged_into uuid;
 alter table public.places add column if not exists verified_at timestamptz;
 -- Eerdere tests laten plekken met adressen achter: hier tellen alleen de plekken van deze test
@@ -20,7 +21,7 @@ insert into public.places (id, name, kind, town, email, departure, checkout_unti
   ('a0000000-0000-4000-8000-000000000003', 'Gmail-plek', 'camping', 'Zeist', 'jan@gmail.com', null, null, null, 'published', '{}', null),
   -- Parkeerplaats: geen eigenaar om te mailen
   ('a0000000-0000-4000-8000-000000000004', 'Parkeerplaats', 'parkeerplaats', 'Ede', 'gemeente@ede.nl', null, null, null, 'published', '{}', null),
-  -- Alles bekend en recent bevestigd: niets te vragen
+  -- Alles bekend: niets te vragen (verified_at zegt niets: de scraper zet het bij elke gelezen website)
   ('a0000000-0000-4000-8000-000000000005', 'Compleet', 'camping', 'Vaals', 'info@compleet.nl', 'vast', '12:00', '14:00', 'published', '{}', now()),
   -- Eigenaar liet de lezer stoppen
   ('a0000000-0000-4000-8000-000000000006', 'Geblokkeerd', 'camping', 'Echt', 'info@geblokkeerd.nl', null, null, null, 'published', '{"stealth": {"error": "geblokkeerd: eigenaar vroeg te stoppen"}}', null),
@@ -29,9 +30,17 @@ insert into public.places (id, name, kind, town, email, departure, checkout_unti
   -- Keten: twee plekken, één adres
   ('a0000000-0000-4000-8000-000000000008', 'Keten Noord', 'camping', 'Assen', 'keten@ketting.nl', null, null, null, 'published', '{}', null),
   ('a0000000-0000-4000-8000-000000000009', 'Keten Zuid', 'camping', 'Venlo', 'keten@ketting.nl', 'vast', '10:00', '15:00', 'draft', '{}', null),
+  -- Alles belangrijke bekend, niet recent bevestigd: niets te vragen
+  ('a0000000-0000-4000-8000-00000000000b', 'Alles bekend', 'camping', 'Vaals', 'info@allesbekend.nl', 'vast', '12:00', '14:00', 'published', '{}', null),
   -- Geen geldig adres
   ('a0000000-0000-4000-8000-00000000000a', 'Kapot adres', 'camping', 'Echt', 'geen adres', null, null, null, 'published', '{}', null);
 update public.places set merged_into = 'a0000000-0000-4000-8000-000000000001' where id = 'a0000000-0000-4000-8000-000000000007';
+update public.places set open_all_year = true, price_eur = 20, power = true, water = true, dump_station = false
+ where id in ('a0000000-0000-4000-8000-00000000000b', 'a0000000-0000-4000-8000-000000000005');
+-- Vertrek en aankomst bekend, maar maar één ander gegeven mist: niet genoeg om een mail te rechtvaardigen
+insert into public.places (id, name, kind, email, departure, checkout_until, checkin_from, open_all_year, price_eur, power, water, dump_station, status)
+  values ('a0000000-0000-4000-8000-00000000000c', 'Bijna compleet', 'camping', 'info@bijnacompleet.nl', 'vast', '11:00', '14:00', true, 20, true, true, null, 'published');
+update public.places set slug = 'camping-de-vlinder' where id = 'a0000000-0000-4000-8000-000000000001';
 
 \i :migration
 
@@ -55,6 +64,13 @@ end $$;
 reset role;
 do $$ begin assert (select count(*) from private.outreach_log) = 0, 'log gevuld terwijl uit'; end $$;
 
+-- Wat missen we: alleen belangrijke gegevens, in vaste volgorde
+do $$ begin
+  assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-000000000002')) = array['aankomst','seizoen','prijs','stroom','water','lozen'];
+  assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-00000000000b')) = array[]::text[];
+  assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-00000000000c')) = array['lozen'];
+end $$;
+
 -- Wie komt in aanmerking: de Vlinder, het Hooi (aankomst onbekend) en één van de keten (Noord: geen vertrekregel gaat voor)
 do $$
 declare ids uuid[];
@@ -76,6 +92,8 @@ begin
   assert jsonb_array_length(r -> 'items') = 2, 'quotum 2: ' || r::text;
   assert (r -> 'items' -> 0 ->> 'place_id') = 'a0000000-0000-4000-8000-000000000001', 'volgorde: zonder vertrekregel eerst';
   assert (r -> 'items' -> 0 ->> 'email') = 'Info@DeVlinder.nl', 'adres ontbreekt';
+  assert (r -> 'items' -> 0 ->> 'slug') = 'camping-de-vlinder', 'slug voor de link naar de plekpagina';
+  assert (r -> 'items' -> 0 -> 'missing') = '["vertrek","aankomst","seizoen","prijs","stroom","water","lozen"]'::jsonb, 'missing: ' || (r -> 'items' -> 0 -> 'missing')::text;
   assert (r -> 'items' -> 1 ->> 'place_id') = 'a0000000-0000-4000-8000-000000000008', 'keten: de plek zonder regel';
   -- Tweede aanroep zonder iets verstuurd te hebben: geen nieuwe plekken (quotum op) en niets opnieuw (nog geen 30 min)
   r := public.outreach_next('outreach-geheim', 10);
@@ -125,6 +143,18 @@ reset role;
 do $$ begin
   assert (select status from private.outreach_log where place_id = 'a0000000-0000-4000-8000-000000000002') = 'failed', 'failed';
   assert exists (select 1 from private.outreach_suppressions where email_hash = private.email_hash('hooi@hethooi.nl') and reason = 'geweigerd'), 'geweigerd niet op de lijst';
+end $$;
+
+-- Een fout aan onze kant (p_suppress false) geeft de plek op, maar sluit het adres niet uit
+insert into public.places (id, name, kind, email, status) values ('a0000000-0000-4000-8000-0000000000c1', 'Eigen fout', 'camping', 'info@eigenfout.nl', 'published');
+insert into private.outreach_log (place_id, email_hash) values ('a0000000-0000-4000-8000-0000000000c1', private.email_hash('info@eigenfout.nl'));
+select token as t3 from private.outreach_log where place_id = 'a0000000-0000-4000-8000-0000000000c1' \gset
+set role anon;
+select public.outreach_failed('outreach-geheim', :'t3', 'niets te vragen', true, false) \gset
+reset role;
+do $$ begin
+  assert (select status from private.outreach_log where place_id = 'a0000000-0000-4000-8000-0000000000c1') = 'failed';
+  assert not exists (select 1 from private.outreach_suppressions where email_hash = private.email_hash('info@eigenfout.nl')), 'adres uitgesloten door onze eigen fout';
 end $$;
 
 -- Afmelden met het token: op de lijst, ook bij een tweede keer of een onbekend token (zelfde antwoord)
@@ -188,12 +218,26 @@ begin
   r := public.log_owner_reply('inbox-geheim', '{"email_id": "r2", "from": "keten@ketting.nl", "place_id": "a0000000-0000-4000-8000-000000000008",
     "intent": "update", "checkin_from": "25:00", "departure_rule": "soms"}');
   assert (r ->> 'queued')::int = 0, 'onzin in de wachtrij: ' || r::text;
+  -- Voorzieningen en openingsperiode uit het antwoord: elk een eigen rij voor de beheerder
+  r := public.log_owner_reply('inbox-geheim', '{"email_id": "r3", "from": "keten@ketting.nl", "place_id": "a0000000-0000-4000-8000-000000000008",
+    "intent": "update", "power": true, "water": true, "dump_station": false, "season": "1 april tot en met 31 oktober", "price": 24}');
+  assert (r ->> 'queued')::int = 5, 'voorzieningen, seizoen en prijs: ' || r::text;
+  -- Een periode met data en "het hele jaar open" spreken elkaar tegen: geen van beide
+  r := public.log_owner_reply('inbox-geheim', '{"email_id": "r4", "from": "keten@ketting.nl", "place_id": "a0000000-0000-4000-8000-000000000008",
+    "intent": "update", "open_all_year": true, "season": "1 april tot 1 oktober"}');
+  assert (r ->> 'queued')::int = 0, 'tegenstrijdige periode kwam in de wachtrij: ' || r::text;
+  -- Een tekst in plaats van ja/nee is geen waarheidswaarde
+  r := public.log_owner_reply('inbox-geheim', '{"email_id": "r5", "from": "keten@ketting.nl", "place_id": "a0000000-0000-4000-8000-000000000008",
+    "intent": "update", "power": "misschien", "water": "ja"}');
+  assert (r ->> 'queued')::int = 0, 'tekst als boolean: ' || r::text;
 end $$;
 reset role;
 do $$ begin
   assert (select status from private.outreach_log where place_id = 'a0000000-0000-4000-8000-000000000008') = 'replied', 'replied';
   assert (select new_value from public.updates_queue where owner_reply_id = (select id from public.owner_replies where email_id = 'r1') and field_changed = 'checkin_from') = '"15:00"'::jsonb;
   assert (select new_value from public.updates_queue where owner_reply_id = (select id from public.owner_replies where email_id = 'r1') and field_changed = 'departure') = '"vrij"'::jsonb;
+  assert (select new_value from public.updates_queue where owner_reply_id = (select id from public.owner_replies where email_id = 'r3') and field_changed = 'season') = '"1 april tot en met 31 oktober"'::jsonb;
+  assert (select new_value from public.updates_queue where owner_reply_id = (select id from public.owner_replies where email_id = 'r3') and field_changed = 'dump_station') = 'false'::jsonb;
 end $$;
 
 -- Noodrem: een spamklacht zet de hele campagne uit, ook voor volgende aanroepen
