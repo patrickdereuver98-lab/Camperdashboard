@@ -47,7 +47,7 @@
 | ✅ Reisstatistieken (dashboard) | Agent | Opdracht Patrick (Fase 5) | `/mijn-reis/statistieken`, `trip-stats.ts` | Alleen berekend uit bekende gegevens; tabel bij elke grafiek | Mijn reis, uitgaven |
 | ✅ Samen een reis plannen (realtime) | Agent | Opdracht Patrick (Fase 5) | `shared_trips`, `/samen/<code>`, `SharedCard` | Leden zien wijzigingen direct; buitenstaanders niet | Accounts |
 | ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
-| ⬜ Testtabellen `private.probe*` verwijderen (1 november 2026: `probe` 11 en `probe2` 198 rijen, nergens gebruikt; het verwijderen via de Supabase-koppeling vraagt een bevestiging die niet is gegeven, dus 👤 Patrick: `drop table private.probe, private.probe2;`) | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
+| ✅ Testtabellen `private.probe*` verwijderd (2 november 2026, migratie `20261102070235_probe_tabellen_weg.sql`, akkoord Patrick) | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 
 ## Mijlpaal 3: hoofdroute ✅
 
@@ -156,8 +156,7 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 - **Data (Agent):** vertrekregel bij 1.448 van 2.195 gepubliceerde plekken (66%) en prijs bij 1.260 (57%), doel 90%
   (telling 1 november 2026). Zoekagenten, stealth-lezer en dataketen lopen door.
 - **Alleen Patrick:** domein en `NEXT_PUBLIC_SITE_URL`, Supabase Auth (Site URL, redirects, SMTP, OAuth-sleutels,
-  mailsjablonen), contactgegevens in `company.ts`, juridische teksten laten nalezen, bewaartermijnen activeren,
-  testtabellen `private.probe*` weghalen.
+  mailsjablonen), contactgegevens in `company.ts`, juridische teksten laten nalezen, bewaartermijnen activeren.
 - **Na de soft-launch (Agent):** rol support beperken, `delete_my_account`, `schema.sql` opnieuw genereren, testplan
   met de bètagebruikers, monitoring van serverfouten.
 - **Mijlpaal 7:** Plekpuls-backend, versheid per feit, eigenarenportaal, offline pakket.
