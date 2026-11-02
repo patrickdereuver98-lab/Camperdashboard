@@ -16,8 +16,8 @@ Besluiten van Patrick (2 november 2026, keuzevragen):
 
 Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 
-**Stand 2 november 2026:** fase 0 tot en met 4 gebouwd en getest (unit-, SQL- en renderproeven). Open: de migratie
-live zetten na het samenvoegen, en de acties van Patrick in §6. Spec: [document 7](../specs/07-marketing-en-rebrand.md).
+**Stand 2 november 2026:** fase 0 tot en met 4 gebouwd en getest (unit-, SQL- en renderproeven). Op `main` sinds PR #135; de
+migratie staat live. Open: de acties van Patrick in §6. Spec: [document 7](../specs/07-marketing-en-rebrand.md).
 
 **Wijziging na het plan (README 98):** "BRAG" bleek [latent-spaces/brag](https://github.com/latent-spaces/brag), een
 agent-skill die launch-video's maakt met Hyperframes. De Studio gebruikt daarom geen Remotion maar dezelfde werkwijze
