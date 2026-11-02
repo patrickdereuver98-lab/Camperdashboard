@@ -199,9 +199,9 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 |---|---|---|---|---|---|
 | ✅ Stap 1: migratie `20261101130000_mission_control.sql` (rol, `admin_logs`, `updates_queue`, `dependency_updates`, accepteren/afwijzen, `log_dependency`, cron `ops-probe`) | Agent | Opdracht, README 88 | Migratie + SQL-tests (`web/supabase/tests/mission_control*.sql`, in `run.sh`) | Tests groen; live na samenvoegen | — |
 | ✅ Dependency-radar: `/api/admin/log-dependency`, `.github/workflows/ai-dependency-triage.yml`, `tools/ops/dependency_triage.py` (Gemini, vaste regel zonder sleutel) | Agent | Opdracht, README 90 en 91 | Route met unit tests, workflow, script met tests | Eerste Dependabot-PR staat in `dependency_updates` | Migratie live, secrets `GEMINI_API_KEY` en `DEPENDENCY_LOG_KEY` (Dependabot) |
-| ⬜ Stap 2: route en toegang | Agent | README 89 | Mission Control in beheer | Niet-admins zien niets | Besluit eigenaar |
-| ⬜ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | Stap 2 |
-| ⬜ Stap 4: SystemLogs en SystemUpdates | Agent | Opdracht | Logboek met kleurcodes, update-radar | Rood bij falende API of cron | Stap 2 |
+| ✅ Stap 2: Mission Control als `/admin/mission-control` (besluit eigenaar 2 november: binnen bestaand beheer, geen proxy of cookie) | Agent | README 89 | Pagina in de beheerzijbalk | Niet-admins zien lege lijsten (RLS) | — |
+| ✅ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini, sessietoken van de beheerder, geen service-role) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | `GEMINI_API_KEY` in Vercel |
+| ✅ Stap 4: Logboeken (stand per API, kleurcodes) en Updates (pending_review gemarkeerd, link naar de PR) | Agent | Opdracht | Tabbladen in Mission Control | Rood bij falende API of cron | Migratie live |
 
 ## Beveiliging (audit 1 november 2026) 🟡
 
