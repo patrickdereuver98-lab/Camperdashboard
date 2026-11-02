@@ -230,6 +230,8 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 | ✅ Stap 2: Mission Control als `/admin/mission-control` (besluit eigenaar 2 november: binnen bestaand beheer, geen proxy of cookie) | Agent | README 91 | Pagina in de beheerzijbalk | Niet-admins zien lege lijsten (RLS) | — |
 | ✅ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini, sessietoken van de beheerder, geen service-role) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | `GEMINI_API_KEY` in Vercel |
 | ✅ Stap 4: Logboeken (stand per API, kleurcodes) en Updates (pending_review gemarkeerd, link naar de PR) | Agent | Opdracht | Tabbladen in Mission Control | Rood bij falende API of cron | Migratie live |
+| ✅ AI Outreach Loop, stap 1: `/api/webhooks/inbound-email` (Resend Inbound, Gemini), migratie `20261102120000_eigenaar_inbox.sql` (`owner_replies`, `log_owner_reply`) | Agent | Opdracht 2 november, README 94 | Route, unit tests, SQL-test | Antwoord van een eigenaar staat als voorstel in de Triage Inbox | Migratie Mission Control en deze migratie live; Vercel: `RESEND_WEBHOOK_SECRET`, `RESEND_API_KEY`, `OWNER_INBOX_KEY`, `GEMINI_API_KEY`; `internal_secrets.owner_inbox_key`; Inbound-domein in Resend |
+| ⬜ AI Outreach Loop, stap 2: uitgaande mail naar eigenaren met `[VS-<id>]` in het onderwerp, en `owner_replies` zichtbaar in Mission Control | Agent | README 94 | — | — | Stap 1 |
 
 ## Beveiliging (audit 1 november 2026) 🟡
 

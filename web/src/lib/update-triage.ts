@@ -4,7 +4,9 @@
  * Het advies is een hulpmiddel; de beheerder beslist altijd zelf (spelregel: nooit data verzinnen).
  */
 
-export const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";
+import { geminiJson } from "./gemini";
+
+export { GEMINI_DEFAULT_MODEL } from "./gemini";
 
 export const TRIAGE_PROMPT =
   "Je bent een data-auditor voor een camper-app. Vergelijk de oude waarde met de voorgestelde nieuwe waarde. " +
@@ -50,28 +52,15 @@ export function parseTriage(raw: string): { score: number; advice: string } | nu
 
 /** Eén aanroep naar Gemini (REST) met een JSON-schema; gooit een fout bij een onbruikbaar antwoord */
 export async function askGemini(key: string, model: string, text: string): Promise<{ score: number; advice: string }> {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text }] }],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 300,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: { score: { type: "INTEGER" }, advice: { type: "STRING" } },
-          required: ["score", "advice"],
-        },
-      },
-    }),
-    signal: AbortSignal.timeout(30_000),
-    cache: "no-store",
+  const raw = await geminiJson(key, model, text, {
+    maxOutputTokens: 300,
+    schema: {
+      type: "OBJECT",
+      properties: { score: { type: "INTEGER" }, advice: { type: "STRING" } },
+      required: ["score", "advice"],
+    },
   });
-  if (!res.ok) throw new Error(`Gemini antwoordde ${res.status}`);
-  const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const out = parseTriage(data.candidates?.[0]?.content?.parts?.[0]?.text ?? "");
+  const out = parseTriage(raw);
   if (!out) throw new Error("Gemini gaf geen bruikbaar antwoord");
   return out;
 }
