@@ -78,17 +78,30 @@ export function Icon({
   );
 }
 
-/** Beeldmerk: een campingbord met camper */
+/**
+ * Beeldmerk: camper op een heuvel voor de zakkende avondzon, die ook een klok is (de vertrektijd). Gelijk aan
+ * public/icon.svg. Een lichte rand houdt camper en wielen los van de groene lucht. Vanaf 48 px dunnere wijzers en
+ * randen, daaronder iets dikker zodat ze klein leesbaar blijven.
+ */
 export function Logo({ size = 34 }: { size?: number }) {
-  // Camper onder de avondzon, op bosgroen
+  const fine = size >= 48;
+  const wheel = { r: fine ? 3.4 : 3.6, fill: "#2d5a43", stroke: "#fffcf6", strokeWidth: fine ? 1.6 : 2 };
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="9" fill="#2d5a43" />
-      <circle cx="22" cy="10.5" r="4" fill="#e8915c" />
-      <path d="M3 24.5c4.5-5.2 8.5-7.6 13-7.6s8.5 2.4 13 7.6V29H3Z" fill="#fffcf6" opacity=".95" />
-      <path d="M10.6 20.6h8.6l2.2 2.6v2.6H9.2v-3.8a1.4 1.4 0 0 1 1.4-1.4Z" fill="#2d5a43" />
-      <circle cx="12.9" cy="26" r="1.25" fill="#fffcf6" />
-      <circle cx="19" cy="26" r="1.25" fill="#fffcf6" />
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="15" fill="#2d5a43" />
+      <circle cx="44" cy="27" r="11" fill="#e8915c" />
+      <path d="M44 27v-7.5M44 27l5.2-3" fill="none" stroke="#2d5a43" strokeWidth={fine ? 2.6 : 3.4} strokeLinecap="round" />
+      <path d="M0 44.5C11 39.2 21.5 36.5 32 36.5S53 39.2 64 44.5V49A15 15 0 0 1 49 64H15A15 15 0 0 1 0 49Z" fill="#fffcf6" />
+      <path
+        d="M14.5 36h15.2c1 0 1.9.4 2.6 1.1l5.6 5.9c.7.7 1.1 1.7 1.1 2.7V48a1.5 1.5 0 0 1-1.5 1.5H12.5A1.5 1.5 0 0 1 11 48v-8.5a3.5 3.5 0 0 1 3.5-3.5Z"
+        fill="#2d5a43"
+        stroke="#fffcf6"
+        strokeWidth={fine ? 1.6 : 2}
+        strokeLinejoin="round"
+      />
+      <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#fffcf6" />
+      <circle cx="17.5" cy="49.5" {...wheel} />
+      <circle cx="32.5" cy="49.5" {...wheel} />
     </svg>
   );
 }
