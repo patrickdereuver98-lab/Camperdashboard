@@ -10,6 +10,9 @@ ze in deze ronde zijn afgevinkt.
 
 Stand 23 oktober: §2 stap 1 tot en met 9 klaar, alles in PR #54.
 
+**Marketing (2 november 2026):** het plan voor het nieuwe marketing- en contentdashboard staat in
+[`docs/marketing/plan.md`](docs/marketing/plan.md).
+
 Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 
 ---

@@ -1,5 +1,9 @@
 # 7. Marketing
 
+> **Wordt vervangen (2 november 2026).** De AI-teksten per camperplaats verdwijnen; er komt een eigen marketing- en
+> contentdashboard dat de app promoot. Plan: [`docs/marketing/plan.md`](../marketing/plan.md). De SEO-fundering hieronder
+> (titels, JSON-LD, sitemap, `/api/og`) blijft. Dit document wordt de spec van het nieuwe dashboard zodra fase 0 klaar is.
+
 Opdracht eigenaar, 2 november 2026: een geautomatiseerde SEO- en marketingmachine met een micro-budget (€ 50 tot
 € 100). Dit document is het plan; de status staat in het [implementatieplan](06-implementatieplan.md#marketing-opdracht-2-november-2026-).
 

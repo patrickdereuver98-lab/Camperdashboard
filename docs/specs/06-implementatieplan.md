@@ -238,7 +238,7 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 
 ## Marketing (opdracht 2 november 2026) ✅
 
-Plan in [document 7](07-marketing-en-rebrand.md).
+Plan in [document 7](07-marketing-en-rebrand.md). **Vervolg (2 november 2026):** nieuw marketing- en contentdashboard voor de app, plan en fasen in [`docs/marketing/plan.md`](../marketing/plan.md).
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
