@@ -254,7 +254,7 @@ contentdashboard voor de app: plan en stand in [`docs/marketing/plan.md`](../mar
 | ✅ Fase 2: contentstudio (`/api/admin/marketing/write`), kalender, bibliotheek, beeldsjablonen (`/api/marketing/beeld`), linkmaker met QR | Agent | Plan §3.3–3.6 | Pagina's | Tekst met verzonnen getal kan niet op klaar | `GEMINI_API_KEY` |
 | ✅ Fase 3: videosjablonen (`lib/marketing/video.ts`), renderen en schermopnames in de Action (`scripts/marketing/jobs.ts`), `/brag-slim` in `.claude/skills` | Agent | Plan §3.4 | Studio | MP4 in de bibliotheek | Migratie live, `SUPABASE_DB_URL` |
 | ✅ Fase 4: campagnes met budget en resultaat per bron, sociale cijfers (handmatig, Instagram via de Graph API) | Agent | Plan §3.6 | Pagina Campagnes | Budgetbalk klopt | 👤 P5 voor Instagram |
-| ⬜ Migratie `20261102180000_marketing_dashboard.sql` live zetten | Agent | Na samenvoegen | — | `marketing_facts()` werkt voor admin | Samenvoegen |
+| ✅ Migratie `20261102180000_marketing_dashboard.sql` live (2 november 2026, na samenvoegen PR #135): 9 tabellen met RLS, 7 functies, privé bucket `marketing`, cron `marketing-opruimen` | Agent | Na samenvoegen | — | Gecontroleerd: anon leest niets | — |
 | ⬜ Search Console en Bing Webmaster aanmelden, sitemap insturen, serviceaccount | Eigenaar | Plan §6 P1, P2 | — | Eerste nachtrun groen | Livegang |
 
 ## Beveiliging (audit 1 november 2026) 🟡
