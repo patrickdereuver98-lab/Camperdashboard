@@ -266,9 +266,10 @@ Staat gebouwd, maar **uit**. Niets wordt verstuurd tot je het zelf aanzet. Volgo
 4. **Resend-webhook:** voeg bij de bestaande webhook de events `email.delivered`, `email.bounced` en `email.complained`
    toe. Zonder die events merkt de noodrem een spamklacht niet.
 5. **Migratie toepassen** (`20261102200000_outreach.sql`), pas nadat de code samengevoegd is.
-6. **Proefmail:** zet in de database een plek met je eigen adres (op een eigen domein, niet gmail), roep de route met
+6. **Voorbeeld bekijken zonder te versturen:** `node --no-warnings --import ./tests/register.mjs scripts/outreach-preview.ts voorbeelden.json uitvoermap` (in `web/`). Het bestand is een lijst plekken zoals `outreach_next` ze geeft; elke mail komt als tekst in beeld en als `.html` in de uitvoermap.
+7. **Proefmail:** zet in de database een plek met je eigen adres (op een eigen domein, niet gmail), roep de route met
    de hand aan (Actions → Mail naar eigenaren → Run workflow) en kijk naar de mail, de afmeldlink en een antwoord.
-7. **Aanzetten:** `select public.admin_outreach_set(true);` (ingelogd als beheerder). Uitzetten kan altijd met
+8. **Aanzetten:** `select public.admin_outreach_set(true);` (ingelogd als beheerder). Uitzetten kan altijd met
    `select public.admin_outreach_set(false);`. Overzicht: `select public.admin_outreach_overview();`.
 
 Het dagquotum begint op 25 en verdubbelt elke 3 dagen tot 200; verzenden gebeurt alleen op werkdagen van 08:00 tot 17:00.
