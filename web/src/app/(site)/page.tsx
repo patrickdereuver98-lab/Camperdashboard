@@ -7,6 +7,7 @@ import { HomeSearch } from "@/components/home-search";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 import { CreditedPhoto, PlaceCard } from "@/components/place-ui";
+import { CARD_CELL, CARD_GRID } from "@/lib/card-grid";
 import { looksLikeGraphic } from "@/lib/photos";
 import { Onboarding } from "@/components/onboarding";
 
@@ -179,9 +180,9 @@ export default async function Home() {
               Bekijk alle <Icon name="chevronRight" size={18} />
             </Link>
           </div>
-          <ul className="no-scrollbar -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
+          <ul className={`${CARD_GRID} -mx-3 scroll-px-3 px-3 sm:mx-0 sm:px-0`}>
             {featured.map((p) => (
-              <li key={p.id} className="w-[78vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
+              <li key={p.id} className={CARD_CELL}>
                 <PlaceCard place={p} layout="stack" />
               </li>
             ))}

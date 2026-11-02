@@ -276,7 +276,6 @@ export function PlaceCard({
   eager?: boolean;
 }) {
   const stack = layout === "stack";
-  const hasPhoto = Boolean(place.imageUrl);
   // Afstand: rijtijd van de pagina, anders vanaf je eigen locatie (blijft op het apparaat), anders vanaf de zoekplek
   const me = useMyLocation().pos;
   const fromMe = me ? distanceKm(me, place) : undefined;
@@ -295,61 +294,62 @@ export function PlaceCard({
     ));
   const arrival = arrivalShort(place);
   if (!stack) return <PlaceRow place={place} distance={distance} active={active} onHover={onHover} eager={eager} />;
+  const hasWhen = Boolean(departureShort(place) || isIncomplete(place) || arrival);
   return (
     <article
       data-slug={place.slug}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
-      // Rand van 1 px, geen schaduw (besluit eigenaar 30 oktober 2026, README 75)
-      className={`group relative flex overflow-hidden rounded-lg border bg-surface transition-colors duration-150 ${
+      // Rand van 1 px, geen schaduw (besluit eigenaar 30 oktober 2026, README 75). Subgrid: elke regel (foto, vertrek,
+      // naam, status, prijs) staat op dezelfde hoogte als bij de kaarten ernaast, en alle kaarten zijn even hoog
+      // (design-audit 2 november 2026). Zonder subgrid-ouder (CARD_GRID) is het een gewone kolom.
+      className={`group relative row-span-5 grid grid-rows-subgrid gap-0 overflow-hidden rounded-lg border bg-surface transition-colors duration-150 ${
         active ? "border-forest" : "border-line hover:border-ink-2/40"
-      } has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest outline ${stack ? "flex-col" : "flex-row"}`}
+      } has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest outline`}
     >
-      <div
-        className={`relative shrink-0 ${
-          stack ? (hasPhoto ? "aspect-[16/10]" : "aspect-[16/7]") : "w-[32%] max-w-36 self-stretch sm:w-56 sm:max-w-none"
-        }`}
-      >
+      {/* Vaste verhouding voor elke kaart, met of zonder foto; overflow-hidden voorkomt dat een grote foto het vak oprekt */}
+      <div className="relative aspect-[16/10] overflow-hidden">
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
-          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
+          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="absolute inset-0" />
         </ViewTransition>
         {place.priceEur === 0 && (
           <span className="absolute top-2 left-2 rounded-md bg-ember px-2 py-0.5 font-display text-sm font-semibold text-on-ember">Gratis</span>
         )}
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
-      <div className={`absolute z-10 ${stack ? "top-3 right-3" : "top-0.5 right-0.5 sm:top-2 sm:right-2"}`}>
-        <SaveButton slug={place.slug} variant={stack ? "icon" : "plain"} />
+      <div className="absolute top-3 right-3 z-10">
+        <SaveButton slug={place.slug} variant="icon" />
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col ${stack ? "gap-2 p-4" : "gap-2 py-2.5 pr-3 pl-3 sm:p-4"}`}>
-        {/* Wanneer eerst: de vertrekregel is waar je op kiest (review 23 oktober 2026), daarna aankomen */}
-        {(departureShort(place) || isIncomplete(place) || arrival) && (
-          <div className={`min-w-0 space-y-0.5 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
+      {/* Wanneer eerst: de vertrekregel is waar je op kiest (review 23 oktober 2026), daarna aankomen */}
+      <div className="min-w-0 space-y-1 px-4 pt-4">
+        {hasWhen && (
+          <>
             <DepartureChip place={place} />
             {arrival && <p className="text-sm text-ink-2">{arrival}</p>}
-          </div>
+          </>
         )}
-        {/* Waar: naam, soort en plaats, afstand */}
-        <div className={`min-w-0 ${stack ? "pr-12" : "pr-8 sm:pr-11"}`}>
-          <h3 className={`font-display leading-snug font-semibold text-ink ${stack ? "text-xl" : "text-[1.0625rem] sm:text-xl"}`}>
-            <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
-              {place.name}
-            </Link>
-          </h3>
-          <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
-            {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
-          </p>
-          {distance && <p className="text-sm font-semibold text-forest">{distance}</p>}
-        </div>
-
-        <OpenChip place={place} onlyClosed={!stack} />
+      </div>
+      {/* Waar: naam, soort en plaats, afstand */}
+      <div className="min-w-0 px-4 pt-2">
+        <h3 className="line-clamp-2 font-display text-lg leading-snug font-semibold text-ink" title={place.name}>
+          <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
+            {place.name}
+          </Link>
+        </h3>
+        <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
+          {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
+        </p>
+        {distance && <p className="truncate text-sm font-semibold text-forest">{distance}</p>}
+      </div>
+      {/* Hoe: open of dicht, score. Leeg vak bij een kaart zonder deze gegevens, zodat de rest gelijk blijft */}
+      <div className="flex min-w-0 flex-col items-start gap-2 px-4 pt-2 empty:pt-0">
+        <OpenChip place={place} />
         {place.ratingCount > 0 && <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} />}
-
-        {/* Wat en hoeveel: voorzieningen links, prijs rechts */}
-        <div className="mt-auto flex items-end justify-between gap-2 pt-0.5">
-          <FacilitySigns place={place} max={stack ? 5 : 3} size={stack ? 26 : 22} />
-          <CardPrice place={place} />
-        </div>
+      </div>
+      {/* Wat en hoeveel: voorzieningen links, prijs rechts, op één basislijn onderaan elke kaart */}
+      <div className="flex items-end justify-between gap-2 px-4 pt-3 pb-4">
+        <FacilitySigns place={place} max={5} size={26} />
+        <CardPrice place={place} />
       </div>
     </article>
   );
@@ -396,8 +396,8 @@ function PlaceRow({
           <div className="min-w-0 flex-1">
             <DepartureChip place={place} compact />
           </div>
-          {/* Tikvlak 44 px, met negatieve marge zodat de regel niet hoger wordt */}
-          <div className="relative z-10 -my-2.5 shrink-0">
+          {/* Tikvlak 44 px, met negatieve marge zodat de regel niet hoger wordt; -mr zet het hartje recht boven de prijs */}
+          <div className="relative z-10 -my-2.5 -mr-3 shrink-0">
             <SaveButton slug={place.slug} variant="plain" />
           </div>
         </div>

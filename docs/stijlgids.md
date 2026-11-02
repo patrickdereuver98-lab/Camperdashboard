@@ -146,6 +146,10 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
   voorzieningen + prijs onderaan. Geen kaartje: de resultaten zijn één lijst met een lijn onder elke rij
   (`RESULT_LIST`, besluit eigenaar 1 november 2026). Foto met 6 px hoek; de actieve rij (kaart) krijgt een bosgroen
   vlak met een streep links. Geen schaduw.
+- **Plekkaart (stapel)**: voor rijen kaarten naast elkaar (start, "In de buurt"). Altijd in `CARD_GRID` met `CARD_CELL`
+  (`src/lib/card-grid.ts`): CSS-subgrid, zodat kaarten even hoog zijn en foto, vertrekregel, naam, status en prijs
+  over de hele rij op één lijn staan. Foto altijd 16:10, titel maximaal 2 regels, prijs en voorzieningen onderaan.
+  Nieuwe kaarten of tegels naast elkaar: zelfde regel, nooit kaarten van wisselende hoogte (design-audit 2 november 2026).
 - **Vertrekbadge**: 6 px hoek, klein klokje, getint vlak (groen/blauw/grijs). Het enige gekleurde element op een kaart.
 - **Lege foto**: zandkleurig vlak met een klein lijnicoon van het soort plek; geen tekening.
 - **Lege staat, fout, laden**: zie Design Brief; laden altijd met skeletvormen van de echte layout.
