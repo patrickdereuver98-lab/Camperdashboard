@@ -98,3 +98,18 @@ test("links: bron en campagne netjes, bestaande parameters blijven", async () =>
   assert.equal(campaignLink("https://vrijstaan.nl/", "/zoeken?q=ede", "Instagram", "Voorjaar 2027"), "https://vrijstaan.nl/zoeken?q=ede&bron=instagram&campagne=voorjaar-2027");
   assert.equal(campaignLink("https://vrijstaan.nl", "", "flyer"), "https://vrijstaan.nl/?bron=flyer");
 });
+
+test("factsFromSummaries: zelfde vertrekgroepen als de database", async () => {
+  const { factsFromSummaries } = await import("../src/lib/marketing/public-facts.ts");
+  const base = { id: "x", slug: "x", name: "x", lat: 52, lng: 5, town: "Ede", ratingCount: 0, completeness: 1 };
+  const f = factsFromSummaries([
+    { ...base, province: "Gelderland", departure: "vrij", priceEur: 0, power: true },
+    { ...base, province: "Gelderland", departure: "vrij", departureCheck: "voorwaardelijk", priceEur: 10 },
+    { ...base, province: "Zeeland", departure: "vast", checkoutUntil: "12:00", priceEur: 20 },
+    { ...base, province: "Zeeland", departure: "vast", checkoutUntil: "9.30", priceEur: 30 },
+  ] as never);
+  assert.deepEqual(f.departure, { known: 3, vrij: 1, uitslapers: 1, ruim: 0, vroeg: 1 });
+  assert.equal(f.price.median, 20);
+  assert.equal(f.price.free, 1);
+  assert.deepEqual(f.provinces.map((p) => p.places), [2, 2]);
+});

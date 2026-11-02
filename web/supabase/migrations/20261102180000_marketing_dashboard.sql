@@ -336,7 +336,8 @@ end $$;
 revoke all on function private.marketing_claim_job() from public;
 revoke all on function private.marketing_finish_job(uuid, jsonb, text) from public;
 
--- Bewaartermijnen (plan §4): jobs 30 dagen; assets 2 jaar (bestanden ruimt de Action op bij het opruimen)
+-- Bewaartermijnen (plan §4): afgeronde jobs 30 dagen, Search Console 3 jaar. Bestanden en assets blijven tot
+-- beheer ze verwijdert (Bibliotheek → Verwijderen)
 create or replace function private.marketing_cleanup() returns void language sql security definer set search_path to '' as $$
   delete from public.marketing_jobs where finished_at < now() - interval '30 days';
   delete from public.seo_daily where date < current_date - interval '3 years';

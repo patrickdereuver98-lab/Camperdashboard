@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { ogFonts } from "@/lib/og-fonts";
 import { BRAND_DOMAIN, BRAND_NAME } from "@/lib/brand";
 import { allInPrice, departureFact, labeledName } from "@/lib/place-seo";
 import { getPlace } from "@/lib/places";
@@ -40,9 +41,9 @@ export async function GET(request: Request) {
 
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: PAPER, color: INK, padding: "56px 64px" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: PAPER, color: INK, fontFamily: "Geist", padding: "56px 64px" }}>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: name.length > 34 ? 56 : 68, fontWeight: 700, lineHeight: 1.1, letterSpacing: -1 }}>{name}</div>
+          <div style={{ display: "flex", fontSize: name.length > 34 ? 56 : 68, fontWeight: 600, lineHeight: 1.1, letterSpacing: -1 }}>{name}</div>
           <div style={{ display: "flex", fontSize: 40, color: INK_2, marginTop: 12 }}>
             {place.town}, {place.province}
           </div>
@@ -54,17 +55,17 @@ export async function GET(request: Request) {
               style={{ display: "flex", flexDirection: "column", flex: 1, background: SURFACE, border: `3px solid ${LINE}`, borderRadius: 20, padding: "24px 32px" }}
             >
               <div style={{ display: "flex", fontSize: 30, color: INK_2 }}>{f.label}</div>
-              <div style={{ display: "flex", fontSize: f.value.length > 18 ? 48 : 64, fontWeight: 700, color: FOREST, marginTop: 6, lineHeight: 1.1 }}>{f.value}</div>
+              <div style={{ display: "flex", fontSize: f.value.length > 18 ? 48 : 64, fontWeight: 600, color: FOREST, marginTop: 6, lineHeight: 1.1 }}>{f.value}</div>
               {f.note && <div style={{ display: "flex", fontSize: 28, color: INK_2, marginTop: 6 }}>{f.note}</div>}
             </div>
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 32, fontSize: 32 }}>
-          <div style={{ display: "flex", fontWeight: 700, color: FOREST }}>{BRAND_NAME}</div>
+          <div style={{ display: "flex", fontWeight: 600, color: FOREST }}>{BRAND_NAME}</div>
           <div style={{ display: "flex", color: INK_2 }}>{BRAND_DOMAIN}</div>
         </div>
       </div>
     ),
-    { width: 1200, height: 630, headers: CACHE },
+    { width: 1200, height: 630, headers: CACHE, fonts: await ogFonts() },
   );
 }
