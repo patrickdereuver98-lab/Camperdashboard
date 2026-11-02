@@ -1,0 +1,43 @@
+# Marketingdashboard (docs/marketing/plan.md): Search Console en PageSpeed elke nacht naar Supabase.
+# Geheimen (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL            bestaat al (back-up, pipeline)
+#   GSC_SERVICE_ACCOUNT_JSON   JSON-sleutel van het serviceaccount met leesrechten in Search Console (plan §6, P2)
+#   PAGESPEED_API_KEY          optioneel; zonder sleutel geldt een lage dagelijkse limiet
+# Variabelen (optioneel): GSC_SITE (standaard sc-domain:vrijstaan.nl), SITE_URL (standaard https://vrijstaan.nl)
+name: Marketing
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-seo
+  cancel-in-progress: false
+
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+      PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
+      GSC_SITE: ${{ vars.GSC_SITE }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Geheim aanwezig
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then echo "::error::SUPABASE_DB_URL ontbreekt"; exit 1; fi
+      - name: Search Console en PageSpeed ophalen
+        run: node --no-warnings --import ./tests/register.mjs scripts/marketing/search-console.ts

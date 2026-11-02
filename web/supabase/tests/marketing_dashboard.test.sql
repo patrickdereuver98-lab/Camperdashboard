@@ -88,6 +88,36 @@ begin
   assert (t -> 'per_campagne' -> 0 ->> 'campagne') = 'voorjaar', 'campagne';
 end $$;
 
+-- Search Console samengevat: per zoekvraag en per pagina
+reset role;
+insert into public.seo_daily (date, query, page, clicks, impressions, position) values
+  ('2026-10-30', 'camperplaats ede', 'https://vrijstaan.nl/plek/a', 1, 10, 4),
+  ('2026-10-29', 'camperplaats ede', 'https://vrijstaan.nl/plek/a', 0, 30, 8),
+  ('2026-10-29', 'camperplaats ede', 'https://vrijstaan.nl/', 0, 5, 20),
+  ('2026-10-29', 'vrijstaan', 'https://vrijstaan.nl/', 4, 6, 1),
+  ('2026-08-01', 'oud', 'https://vrijstaan.nl/', 9, 9, 1);
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$
+declare q jsonb := public.marketing_seo_rows(28, 'query', 10);
+declare p jsonb := public.marketing_seo_rows(28, 'page', 10);
+begin
+  assert jsonb_array_length(q) = 2, 'oude dag telt niet mee: ' || q::text;
+  assert (q -> 0 ->> 'query') = 'camperplaats ede' and (q -> 0 ->> 'impressions')::int = 45, 'som per zoekvraag';
+  assert (q -> 0 ->> 'page') = 'https://vrijstaan.nl/plek/a', 'beste pagina';
+  assert (q -> 0 ->> 'position')::numeric = round((4 * 10 + 8 * 30 + 20 * 5) / 45.0, 2), 'gewogen positie';
+  assert (p -> 0 ->> 'page') = 'https://vrijstaan.nl/plek/a' and (p -> 0 ->> 'count')::int = 1, 'per pagina';
+end $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
+do $$ begin
+  begin
+    perform public.marketing_seo_rows(28, 'query', 10);
+    assert false, 'gast kreeg seo-rijen';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+
 -- Beheerder maakt content, campagne en een job
 insert into public.content_items (pillar, channel, title, body) values ('cijfers', 'instagram', 'Cijfers november', 'Tekst');
 insert into public.campaigns (name, channel, bron, campagne, budget_eur) values ('Voorjaar', 'instagram', 'instagram', 'voorjaar', 40);

@@ -104,4 +104,5 @@ export type MarketingTables = {
 export type MarketingFunctions = {
   marketing_facts: { Args: never; Returns: Json };
   marketing_traffic: { Args: { p_days?: number }; Returns: Json };
+  marketing_seo_rows: { Args: { p_days?: number; p_by?: "query" | "page"; p_limit?: number }; Returns: Json };
 };

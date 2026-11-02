@@ -234,6 +234,40 @@ end $$;
 revoke all on function public.marketing_traffic(integer) from public, anon;
 grant execute on function public.marketing_traffic(integer) to authenticated;
 
+-- ── Search Console samengevat voor het dashboard (per zoekvraag of per pagina, positie gewogen naar vertoningen) ───
+create or replace function public.marketing_seo_rows(p_days integer default 28, p_by text default 'query', p_limit integer default 500)
+  returns jsonb language plpgsql stable security definer set search_path to ''
+as $$
+declare
+  last_day date;
+  out jsonb;
+begin
+  if not public.has_admin_role() then raise exception 'Alleen voor beheerders' using errcode = '42501'; end if;
+  if p_by not in ('query', 'page') then raise exception 'p_by moet query of page zijn'; end if;
+  select max(date) into last_day from public.seo_daily;
+  if last_day is null then return '[]'::jsonb; end if;
+  with d as (
+    select * from public.seo_daily
+    where date > last_day - least(greatest(coalesce(p_days, 28), 1), 480) and date <= last_day
+  ), g as (
+    select case when p_by = 'query' then query else page end as k,
+      sum(clicks) clicks, sum(impressions) impressions,
+      round(sum(position * impressions) / nullif(sum(impressions) filter (where position is not null), 0), 2) position,
+      (array_agg(case when p_by = 'query' then page else query end order by impressions desc))[1] as other,
+      count(distinct case when p_by = 'query' then page else query end) as n_other
+    from d group by 1
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'query', case when p_by = 'query' then k else other end,
+      'page', case when p_by = 'page' then k else other end,
+      'clicks', clicks, 'impressions', impressions, 'position', position, 'count', n_other) order by impressions desc), '[]')
+  into out
+  from (select * from g order by impressions desc limit least(greatest(coalesce(p_limit, 500), 1), 2000)) x;
+  return out;
+end $$;
+revoke all on function public.marketing_seo_rows(integer, text, integer) from public, anon;
+grant execute on function public.marketing_seo_rows(integer, text, integer) to authenticated;
+
 -- ── Opslag: privé bucket, admin leest; de Action uploadt alleen naar het pad van een lopende job ────────────────────
 create or replace function public.marketing_upload_allowed(p_name text) returns boolean
   language sql stable security definer set search_path to ''

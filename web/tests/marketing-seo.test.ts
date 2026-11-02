@@ -89,3 +89,12 @@ test("opportunities: lage CTR, bijna top, nieuwe pagina; merknaam en weinig vert
   ]);
   assert.ok(expectedCtr(1) > expectedCtr(5) && expectedCtr(30) === 0.01);
 });
+
+test("links: bron en campagne netjes, bestaande parameters blijven", async () => {
+  const { campaignLink, cleanSource } = await import("../src/lib/marketing/links.ts");
+  assert.equal(cleanSource(" Instagram Bio! "), "instagram-bio");
+  assert.equal(cleanSource("---"), undefined);
+  assert.equal(cleanSource("x".repeat(60))!.length, 40);
+  assert.equal(campaignLink("https://vrijstaan.nl/", "/zoeken?q=ede", "Instagram", "Voorjaar 2027"), "https://vrijstaan.nl/zoeken?q=ede&bron=instagram&campagne=voorjaar-2027");
+  assert.equal(campaignLink("https://vrijstaan.nl", "", "flyer"), "https://vrijstaan.nl/?bron=flyer");
+});
