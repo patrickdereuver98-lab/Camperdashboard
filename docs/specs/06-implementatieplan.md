@@ -221,6 +221,28 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 | ✅ Pipeline v45, parser 42 (23 okt; v44 = ebcfc8d, v45 voegt de wisseltijd onder een kopje en "tussen 13.00 en voor 17.00" toe): `/?page_id=`-pagina's, kleine sites helemaal lezen, reserveren/boeken als subpagina, geen geraden adressen bij sites van één pagina, wisseltijd "aankomst/vertrek 11.00 … wisselen", vertrekvenster met toeslag, "iedere 24 uur … nieuwe nacht", aankomstvensters "vanaf 13:00 tot 18:00" en "15.00 - 17.30". Uit een steekproef van 20 plekken zonder vertrektijd | Agent | Steekproef 23 okt | Edge function `pipeline` | Tests per regel groen | — |
 | ✅ Terugdraaien | Agent | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/draaiboek.md` | Vercel |
 
+## Mission Control (opdracht 1 november 2026) 🟡
+
+| Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
+|---|---|---|---|---|---|
+| ✅ Stap 1: migratie `20261101130000_mission_control.sql` (rol, `admin_logs`, `updates_queue`, `dependency_updates`, accepteren/afwijzen, `log_dependency`, cron `ops-probe`) | Agent | Opdracht, README 90 | Migratie + SQL-tests (`web/supabase/tests/mission_control*.sql`, in `run.sh`) | Tests groen; live na samenvoegen | — |
+| ✅ Dependency-radar: `/api/admin/log-dependency`, `.github/workflows/ai-dependency-triage.yml`, `tools/ops/dependency_triage.py` (Gemini, vaste regel zonder sleutel) | Agent | Opdracht, README 92 en 93 | Route met unit tests, workflow, script met tests | Eerste Dependabot-PR staat in `dependency_updates` | Migratie live, secrets `GEMINI_API_KEY` en `DEPENDENCY_LOG_KEY` (Dependabot) |
+| ✅ Stap 2: Mission Control als `/admin/mission-control` (besluit eigenaar 2 november: binnen bestaand beheer, geen proxy of cookie) | Agent | README 91 | Pagina in de beheerzijbalk | Niet-admins zien lege lijsten (RLS) | — |
+| ✅ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini, sessietoken van de beheerder, geen service-role) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | `GEMINI_API_KEY` in Vercel |
+| ✅ Stap 4: Logboeken (stand per API, kleurcodes) en Updates (pending_review gemarkeerd, link naar de PR) | Agent | Opdracht | Tabbladen in Mission Control | Rood bij falende API of cron | Migratie live |
+
+## Beveiliging (audit 1 november 2026) 🟡
+
+Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA in de app: niet bouwen (besluit eigenaar).
+
+| Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
+|---|---|---|---|---|---|
+| ✅ Audit en verbeterplan, `web/.env.example` met alle geheimen | Agent | Live project, code, Actions | `docs/beveiliging/verbeterplan.md` | 20 bevindingen met aanpak, checklist van 20 punten getoetst | — |
+| ⬜ B2 en B4: Google-account beveiligen, wachtwoord minimaal 10 tekens in Supabase | Patrick | Verbeterplan | Instellingen | Advisor meldt geen zwak wachtwoordbeleid meer | — |
+| ⬜ B1, B12 en B19: e-mailadres, beheernotitie en `user_id` van reviews afschermen, `admin_reviews()`, oude `submit_review` weg | Agent | Verbeterplan | Migratie, beheerpagina, test | Publieke sleutel krijgt geen `author_email` | Vóór de eerste goedgekeurde review |
+| ⬜ B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
+| ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 89 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
+
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
 
 Leidraad: [README, VrijStaan 2.0](README.md#vrijstaan-20---visie-strategie--toekomstige-roadmap). Geen werk vóór de livegang; open punten 82 tot 86.

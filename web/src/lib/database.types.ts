@@ -18,6 +18,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          details: Json
+          duration_ms: number | null
+          http_status: number | null
+          id: number
+          kind: string
+          message: string | null
+          request_id: number | null
+          source: string
+          status: string
+          ts: string
+        }
+        Insert: {
+          details?: Json
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: number
+          kind: string
+          message?: string | null
+          request_id?: number | null
+          source: string
+          status: string
+          ts?: string
+        }
+        Update: {
+          details?: Json
+          duration_ms?: number | null
+          http_status?: number | null
+          id?: number
+          kind?: string
+          message?: string | null
+          request_id?: number | null
+          source?: string
+          status?: string
+          ts?: string
+        }
+        Relationships: []
+      }
       admins: {
         Row: {
           created_at: string
@@ -189,6 +228,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dependency_updates: {
+        Row: {
+          ai_advice: string | null
+          ai_model: string | null
+          category: string
+          created_at: string
+          ecosystem: string | null
+          id: string
+          package_name: string
+          pr_number: number | null
+          pr_url: string | null
+          status: string
+          update_type: string | null
+          updated_at: string
+          version_from: string | null
+          version_to: string | null
+        }
+        Insert: {
+          ai_advice?: string | null
+          ai_model?: string | null
+          category: string
+          created_at?: string
+          ecosystem?: string | null
+          id?: string
+          package_name: string
+          pr_number?: number | null
+          pr_url?: string | null
+          status?: string
+          update_type?: string | null
+          updated_at?: string
+          version_from?: string | null
+          version_to?: string | null
+        }
+        Update: {
+          ai_advice?: string | null
+          ai_model?: string | null
+          category?: string
+          created_at?: string
+          ecosystem?: string | null
+          id?: string
+          package_name?: string
+          pr_number?: number | null
+          pr_url?: string | null
+          status?: string
+          update_type?: string | null
+          updated_at?: string
+          version_from?: string | null
+          version_to?: string | null
+        }
+        Relationships: []
       }
       duplicate_dismissals: {
         Row: {
@@ -1055,6 +1145,78 @@ export type Database = {
           },
         ]
       }
+      updates_queue: {
+        Row: {
+          ai_advice: string | null
+          ai_checked_at: string | null
+          ai_model: string | null
+          ai_score: number | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          field_changed: string
+          id: string
+          new_value: Json
+          old_value: Json | null
+          place_id: string
+          source: string
+          status: string
+          submission_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ai_advice?: string | null
+          ai_checked_at?: string | null
+          ai_model?: string | null
+          ai_score?: number | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          field_changed: string
+          id?: string
+          new_value: Json
+          old_value?: Json | null
+          place_id: string
+          source?: string
+          status?: string
+          submission_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ai_advice?: string | null
+          ai_checked_at?: string | null
+          ai_model?: string | null
+          ai_score?: number | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          field_changed?: string
+          id?: string
+          new_value?: Json
+          old_value?: Json | null
+          place_id?: string
+          source?: string
+          status?: string
+          submission_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "updates_queue_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "updates_queue_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_expenses: {
         Row: {
           entries: Json
@@ -1137,6 +1299,7 @@ export type Database = {
           name_similarity: number
         }[]
       }
+      admin_apply_update: { Args: { p_id: string }; Returns: Json }
       admin_mark_beheer: {
         Args: { p_fields: string[]; p_place_id: string }
         Returns: undefined
@@ -1151,6 +1314,7 @@ export type Database = {
       }
       admin_overview: { Args: never; Returns: Json }
       admin_pipeline: { Args: { p_action: string }; Returns: string }
+      admin_reject_update: { Args: { p_id: string; p_note?: string }; Returns: Json }
       admin_stats: { Args: { p_days?: number }; Returns: Json }
       apply_discovery: {
         Args: { p_id: string; p_url: string }
@@ -1198,7 +1362,9 @@ export type Database = {
       get_ticket: { Args: { p_token: string }; Returns: Json }
       ingest_osm: { Args: { p_rows: Json }; Returns: Json }
       ingest_osm_points: { Args: { p_points: Json }; Returns: number }
+      has_admin_role: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      log_dependency: { Args: { p_secret: string; p_update: Json }; Returns: Json }
       is_trip_member: { Args: { p_trip: string }; Returns: boolean }
       join_shared_trip: { Args: { p_code: string }; Returns: Json }
       leave_shared_trip: { Args: { p_trip: string }; Returns: undefined }

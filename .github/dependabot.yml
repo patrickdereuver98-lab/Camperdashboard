@@ -1,5 +1,7 @@
 # Wekelijks een PR als een pakket of GitHub Action een update heeft. Beveiligingsupdates komen direct.
 # PR's gaan naar acceptatie (zie docs/specs/06-implementatieplan.md, werkwijze) en draaien daar door de CI.
+# Elke PR krijgt een categorie en advies van de dependency-radar (workflows/ai-dependency-triage.yml) en verschijnt in
+# Mission Control (tabel dependency_updates).
 version: 2
 updates:
   - package-ecosystem: npm
