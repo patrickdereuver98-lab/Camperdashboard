@@ -248,6 +248,32 @@ maar 60 verbindingen. Zie `web/.env.example` voor het formaat.
 | Database opnieuw opzetten in een ander project | Voer `web/supabase/schema.sql` en daarna `web/supabase/seed.sql` uit, deploy `web/supabase/functions/pipeline` (zonder JWT-controle), zet een geheime sleutel in `public.internal_secrets` (`name = 'pipeline_key'`) en pas de projectnaam in `private.call_pipeline` aan |
 
 
+## Uitgaande mail naar eigenaren (README 101)
+
+Staat gebouwd, maar **uit**. Niets wordt verstuurd tot je het zelf aanzet. Volgorde:
+
+1. **Afzenderdomein in Resend.** Resend → Domains → een subdomein toevoegen, bijvoorbeeld `mail.vrijstaan.nl`, en de
+   SPF- en DKIM-records bij je domeinbeheerder zetten. Wacht tot Resend "Verified" toont. Een eigen subdomein houdt de
+   inkomende mail veilig als een afzender ooit geblokkeerd wordt.
+2. **Sleutels maken** (willekeurig, minstens 32 tekens, twee verschillende):
+   - `OUTREACH_KEY`: in Vercel én in de database: `insert into internal_secrets (name, value) values ('outreach_key', '<sleutel>')
+     on conflict (name) do update set value = excluded.value;`
+   - `OUTREACH_CRON_KEY`: in Vercel én als GitHub-secret (Settings → Secrets and variables → Actions).
+3. **Vercel-variabelen:** `OUTREACH_FROM` (bijvoorbeeld `VrijStaan <plek@mail.vrijstaan.nl>`), `OUTREACH_REPLY_TO` (het
+   inbound-adres van Resend, waar antwoorden binnenkomen), en optioneel `OUTREACH_BASE_URL` voor de afmeldlink (zonder
+   deze staat het op `NEXT_PUBLIC_SITE_URL`; `vrijstaan.nl` stuurt met een 301 door en een één-klik-afmelding overleeft dat niet).
+   Daarna opnieuw uitrollen.
+4. **Resend-webhook:** voeg bij de bestaande webhook de events `email.delivered`, `email.bounced` en `email.complained`
+   toe. Zonder die events merkt de noodrem een spamklacht niet.
+5. **Migratie toepassen** (`20261102200000_outreach.sql`), pas nadat de code samengevoegd is.
+6. **Proefmail:** zet in de database een plek met je eigen adres (op een eigen domein, niet gmail), roep de route met
+   de hand aan (Actions → Mail naar eigenaren → Run workflow) en kijk naar de mail, de afmeldlink en een antwoord.
+7. **Aanzetten:** `select public.admin_outreach_set(true);` (ingelogd als beheerder). Uitzetten kan altijd met
+   `select public.admin_outreach_set(false);`. Overzicht: `select public.admin_outreach_overview();`.
+
+Het dagquotum begint op 25 en verdubbelt elke 3 dagen tot 200; verzenden gebeurt alleen op werkdagen van 08:00 tot 17:00.
+Een spamklacht of meer dan 3% harde bounces zet de campagne zelf uit (`paused_reason`).
+
 ## Scraper uitrollen (edge function `pipeline`)
 
 De functie in Supabase bestaat uit één regel die de code uit GitHub haalt, vastgezet op een commit:

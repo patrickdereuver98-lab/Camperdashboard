@@ -1,0 +1,33 @@
+# Verstuurt de volgende mails naar eigenaren (AI Outreach Loop, stap 2). De route zelf bepaalt niets: de database beslist
+# of de campagne aanstaat (standaard uit), of het verzendvenster open is (werkdagen 08:00 tot 17:00, Amsterdam) en hoeveel
+# er vandaag nog mogen. Staat alles uit, dan komt er een lege lijst terug en gebeurt er niets.
+#
+# GitHub-secret: OUTREACH_CRON_KEY (hetzelfde als op Vercel). Optioneel de variabele OUTREACH_SITE_URL; zonder die gaat
+# het naar de Vercel-URL (vrijstaan.nl stuurt met een 301 door, en een POST overleeft dat niet).
+name: Mail naar eigenaren
+
+on:
+  schedule:
+    # Elke 20 minuten overdag (UTC); het verzendvenster in de database bepaalt wat er echt gebeurt
+    - cron: "7,27,47 6-16 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: owner-outreach
+  cancel-in-progress: false
+
+jobs:
+  versturen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Volgende mails versturen
+        env:
+          OUTREACH_CRON_KEY: ${{ secrets.OUTREACH_CRON_KEY }}
+          SITE_URL: ${{ vars.OUTREACH_SITE_URL || 'https://camperdashboard-vrijstaan.vercel.app' }}
+        run: |
+          if [ -z "$OUTREACH_CRON_KEY" ]; then echo "OUTREACH_CRON_KEY ontbreekt: niets gedaan"; exit 0; fi
+          code=$(curl -s -o out.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $OUTREACH_CRON_KEY" "$SITE_URL/api/cron/owner-outreach")
+          echo "HTTP $code"; cat out.json; echo
+          test "$code" = "200" || test "$code" = "503"
