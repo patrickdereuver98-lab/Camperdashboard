@@ -36,3 +36,11 @@ wereldwijd). `security-review` is weggelaten omdat de ingebouwde `/security-revi
 Ze zijn Engelstalig en algemeen. **CLAUDE.md, `docs/specs/` en de stijlgids gaan voor** (Nederlandse teksten en
 commits, nooit data verzinnen, controle met `npm run check`). Bijwerken: kopieer de map opnieuw uit een nieuwere
 commit en pas het commitnummer hier aan.
+
+## /brag (launch-video's)
+
+Op 2 november 2026 toegevoegd (verzoek eigenaar, marketingplan `docs/marketing/plan.md` §3.4):
+`brag-slim` uit github.com/latent-spaces/brag (commit 669ab92, MIT, licentie in de map). Eén bestand, zonder
+meegeleverde muziek of Hyperframes. Huisregels die voorgaan staan in `.claude/skills/brag-slim/VRIJSTAAN.md`.
+De volledige `/brag` (met Hyperframes en muziek, ±20 MB) is bewust niet overgenomen; de Studio in het dashboard
+gebruikt dezelfde werkwijze (HTML met tijdlijn, Chromium, ffmpeg) zonder extra pakket.

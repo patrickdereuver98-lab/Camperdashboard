@@ -33,3 +33,17 @@ test("pageRow: PASS is geïndexeerd, onbekend blijft leeg", () => {
   assert.equal(pageRow("u", { inspectionResult: { indexStatusResult: { verdict: "NEUTRAL" } } }).indexed, false);
   assert.equal(pageRow("u", {}).indexed, null);
 });
+
+test("Instagram: statRow leest total_value en values, zonder permalink niets", async () => {
+  const { statRow } = await import("../src/lib/marketing/instagram.ts");
+  const row = statRow({ id: "1", permalink: "https://www.instagram.com/p/x/", like_count: 4, comments_count: 1 }, [
+    { name: "reach", values: [{ value: 120 }] },
+    { name: "views", total_value: { value: 300 } },
+    { name: "saved", values: [{ value: 2 }] },
+  ], "2026-11-02")!;
+  assert.equal(row.reach, 120);
+  assert.equal(row.views, 300);
+  assert.equal(row.saves, 2);
+  assert.equal(row.shares, null);
+  assert.equal(statRow({ id: "2" }, [], "2026-11-02"), null);
+});

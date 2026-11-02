@@ -37,7 +37,11 @@ async function upload(path: string, body: Buffer, type: string) {
   if (!res.ok) throw new Error(`Upload ${path} mislukt: ${res.status} ${(await res.text()).slice(0, 200)}`);
 }
 
-const topSlug = () => sql("select slug from public.places where status = 'published' and slug is not null order by rating_count desc nulls last, completeness desc nulls last limit 1") || null;
+/** Plek voor de schermopname: met vertrektijd, prijs en foto, zodat de plekpagina laat zien wat de app kan */
+const topSlug = () =>
+  sql(`select slug from public.places where status = 'published' and slug is not null
+       order by (departure = 'vast' and checkout_until is not null) desc, (price_eur is not null) desc, (image_url is not null) desc,
+                rating_count desc nulls last, completeness desc nulls last limit 1`) || null;
 
 async function runJob(job: Job, browser: Awaited<ReturnType<typeof chromium.launch>>): Promise<Asset[]> {
   const assets: Asset[] = [];

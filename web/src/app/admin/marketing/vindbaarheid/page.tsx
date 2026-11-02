@@ -6,7 +6,7 @@ import { BRAND, opportunities, sumPeriods, type Opportunity, type QueryRow, type
 import type { SeoPage, SeoStatus } from "@/lib/marketing/db-types";
 import { ISLANDS } from "@/lib/seo-pages";
 import { PROVINCES } from "@/lib/types";
-import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, useQuery, when } from "../../ui";
+import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, secondary, useQuery, when } from "../../ui";
 import { DayBars } from "../charts";
 import { Section, Stat, delta, notLive } from "../shared";
 
@@ -105,22 +105,63 @@ function Kansen({ rows }: { rows: Opportunity[] }) {
     return <Empty>Geen kansen gevonden. Kansen verschijnen bij zoekvragen met minstens 30 vertoningen (zonder de merknaam).</Empty>;
   return (
     <ul className="space-y-3">
-      {rows.slice(0, 60).map((k) => (
-        <li key={`${k.kind}-${k.query}`} className="space-y-1 rounded-lg bg-surface p-4 outline outline-1 outline-line">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={KIND[k.kind].tone}>{KIND[k.kind].label}</Badge>
-            <span className="font-semibold">&quot;{k.query}&quot;</span>
-            <span className="text-sm text-muted">
-              {nl(k.impressions)} vertoningen, {nl(k.clicks)} klikken, positie {pos(k.position)}
-            </span>
-          </div>
-          <p className="text-ink-2">{k.advice}</p>
-          <a href={k.page} target="_blank" rel="noreferrer" className="text-sm font-semibold break-all text-forest underline">
-            {path(k.page)}
-          </a>
-        </li>
-      ))}
+      {rows.slice(0, 60).map((k) => <Kans key={`${k.kind}-${k.query}`} k={k} />)}
     </ul>
+  );
+}
+
+type Advice = { title: string; description: string; why: string; model: string };
+
+function Kans({ k }: { k: Opportunity }) {
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function ask() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const token = (await db().auth.getSession()).data.session?.access_token;
+      const res = await fetch("/api/admin/marketing/write", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+        body: JSON.stringify({ mode: "seo", query: k.query, page: k.page, position: k.position }),
+      });
+      const out = (await res.json().catch(() => ({}))) as Partial<Advice> & { error?: string };
+      if (!res.ok || !out.title) throw new Error(out.error ?? `Fout ${res.status}`);
+      setAdvice(out as Advice);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+    setBusy(false);
+  }
+  return (
+    <li className="space-y-1 rounded-lg bg-surface p-4 outline outline-1 outline-line">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={KIND[k.kind].tone}>{KIND[k.kind].label}</Badge>
+        <span className="font-semibold">&quot;{k.query}&quot;</span>
+        <span className="text-sm text-muted">
+          {nl(k.impressions)} vertoningen, {nl(k.clicks)} klikken, positie {pos(k.position)}
+        </span>
+      </div>
+      <p className="text-ink-2">{k.advice}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <a href={k.page} target="_blank" rel="noreferrer" className="text-sm font-semibold break-all text-forest underline">
+          {path(k.page)}
+        </a>
+        {k.kind === "ctr" && !advice && (
+          <button className={`${secondary} h-9 px-3`} onClick={ask} disabled={busy}>{busy ? "Bezig…" : "Voorstel voor titel en omschrijving"}</button>
+        )}
+      </div>
+      {advice && (
+        <div className="mt-2 space-y-1 rounded-lg bg-sunken/60 p-3 text-sm">
+          <p><strong>Titel</strong> ({advice.title.length}/60): {advice.title}</p>
+          <p><strong>Omschrijving</strong> ({advice.description.length}/155): {advice.description}</p>
+          {advice.why && <p className="text-muted">{advice.why}</p>}
+          <p className="text-muted">Voorstel van {advice.model}. Niets is op de site aangepast; titels per plek komen uit lib/place-seo.ts.</p>
+        </div>
+      )}
+      <ErrorNote message={err} />
+    </li>
   );
 }
 

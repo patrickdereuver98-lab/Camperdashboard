@@ -73,7 +73,7 @@ const outro = (from: number): Scene => ({
   to: from + 4,
   html: [
     `<div class="logo" data-in="${from + 0.1}" data-anim="scale"><span class="mark">V</span><span>VrijStaan</span></div>`,
-    el("p", "sub", "Camperplaatsen met prijs en vertrektijd", from + 0.6),
+    el("p", "sub", "Camperplaatsen in heel Nederland", from + 0.6),
     el("p", "url", "vrijstaan.nl", from + 1.1),
     el("p", "small", "Gratis, zonder account", from + 1.5),
   ].join(""),
@@ -91,7 +91,7 @@ function scenes(t: VideoTemplate, f: Facts, o: VideoOptions): Scene[] {
   switch (t) {
     case "cijfers": {
       const out: Scene[] = [
-        { from: 0, to: 3.8, html: [el("p", "kicker", "Camperplaatsen in Nederland", 0.15, 3.5), counter(f.places, 0.4, 3.5), el("p", "sub", "met prijs, vertrektijd en voorzieningen", 1.4, 3.5)].join("") },
+        { from: 0, to: 3.8, html: [el("p", "kicker", "Camperplaatsen in Nederland", 0.15, 3.5), counter(f.places, 0.4, 3.5), el("p", "sub", "op één kaart, met prijs en vertrektijd als we die weten", 1.4, 3.5)].join("") },
       ];
       let at = 3.9;
       if (pub(d.uitslapers) || pub(d.known)) {

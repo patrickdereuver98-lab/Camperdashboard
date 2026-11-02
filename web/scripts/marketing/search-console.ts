@@ -1,11 +1,13 @@
-// Dagelijks: Search Console (zoekvragen, totalen, sitemaps, indexering) en PageSpeed naar Supabase.
+// Dagelijks: Search Console (zoekvragen, totalen, sitemaps, indexering), PageSpeed en Instagram naar Supabase.
 // Draait in .github/workflows/marketing.yml:
 //   cd web && node --import ./tests/register.mjs scripts/marketing/search-console.ts
-// Geheimen: GSC_SERVICE_ACCOUNT_JSON (verplicht), SUPABASE_DB_URL (verplicht), PAGESPEED_API_KEY (optioneel).
+// Geheimen: SUPABASE_DB_URL (verplicht), GSC_SERVICE_ACCOUNT_JSON, PAGESPEED_API_KEY, IG_ACCESS_TOKEN + IG_USER_ID
+// (alle drie optioneel: zonder wordt dat onderdeel overgeslagen).
 // Variabele: GSC_SITE (standaard sc-domain:vrijstaan.nl), SITE_URL (standaard https://vrijstaan.nl).
 import { chunks, dailyRows, fetchRange, pageRow, totalRows, type GscRow } from "@/lib/marketing/gsc";
 import { getJson, googleToken } from "./google";
 import { json, logRun, sql, sqlJson } from "./db";
+import { instagram } from "./instagram";
 
 const SITE = process.env.GSC_SITE || "sc-domain:vrijstaan.nl";
 const SITE_URL = (process.env.SITE_URL || "https://vrijstaan.nl").replace(/\/$/, "");
@@ -95,6 +97,7 @@ async function main() {
   }
 
   await pagespeed();
+  await instagram();
   const msg = `${daily} zoekregels${range ? ` (${range.start} t/m ${range.end})` : ", niets nieuws"}, ${inspected} pagina's gecontroleerd`;
   sql(`insert into public.seo_status (key, value) values ('laatste-run', ${json({ ok: true, message: msg })})
        on conflict (key) do update set value = excluded.value, checked_at = now()`);

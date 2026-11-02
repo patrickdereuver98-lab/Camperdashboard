@@ -34,7 +34,7 @@ export function slideFor(template: ImageTemplate, facts: Facts, opts: { province
       return {
         kicker: "Camperplaatsen in Nederland",
         big: nl(facts.places),
-        title: "plekken met prijs, vertrektijd en voorzieningen",
+        title: "op één kaart, met prijs en vertrektijd als we die weten",
         lines: [
           pub(d.known) ? `${nl(d.known)} met bekende vertrektijd` : "",
           pub(d.uitslapers) ? `${nl(d.uitslapers)} waar je tot 12:00 of later mag blijven` : "",
@@ -52,7 +52,7 @@ export function slideFor(template: ImageTemplate, facts: Facts, opts: { province
     case "provincie": {
       const p = facts.provinces.find((x) => x.province === opts.province);
       if (!p || !pub(p.places)) return null;
-      return { kicker: "Camperplaatsen in", big: p.province, title: `${nl(p.places)} plekken met prijs en vertrektijd`, lines: ["Zoek op de kaart, filter op vertrektijd en voorzieningen"], footer: stand };
+      return { kicker: "Camperplaatsen in", big: p.province, title: `${nl(p.places)} camperplaatsen op de kaart`, lines: ["Zoek op de kaart, filter op vertrektijd en voorzieningen"], footer: stand };
     }
     case "app":
       return {

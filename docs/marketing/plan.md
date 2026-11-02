@@ -12,9 +12,17 @@ Besluiten van Patrick (2 november 2026, keuzevragen):
 | Waar komt het dashboard | `/admin/marketing`, eigen onderdeel in het beheer, alleen rol admin |
 | Filmpjes | Sjablonen in code (Remotion) met echte cijfers en schermopnames van de app, geen AI-video |
 | Instagram en TikTok | Het dashboard maakt het materiaal, Patrick plaatst zelf (geen app-review van Meta of TikTok nodig) |
-| "Zoals BRAG" | Een bestaande tool; naam of link volgt (open punt O1) |
+| "Zoals BRAG" | latent-spaces/brag (agent-skill, Hyperframes); zie README 98 |
 
 Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
+
+**Stand 2 november 2026:** fase 0 tot en met 4 gebouwd en getest (unit-, SQL- en renderproeven). Open: de migratie
+live zetten na het samenvoegen, en de acties van Patrick in §6. Spec: [document 7](../specs/07-marketing-en-rebrand.md).
+
+**Wijziging na het plan (README 98):** "BRAG" bleek [latent-spaces/brag](https://github.com/latent-spaces/brag), een
+agent-skill die launch-video's maakt met Hyperframes. De Studio gebruikt daarom geen Remotion maar dezelfde werkwijze
+als Hyperframes (HTML-sjabloon met tijdlijn → Chromium → ffmpeg), zonder extra pakket en zonder licentiegrens; P4
+vervalt. `/brag-slim` staat in `.claude/skills/brag-slim` voor losse launch-video's.
 
 ---
 
@@ -215,15 +223,15 @@ beheerders), Instagram en TikTok 2 tot 3 keer per week, QR-flyers bij camperplaa
 | `seo_pages` | url, indexed, last_crawl, verdict, checked_at | Laatste stand |
 | `content_items` | id, pillar, channel, title, body, hashtags, link, status, planned_at, posted_url, asset_ids, created_by | Onbeperkt (eigen content) |
 | `marketing_assets` | id, kind (video, afbeelding, schermopname), template, format, storage_path, facts_snapshot, created_at | 2 jaar, daarna opruimen |
-| `render_jobs` | id, template, props, status (wacht, bezig, klaar, fout), asset_id, error, created_at | 30 dagen |
+| `marketing_jobs` | id, kind (video, schermopnames), template, format, props, status (wacht, bezig, klaar, fout), error, created_at | 30 dagen |
 | `campaigns` | id, name, channel, budget_eur, spent_eur, starts_on, ends_on, bron, campagne | Onbeperkt |
 | Storage-bucket `marketing` | Privé, alleen admin; downloadlinks met korte geldigheid | Zoals `marketing_assets` |
 
 `events` krijgt geen nieuwe kolommen: `bron` en `campagne` gaan in `props`.
 
-Nieuwe geheimen (alleen server): `GSC_SERVICE_ACCOUNT_JSON` (Search Console, alleen lezen), `PAGESPEED_API_KEY`
-(optioneel), `GITHUB_RENDER_TOKEN` of een geheim waarmee de Action `render_jobs` mag lezen en schrijven
-(zelfde patroon als `log_dependency`: een RPC met een eigen sleutel, geen service-role-sleutel in de website).
+Geheimen (alleen in GitHub, niet in de website): `SUPABASE_DB_URL` (bestond al; jobs oppakken via
+`private.marketing_claim_job()`), `GSC_SERVICE_ACCOUNT_JSON`, optioneel `PAGESPEED_API_KEY`, `IG_ACCESS_TOKEN`, `IG_USER_ID`.
+Uploaden naar de bucket gaat met de publishable key en een opslagregel die alleen `jobs/<id>/` van een lopende job toestaat.
 
 ## 5. Fasering
 
@@ -234,59 +242,59 @@ groen. Migraties gaan pas live als de code samengevoegd is.
 
 | Taak | Klaar als |
 |---|---|
-| ⬜ Tab Marketing en `/api/admin/generate-marketing` verwijderen, ongebruikte code en tests uit `lib/marketing.ts` | Mission Control heeft weer drie tabbladen; build groen |
-| ⬜ Prijsregel: geen "incl. toeslagen" bij een vanaf-prijs (titel, omschrijving, JSON-LD, `/api/og`) | Test met Burgh-achtig geval; de 38 plekken tonen "vanaf € x per nacht" |
-| ⬜ `/admin/marketing` met zijbalkitem en lege onderdelen | Alleen admin ziet het |
-| ⬜ Migratie: tabellen en `marketing_facts()` (§4), SQL-tests | Tests groen; live na samenvoegen |
-| ⬜ Specs: document 7 herschrijven tot spec van het dashboard, App Flow, Backend Schema, TRD, implementatieplan | In dezelfde PR |
+| ✅ Tab Marketing en `/api/admin/generate-marketing` verwijderen, ongebruikte code en tests uit `lib/marketing.ts` | Mission Control heeft weer drie tabbladen; build groen |
+| ✅ Prijsregel: geen "incl. toeslagen" bij een vanaf-prijs (titel, omschrijving, JSON-LD, `/api/og`) | Test met Burgh-achtig geval; de 38 plekken tonen "vanaf € x per nacht" |
+| ✅ `/admin/marketing` met zijbalkitem en lege onderdelen | Alleen admin ziet het |
+| ✅ Migratie: tabellen en `marketing_facts()` (§4), SQL-tests | Tests groen; live na samenvoegen |
+| ✅ Specs: document 7 herschrijven tot spec van het dashboard, App Flow, Backend Schema, TRD, implementatieplan | In dezelfde PR |
 
 ### Fase 1: vindbaarheid en overzicht (± 2 tot 3 dagen)
 
 | Taak | Klaar als | Afhankelijk van |
 |---|---|---|
-| ⬜ Search Console-koppeling (serviceaccount, Search Analytics, Sitemaps) | Cijfers van gisteren in `seo_daily` | 👤 P1, P2 |
-| ⬜ Dagelijkse cron en ophalen van 16 maanden historie bij de eerste run | Trend toont 3 maanden | — |
-| ⬜ Schermen Trend, Zoekvragen, Pagina's, Techniek | Werkt op telefoon | — |
-| ⬜ Kansen met vaste regels, optioneel Gemini-voorstel per kans | Minstens één regel per soort kans getest | — |
-| ⬜ Overzicht met Google, eigen bezoekers per `bron`, installaties | Getallen gelijk aan Statistieken en Search Console | — |
-| ⬜ Site: `bron` en `campagne` uit de URL meesturen in `events` (alleen met toestemming) | Test: `?bron=instagram` verschijnt in het overzicht | — |
+| ✅ Search Console-koppeling (serviceaccount, Search Analytics, Sitemaps) | Cijfers van gisteren in `seo_daily` | 👤 P1, P2 |
+| ✅ Dagelijkse cron en ophalen van 16 maanden historie bij de eerste run | Trend toont 3 maanden | — |
+| ✅ Schermen Trend, Zoekvragen, Pagina's, Techniek | Werkt op telefoon | — |
+| ✅ Kansen met vaste regels, optioneel Gemini-voorstel per kans | Minstens één regel per soort kans getest | — |
+| ✅ Overzicht met Google, eigen bezoekers per `bron`, installaties | Getallen gelijk aan Statistieken en Search Console | — |
+| ✅ Site: `bron` en `campagne` uit de URL meesturen in `events` (alleen met toestemming) | Test: `?bron=instagram` verschijnt in het overzicht | — |
 
 ### Fase 2: content en beeld (± 3 dagen)
 
 | Taak | Klaar als |
 |---|---|
-| ⬜ Contentstudio: pijlers, kanalen, Gemini (3 varianten), controle op emoji, lengte en getallen | Een tekst met een verzonnen getal kan niet op "klaar" |
-| ⬜ Kalender en bibliotheek | Item van idee tot geplaatst, met link |
-| ⬜ Afbeeldingssjablonen (carrousel, Story, tijdlijn) met `ImageResponse` | Download in drie formaten |
-| ⬜ Linkmaker met QR-code | QR leidt naar de juiste `bron` |
+| ✅ Contentstudio: pijlers, kanalen, Gemini (3 varianten), controle op emoji, lengte en getallen | Een tekst met een verzonnen getal kan niet op "klaar" |
+| ✅ Kalender en bibliotheek | Item van idee tot geplaatst, met link |
+| ✅ Afbeeldingssjablonen (carrousel, Story, tijdlijn) met `ImageResponse` | Download in drie formaten |
+| ✅ Linkmaker met QR-code | QR leidt naar de juiste `bron` |
 
 ### Fase 3: video (± 3 tot 4 dagen)
 
 | Taak | Klaar als | Afhankelijk van |
 |---|---|---|
-| ⬜ Remotion in het project, sjablonen Cijfers en Provincie | Voorbeeld speelt in het dashboard | 👤 P4 (licentie) |
-| ⬜ GitHub Action: wekelijkse schermopnames met Playwright naar Storage | Nieuwe opnames na elke week | — |
-| ⬜ Sjablonen Zo werkt het, Nieuw, Doe mee | Vijf sjablonen | — |
-| ⬜ Renderen via `render_jobs` en GitHub Action, downloadknop | MP4 binnen 3 minuten | — |
-| ⬜ Vergelijking met "BRAG" en wat we overnemen | Notitie in dit plan | O1 |
+| ✅ ~~Remotion~~ eigen HTML-sjablonen (werkwijze Hyperframes), sjablonen Cijfers en Provincie | Voorbeeld speelt in het dashboard | — |
+| ✅ GitHub Action: wekelijkse schermopnames met Playwright naar Storage | Nieuwe opnames na elke week | — |
+| ✅ Sjablonen Zo werkt het, Nieuw, Doe mee | Vijf sjablonen | — |
+| ✅ Renderen via `marketing_jobs` en GitHub Action, downloadknop | MP4 binnen 3 minuten | — |
+| ✅ Vergelijking met "BRAG" en wat we overnemen | Notitie in dit plan | O1 |
 
 ### Fase 4: campagnes en sociale cijfers (± 2 dagen, optioneel)
 
 | Taak | Klaar als | Afhankelijk van |
 |---|---|---|
-| ⬜ Campagnes met budget en resultaat per `bron` | Budgetbalk klopt met ingevulde bedragen | — |
-| ⬜ Instagram Insights (Graph API, eigen account) | Bereik en weergaven per post | 👤 P5 |
-| ⬜ TikTok-cijfers, of handmatig invullen | Weergaven per post | 👤 P6 |
+| ✅ Campagnes met budget en resultaat per `bron` | Budgetbalk klopt met ingevulde bedragen | — |
+| ✅ Instagram Insights (Graph API, eigen account) | Bereik en weergaven per post | 👤 P5 |
+| ✅ TikTok-cijfers handmatig invullen (API vraagt een goedgekeurde app) | Weergaven per post | 👤 P6 alleen voor de API |
 
 ## 6. Wat Patrick moet regelen (👤)
 
 | # | Wat | Voor fase |
 |---|---|---|
 | P1 | vrijstaan.nl verifiëren in Google Search Console (domeinproperty, via een DNS-record) en de sitemap insturen | 1 |
-| P2 | In Google Cloud een project en serviceaccount maken, de Search Console API aanzetten, het serviceaccount als gebruiker (beperkt) toevoegen in Search Console, de JSON-sleutel als `GSC_SERVICE_ACCOUNT_JSON` in Vercel | 1 |
+| P2 | In Google Cloud een project en serviceaccount maken, de Search Console API (en PageSpeed Insights API) aanzetten, het serviceaccount als gebruiker (beperkt) toevoegen in Search Console, de JSON-sleutel als **GitHub-secret** `GSC_SERVICE_ACCOUNT_JSON` (Settings → Secrets and variables → Actions) | 1 |
 | P3 | Naam of link van "BRAG" | 3 |
-| P4 | Bevestigen dat VrijStaan onder de gratis Remotion-licentie valt (maximaal 3 medewerkers) | 3 |
-| P5 | Instagram omzetten naar een zakelijk of creatoraccount, gekoppeld aan een Facebook-pagina | 4 |
+| P4 | ~~Remotion-licentie~~ vervallen: geen Remotion gebruikt (README 98) | — |
+| P5 | Instagram omzetten naar een zakelijk of creatoraccount, gekoppeld aan een Facebook-pagina; een Meta-app (ontwikkelmodus) met een langlevend token; `IG_ACCESS_TOKEN` en `IG_USER_ID` als GitHub-secrets (token elke 60 dagen vernieuwen) | 4 |
 | P6 | Eventueel een TikTok-ontwikkelaarsaccount aanvragen | 4 |
 | P7 | Advertentieaccounts bij Meta en Google Ads, en het budget vrijgeven | 4 |
 
@@ -294,12 +302,12 @@ groen. Migraties gaan pas live als de code samengevoegd is.
 
 | # | Punt | Voorstel |
 |---|---|---|
-| O1 | "Zoals BRAG": tool onbekend | Naam of link van Patrick; tot dan bouwen we de eigen sjablonen |
+| O1 | ~~"Zoals BRAG": tool onbekend~~ | Opgelost: latent-spaces/brag (README 98) |
 | O2 | Vercel Hobby is niet-commercieel (specs README 6); betaalde advertenties voor de site kunnen als commercieel gelden | Vóór de eerste betaalde campagne beoordelen; zo nodig Vercel Pro (± $ 20 per maand, buiten het marketingbudget) |
 | O3 | Gemini gratis laag: Google mag invoer gebruiken om het product te verbeteren | Alleen feitenbank en eigen teksten gaan erheen, geen bezoekers- of accountgegevens |
 | O4 | Cijfers in content verouderen | Elk filmpje en elke afbeelding bewaart de meetdatum (`facts_snapshot`) en toont "Stand: [datum]" |
 | O5 | Kleine aantallen kunnen overdreven overkomen (32 plekken zonder vaste vertrektijd) | Pijler Cijfers gebruikt alleen feiten boven een drempel; "zonder vertrektijd" alleen als functie (filter), niet als aantal |
-| O6 | GitHub Actions-minuten (gratis 2.000 per maand voor privé-repo's; de repo is openbaar, dan onbeperkt) | Renderen alleen op aanvraag, schermopnames 1 keer per week |
+| O6 | GitHub Actions-minuten (gratis 2.000 per maand voor privé-repo's; de repo is openbaar, dan onbeperkt) | Een run zonder opdracht stopt na de telling (±15 s). Wordt de repo privé, zet de jobs-cron dan op elk uur |
 | O7 | Search Console geeft alleen data van de eigen property | Geen concurrentieanalyse; daarvoor zijn betaalde tools nodig die buiten het budget vallen |
 | O8 | Schermopnames kunnen persoonlijke gegevens tonen (Mijn reis, account) | Opnames met een vast testaccount zonder echte gegevens, nooit met een echt account |
 
