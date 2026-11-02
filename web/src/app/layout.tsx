@@ -7,6 +7,7 @@ import { TripSync } from "@/components/trip-sync";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SITE_URL } from "@/lib/env";
 import { OPEN_GRAPH } from "@/lib/meta";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 // Eén lettertype voor koppen, tekst en cijfers (zie docs/stijlgids.md §4)
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
@@ -36,7 +37,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   // grootste beeld van zoeken en de plekpagina (LCP, audit 1 november 2026). Zonder crossOrigin: <img> laadt zonder CORS.
   preconnect("https://wsrv.nl");
   return (
-    <html lang="nl" className={`${geist.variable} h-full antialiased`}>
+    // suppressHydrationWarning: het themascript zet data-theme op <html> vóór React hydrateert
+    <html lang="nl" className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Licht of donker vóór de eerste weergave (systeem of de zon/maan-knop), zie lib/theme.ts */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <Header />
         <div id="inhoud" className="flex flex-1 flex-col">

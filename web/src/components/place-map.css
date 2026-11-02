@@ -45,15 +45,13 @@
   position: absolute;
   inset: -10px;
 }
-@media (prefers-color-scheme: dark) {
-  .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-    filter: invert(1);
-  }
-  .maplibregl-ctrl-attrib {
-    background: rgb(24 32 27 / 0.85) !important;
-    color: var(--muted);
-  }
-  .maplibregl-ctrl-attrib a {
-    color: var(--ink-2);
-  }
+[data-theme="dark"] .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+[data-theme="dark"] .maplibregl-ctrl-attrib {
+  background: rgb(24 32 27 / 0.85) !important;
+  color: var(--muted);
+}
+[data-theme="dark"] .maplibregl-ctrl-attrib a {
+  color: var(--ink-2);
 }

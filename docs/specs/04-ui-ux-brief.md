@@ -36,7 +36,7 @@
 | `lake` (meerblauw) | `#2F6F7E` | `#82BCC8` | Water en routes op de kaart, **uitslapers** (vertrek 12:00 of later) |
 | `alert` | `#A8321D` | `#F08A72` | Fouten, "niet aanwezig" |
 
-Donkere modus "avond in het bos": volgt de systeeminstelling.
+Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live (zonsondergang). Een kleine zon/maan-knop in de header (44 × 44 px, rechts naast Hulp) zet het andere thema vast op dit toestel (`vrijstaan:thema`); kies je weer wat het systeem doet, dan volgt de site het systeem weer. Het actieve thema staat als `data-theme` op `<html>`, gezet vóór de eerste weergave (`lib/theme.ts`), zodat er geen lichte flits is. De kaart wisselt mee zonder te herladen.
 
 ## Typografie
 

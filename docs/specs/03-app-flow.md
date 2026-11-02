@@ -120,7 +120,7 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 
 - **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
   vaste actiebalk met prijs, hartje, bellen, website en **Route**.
-- **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden). Op `/plek/*` een terugknop.
+- **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden), zon/maan wisselt licht en donker (gevolg: thema direct om, keuze bewaard op het toestel; gelijk aan het systeem = geen keuze bewaard). Op `/plek/*` een terugknop.
 - **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
 - **Kruimelpad op de plekpagina**: Zoeken › provincie (naar `/camperplaatsen/<provincie>`) › plek; onder "In de buurt"
   links naar alle camperplaatsen in de provincie en, op een Waddeneiland, op dat eiland.
