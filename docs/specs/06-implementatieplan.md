@@ -231,23 +231,31 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 | ✅ Stap 2: Mission Control als `/admin/mission-control` (besluit eigenaar 2 november: binnen bestaand beheer, geen proxy of cookie) | Agent | README 91 | Pagina in de beheerzijbalk | Niet-admins zien lege lijsten (RLS) | — |
 | ✅ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini, sessietoken van de beheerder, geen service-role) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | `GEMINI_API_KEY` in Vercel |
 | ✅ Stap 4: Logboeken (stand per API, kleurcodes) en Updates (pending_review gemarkeerd, link naar de PR) | Agent | Opdracht | Tabbladen in Mission Control | Rood bij falende API of cron | Migratie live |
+| ✅ Inbox: vertrektijd uit het bronnenonderzoek te accepteren (README 96): migratie `20261102160000_vertrektijd_voorstel.sql` (live 2 nov), test `vertrektijd_voorstel.test.sql` in `run.sh` | Agent | Melding eigenaar | Trigger `queue_from_submission` | Accepteren zet `departure` en `checkout_until` | — |
 | ✅ AI Outreach Loop, stap 1: `/api/webhooks/inbound-email` (Resend Inbound, Gemini), migratie `20261102120000_eigenaar_inbox.sql` (`owner_replies`, `log_owner_reply`) — **migratie live sinds 2 november 2026**; Resend-adres `eigenaren@…resend.app`, Gmail stuurt mails met `VS-` in het onderwerp door (filter) | Agent | Opdracht 2 november, README 94 | Route, unit tests, SQL-test | Antwoord van een eigenaar staat als voorstel in de Triage Inbox | Vercel: `RESEND_WEBHOOK_SECRET`, `RESEND_API_KEY`, `OWNER_INBOX_KEY`, `GEMINI_API_KEY`; `internal_secrets.owner_inbox_key`; Inbound-domein in Resend |
 | ✅ Vertrektijd uit Doe mee in de juiste kolommen (README 95): migratie `20261102140000_vertrektijd_wachtrij.sql`, live 2 november 2026 | Agent | README 95 | Migratie + SQL-test `vertrektijd_wachtrij.test.sql` | Accepteer zet een vertrektijd live | — |
 | ⬜ AI Outreach Loop, stap 2: uitgaande mail naar eigenaren met `[VS-<id>]` in het onderwerp, en `owner_replies` zichtbaar in Mission Control | Agent | README 94 | — | — | Stap 1 |
 
-## Marketing (opdracht 2 november 2026) ✅
+## Marketing (opdracht 2 november 2026) 🟡
 
-Plan in [document 7](07-marketing-en-rebrand.md).
+Eerste ronde (SEO per plek) staat hieronder. De AI-teksten per plek zijn vervangen door het marketing- en
+contentdashboard voor de app: plan en stand in [`docs/marketing/plan.md`](../marketing/plan.md), spec in
+[document 7](07-marketing-en-rebrand.md).
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
 | ~~Rebrand~~ geannuleerd: naam blijft VrijStaan, domein vrijstaan.nl, huidig logo (besluit eigenaar 2 november 2026) | — | — | — | — | — |
-| ✅ SEO-titel en omschrijving per plek met all-in prijs en vertrektijd (`lib/marketing.ts`) | Agent | Opdracht | `generateMetadata`, tests `tests/marketing.test.ts` | Onbekend valt weg; "incl. toeslagen" alleen bij een vast totaal | — |
+| ✅ SEO-titel en omschrijving per plek met all-in prijs en vertrektijd (`lib/place-seo.ts`); vanaf-prijs nooit "inclusief toeslagen" | Agent | Opdracht, melding Burgh | `generateMetadata`, tests `tests/place-seo.test.ts` | Onbekend valt weg | — |
 | ✅ JSON-LD Campground aangevuld (`checkoutTime`, `checkinTime`, `priceRange`) | Agent | Opdracht | Plekpagina | Rich Results Test zonder fouten | — |
 | ✅ Sitemap met alleen gepubliceerde plekken | Agent | Opdracht | Bestond al (`app/sitemap.ts`) | — | — |
-| ✅ Deelafbeelding `/api/og?slug=` (Satori, grote letters) | Agent | Opdracht | Route, `og:image` van de plekpagina | PNG 1200 × 630 met naam, prijs, vertrektijd | — |
-| ✅ Mission Control → Marketing, `/api/admin/generate-marketing` (Gemini via gedeelde helper `lib/gemini.ts`) | Agent | Opdracht | Tabblad met zoeken, teksten, kopiëren, afbeelding downloaden | 2 posts en 2 advertenties zonder emoji | `GEMINI_API_KEY` in Vercel |
-| ⬜ Search Console en Bing Webmaster aanmelden, sitemap insturen | Eigenaar | Document 7 | — | Sitemap verwerkt | Livegang |
+| ✅ Deelafbeelding `/api/og?slug=` (Satori, Geist, grote letters) | Agent | Opdracht | Route, `og:image` van de plekpagina | PNG 1200 × 630 | — |
+| ✅ Fase 0: tab Marketing en `/api/admin/generate-marketing` weg; `/admin/marketing`; migratie `20261102180000_marketing_dashboard.sql` met SQL-tests | Agent | Plan §5 | Dashboard, migratie | Tests groen; **migratie live na samenvoegen** | — |
+| ✅ Fase 1: vindbaarheid (`scripts/marketing/search-console.ts`, workflow `marketing.yml`), overzicht, `?bron=` in `events` | Agent | Plan §3.1, §3.2 | Pagina's, Action | Cijfers van gisteren in `seo_daily` | 👤 P1, P2 |
+| ✅ Fase 2: contentstudio (`/api/admin/marketing/write`), kalender, bibliotheek, beeldsjablonen (`/api/marketing/beeld`), linkmaker met QR | Agent | Plan §3.3–3.6 | Pagina's | Tekst met verzonnen getal kan niet op klaar | `GEMINI_API_KEY` |
+| ✅ Fase 3: videosjablonen (`lib/marketing/video.ts`), renderen en schermopnames in de Action (`scripts/marketing/jobs.ts`), `/brag-slim` in `.claude/skills` | Agent | Plan §3.4 | Studio | MP4 in de bibliotheek | Migratie live, `SUPABASE_DB_URL` |
+| ✅ Fase 4: campagnes met budget en resultaat per bron, sociale cijfers (handmatig, Instagram via de Graph API) | Agent | Plan §3.6 | Pagina Campagnes | Budgetbalk klopt | 👤 P5 voor Instagram |
+| ⬜ Migratie `20261102180000_marketing_dashboard.sql` live zetten | Agent | Na samenvoegen | — | `marketing_facts()` werkt voor admin | Samenvoegen |
+| ⬜ Search Console en Bing Webmaster aanmelden, sitemap insturen, serviceaccount | Eigenaar | Plan §6 P1, P2 | — | Eerste nachtrun groen | Livegang |
 
 ## Beveiliging (audit 1 november 2026) 🟡
 

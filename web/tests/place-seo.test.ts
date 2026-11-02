@@ -1,7 +1,7 @@
-// SEO-titels, deelafbeelding en AI-marketing: alleen bekende feiten, "inclusief toeslagen" alleen als het klopt.
+// SEO per plek en deelafbeelding: alleen bekende feiten, "inclusief toeslagen" alleen als het klopt.
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { allInPrice, departureFact, labeledName, marketingText, parseMarketing, seoDescription, seoTitle, type MarketingPlace } from "../src/lib/marketing.ts";
+import { allInPrice, departureFact, labeledName, seoDescription, seoTitle, type MarketingPlace } from "../src/lib/place-seo.ts";
 
 const base: MarketingPlace = { slug: "de-proef-ede", name: "De Proef", town: "Ede", province: "Gelderland", kind: "camperplaats" };
 const tax = { label: "Toeristenbelasting", amount: 1.35, unit: "per persoon per nacht" };
@@ -38,31 +38,18 @@ test("SEO-titel en omschrijving volgen het vaste patroon en laten onbekend weg",
   assert.doesNotMatch(seoDescription(base), /Vertrektijd|€/);
 });
 
-test("prompt bevat de vaste opdracht en alleen feiten, geen telefoon of e-mail", () => {
-  const t = marketingText({ ...base, power: true, dogs: false }, "https://example.nl/plek/de-proef-ede");
-  assert.match(t, /Schrijf 2 Facebook-posts en 2 Google Ads teksten voor camperplaats De Proef/);
-  assert.match(t, /Geen emojis/);
-  assert.match(t, /je en jij, nooit met u/);
-  assert.match(t, /- Wel: stroom/);
-  assert.match(t, /- Niet: honden welkom/);
-  assert.match(t, /- Prijs: onbekend/);
-  assert.doesNotMatch(t, /@/);
-});
-
-test("parseMarketing: 2 posts en 2 advertenties, emoji eruit, lengtes begrensd", () => {
-  const ok = parseMarketing(
-    JSON.stringify({
-      facebook: ["Post een 🚐", "Post twee"],
-      googleAds: [
-        { headline: "Kop die veel te lang is voor Google Ads", description: "Omschrijving" },
-        { headline: "Kop", description: "x".repeat(200) },
-      ],
-    }),
-  );
-  assert.ok(ok);
-  assert.equal(ok.facebook[0], "Post een");
-  assert.equal(ok.googleAds[0].headline.length, 30);
-  assert.equal(ok.googleAds[1].description.length, 90);
-  assert.equal(parseMarketing("geen json"), null);
-  assert.equal(parseMarketing(JSON.stringify({ facebook: ["een"], googleAds: [] })), null);
+test("vanaf-prijs: nooit 'inclusief toeslagen', ook als elk onderdeel bekend is (Burgh)", () => {
+  const burgh: MarketingPlace = {
+    ...base,
+    kind: "camping",
+    priceEur: 5,
+    priceFrom: true,
+    priceExtras: [tax, { label: "Stroom", amount: 2.5, unit: "per nacht" }],
+  };
+  const price = allInPrice(burgh);
+  assert.equal(price?.allIn, false);
+  assert.match(price!.amount, /^vanaf €\s?5$/);
+  assert.match(price!.text, /plus toeslagen$/);
+  assert.doesNotMatch(seoTitle(burgh), /incl/);
+  assert.doesNotMatch(seoDescription(burgh), /inclusief/);
 });

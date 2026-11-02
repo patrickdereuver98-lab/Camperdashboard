@@ -1,0 +1,100 @@
+# Marketingdashboard (docs/marketing/plan.md):
+#   seo   elke nacht: Search Console en PageSpeed naar Supabase
+#   jobs  elke 10 minuten: opdrachten uit Studio (filmpjes, schermopnames); maandag ook nieuwe schermopnames
+# Geheimen (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL            bestaat al (back-up, pipeline)
+#   GSC_SERVICE_ACCOUNT_JSON   JSON-sleutel van het serviceaccount met leesrechten in Search Console (plan §6, P2)
+#   PAGESPEED_API_KEY          optioneel; zonder sleutel geldt een lage dagelijkse limiet
+#   IG_ACCESS_TOKEN, IG_USER_ID  optioneel: Instagram-cijfers van het eigen zakelijke account (plan §6, P5)
+# Variabelen (optioneel): GSC_SITE (standaard sc-domain:vrijstaan.nl), SITE_URL (standaard https://vrijstaan.nl)
+name: Marketing
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+    - cron: "*/10 6-22 * * *"
+    - cron: "43 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      onderdeel:
+        description: "seo of jobs"
+        default: jobs
+
+permissions:
+  contents: read
+
+jobs:
+  seo:
+    if: github.event.schedule == '17 5 * * *' || (github.event_name == 'workflow_dispatch' && inputs.onderdeel == 'seo')
+    concurrency:
+      group: marketing-seo
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+      PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      GSC_SITE: ${{ vars.GSC_SITE }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Geheim aanwezig
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then echo "::error::SUPABASE_DB_URL ontbreekt"; exit 1; fi
+      - name: Search Console, PageSpeed en Instagram ophalen
+        run: node --no-warnings --import ./tests/register.mjs scripts/marketing/search-console.ts
+
+  jobs:
+    if: github.event.schedule != '17 5 * * *' && (github.event_name != 'workflow_dispatch' || inputs.onderdeel != 'seo')
+    concurrency:
+      group: marketing-jobs
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: web
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - name: Geheim aanwezig
+        working-directory: .
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then echo "::error::SUPABASE_DB_URL ontbreekt"; exit 1; fi
+      - name: Maandag nieuwe schermopnames klaarzetten
+        if: github.event.schedule == '43 6 * * 1'
+        working-directory: .
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -qc "insert into public.marketing_jobs (kind) values ('schermopnames')"
+      - name: Opdrachten?
+        id: open
+        working-directory: .
+        run: |
+          n=$(psql "$SUPABASE_DB_URL" -tAc "select count(*) from public.marketing_jobs where status = 'wacht' or (status = 'bezig' and started_at < now() - interval '2 hours')")
+          echo "aantal=$n" >> "$GITHUB_OUTPUT"
+          echo "$n opdracht(en) open"
+      - uses: actions/checkout@v7
+        if: steps.open.outputs.aantal != '0'
+      - uses: actions/setup-node@v7
+        if: steps.open.outputs.aantal != '0'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Pakketten en Chromium
+        if: steps.open.outputs.aantal != '0'
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Opdrachten uitvoeren
+        if: steps.open.outputs.aantal != '0'
+        run: node --no-warnings --import ./tests/register.mjs scripts/marketing/jobs.ts

@@ -8,6 +8,8 @@ const csp = [
   `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
+  // Filmpjes uit de privé marketing-bucket (beheer, tijdelijke links)
+  "media-src 'self' blob: https://*.supabase.co",
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://tiles.openfreemap.org",
   "worker-src 'self' blob:",

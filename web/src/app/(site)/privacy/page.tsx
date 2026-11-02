@@ -230,6 +230,11 @@ export default function PrivacyPage() {
           het niet aan andere gegevens en delen het met niemand.
         </p>
         <p>
+          Kwam je binnen via een link van ons met <em>bron</em> of <em>campagne</em> erin (bijvoorbeeld van Instagram of een
+          flyer), dan slaan we die twee woorden mee op, zodat we zien welke link werkt. Ook dat alleen met je toestemming, en
+          het blijft bij de link: er zit geen pixel of cookie van Instagram, Facebook, TikTok of Google op onze site.
+        </p>
+        <p>
           Het sessienummer staat in de sessieopslag van je browser en verdwijnt als je het tabblad sluit. Volgens art. 11.7a
           Telecommunicatiewet is voor statistieken met weinig gevolgen voor je privacy soms geen toestemming nodig. We vragen
           het toch.
