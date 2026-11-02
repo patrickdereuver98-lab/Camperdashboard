@@ -47,7 +47,7 @@
 | ✅ Reisstatistieken (dashboard) | Agent | Opdracht Patrick (Fase 5) | `/mijn-reis/statistieken`, `trip-stats.ts` | Alleen berekend uit bekende gegevens; tabel bij elke grafiek | Mijn reis, uitgaven |
 | ✅ Samen een reis plannen (realtime) | Agent | Opdracht Patrick (Fase 5) | `shared_trips`, `/samen/<code>`, `SharedCard` | Leden zien wijzigingen direct; buitenstaanders niet | Accounts |
 | ✅ Dubbele plekken samenvoegen (beheer) | Agent | Opdracht Patrick | `/admin/dubbelen`, `admin_merge_places` | Oude link stuurt door | Schema |
-| ⬜ Testtabellen `private.probe*` verwijderen | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
+| ⬜ Testtabellen `private.probe*` verwijderen (1 november 2026: `probe` 11 en `probe2` 198 rijen, nergens gebruikt; het verwijderen via de Supabase-koppeling vraagt een bevestiging die niet is gegeven, dus 👤 Patrick: `drop table private.probe, private.probe2;`) | Agent of Patrick | — | — | Tabellen bestaan niet meer | — |
 
 ## Mijlpaal 3: hoofdroute ✅
 
@@ -80,6 +80,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
+| ✅ Bètaronde soft-launch (1 november 2026): frictieloze onboarding (drie schermen, `components/onboarding.tsx`, alleen startpagina, één keer per toestel via `vrijstaan:welkom`); zoeklijst toont de vertrekregel over de hele breedte (werd op 390 px afgekapt achter de prijs); Plekpuls-basis klaar maar uit (`components/plekpuls.tsx`, `lib/plekpuls.ts`, README 88); cookiebeleid noemt `vrijstaan:welkom`; de cookiebalk wacht op de startpagina tot de uitleg weg is | Agent | Masterplan fase 1, README 87 en 88 | `onboarding.tsx`, `plekpuls.tsx`, `lib/plekpuls.ts`, `lib/store.ts`, `place-ui.tsx`, startpagina, plekpagina, `cookies/page.tsx` | `e2e/onboarding.spec.ts`, a11y-test van de welkomstsheet (licht en donker), `tests/plekpuls.test.ts`; huisregels (14 px, 44 px) groen op alle pagina's; CLS op 390 px gemeten bij trage verbinding: zoeken 0, plekpagina < 0,001, startpagina 0, Zonder vertrektijd 0,018 (lettertype laadt, ruim onder 0,1) | — |
 | ✅ Plekpagina rustiger op mobiel: beslisblok, voorzieningen als labels, niets dubbel, kleinere koppen en header, basis 16 px op de telefoon | Agent | Verzoek Patrick, UX-onderzoek | `plek/[slug]/page.tsx`, `chrome.tsx`, `globals.css` | Vertrekken, prijs, open en lengte in één scherm op iPhone-formaat | — |
 | ✅ Plekkaart opnieuw ingedeeld: waar (plaats, afstand vanaf je locatie), wanneer (vertrek + aankomst), wat en hoeveel (voorzieningen, prijs + toeslagen) | Agent | Verzoek Patrick | `place-ui.tsx`, `lib/my-location.ts`, samenvattingen met aankomsttijden | Afstand, vertrek, aankomst en prijs op elke kaart zonder doortikken | — |
 | ✅ Zoekscherm compacter op mobiel (Booking als voorbeeld): kleinere tabbladen en zoekveld, één rij Filters/Sorteren/Kaart, kleinere kop, compactere kaarten, prijs past altijd | Agent | Verzoek Patrick | `search-app.tsx`, `destination-search.tsx`, `place-ui.tsx` | Eerste plek direct in beeld op iPhone | — |
@@ -145,15 +146,43 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 ## Mijlpaal 6: release ⬜
 
+### Stand bij de bevriezing van v1.0.0-beta (1 november 2026)
+
+De code voor de soft-launch is af en bevroren: alles op `main`, CI groen, geen `console.log` of TODO's in `web/src`,
+`NEXT_PUBLIC_PLEKPULS=0` in `web/.env.example`. De taken hieronder met ⬜ of 🔄 zijn **niet** afgevinkt, omdat ze niet
+klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze horen bij de livegang van
+1 januari 2027, niet bij de soft-launch:
+
+- **Data (Agent):** vertrekregel bij 1.448 van 2.195 gepubliceerde plekken (66%) en prijs bij 1.260 (57%), doel 90%
+  (telling 1 november 2026). Zoekagenten, stealth-lezer en dataketen lopen door.
+- **Alleen Patrick:** domein en `NEXT_PUBLIC_SITE_URL`, Supabase Auth (Site URL, redirects, SMTP, OAuth-sleutels,
+  mailsjablonen), contactgegevens in `company.ts`, juridische teksten laten nalezen, bewaartermijnen activeren,
+  testtabellen `private.probe*` weghalen.
+- **Na de soft-launch (Agent):** rol support beperken, `delete_my_account`, `schema.sql` opnieuw genereren, testplan
+  met de bètagebruikers, monitoring van serverfouten.
+- **Mijlpaal 7:** Plekpuls-backend, versheid per feit, eigenarenportaal, offline pakket.
+
+### Checklist livegang v1.0.0-beta (soft-launch, 1 november 2026)
+
+- [ ] Vercel, omgeving Production: `NEXT_PUBLIC_PLEKPULS` niet gezet of `0` (Plekpuls uit, README 88); geen
+  `VRIJSTAAN_OFFLINE`.
+- [ ] Vercel: `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_ANON_KEY` wijzen naar het productieproject
+  (`qkrmthrhwmmmwswmfgwc`), `NEXT_PUBLIC_SITE_URL` = `https://vrijstaan.nl`, `ORS_API_KEY` aanwezig.
+- [ ] Supabase: Auth → URL Configuration heeft `https://vrijstaan.nl` als Site URL en in de redirect-lijst.
+- [ ] Supabase: `list_migrations` gelijk aan `web/supabase/migrations/`; advisors zonder security-fouten.
+- [ ] Na de deploy: startpagina in een privévenster op de telefoon (welkomstuitleg, daarna cookiebalk), een plek
+  openen, een zoekopdracht met filter; geen fouten in de Vercel-logs.
+- [ ] Tag `v1.0.0-beta` op `main`; terugdraaien = vorige deploy promoten in Vercel.
+
+
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
 | ⬜ Alle plekken zonder vertrektijd vinden, allemaal groen (doel livegang 1 januari 2027) | Agent + Patrick | PRD Databronnen | Zoekagenten over eigen sites, reviews en fora; bevestiging in Beheer → Vertrektijden | Elke plek op Zonder vertrektijd groen; 90% van de gepubliceerde plekken met vertrekregel | README #41 |
 | ⬜ Brondatabase: bron, datum en letterlijke zin per gegeven, terug te vinden in beheer | Agent | PRD Databronnen | Tabel of uitbreiding van `sources`, beheerscherm | Bij elke vertrekregel en prijs is de bron te openen | — |
 | ✅ Onvolledige plekken grijs met oproep om de vertrektijd door te geven (22 okt, branch `claude/onvolledig-verouderd`): onvolledig = gepubliceerd zonder vertrekregel (`isIncomplete`). Kaart: grijze stip (`muted`) onder de gekleurde, popup "Vertrektijd onbekend"; lijst: grijs label "Vertrektijd onbekend"; plekpagina: oproep met knop **Vertrektijd doorgeven**, die het formulier van Doe mee opent (nu gedeeld: `components/departure-form.tsx`, inzending `correctie`/`vertrektijd`); legenda bijgewerkt. Plekken onder de drempel blijven verborgen | Agent | PRD, README #42 | `lib/place-status.ts`, `place-map.tsx`, `place-ui.tsx`, `legend.tsx`, `departure-form.tsx`, plekpagina | `tests/place-status.test.ts`; check, test en offline build groen. Nog te doen: screenshots iPhone licht/donker (browser niet te installeren in de bouwomgeving) | — |
 | ✅ "Mogelijk verouderd" bij gegevens ouder dan 12 maanden (22 okt, branch `claude/onvolledig-verouderd`): laatste controle = de jongste van `verified_at` en `departure_checked_at` (`lastChecked`); ouder dan 12 kalendermaanden geeft ", mogelijk verouderd" achter "Laatste update" op de plekpagina (na hydratatie, met de datum van de bezoeker). Zonder die datums geen melding. `last_scraped_at` en `updated_at` tellen bewust niet: die veranderen ook als er niets is gecontroleerd. Per gegeven (brondatabase) volgt later | Agent | PRD, README #45 | `lib/place-status.ts`, plekpagina (`OutdatedNote`) | `tests/place-status.test.ts`; check, test en offline build groen | Brondatabase (voor een datum per gegeven) |
-| ⬜ Reviews alleen met account of code per mail | Agent | PRD open vraag 6 | Reviewformulier, RPC | Review zonder bevestiging niet zichtbaar | — |
+| ✅ Reviews alleen met account of code per mail (gecontroleerd 1 november 2026: migratie `reviews_met_account` live, formulier in `plek/[slug]/client.tsx` op `main`) | Agent | PRD open vraag 6 | Reviewformulier, RPC | Review zonder bevestiging niet zichtbaar | — |
 | ⬜ Rol support beperken | Agent | PRD Rollen, README #1 | Policies per rol | Support kan geen instellingen, beheerders of verwijderingen | — |
-| ⬜ SEO-pagina's per provincie en plaats, structured data, sitemap | Agent | PRD | Pagina's, JSON-LD, `sitemap.xml` | Pagina's geïndexeerd in Search Console | Domein |
 | ⬜ Domein vrijstaan.nl registreren | Patrick | — | Domein | Domein op naam van Patrick | — |
 | ⬜ Prijzen naar 90% van de gepubliceerde plekken | Agent | PRD | Scraper en zoekagenten | 90% met nachtprijs | — |
 | ⬜ Contactgegevens invullen (hobby, nog geen KvK) | Patrick | Naam, contactadres | `web/src/lib/company.ts` | Geen "[… nog invullen]" meer op de site | — |
@@ -197,9 +226,9 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
-| ✅ Stap 1: migratie `20261101130000_mission_control.sql` (rol, `admin_logs`, `updates_queue`, `dependency_updates`, accepteren/afwijzen, `log_dependency`, cron `ops-probe`) | Agent | Opdracht, README 88 | Migratie + SQL-tests (`web/supabase/tests/mission_control*.sql`, in `run.sh`) | Tests groen; live na samenvoegen | — |
-| ✅ Dependency-radar: `/api/admin/log-dependency`, `.github/workflows/ai-dependency-triage.yml`, `tools/ops/dependency_triage.py` (Gemini, vaste regel zonder sleutel) | Agent | Opdracht, README 90 en 91 | Route met unit tests, workflow, script met tests | Eerste Dependabot-PR staat in `dependency_updates` | Migratie live, secrets `GEMINI_API_KEY` en `DEPENDENCY_LOG_KEY` (Dependabot) |
-| ✅ Stap 2: Mission Control als `/admin/mission-control` (besluit eigenaar 2 november: binnen bestaand beheer, geen proxy of cookie) | Agent | README 89 | Pagina in de beheerzijbalk | Niet-admins zien lege lijsten (RLS) | — |
+| ✅ Stap 1: migratie `20261101130000_mission_control.sql` (rol, `admin_logs`, `updates_queue`, `dependency_updates`, accepteren/afwijzen, `log_dependency`, cron `ops-probe`) | Agent | Opdracht, README 90 | Migratie + SQL-tests (`web/supabase/tests/mission_control*.sql`, in `run.sh`) | Tests groen; live na samenvoegen | — |
+| ✅ Dependency-radar: `/api/admin/log-dependency`, `.github/workflows/ai-dependency-triage.yml`, `tools/ops/dependency_triage.py` (Gemini, vaste regel zonder sleutel) | Agent | Opdracht, README 92 en 93 | Route met unit tests, workflow, script met tests | Eerste Dependabot-PR staat in `dependency_updates` | Migratie live, secrets `GEMINI_API_KEY` en `DEPENDENCY_LOG_KEY` (Dependabot) |
+| ✅ Stap 2: Mission Control als `/admin/mission-control` (besluit eigenaar 2 november: binnen bestaand beheer, geen proxy of cookie) | Agent | README 91 | Pagina in de beheerzijbalk | Niet-admins zien lege lijsten (RLS) | — |
 | ✅ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini, sessietoken van de beheerder, geen service-role) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | `GEMINI_API_KEY` in Vercel |
 | ✅ Stap 4: Logboeken (stand per API, kleurcodes) en Updates (pending_review gemarkeerd, link naar de PR) | Agent | Opdracht | Tabbladen in Mission Control | Rood bij falende API of cron | Migratie live |
 
@@ -213,7 +242,7 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 | ⬜ B2 en B4: Google-account beveiligen, wachtwoord minimaal 10 tekens in Supabase | Patrick | Verbeterplan | Instellingen | Advisor meldt geen zwak wachtwoordbeleid meer | — |
 | ⬜ B1, B12 en B19: e-mailadres, beheernotitie en `user_id` van reviews afschermen, `admin_reviews()`, oude `submit_review` weg | Agent | Verbeterplan | Migratie, beheerpagina, test | Publieke sleutel krijgt geen `author_email` | Vóór de eerste goedgekeurde review |
 | ⬜ B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
-| ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 87 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
+| ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 89 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
 
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
 
@@ -222,7 +251,7 @@ Leidraad: [README, VrijStaan 2.0](README.md#vrijstaan-20---visie-strategie--toek
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
 | ⬜ H1: versheid per feit zichtbaar (datum en telling bij vertrektijd en prijs) | Agent | Visie §3 en §5 | Plekpagina, rij, `lastChecked` per feit | Elk kernfeit toont zijn leeftijd of "onbekend" | Brondatabase (M6) |
-| ⬜ H1: Plekpuls v1, één vraag na een overnachting op een bewaarde plek | Agent | Visie §4A | Vraag in Mijn reis, claim in `bron.claims` met vertrouwensgewicht | 30% van de bezochte plekken bevestigd in 90 dagen | Bronnenlaag live (README 71), README 86 |
+| ⬜ H1: Plekpuls v1, één vraag na een overnachting op een bewaarde plek (UI-basis 🔄: `PlekpulsVraag` staat klaar achter `NEXT_PUBLIC_PLEKPULS`, README 88) | Agent | Visie §4A | Vraag in Mijn reis, claim in `bron.claims` met vertrouwensgewicht | 30% van de bezochte plekken bevestigd in 90 dagen | Bronnenlaag live (README 71), README 86 |
 | ⬜ H1: eigenarenportaal v1 (claimen en zelf bijwerken als tier 1-bron) | Agent + Patrick | Visie §4C | Portaal, rol eigenaar, beheerstroom | 50 eigenaren actief | Plek claimen (PRD) |
 | ⬜ H1: offline pakket v1 (hele dataset op het toestel) | Agent | Visie §4B | Service worker, IndexedDB, versie per pakket | Zoeken en plekpagina werken zonder bereik | — |
 | ⬜ H2: Vannacht-knop met plan B en camperprofiel met hoogte | Agent | Visie §4B | Knop, rangschikking op rijtijd, `maxheight` uit OSM | Mediaan open app tot doorklik < 60 s | Offline pakket |

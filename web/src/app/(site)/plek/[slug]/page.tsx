@@ -28,6 +28,8 @@ import { CrowdStatusCard } from "./crowd-status";
 import { DecisionGrid } from "./decision-grid";
 import { FacilityGrid } from "./facility-grid";
 import { DistanceFromMe } from "./live-facts";
+import { PlekpulsVraag } from "@/components/plekpuls";
+import { departureQuestion, PLEKPULS_ACTIEF } from "@/lib/plekpuls";
 
 // Alleen de top-100 tijdens de build: alle plekken prerenderen liep op Vercel stuk (RangeError). De rest wordt bij het
 // eerste bezoek gerenderd ("blocking": params worden buiten <Suspense> afgewacht) en daarna uit de cache geserveerd.
@@ -121,6 +123,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   // Laatste controle (website of vertrekcontrole); zonder die datum de laatste wijziging, maar dan geen "verouderd"
   const lastUpdate = lastChecked(place) ?? place.updatedAt;
   const reserveLabel = rule === "verplicht" || rule === "mogelijk" ? "Reserveren via de website" : "Naar de website";
+  // Plekpuls staat uit tot de koppeling met de bronnenlaag er is (lib/plekpuls.ts)
+  const pulse = PLEKPULS_ACTIEF ? departureQuestion(place) : undefined;
 
   return (
     <article className="pb-24 md:pb-8">
@@ -185,6 +189,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
             <DecisionGrid place={place} visitors={visitors} />
             <DecisionDetails place={place} />
+            {pulse && (
+              <div className="-mt-4 rounded-lg border border-line bg-surface px-4 py-3">
+                <PlekpulsVraag question={pulse} />
+              </div>
+            )}
             {/* Foto toevoegen staat onder het kernblok: eerst beslissen, dan bijdragen */}
             <div className="-mt-4 min-h-11">
               <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />

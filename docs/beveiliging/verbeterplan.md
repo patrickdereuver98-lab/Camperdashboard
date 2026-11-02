@@ -108,7 +108,7 @@ maakt raden onhaalbaar.
 2. SPF, DKIM en DMARC voor `vrijstaan.nl` instellen, zodat de mails niet in de spam belanden en niemand
    namens je domein kan mailen.
 3. Captcha alleen als er echt misbruik komt: hCaptcha en Turnstile zijn diensten van derden, en dat botst met
-   "geen tracking van derden". Besluit eigenaar (open punt 87).
+   "geen tracking van derden". Besluit eigenaar (open punt 89).
 
 ### B4. Wachtwoordregels alleen in de browser (Middel)
 

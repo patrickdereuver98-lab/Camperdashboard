@@ -1,5 +1,5 @@
 -- Mission Control, stap 1 (opdracht 1 november 2026): rol per account, logboek, update-wachtrij met AI-advies en
--- de dependency-radar. Zie docs/specs/05-backend-schema.md en README nummer 88 voor de keuzes.
+-- de dependency-radar. Zie docs/specs/05-backend-schema.md en README nummer 90 voor de keuzes.
 --
 -- Rol: `profiles.role` ('user', 'support', 'admin'). Bron blijft `public.admins` (uitnodiging via
 -- private.admin_invites); een trigger houdt `profiles.role` gelijk. Gebruikers kunnen hun eigen rol niet wijzigen
