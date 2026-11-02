@@ -4,13 +4,14 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getDepartureVisitors, getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
-import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, websiteLabel } from "@/lib/format";
+import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, timeToMinutes, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
 import { isIncomplete, lastChecked } from "@/lib/place-status";
 import { NavigateButton } from "@/components/navigate";
 import { SITE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
+import { allInPrice, ogImagePath, seoDescription, seoTitle } from "@/lib/marketing";
 import { inBbox } from "@/lib/bbox";
 import { areaPath, breadcrumbLd, ISLANDS, ldJson, provinceSlug } from "@/lib/seo-pages";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
@@ -41,12 +42,16 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
   const { slug } = await params;
   const place = await getPlace(slug);
   if (!place) return { title: "Plek niet gevonden" };
-  const price = place.priceEur === undefined ? "" : place.priceEur === 0 ? "Gratis. " : `${place.priceFrom ? "Vanaf " : ""}${eur(place.priceEur)} per nacht. `;
+  // "Camperplaats [naam] in [plaats]: [prijs] inclusief toeslagen. Vertrektijd: [tijd]." Onbekend laten we weg.
+  const title = seoTitle(place);
+  const description = seoDescription(place);
+  const image = { url: ogImagePath(place.slug), width: 1200, height: 630, alt: `${place.name} in ${place.town}: prijs en vertrektijd` };
   return {
-    title: `${place.name}, ${place.town}`,
-    description: `${place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in ${place.town} (${place.province}). ${price}Bekijk voorzieningen, foto's, reviews en de route.`,
+    title,
+    description,
     alternates: { canonical: `/plek/${place.slug}` },
-    openGraph: { ...OPEN_GRAPH, images: place.imageUrl ? [{ url: upgradePhotoUrl(place.imageUrl) }] : OPEN_GRAPH.images },
+    openGraph: { ...OPEN_GRAPH, title, description, url: `/plek/${place.slug}`, images: [image] },
+    twitter: { card: "summary_large_image", title, description, images: [image.url] },
   };
 }
 
@@ -106,6 +111,10 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lng },
     telephone: tel,
     petsAllowed: place.dogs,
+    // Alleen een vaste, leesbare vertrektijd; "geen vaste vertrektijd" heeft geen Schema.org-veld
+    checkoutTime: place.departure === "vast" && timeToMinutes(place.checkoutUntil) !== undefined ? place.checkoutUntil : undefined,
+    checkinTime: timeToMinutes(place.checkinFrom) !== undefined ? place.checkinFrom : undefined,
+    priceRange: allInPrice(place)?.text,
     amenityFeature: amenities.length ? amenities : undefined,
     ...(place.ratingAvg && place.ratingCount
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: place.ratingAvg, bestRating: 10, worstRating: 1, ratingCount: place.ratingCount } }
