@@ -43,4 +43,6 @@ psql "$mc_url" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/mission_control_stub.sql
 \i $migrations/20261101130000_mission_control.sql
 \i $here/mission_control.test.sql
+\set migration $migrations/20261102120000_eigenaar_inbox.sql
+\i $here/eigenaar_inbox.test.sql
 SQL

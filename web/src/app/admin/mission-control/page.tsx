@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { errorMessage } from "@/lib/supabase-browser";
-import { Badge, Empty, ErrorNote, PageTitle, Segmented, danger, db, primary, secondary, useQuery, when } from "../ui";
+import { Badge, Empty, ErrorNote, PageTitle, Segmented, danger, db, input, primary, secondary, useQuery, when } from "../ui";
 
-type Tab = "inbox" | "logs" | "updates";
+type Tab = "inbox" | "logs" | "updates" | "marketing";
 
 /**
- * Mission Control: Triage Inbox (updates van gebruikers met AI-advies), Logboeken (API's, cron, scrapers) en de
- * update-radar (Dependabot). Alleen voor rol admin: de database (RLS, has_admin_role) geeft anderen lege lijsten.
+ * Mission Control: Triage Inbox (updates van gebruikers met AI-advies), Logboeken (API's, cron, scrapers), de
+ * update-radar (Dependabot) en Marketing (AI-teksten en deelafbeelding per plek). Alleen voor rol admin: de database (RLS, has_admin_role) geeft anderen lege lijsten.
  */
 export default function MissionControl() {
   const [tab, setTab] = useState<Tab>("inbox");
@@ -28,11 +28,13 @@ export default function MissionControl() {
           { value: "inbox", label: "Triage Inbox" },
           { value: "logs", label: "Logboeken" },
           { value: "updates", label: "Updates" },
+          { value: "marketing", label: "Marketing" },
         ]}
       />
       {tab === "inbox" && <TriageInbox />}
       {tab === "logs" && <SystemLogs />}
       {tab === "updates" && <SystemUpdates />}
+      {tab === "marketing" && <Marketing />}
     </div>
   );
 }
@@ -326,6 +328,149 @@ function SystemUpdates() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Marketing ────────────────────────────────────────────────────────────────────────────────────────────────────────
+type PlaceHit = { slug: string; name: string; town: string | null; province: string | null };
+type Copy = { facebook: string[]; googleAds: { headline: string; description: string }[]; model: string; slug: string; name: string; ogImage: string };
+
+/** Alleen letters, cijfers, spaties en streepjes: komma's en haakjes zouden het PostgREST-filter breken */
+const searchTerm = (q: string) => q.replace(/[^\p{L}\p{N} '-]/gu, " ").trim().slice(0, 60);
+
+function Marketing() {
+  const [q, setQ] = useState("");
+  const term = searchTerm(q);
+  const hits = useQuery(
+    () =>
+      term.length < 2
+        ? Promise.resolve({ data: [] as PlaceHit[], error: null })
+        : db()
+            .from("places")
+            .select("slug, name, town, province")
+            .eq("status", "published")
+            .or(`name.ilike.*${term}*,town.ilike.*${term}*`)
+            .order("name")
+            .limit(15),
+    [term],
+  );
+  const [picked, setPicked] = useState<PlaceHit | null>(null);
+  const [copy, setCopy] = useState<Copy | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  async function generate() {
+    if (!picked) return;
+    setBusy(true);
+    setErr(null);
+    setCopy(null);
+    try {
+      const token = (await db().auth.getSession()).data.session?.access_token;
+      const res = await fetch("/api/admin/generate-marketing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+        body: JSON.stringify({ slug: picked.slug }),
+      });
+      const out = (await res.json().catch(() => ({}))) as Partial<Copy> & { error?: string };
+      if (!res.ok) throw new Error(out.error ?? `Fout ${res.status}`);
+      setCopy(out as Copy);
+    } catch (e) {
+      setErr(errorMessage(e));
+    }
+    setBusy(false);
+  }
+
+  async function copyText(id: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(id);
+      setTimeout(() => setCopied((c) => (c === id ? null : c)), 2000);
+    } catch {
+      setErr("Kopiëren lukte niet. Selecteer de tekst en kopieer hem zelf.");
+    }
+  }
+
+  const og = picked ? `/api/og?slug=${encodeURIComponent(picked.slug)}` : null;
+  const rows = (hits.data ?? []) as PlaceHit[];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-ink-2">
+        Kies een plek. Gemini schrijft 2 Facebook-posts en 2 Google Ads-teksten op basis van de bekende feiten (prijs met toeslagen, vertrektijd,
+        voorzieningen). Lees alles na voor je het plaatst: het model kan zich vergissen.
+      </p>
+      <div className="max-w-xl space-y-2">
+        <label htmlFor="mk-zoek" className="block font-semibold">Camperplaats zoeken</label>
+        <input id="mk-zoek" className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Naam of plaats, bijvoorbeeld Ede" autoComplete="off" />
+        <ErrorNote message={hits.error} />
+        {term.length >= 2 && (
+          <ul className="max-h-72 divide-y divide-line overflow-y-auto rounded-lg bg-surface outline outline-1 outline-line" aria-label="Zoekresultaten">
+            {rows.length === 0 && !hits.loading && <li className="px-3 py-2 text-muted">Geen plekken gevonden.</li>}
+            {rows.map((r) => (
+              <li key={r.slug}>
+                <button
+                  type="button"
+                  aria-pressed={picked?.slug === r.slug}
+                  onClick={() => {
+                    setPicked(r);
+                    setCopy(null);
+                  }}
+                  className={`flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-sunken ${picked?.slug === r.slug ? "bg-forest-tint font-semibold" : ""}`}
+                >
+                  <span>{r.name}</span>
+                  <span className="text-sm text-muted">{[r.town, r.province].filter(Boolean).join(", ")}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {picked && og && (
+        <div className="space-y-3 rounded-lg bg-surface p-4 outline outline-1 outline-line">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="mr-auto font-semibold">
+              {picked.name} <span className="font-normal text-muted">{picked.town}</span>
+            </p>
+            <a className={secondary} href={`/plek/${picked.slug}`} target="_blank" rel="noreferrer">Plekpagina</a>
+            <a className={secondary} href={og} target="_blank" rel="noreferrer">Afbeelding bekijken</a>
+            <a className={secondary} href={og} download={`${picked.slug}.png`}>Afbeelding downloaden</a>
+            <button className={primary} onClick={generate} disabled={busy}>{busy ? "Bezig met schrijven…" : copy ? "Opnieuw schrijven" : "Teksten schrijven"}</button>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- dynamische PNG uit onze eigen route, geen optimalisatie nodig */}
+          <img src={og} alt={`Deelafbeelding van ${picked.name}`} width={1200} height={630} className="h-auto w-full max-w-xl rounded-lg outline outline-1 outline-line" />
+          <ErrorNote message={err} />
+        </div>
+      )}
+
+      {copy && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section aria-labelledby="mk-fb" className="space-y-3">
+            <h2 id="mk-fb" className="font-display text-lg font-semibold">Facebook-posts</h2>
+            {copy.facebook.map((t, i) => (
+              <div key={i} className="space-y-2 rounded-lg bg-surface p-4 outline outline-1 outline-line">
+                <p className="whitespace-pre-line text-ink">{t}</p>
+                <button className={`${secondary} h-9 px-3`} onClick={() => copyText(`fb${i}`, t)}>{copied === `fb${i}` ? "Gekopieerd" : "Kopiëren"}</button>
+              </div>
+            ))}
+          </section>
+          <section aria-labelledby="mk-ads" className="space-y-3">
+            <h2 id="mk-ads" className="font-display text-lg font-semibold">Google Ads</h2>
+            {copy.googleAds.map((a, i) => (
+              <div key={i} className="space-y-1 rounded-lg bg-surface p-4 outline outline-1 outline-line">
+                <p className="font-semibold text-lake">{a.headline} <span className="text-sm font-normal text-muted">({a.headline.length}/30)</span></p>
+                <p className="text-ink-2">{a.description} <span className="text-sm text-muted">({a.description.length}/90)</span></p>
+                <button className={`${secondary} mt-1 h-9 px-3`} onClick={() => copyText(`ad${i}`, `${a.headline}\n${a.description}`)}>
+                  {copied === `ad${i}` ? "Gekopieerd" : "Kopiëren"}
+                </button>
+              </div>
+            ))}
+            <p className="text-sm text-muted">Geschreven door {copy.model}. Niets wordt opgeslagen.</p>
+          </section>
         </div>
       )}
     </div>

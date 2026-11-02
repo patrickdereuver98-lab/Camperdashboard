@@ -225,11 +225,27 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
-| ✅ Stap 1: migratie `20261101130000_mission_control.sql` (rol, `admin_logs`, `updates_queue`, `dependency_updates`, accepteren/afwijzen, `log_dependency`, cron `ops-probe`) | Agent | Opdracht, README 90 | Migratie + SQL-tests (`web/supabase/tests/mission_control*.sql`, in `run.sh`) | Tests groen; live na samenvoegen | — |
+| ✅ Stap 1: migratie `20261101130000_mission_control.sql` (rol, `admin_logs`, `updates_queue`, `dependency_updates`, accepteren/afwijzen, `log_dependency`, cron `ops-probe`) | Agent | Opdracht, README 90 | Migratie + SQL-tests (`web/supabase/tests/mission_control*.sql`, in `run.sh`) | Tests groen; **live sinds 2 november 2026** (4 open Doe mee-wijzigingen in de wachtrij, 1 admin) | — |
 | ✅ Dependency-radar: `/api/admin/log-dependency`, `.github/workflows/ai-dependency-triage.yml`, `tools/ops/dependency_triage.py` (Gemini, vaste regel zonder sleutel) | Agent | Opdracht, README 92 en 93 | Route met unit tests, workflow, script met tests | Eerste Dependabot-PR staat in `dependency_updates` | Migratie live, secrets `GEMINI_API_KEY` en `DEPENDENCY_LOG_KEY` (Dependabot) |
 | ✅ Stap 2: Mission Control als `/admin/mission-control` (besluit eigenaar 2 november: binnen bestaand beheer, geen proxy of cookie) | Agent | README 91 | Pagina in de beheerzijbalk | Niet-admins zien lege lijsten (RLS) | — |
 | ✅ Stap 3: Triage Inbox met `/api/admin/evaluate-update` (Gemini, sessietoken van de beheerder, geen service-role) | Agent | Opdracht | Inbox, AI-score per update | Accepteren schrijft `places` | `GEMINI_API_KEY` in Vercel |
 | ✅ Stap 4: Logboeken (stand per API, kleurcodes) en Updates (pending_review gemarkeerd, link naar de PR) | Agent | Opdracht | Tabbladen in Mission Control | Rood bij falende API of cron | Migratie live |
+| ✅ AI Outreach Loop, stap 1: `/api/webhooks/inbound-email` (Resend Inbound, Gemini), migratie `20261102120000_eigenaar_inbox.sql` (`owner_replies`, `log_owner_reply`) | Agent | Opdracht 2 november, README 94 | Route, unit tests, SQL-test | Antwoord van een eigenaar staat als voorstel in de Triage Inbox | Deze migratie live (Mission Control staat live); Vercel: `RESEND_WEBHOOK_SECRET`, `RESEND_API_KEY`, `OWNER_INBOX_KEY`, `GEMINI_API_KEY`; `internal_secrets.owner_inbox_key`; Inbound-domein in Resend |
+| ⬜ AI Outreach Loop, stap 2: uitgaande mail naar eigenaren met `[VS-<id>]` in het onderwerp, en `owner_replies` zichtbaar in Mission Control | Agent | README 94 | — | — | Stap 1 |
+
+## Marketing en rebrand (opdracht 2 november 2026) 🟡
+
+Plan in [document 7](07-marketing-en-rebrand.md).
+
+| Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
+|---|---|---|---|---|---|
+| ⬜ Rebrand: naam, domein, globale vervanging, `public/logo.svg` | Agent | Naam en domein (README 97) | Code, teksten, logo | Geen zichtbare "VrijStaan" meer; 301 vanaf het oude domein | Besluit eigenaar |
+| ✅ SEO-titel en omschrijving per plek met all-in prijs en vertrektijd (`lib/marketing.ts`) | Agent | Opdracht | `generateMetadata`, tests `tests/marketing.test.ts` | Onbekend valt weg; "incl. toeslagen" alleen bij een vast totaal | — |
+| ✅ JSON-LD Campground aangevuld (`checkoutTime`, `checkinTime`, `priceRange`) | Agent | Opdracht | Plekpagina | Rich Results Test zonder fouten | — |
+| ✅ Sitemap met alleen gepubliceerde plekken | Agent | Opdracht | Bestond al (`app/sitemap.ts`) | — | — |
+| ✅ Deelafbeelding `/api/og?slug=` (Satori, grote letters) | Agent | Opdracht | Route, `og:image` van de plekpagina | PNG 1200 × 630 met naam, prijs, vertrektijd | — |
+| ✅ Mission Control → Marketing, `/api/admin/generate-marketing` (Gemini) | Agent | Opdracht | Tabblad met zoeken, teksten, kopiëren, afbeelding downloaden | 2 posts en 2 advertenties zonder emoji | `GEMINI_API_KEY` in Vercel |
+| ⬜ Search Console en Bing Webmaster aanmelden, sitemap insturen | Eigenaar | Document 7 | — | Sitemap verwerkt | Livegang |
 
 ## Beveiliging (audit 1 november 2026) 🟡
 
