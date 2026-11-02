@@ -34,3 +34,13 @@ psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $migrations/20261031200000_servicepunten_dichtstbij.sql
 \i $here/kernfeit.test.sql
 SQL
+
+# Mission Control (rol, admin_logs, updates_queue, dependency-radar) in een eigen database: eigen stub van auth,
+# cron en pg_net, los van de geo_master-stub hierboven
+psql "$DATABASE_URL" -q -X -c "drop database if exists mission_control" -c "create database mission_control"
+mc_url="$(python3 -c 'import sys,urllib.parse as u;p=u.urlsplit(sys.argv[1]);print(u.urlunsplit(p._replace(path="/mission_control")))' "$DATABASE_URL")"
+psql "$mc_url" -q -v ON_ERROR_STOP=1 -X <<SQL
+\i $here/mission_control_stub.sql
+\i $migrations/20261101130000_mission_control.sql
+\i $here/mission_control.test.sql
+SQL

@@ -119,6 +119,9 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `faq` | id*, category*, question*, answer*, position*, published*, updated_at* | published `true` |
 | `site_settings` | key*, value* (jsonb) | |
 | `admins` | user_id* (→ auth.users), email*, role* (`admin`, `support`), created_at* | role `admin` |
+| `admin_logs` | id*, ts*, kind* (`cron`, `api`, `scraper`, `sync`, `deploy`, `security`), source*, status* (`ok`, `failed`, `warn`, `pending`), message (≤ 1.000), http_status, duration_ms, request_id (pg_net), details* | Migratie `20261101130000_mission_control.sql` (nog niet live). Gevuld door `private.ops_probe()` (cron `ops-probe`, elke 10 min: API-checks via pg_net op PDOK, OSRM, Overpass, OpenFreeMap, wsrv en de eigen site, plus mislukte cron-runs), trigger op `ingest_runs` en `log_dependency`. `ok` 30 dagen bewaard, de rest 180 dagen. Alleen `role = 'admin'` |
+| `updates_queue` | id*, place_id* (→ places, `CASCADE`), field_changed*, old_value, new_value* (jsonb), source* (`doe-mee`, `plekpuls`, `beheer`, `pipeline`), submission_id (→ submissions), user_id, status* (`pending`, `approved`, `rejected`), ai_score (0–100), ai_advice (≤ 300), ai_model, ai_checked_at, decided_by, decided_at, created_at* | Zelfde migratie. Trigger `submissions_to_queue` splitst elke correctie (voorzieningen, `veld`/`voorstel`, vertrektijd) in rijen per veld. Accepteren via `admin_apply_update(id)` (schrijft `places`, merkteken beheer, `audit_log`; alleen velden uit `private.queue_fields()`), afwijzen via `admin_reject_update(id, notitie)` (rij blijft, status `rejected`). Inzending gaat naar `verwerkt` of `afgewezen` als al haar velden beoordeeld zijn. Alleen `role = 'admin'` |
+| `dependency_updates` | id*, package_name*, version_from, version_to, update_type, ecosystem, category* (`kritiek`, `aanbevolen`, `uitstellen`), ai_advice (≤ 600), ai_model, status* (`auto-merged`, `pending_review`, `rejected`), pr_number, pr_url (alleen github.com), created_at*, updated_at*; uniek op (pr_number, package_name) | Zelfde migratie. Geschreven door `log_dependency(geheim, update)` (anon mag aanroepen; het geheim moet gelijk zijn aan `internal_secrets.dependency_log_key`), via `/api/admin/log-dependency`. Alleen `role = 'admin'` leest |
 | `events` | id*, ts*, name* (page_view, search, place_view, outbound, route, save, review, ticket), path, props*, session_id | index op ts |
 | `consent_log` | id*, ts*, consent_id*, analytics*, marketing*, version* | |
 | `audit_log` | id*, ts*, actor, actor_email, action*, entity*, entity_id, details* | |
@@ -199,6 +202,8 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `tickets`, `ticket_messages` | beheer; klant via `get_ticket(token)` | via `create_ticket`, `reply_ticket` | beheer | beheer |
 | `events`, `consent_log` | beheer | via `track`, `log_consent` | — | — |
 | `admins`, `audit_log`, `app_logs`, `ingest_runs` | beheer | systeem | — | — |
+| `admin_logs`, `updates_queue`, `dependency_updates` | `role = 'admin'` (`has_admin_role()`) | `role = 'admin'`, triggers en definer-functies | `role = 'admin'` | `role = 'admin'` |
+| `profiles.role` | eigen rij | trigger vanuit `admins` | nooit door de gebruiker (kolomrechten: alleen `display_name`, `avatar_url`) | — |
 | `internal_secrets`, `private.*` | niemand via de API | systeem | systeem | systeem |
 
 "Beheer" = `public.is_admin()`: elke gebruiker in `admins`, ongeacht rol.

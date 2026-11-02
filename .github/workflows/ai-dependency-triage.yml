@@ -1,0 +1,95 @@
+# Dependency-radar: elke Dependabot-PR krijgt een categorie (Kritiek, Aanbevolen, Uitstellen) met advies van
+# Gemini, en komt in Mission Control (tabel dependency_updates) via /api/admin/log-dependency.
+#   Kritiek    → automatisch samenvoegen, maar pas als de CI groen is (gh pr merge --auto). Nooit bij een major-versie.
+#   Aanbevolen → status pending_review: een mens klikt op samenvoegen.
+#   Uitstellen → status pending_review met het advies om te wachten.
+#
+# Secrets (Dependabot-PR's krijgen alleen DEPENDABOT-secrets: Settings → Secrets and variables → Dependabot):
+#   GEMINI_API_KEY     sleutel van Google AI Studio (zonder sleutel: vaste regel, gemarkeerd als "regel, geen AI")
+#   DEPENDENCY_LOG_KEY zelfde waarde als internal_secrets.dependency_log_key in Supabase
+# Variabele (optioneel, Settings → Variables): VRIJSTAAN_URL, standaard de productie-URL op Vercel.
+name: AI dependency-triage
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [acceptatie, main]
+
+concurrency:
+  group: dependency-triage-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  triage:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write        # alleen voor gh pr merge bij Kritiek
+      pull-requests: write
+    steps:
+      - name: Gegevens van de update
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}  # het script van de basisbranch, niet uit de PR
+          persist-credentials: false
+
+      - name: Beoordelen (Gemini of vaste regel)
+        id: triage
+        env:
+          DEP_NAMES: ${{ steps.meta.outputs.dependency-names }}
+          DEP_FROM: ${{ steps.meta.outputs.previous-version }}
+          DEP_TO: ${{ steps.meta.outputs.new-version }}
+          DEP_UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          DEP_ECOSYSTEM: ${{ steps.meta.outputs.package-ecosystem }}
+          DEP_GHSA: ${{ steps.meta.outputs.ghsa-id }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: python3 -I tools/ops/dependency_triage.py "$RUNNER_TEMP/update.json"
+
+      - name: Kritiek automatisch samenvoegen na groene CI
+        id: merge
+        if: steps.triage.outputs.category == 'kritiek'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          # --auto wacht op de verplichte checks van de branch (branch protection op acceptatie en main).
+          if gh pr merge --auto --squash "$PR_URL"; then
+            echo "status=auto-merged" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Automatisch samenvoegen lukte niet (staat auto-merge aan in de repository?). Blijft ter beoordeling."
+            echo "status=pending_review" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Melden in Mission Control
+        env:
+          URL: ${{ vars.VRIJSTAAN_URL || 'https://camperdashboard-vrijstaan.vercel.app' }}
+          KEY: ${{ secrets.DEPENDENCY_LOG_KEY }}
+          STATUS: ${{ steps.merge.outputs.status || 'pending_review' }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::warning::DEPENDENCY_LOG_KEY ontbreekt (Dependabot-secret); niets gemeld in Mission Control."
+            exit 0
+          fi
+          jq --arg s "$STATUS" '.status = $s' "$RUNNER_TEMP/update.json" > "$RUNNER_TEMP/body.json"
+          code=$(curl -sS -o "$RUNNER_TEMP/antwoord.json" -w "%{http_code}" --max-time 20 \
+            -X POST "$URL/api/admin/log-dependency" \
+            -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+            --data-binary "@$RUNNER_TEMP/body.json")
+          echo "Mission Control antwoordde $code"
+          if [ "$code" != "200" ]; then
+            cat "$RUNNER_TEMP/antwoord.json" || true
+            exit 1
+          fi

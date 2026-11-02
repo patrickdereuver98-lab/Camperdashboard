@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install -r tools/data-collectors/requirements.txt pytest
-      - run: python -m pytest -q tools/data-collectors
+      - run: python -m pytest -q tools/data-collectors tools/ops
 
   # Migraties van geo_master en de promotie naar places op een lege Postgres 16 (web/supabase/tests)
   sql:
