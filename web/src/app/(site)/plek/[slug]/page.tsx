@@ -18,6 +18,7 @@ import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
 import { PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
+import { CARD_CELL, CARD_GRID } from "@/lib/card-grid";
 import { PlaceMap } from "@/components/place-map";
 import { pickFacilities } from "@/lib/facility-update";
 import { Legend } from "@/components/legend";
@@ -258,9 +259,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {nearby.length > 0 && (
           <section className="mt-10" aria-labelledby="buurt">
             <h2 id="buurt" className="font-display text-xl font-semibold sm:text-2xl">In de buurt</h2>
-            <ul className="no-scrollbar -mx-4 mt-3 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
+            <ul className={`${CARD_GRID} -mx-4 mt-3 scroll-px-4 px-4 sm:mx-0 sm:px-0`}>
               {nearby.map(({ place: p, km }) => (
-                <li key={p.id} className="w-[75vw] max-w-xs shrink-0 snap-start sm:w-auto sm:max-w-none">
+                <li key={p.id} className={CARD_CELL}>
                   <PlaceCard place={p} km={km} layout="stack" />
                 </li>
               ))}
