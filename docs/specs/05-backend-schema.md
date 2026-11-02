@@ -185,8 +185,8 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 
 ## Eigendom van records
 
-- Bezoekers hebben geen account en bezitten geen records in de database. Bewaarde plekken, reis en cookiekeuze staan
-  alleen op het apparaat (`localStorage`).
+- Bezoekers hebben geen account en bezitten geen records in de database. Bewaarde plekken, reis, cookiekeuze en een eigen
+  themakeuze (`vrijstaan:thema`) staan alleen op het apparaat (`localStorage`).
 - Een ticket is van wie het `access_token` heeft (de persoonlijke link).
 - Reviews en inzendingen zijn na indienen van VrijStaan (licentie via de voorwaarden); de indiener kan verwijdering
   vragen via contact.

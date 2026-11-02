@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useOffline } from "next/offline";
 import { Suspense, useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
+import { currentTheme, setTheme } from "@/lib/theme";
+import { useDarkTheme } from "@/lib/use-media";
 import { useTrip } from "@/lib/store";
 import { track } from "@/lib/track";
 import { Icon, Logo, type IconName } from "./icons";
@@ -69,6 +71,7 @@ function TripBadge({ className = "" }: { className?: string }) {
 
 function HeaderView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
+  const onPlace = pathname.startsWith("/plek/");
   if (pathname.startsWith("/admin")) return null;
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
@@ -76,7 +79,7 @@ function HeaderView({ pathname }: { pathname: string }) {
         Naar de inhoud
       </a>
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
-        {pathname.startsWith("/plek/") && <BackButton />}
+        {onPlace && <BackButton />}
         <Link href="/" className="flex h-11 items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
           <Logo size={30} />
           <span className="font-display text-lg font-semibold tracking-tight text-forest sm:text-xl">VrijStaan</span>
@@ -117,15 +120,41 @@ function HeaderView({ pathname }: { pathname: string }) {
           >
             <Icon name="plus" size={22} />
           </Link>
-          <Link href="/veelgestelde-vragen" className="flex h-11 items-center gap-1.5 rounded-xl px-2.5 font-semibold text-ink-2 hover:bg-sunken">
+          {/* Op een plekpagina staat er ook een terugknop: dan alleen het icoon, anders past de kop niet op 390 px */}
+          <Link
+            href="/veelgestelde-vragen"
+            className={`flex h-11 items-center gap-1.5 rounded-xl font-semibold text-ink-2 hover:bg-sunken ${onPlace ? "w-11 justify-center" : "px-2.5"}`}
+          >
             <Icon name="help" size={22} />
-            Hulp
+            <span className={onPlace ? "sr-only" : undefined}>Hulp</span>
           </Link>
         </div>
+        <ThemeButton />
         <AccountButton active={isActive("/account")} />
       </div>
       <OfflineBar />
     </header>
+  );
+}
+
+/**
+ * Zon/maan: wisselt tussen licht en donker (lib/theme.ts). De pictogrammen wisselen via CSS op data-theme, zodat de
+ * knop al vóór hydratatie klopt; aria-pressed volgt na hydratatie.
+ */
+function ThemeButton() {
+  const dark = useDarkTheme();
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(currentTheme() === "dark" ? "light" : "dark")}
+      aria-label="Donkere modus"
+      aria-pressed={dark}
+      data-testid="theme-button"
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-ink-2 hover:bg-sunken hover:text-ink md:ml-1"
+    >
+      <Icon name="moon" size={21} className="dark:hidden" />
+      <Icon name="sun" size={22} className="hidden dark:block" />
+    </button>
   );
 }
 

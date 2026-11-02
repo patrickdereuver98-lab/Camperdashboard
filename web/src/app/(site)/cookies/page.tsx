@@ -11,6 +11,7 @@ const ROWS = [
   ["vrijstaan:reis-plekken", "Noodzakelijk", "Een kopie van de gegevens van je bewaarde plekken, zodat Mijn reis ook zonder bereik werkt", "Tot je je reis wist"],
   ["vrijstaan:reisinstellingen", "Noodzakelijk", "Verbruik, brandstofprijs, personen en toeristenbelasting voor de kostenberekening", "Tot je hem wist"],
   ["vrijstaan:welkom", "Noodzakelijk", "Dat je de korte uitleg op de startpagina hebt gezien, zodat hij niet terugkomt", "Tot je je browsergegevens wist"],
+  ["vrijstaan:thema", "Noodzakelijk", "Licht of donker, alleen als je met de zon/maan-knop iets anders koos dan je toestel", "Tot je weer het thema van je toestel kiest of je browsergegevens wist"],
   ["vrijstaan-auth", "Noodzakelijk, alleen beheerders", "Inlogsessie van Supabase voor de beheeromgeving. Komt er alleen als een beheerder inlogt", "Tot uitloggen"],
   ["vrijstaan:sessie", "Statistiek, alleen met toestemming", "Willekeurig nummer om paginaweergaven binnen één bezoek te tellen (sessieopslag)", "Tot je het tabblad sluit"],
 ];

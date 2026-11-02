@@ -8,6 +8,8 @@ import "./place-map.css";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { LatLng } from "@/lib/geo";
 import { byClusterSize, CLUSTER_RADIUS, clusterColors, popupProps, toGeoJSON, type MapPlace, type PinProps, type PopupProps } from "@/lib/map-data";
+import { currentTheme } from "@/lib/theme";
+import { useDarkTheme } from "@/lib/use-media";
 import { SaveButton } from "./place-ui";
 
 const NL_BOUNDS: [[number, number], [number, number]] = [
@@ -103,6 +105,12 @@ export function PlaceMap({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Licht of donker wisselt live (systeem bij zonsondergang of de zon/maan-knop): dan wordt de kaart opnieuw opgebouwd
+  const dark = useDarkTheme();
+  // Kaartbeeld van de vorige opbouw, zodat een themawissel de kaart niet laat verspringen
+  const camera = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  // fitKey waarop al is ingezoomd; een nieuwe opbouw (thema) zoomt dan niet opnieuw
+  const fitted = useRef<{ key?: string } | null>(null);
   const latest = useRef({ places, onSelect, cluster, departures, popup });
   useEffect(() => {
     latest.current = { places, onSelect, cluster, departures, popup };
@@ -110,14 +118,16 @@ export function PlaceMap({
 
   // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
   useEffect(() => {
+    // Tijdens hydratatie is dark nog de waarde van de server; de volgende weergave heeft de echte, bouw dan pas
+    if (dark !== (currentTheme() === "dark")) return;
     let cancelled = false;
     let map: MlMap | null = null;
+    let loaded = false;
     (async () => {
       const maplibregl = await import("maplibre-gl");
       if (cancelled || !el.current) return;
       // Worker staat in public/ (scripts/copy-maplibre-worker.mjs); de versie in de URL voorkomt een oude cache
       maplibregl.setWorkerUrl(`/maplibre-gl-worker.mjs?v=${maplibregl.getVersion()}`);
-      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const css = getComputedStyle(document.documentElement);
       // Bosgroen zonder vaste vertrektijd, meerblauw voor uitslapers en de route, avondzon voor de geselecteerde plek
       // In donker bewust donkerder dan de tokens --ember en --forest: witte tekst in clusters blijft dan leesbaar
@@ -140,8 +150,7 @@ export function PlaceMap({
       map = new maplibregl.Map({
         container: el.current,
         style: dark ? STYLE_DARK : STYLE_LIGHT,
-        bounds: NL_BOUNDS,
-        fitBoundsOptions: { padding: 24 },
+        ...(camera.current ?? { bounds: NL_BOUNDS, fitBoundsOptions: { padding: 24 } }),
         attributionControl: { compact: true },
       });
       mapRef.current = map;
@@ -152,6 +161,7 @@ export function PlaceMap({
 
       map.on("load", () => {
         if (!map) return;
+        loaded = true;
         tint(map, dark);
         map.addSource("places", {
           type: "geojson",
@@ -297,12 +307,17 @@ export function PlaceMap({
       popupRef.current?.remove();
       userMarker.current?.remove();
       userMarker.current = null;
+      if (map && loaded) {
+        const c = map.getCenter();
+        camera.current = { center: [c.lng, c.lat], zoom: map.getZoom() };
+      }
       map?.remove();
       mapRef.current = null;
       setReady(false);
     };
-    // De kaart wordt één keer opgebouwd (opnieuw na "Opnieuw proberen"); updates lopen via de effecten hieronder.
-  }, [attempt]);
+    // De kaart wordt één keer opgebouwd (opnieuw na "Opnieuw proberen" en bij een ander thema); updates lopen via de
+    // effecten hieronder.
+  }, [attempt, dark]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -328,6 +343,9 @@ export function PlaceMap({
       ...(user ? [[user.lng, user.lat] as [number, number]] : []),
     ];
     if (!pts.length) return;
+    // Na een nieuwe opbouw door een themawissel staat het kaartbeeld al goed
+    if (fitted.current && fitted.current.key === fitKey) return;
+    fitted.current = { key: fitKey };
     if (pts.length === 1) {
       map.easeTo({ center: pts[0], zoom: 12, duration: 500 });
       return;

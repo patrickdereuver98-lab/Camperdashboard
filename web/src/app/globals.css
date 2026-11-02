@@ -33,35 +33,38 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #111713;
-    --surface: #18201b;
-    --sunken: #222c26;
-    --ink: #ece7db;
-    --ink-2: #c7c2b6;
-    --muted: #9aa39b;
-    --line: #2c3730;
-    --forest: #8dbf9f;
-    --forest-deep: #b9dcc4;
-    --forest-tint: #1e3227;
-    --on-forest: #0f1612;
-    --ember: #e8915c;
-    --ember-tint: #3a2519;
-    --on-ember: #0f1612;
-    --lake: #82bcc8;
-    --lake-tint: #17303a;
-    --alert: #f08a72;
-    --alert-tint: #3a1f19;
-    --scrim: rgb(0 0 0 / 0.6);
-    --lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.45);
-    /* In het donker: schaduw plus een zacht licht randje boven, zoals maanlicht op een dak */
-    --elev-low: 0 1px 2px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.04), inset 0 0 0 1px rgb(255 255 255 / 0.05);
-    --elev-raised: 0 12px 30px -10px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px rgb(255 255 255 / 0.06);
-    --elev-float: 0 28px 64px -16px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.07), 0 0 0 1px rgb(255 255 255 / 0.07);
-    color-scheme: dark;
-  }
+/* Donker: het attribuut data-theme op <html> (lib/theme.ts, gezet vóór de eerste weergave). Volgt het systeem,
+   tenzij de zon/maan-knop in de kop een eigen keuze bewaarde. */
+:root[data-theme="dark"] {
+  --paper: #111713;
+  --surface: #18201b;
+  --sunken: #222c26;
+  --ink: #ece7db;
+  --ink-2: #c7c2b6;
+  --muted: #9aa39b;
+  --line: #2c3730;
+  --forest: #8dbf9f;
+  --forest-deep: #b9dcc4;
+  --forest-tint: #1e3227;
+  --on-forest: #0f1612;
+  --ember: #e8915c;
+  --ember-tint: #3a2519;
+  --on-ember: #0f1612;
+  --lake: #82bcc8;
+  --lake-tint: #17303a;
+  --alert: #f08a72;
+  --alert-tint: #3a1f19;
+  --scrim: rgb(0 0 0 / 0.6);
+  --lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.45);
+  /* In het donker: schaduw plus een zacht licht randje boven, zoals maanlicht op een dak */
+  --elev-low: 0 1px 2px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.04), inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  --elev-raised: 0 12px 30px -10px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  --elev-float: 0 28px 64px -16px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.07), 0 0 0 1px rgb(255 255 255 / 0.07);
+  color-scheme: dark;
 }
+
+/* Tailwind-variant dark: hoort bij het attribuut, niet bij de media query */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
   --color-paper: var(--paper);
@@ -219,10 +222,8 @@ button:active:not(:disabled),
 }
 
 /* Gegenereerde landschappen iets gedempt in het donker */
-@media (prefers-color-scheme: dark) {
-  [data-landscape] {
-    filter: brightness(0.8) saturate(0.9);
-  }
+[data-theme="dark"] [data-landscape] {
+  filter: brightness(0.8) saturate(0.9);
 }
 
 .no-scrollbar {
