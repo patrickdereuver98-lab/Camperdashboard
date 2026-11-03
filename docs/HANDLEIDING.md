@@ -248,6 +248,59 @@ maar 60 verbindingen. Zie `web/.env.example` voor het formaat.
 | Database opnieuw opzetten in een ander project | Voer `web/supabase/schema.sql` en daarna `web/supabase/seed.sql` uit, deploy `web/supabase/functions/pipeline` (zonder JWT-controle), zet een geheime sleutel in `public.internal_secrets` (`name = 'pipeline_key'`) en pas de projectnaam in `private.call_pipeline` aan |
 
 
+## Uitgaande mail naar eigenaren (README 101)
+
+Staat gebouwd, maar **uit**. Niets wordt verstuurd tot je het zelf aanzet.
+
+**Zonder eigen domein kan het niet.** Resend verstuurt alleen vanaf een domein dat jij kunt verifiëren; `gmail.com` is niet
+van jou. Zonder geverifieerd domein stuurt Resend alleen naar het adres van je eigen Resend-account. Versturen vanaf je
+persoonlijke Gmail (SMTP) doen we bewust niet: ~2.000 koude mails vanaf een privéaccount kan leiden tot een blokkade van je
+hele Google-account. Een domein kost ongeveer € 5 tot 10 per jaar. Controleer eerst of je `vrijstaan.nl` al hebt: de site
+verwijst daar al naar door (zie `COMPANY.email`, `hallo@vrijstaan.nl`). Dan hoef je niets te kopen.
+
+Je Gmail-adres komt nergens in de mail of op de site. Eigenaren zien alleen het afzenderadres op je domein, bijvoorbeeld
+`VrijStaan <plek@mail.jouwdomein.nl>`. Hun antwoorden gaan naar het inbound-adres van Resend (`OUTREACH_REPLY_TO`), niet naar
+je Gmail.
+
+### Stappen, in deze volgorde
+
+1. **Domein.** Heb je er geen: registreer er een bij een registrar (bijvoorbeeld TransIP, Hostnet, Namecheap of Cloudflare).
+   Zet WHOIS-privacy aan.
+2. **Resend → Domains → Add Domain.** Vul een subdomein in, bijvoorbeeld `mail.jouwdomein.nl`. Resend toont drie of vier
+   DNS-records (SPF, DKIM, soms DMARC). Zet die bij je registrar onder DNS-beheer en klik in Resend op **Verify**. Wacht tot de
+   status **Verified** is (minuten tot een uur).
+3. **Twee sleutels maken.** In een terminal: `openssl rand -hex 32`, twee keer. Eén wordt `OUTREACH_KEY`, de andere
+   `OUTREACH_CRON_KEY`. Bewaar ze in je wachtwoordmanager; plak ze nergens openbaar (de repository is openbaar).
+4. **Supabase → SQL Editor:** `insert into internal_secrets (name, value) values ('outreach_key', '<OUTREACH_KEY>') on
+   conflict (name) do update set value = excluded.value;`. Dit werkt pas nadat de migratie is toegepast (stap 7).
+5. **Vercel → project → Settings → Environment Variables** (Production), alle vier:
+   - `OUTREACH_KEY` (stap 3)
+   - `OUTREACH_CRON_KEY` (stap 3)
+   - `OUTREACH_FROM`, bijvoorbeeld `VrijStaan <plek@mail.jouwdomein.nl>`
+   - `OUTREACH_REPLY_TO`, het inbound-adres uit Resend (Emails → Receiving), waar antwoorden binnenkomen
+   - `OUTREACH_BASE_URL`: `https://camperdashboard-vrijstaan.vercel.app` (de afmeld- en privacylink in de mail; werkt ook als
+     de site niet is aangekondigd; `vrijstaan.nl` stuurt met een 301 door en een één-klik-afmelding overleeft dat niet)
+   Daarna **Redeploy**.
+6. **GitHub → Settings → Secrets and variables → Actions → New repository secret:** `OUTREACH_CRON_KEY` (zelfde waarde) en
+   `OUTREACH_PROEF_ADRES` (je eigen adres voor de proefmail; een geheim, want de repository is openbaar).
+7. **Resend → Webhooks:** op de bestaande webhook (`…/api/webhooks/inbound-email`) ook de events `email.delivered`,
+   `email.bounced` en `email.complained` aanvinken. Zonder die events merkt de noodrem een spamklacht niet.
+8. **PR #141 samenvoegen.** Daarna past de agent de migratie `20261102200000_outreach.sql` toe (staat los van de website,
+   dus de live site breekt niet).
+9. **Proefmail.** GitHub → Actions → **Mail naar eigenaren** → Run workflow → vink **proef** aan. Er gaat één voorbeeldmail
+   naar `OUTREACH_PROEF_ADRES`, met `[PROEF]` in het onderwerp, over een verzonnen plek; er wordt niets vastgelegd. Controleer:
+   komt hij aan (niet in spam), staat de afzender goed, werken de privacylink en de afmeldlink?
+   Antwoord erop en kijk of het antwoord in `owner_replies` verschijnt.
+10. **Aanzetten.** Supabase → SQL Editor, ingelogd als beheerder in de site: `select public.admin_outreach_set(true);`. Uitzetten
+    kan altijd: `select public.admin_outreach_set(false);`. Overzicht: `select public.admin_outreach_overview();`.
+
+Het dagquotum begint op 25 en verdubbelt elke 3 dagen tot 200; verzenden gebeurt alleen op werkdagen van 08:00 tot 17:00. Een
+spamklacht of meer dan 3% harde bounces zet de campagne zelf uit (`paused_reason`).
+
+Voorbeelden bekijken zonder te versturen: `node --no-warnings --import ./tests/register.mjs scripts/outreach-preview.ts voorbeelden.json uitvoermap`
+(in `web/`). Het bestand is een lijst plekken zoals `outreach_next` ze geeft; elke mail komt als tekst in beeld en als `.html`
+in de uitvoermap.
+
 ## Scraper uitrollen (edge function `pipeline`)
 
 De functie in Supabase bestaat uit één regel die de code uit GitHub haalt, vastgezet op een commit:

@@ -51,4 +51,6 @@ psql "$mc_url" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/vertrektijd_voorstel.test.sql
 \set migration $migrations/20261102180000_marketing_dashboard.sql
 \i $here/marketing_dashboard.test.sql
+\set migration $migrations/20261102200000_outreach.sql
+\i $here/outreach.test.sql
 SQL

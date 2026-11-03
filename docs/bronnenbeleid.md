@@ -17,7 +17,7 @@ nooit data verzinnen, onbekend blijft leeg.
 | Google | Openbare Google Maps-pagina's lezen met de stealth-lezer (§3a) voor feiten; de Places API als Patrick een sleutel instelt (W4.4) | Reviewteksten, namen of profielen van reviewers opslaan |
 | Facebook, Instagram en andere pagina's achter een inlog | Openbare pagina's die zonder inlog te zien zijn (stealth-lezer); groepen alleen met toestemming van de beheerders | Inloggen, accounts aanmaken of inlogmuren omzeilen; groepen leegtrekken |
 | Beveiliging van sites | De stealth-lezer (§3a) mag alle botbeveiliging omzeilen: Cloudflare, captcha's, 403, `robots.txt`, browser-vermomming en wisselende proxy's | Inlog- en betaalmuren omzeilen; een site overbelasten; doorgaan als de eigenaar vraagt te stoppen |
-| Eigenaren | Bevestiging via de site (link op de plekpagina, Doe mee) | E-mailen of bellen (besluit 18 oktober 2026) |
+| Eigenaren | Bevestiging via de site (link op de plekpagina, Doe mee). Sinds 2 november 2026 ook een automatische mail vanuit VrijStaan naar het openbare adres van de plek, met afmeldlink (README 101) | Bellen. Mailen aan privéadressen (gmail e.d.), twee keer dezelfde eigenaar mailen, doorgaan na afmelden, een bounce of een klacht |
 
 ## 2. Tiers en wanneer een feit telt
 

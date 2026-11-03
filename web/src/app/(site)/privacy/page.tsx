@@ -169,7 +169,7 @@ export default function PrivacyPage() {
     <ProsePage
       title="Privacyverklaring"
       intro="We verwerken zo weinig persoonsgegevens als we kunnen. Hier lees je welke, waarom, op welke grondslag en hoe lang."
-      updated="22 oktober 2026"
+      updated="2 november 2026"
     >
       <Section title="Wie zijn wij">
         <p>
@@ -301,6 +301,13 @@ export default function PrivacyPage() {
             openbaar heeft gemaakt.
           </li>
           <li>
+            Eenmalig mailen we het openbare e-mailadres van een plek met de vraag naar de aankomst- en vertrektijd. Het adres
+            gaat naar Resend, onze mailverzender, en wat je terugschrijft leest een AI (Google Gemini), zonder je adres, om er
+            de tijden uit te halen. Een medewerker beslist daarna of het op de site komt. We bewaren van een uitgaande mail
+            alleen een versleutelde code van het adres, geen adres. Met de afmeldlink in de mail, of door te antwoorden dat je
+            geen mail wilt, stoppen we direct; die afmelding bewaren we, zodat we je niet opnieuw mailen.
+          </li>
+          <li>
             Op foto&apos;s van de website van een plek staat klein waar ze vandaan komen. Wil de eigenaar of maker dat een
             foto verdwijnt, dan halen we hem weg na een melding via <Link href="/melden">Meld inhoud</Link>.
           </li>
@@ -323,6 +330,11 @@ export default function PrivacyPage() {
           <li>
             <strong>Supabase</strong> levert onze database en backend, in de regio Frankfurt (EU). Met Supabase hebben we een
             verwerkersovereenkomst. Voor hun subverwerkers gelden de standaardcontractbepalingen van de Europese Commissie.
+          </li>
+          <li>
+            <strong>Resend</strong> (Verenigde Staten) ontvangt de antwoorden van eigenaren en verstuurt de eenmalige
+            vraag aan hen. <strong>Google</strong> (Gemini) leest de antwoorden van eigenaren om de tijden en prijzen
+            eruit te halen, zonder afzenderadres.
           </li>
           <li>
             <strong>De pushdienst van je browser</strong> (bij Chrome Google, bij Safari Apple, bij Firefox Mozilla) als je een
