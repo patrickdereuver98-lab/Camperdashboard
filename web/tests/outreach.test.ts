@@ -12,11 +12,10 @@ import {
   sendViaResend,
 } from "../src/lib/outreach.ts";
 
-const ALL = ["vertrek", "aankomst", "seizoen", "prijs", "stroom", "water", "lozen"];
+const ALL = ["vertrek", "aankomst", "stroom", "lozen"];
 const item = (over: Partial<OutreachItem> = {}): OutreachItem => ({
   token: "11111111-1111-4111-8111-111111111111",
   place_id: "22222222-2222-4222-8222-222222222222",
-  slug: "camping-de-vlinder",
   name: "Camping De Vlinder",
   kind: "camping",
   town: "Leek",
@@ -25,49 +24,45 @@ const item = (over: Partial<OutreachItem> = {}): OutreachItem => ({
   checkout_until: null,
   checkin_from: null,
   checkin_until: null,
-  open_all_year: null,
-  season: null,
-  price_eur: null,
   power: null,
-  water: null,
   dump_station: null,
   missing: ALL,
   ...over,
 });
 
-test("de mail noemt wat we weten, vraagt wat we missen en verzint niets", () => {
+test("de mail vraagt wat we missen, noemt wat we weten en verzint niets", () => {
   const m = composeOutreach(
-    item({ departure: "vast", checkout_until: "11:00", checkin_from: "14:00", price_eur: 22.5, power: true, missing: ["seizoen", "water", "lozen"] }),
+    item({ departure: "vast", checkout_until: "11:00", checkin_from: "14:00", missing: ["stroom", "lozen"] }),
     "https://site.test",
   );
-  const [weten, missen] = m.text.split("Dit missen we nog:");
-  assert.match(weten, /- Vertrek: uiterlijk 11:00/);
-  assert.match(weten, /- Aankomst: vanaf 14:00/);
-  assert.match(weten, /- Prijs: vanaf € 22,50 per nacht/);
-  assert.match(weten, /- Stroom: ja/);
-  // Wat we weten wordt niet nog eens gevraagd
-  assert.doesNotMatch(missen, /- Vertrek:|- Aankomst:|- Prijs:|- Stroom:/);
-  assert.match(missen, /- Open: het hele jaar open, of in welke periode\?/);
-  assert.match(missen, /- Water: /);
-  assert.match(missen, /- Lozen: /);
-  // De voorbeeldantwoorden volgen de gestelde vragen
-  assert.match(m.text, /\nOpen: van … tot … \(of: het hele jaar\)\nWater: ja of nee\nLozen: ja of nee\n/);
-  // Geen voorbeeldwaarden die iemand kan overtypen: alleen invulregels met puntjes
-  for (const regel of m.text.split("\n").filter((l) => /^(Open|Water|Lozen): /.test(l))) assert.match(regel, /…|ja of nee/);
+  assert.match(m.text, /Ik maak VrijStaan, een gratis gids voor camperaars die nog in aanbouw is/);
+  assert.match(m.text, /Camping De Vlinder in Leek/);
+  const [vragen] = m.text.split("Een paar woorden per regel");
+  assert.match(vragen, /- Stroom: is er stroom op de plek\?/);
+  assert.match(vragen, /- Lozen: kunnen campers hun toilet en afvalwater lozen\?/);
+  // Wat we weten wordt niet nog eens gevraagd, maar wel getoond om te laten corrigeren
+  assert.doesNotMatch(vragen, /- Vertrek:|- Aankomst:/);
+  assert.match(m.text, /Dit heb ik al staan: vertrek uiterlijk 11:00, aankomst vanaf 14:00\. Klopt dat niet, zeg het dan gerust\./);
   const leeg = composeOutreach(item(), "https://site.test");
-  assert.doesNotMatch(leeg.text, /Dit weten we al/, "niets bekend: geen lijst met wat we weten");
-  for (const f of ["Vertrek", "Aankomst", "Open", "Prijs", "Stroom", "Water", "Lozen"]) assert.match(leeg.text, new RegExp(`- ${f}: `));
-  assert.match(leeg.text, /Camping De Vlinder in Leek/);
-  assert.match(leeg.text, /https:\/\/site\.test\/plek\/camping-de-vlinder/);
+  assert.doesNotMatch(leeg.text, /Dit heb ik al staan/, "niets bekend: geen regel over wat we weten");
+  for (const f of ["Vertrek", "Aankomst", "Stroom", "Lozen"]) assert.match(leeg.text, new RegExp(`- ${f}: `));
+  // Invulregels met puntjes of ja/nee, geen voorbeeldwaarden die iemand kan overtypen
+  assert.match(leeg.text, /\nVertrek: uiterlijk … uur \(of: vrij vertrek\)\nAankomst: vanaf … uur\nStroom: ja of nee\nLozen: ja of nee\n/);
+  assert.doesNotMatch(leeg.text, /\b\d{1,2}:\d{2}\b/);
   // Eén gegeven: eenvoudige kop
-  assert.match(composeOutreach(item({ missing: ["lozen"], departure: "vrij", checkin_from: "14:00" }), "https://site.test").text, /Dit ene gegeven missen we nog:/);
+  assert.match(composeOutreach(item({ missing: ["lozen"], departure: "vrij", checkin_from: "14:00", power: true }), "https://site.test").text, /Dit ene weet ik nog niet:/);
   // Niets te vragen is een fout, geen lege mail
   assert.throws(() => composeOutreach(item({ missing: [] })), /Niets te vragen/);
-  // Vast zonder tijd telt als onbekend; de database zegt dan ook dat het mist
-  assert.equal(departureLine({ departure: "vast", checkout_until: null }), "onbekend");
+  assert.equal(departureLine({ departure: "vast", checkout_until: null }), "onbekend", "vast zonder tijd is onbekend");
   assert.equal(arrivalLine({ checkin_from: "14:00", checkin_until: "18:00" }), "tussen 14:00 en 18:00");
   assert.equal(departureLine({ departure: "vrij", checkout_until: null }), "vrij, geen vaste tijd");
   assert.equal(departureLine({ departure: "vast", checkout_until: "ongeldig" }), "onbekend");
+});
+
+test("de mail doet niet alsof de site live is of we een gast zijn", () => {
+  const m = composeOutreach(item(), "https://site.test");
+  assert.doesNotMatch(m.text, /staat erin|camperaars kiezen|bekeken|\/plek\//i, "geen beweringen over bezoekers of een pagina");
+  assert.doesNotMatch(m.text, /\b(ik kom|we komen|komen kamperen|reserveren)\b/i, "geen gast");
 });
 
 test("onderwerp bevat [VS-<id>] zodat het antwoord aan de plek hangt; afmeldlink en headers staan erin", () => {
@@ -78,7 +73,6 @@ test("onderwerp bevat [VS-<id>] zodat het antwoord aan de plek hangt; afmeldlink
   assert.equal(m.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
   assert.match(m.text, /https:\/\/site\.test\/afmelden\/11111111-1111-4111-8111-111111111111/);
   assert.match(m.html, /Meld je af/);
-  assert.match(m.html, /Zo ziet de pagina er nu uit/);
   assert.match(m.text, /privacy/);
 });
 

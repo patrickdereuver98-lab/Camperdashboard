@@ -66,7 +66,7 @@ do $$ begin assert (select count(*) from private.outreach_log) = 0, 'log gevuld 
 
 -- Wat missen we: alleen belangrijke gegevens, in vaste volgorde
 do $$ begin
-  assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-000000000002')) = array['aankomst','seizoen','prijs','stroom','water','lozen'];
+  assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-000000000002')) = array['aankomst','stroom','lozen'];
   assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-00000000000b')) = array[]::text[];
   assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-00000000000c')) = array['lozen'];
 end $$;
@@ -92,8 +92,7 @@ begin
   assert jsonb_array_length(r -> 'items') = 2, 'quotum 2: ' || r::text;
   assert (r -> 'items' -> 0 ->> 'place_id') = 'a0000000-0000-4000-8000-000000000001', 'volgorde: zonder vertrekregel eerst';
   assert (r -> 'items' -> 0 ->> 'email') = 'Info@DeVlinder.nl', 'adres ontbreekt';
-  assert (r -> 'items' -> 0 ->> 'slug') = 'camping-de-vlinder', 'slug voor de link naar de plekpagina';
-  assert (r -> 'items' -> 0 -> 'missing') = '["vertrek","aankomst","seizoen","prijs","stroom","water","lozen"]'::jsonb, 'missing: ' || (r -> 'items' -> 0 -> 'missing')::text;
+  assert (r -> 'items' -> 0 -> 'missing') = '["vertrek","aankomst","stroom","lozen"]'::jsonb, 'missing: ' || (r -> 'items' -> 0 -> 'missing')::text;
   assert (r -> 'items' -> 1 ->> 'place_id') = 'a0000000-0000-4000-8000-000000000008', 'keten: de plek zonder regel';
   -- Tweede aanroep zonder iets verstuurd te hebben: geen nieuwe plekken (quotum op) en niets opnieuw (nog geen 30 min)
   r := public.outreach_next('outreach-geheim', 10);

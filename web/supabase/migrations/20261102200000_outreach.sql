@@ -71,25 +71,22 @@ create table if not exists private.outreach_suppressions (
 revoke all on private.outreach_config, private.outreach_log, private.outreach_suppressions from public, anon, authenticated;
 
 -- ── Welke belangrijke gegevens missen we ─────────────────────────────────────────────────────────────────────────
--- Alleen wat een camperaar nodig heeft om te kiezen (geen nice-to-have): vertrekregel, aankomst, openingsperiode,
--- prijs, stroom, water en lozen. De mail vraagt precies naar wat hier terugkomt, en laat de rest zien als "dit weten we al".
+-- Waar de mail naar vraagt (besluit eigenaar 3 november 2026: kort en simpel): vertrekregel, aankomst, stroom en lozen.
+-- De mail laat zien wat we al weten en vraagt precies naar wat hier terugkomt.
 create or replace function private.outreach_missing(p public.places) returns text[]
  language sql stable set search_path to ''
 as $$
   select array_remove(array[
     case when p.departure is null or (p.departure = 'vast' and p.checkout_until is null) then 'vertrek' end,
     case when p.checkin_from is null then 'aankomst' end,
-    case when p.open_all_year is null and p.season is null then 'seizoen' end,
-    case when p.price_eur is null then 'prijs' end,
     case when p.power is null then 'stroom' end,
-    case when p.water is null then 'water' end,
     case when p.dump_station is null then 'lozen' end], null)
 $$;
 revoke all on function private.outreach_missing(public.places) from public, anon, authenticated;
 
 -- ── Wie komt in aanmerking ───────────────────────────────────────────────────────────────────────────────────────
--- Een plek met een geldig adres op een eigen domein, waarvan we de vertrekregel of aankomst niet kennen, of minstens twee
--- andere belangrijke gegevens missen. Per adres één plek (ketens krijgen één mail). Niemand die al een mail kreeg of zich
+-- Een plek met een geldig adres op een eigen domein, waarvan we de vertrekregel of aankomst niet kennen, of stroom en
+-- lozen allebei missen. Per adres één plek (ketens krijgen één mail). Niemand die al een mail kreeg of zich
 -- afmeldde.
 create or replace function private.outreach_candidates() returns table (place_id uuid, email_hash text)
  language sql stable set search_path to ''
@@ -220,10 +217,9 @@ begin
     returning l.place_id, l.token
   )
   select coalesce(jsonb_agg(jsonb_build_object(
-           'token', d.token, 'place_id', p.id, 'slug', p.slug, 'name', p.name, 'kind', p.kind, 'town', p.town,
+           'token', d.token, 'place_id', p.id, 'name', p.name, 'kind', p.kind, 'town', p.town,
            'email', trim(p.email), 'departure', p.departure, 'checkout_until', p.checkout_until,
-           'checkin_from', p.checkin_from, 'checkin_until', p.checkin_until, 'open_all_year', p.open_all_year,
-           'season', p.season, 'price_eur', p.price_eur, 'power', p.power, 'water', p.water,
+           'checkin_from', p.checkin_from, 'checkin_until', p.checkin_until, 'power', p.power,
            'dump_station', p.dump_station, 'missing', to_jsonb(private.outreach_missing(p)))), '[]'::jsonb)
     into v_items
     from due d join public.places p on p.id = d.place_id;
