@@ -5,6 +5,7 @@ reset role;
 alter table public.places add column if not exists kind text;
 alter table public.places add column if not exists town text;
 alter table public.places add column if not exists slug text;
+alter table public.places add column if not exists status_locked boolean not null default false;
 alter table public.places add column if not exists merged_into uuid;
 alter table public.places add column if not exists verified_at timestamptz;
 -- Eerdere tests laten plekken met adressen achter: hier tellen alleen de plekken van deze test
@@ -177,6 +178,25 @@ end $$;
 \endif
 \endif
 \endif
+
+-- Afmelden en de plek van de site laten halen: verborgen en vastgezet, zodat de pipeline hem niet terugzet
+insert into public.places (id, name, kind, email, status) values ('a0000000-0000-4000-8000-0000000000d1', 'Haal mij weg', 'camping', 'info@haalmijweg.nl', 'published'),
+  ('a0000000-0000-4000-8000-0000000000d2', 'Blijf staan', 'camping', 'info@blijfstaan.nl', 'published');
+insert into private.outreach_log (place_id, email_hash, status) values
+  ('a0000000-0000-4000-8000-0000000000d1', private.email_hash('info@haalmijweg.nl'), 'sent'),
+  ('a0000000-0000-4000-8000-0000000000d2', private.email_hash('info@blijfstaan.nl'), 'sent');
+select token as td1 from private.outreach_log where place_id = 'a0000000-0000-4000-8000-0000000000d1' \gset
+select token as td2 from private.outreach_log where place_id = 'a0000000-0000-4000-8000-0000000000d2' \gset
+set role anon;
+select (public.outreach_unsubscribe(:'td1', true) ->> 'ok')::boolean as ok4 \gset
+select (public.outreach_unsubscribe(:'td2') ->> 'ok')::boolean as ok5 \gset
+reset role;
+do $$ begin
+  assert (select status || status_locked::text from public.places where id = 'a0000000-0000-4000-8000-0000000000d1') = 'hiddentrue', 'plek niet verborgen';
+  assert (select status from public.places where id = 'a0000000-0000-4000-8000-0000000000d2') = 'published', 'alleen afmelden mag de plek niet verbergen';
+  assert exists (select 1 from private.outreach_suppressions where email_hash = private.email_hash('info@blijfstaan.nl')), 'niet afgemeld';
+  assert exists (select 1 from public.admin_logs where source = 'outreach' and message like 'Eigenaar vroeg om de plek van de site%'), 'geen melding in Mission Control';
+end $$;
 
 -- Terugmailen dat je geen mail wilt (intent unsubscribe): op de lijst, ook zonder gevonden plek
 set role anon;

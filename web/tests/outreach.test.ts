@@ -66,6 +66,14 @@ test("de mail vraagt wat we missen, noemt wat we weten en verzint niets", () => 
   assert.equal(departureLine({ departure: "vast", checkout_until: "ongeldig" }), "onbekend");
 });
 
+test("de mail belooft een latere mail, een uitweg en goede bedoelingen", () => {
+  const m = composeOutreach(item(), "https://site.test");
+  assert.match(m.text, /Zodra de site live is, stuur ik je een mail met een link naar jullie pagina/);
+  assert.match(m.text, /Wil je er liever niet op staan, dan kan dat met de link onderaan/);
+  assert.match(m.text, /alleen goede bedoelingen en het blijft voor iedereen gratis/);
+  assert.match(m.text, /Geen mail meer van mij, of liever niet op de site\? Dat kan hier: https:\/\/site\.test\/afmelden\//);
+});
+
 test("de mail doet niet alsof de site live is of we een gast zijn", () => {
   const m = composeOutreach(item(), "https://site.test");
   assert.doesNotMatch(m.text, /staat erin|camperaars kiezen|bekeken|\/plek\//i, "geen beweringen over bezoekers of een pagina");
@@ -79,7 +87,7 @@ test("onderwerp bevat [VS-<id>] zodat het antwoord aan de plek hangt; afmeldlink
   assert.equal(m.headers["List-Unsubscribe"], "<https://site.test/api/afmelden/11111111-1111-4111-8111-111111111111>");
   assert.equal(m.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
   assert.match(m.text, /https:\/\/site\.test\/afmelden\/11111111-1111-4111-8111-111111111111/);
-  assert.match(m.html, /Meld je af/);
+  assert.match(m.html, /liever niet op de site\? <a href="https:\/\/site\.test\/afmelden\//);
   assert.match(m.text, /privacy/);
 });
 

@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
-import { type OutreachItem, runOutreach, sendViaResend } from "@/lib/outreach";
+import { randomUUID } from "node:crypto";
+import { type OutreachItem, composeOutreach, runOutreach, sendViaResend } from "@/lib/outreach";
 
 export const maxDuration = 60;
 
@@ -10,6 +11,9 @@ export const maxDuration = 60;
  * `Authorization: Bearer OUTREACH_CRON_KEY`. Wie, hoeveel en wanneer bepaalt de database (outreach_next): staat de
  * campagne uit (standaard), buiten het verzendvenster, of is het dagquotum op, dan komt er een lege lijst terug.
  * Het antwoord bevat alleen aantallen, nooit adressen.
+ *
+ * Met `?proef=<adres>` gaat er één voorbeeldmail naar dat adres (verzonnen plek, onderwerp met [PROEF]), zonder iets in de
+ * database te claimen of vast te leggen. Zo test je Resend, de afzender en de opmaak zonder een echte eigenaar te mailen.
  */
 export async function POST(request: Request) {
   const cron = process.env.OUTREACH_CRON_KEY;
@@ -22,6 +26,32 @@ export async function POST(request: Request) {
   const given = Buffer.from((request.headers.get("authorization") ?? "").replace(/^Bearer /, ""));
   const want = Buffer.from(cron);
   if (given.length !== want.length || !timingSafeEqual(given, want)) return Response.json({ error: "Geen toegang" }, { status: 401 });
+
+  const proef = new URL(request.url).searchParams.get("proef");
+  if (proef !== null) {
+    if (!/^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$/.test(proef) || proef.length > 254) return Response.json({ error: "Geen geldig adres" }, { status: 400 });
+    const sample: OutreachItem = {
+      token: randomUUID(),
+      place_id: randomUUID(),
+      name: "Voorbeeldcamping De Linde",
+      kind: "camping",
+      town: "Voorbeelddorp",
+      email: proef,
+      departure: null,
+      checkout_until: null,
+      checkin_from: null,
+      checkin_until: null,
+      open_all_year: null,
+      season: null,
+      price_eur: null,
+      power: null,
+      dump_station: null,
+      missing: ["vertrek", "aankomst", "seizoen", "prijs", "stroom", "lozen"],
+    };
+    const mail = composeOutreach(sample);
+    const result = await sendViaResend(apiKey, from, replyTo, { ...mail, subject: `[PROEF] ${mail.subject}` }, `proef-${sample.token}`);
+    return Response.json({ proef: true, resultaat: result.kind, ...("error" in result ? { error: result.error } : {}) }, { status: result.kind === "sent" ? 200 : 502 });
+  }
 
   const rpc = async (name: string, args: Record<string, unknown>) => {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {

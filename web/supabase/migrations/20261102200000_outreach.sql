@@ -297,25 +297,36 @@ revoke all on function public.outreach_event(text, text, text) from public;
 grant execute on function public.outreach_event(text, text, text) to anon, authenticated;
 
 -- ── Afmelden (link in de mail, met het token uit de mail) ────────────────────────────────────────────────────────
--- Geen sleutel nodig: het token is willekeurig (uuid v4) en geeft alleen het recht om dit ene adres uit te schrijven.
--- Antwoordt altijd hetzelfde, zodat je geen tokens kunt raden.
-create or replace function public.outreach_unsubscribe(p_token uuid) returns jsonb
+-- Geen sleutel nodig: het token is willekeurig (uuid v4), staat alleen in de mail aan het adres van de plek, en geeft
+-- alleen het recht om dit ene adres uit te schrijven en (met p_remove) deze ene plek van de site te halen. Antwoordt
+-- altijd hetzelfde, zodat je geen tokens kunt raden. Een plek van de site halen is: status 'hidden' en vastgezet
+-- (status_locked), dus de pipeline zet hem niet terug. De mail belooft dit, dus het moet echt gebeuren.
+create or replace function public.outreach_unsubscribe(p_token uuid, p_remove boolean default false) returns jsonb
  language plpgsql security definer set search_path to ''
 as $$
-declare v_hash text;
+declare
+  v_hash text;
+  v_place uuid;
+  v_name text;
 begin
   if not private.rate_take('outreach_unsub', 300, interval '1 hour') then
     return jsonb_build_object('ok', true);
   end if;
-  select email_hash into v_hash from private.outreach_log where token = p_token;
+  select email_hash, place_id into v_hash, v_place from private.outreach_log where token = p_token;
   if v_hash is not null then
     insert into private.outreach_suppressions (email_hash, reason) values (v_hash, 'afgemeld') on conflict do nothing;
     update private.outreach_log set status = 'unsubscribed', updated_at = now() where email_hash = v_hash;
+    if p_remove then
+      update public.places set status = 'hidden', status_locked = true where id = v_place returning name into v_name;
+      insert into public.admin_logs (kind, source, status, message, details)
+      values ('api', 'outreach', 'warn', left('Eigenaar vroeg om de plek van de site te halen: ' || coalesce(v_name, '?'), 1000),
+              jsonb_build_object('place_id', v_place));
+    end if;
   end if;
   return jsonb_build_object('ok', true);
 end $$;
-revoke all on function public.outreach_unsubscribe(uuid) from public;
-grant execute on function public.outreach_unsubscribe(uuid) to anon, authenticated;
+revoke all on function public.outreach_unsubscribe(uuid, boolean) from public;
+grant execute on function public.outreach_unsubscribe(uuid, boolean) to anon, authenticated;
 
 -- ── Beheer: overzicht en aan/uit ─────────────────────────────────────────────────────────────────────────────────
 create or replace function public.admin_outreach_overview() returns jsonb

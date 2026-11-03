@@ -250,30 +250,56 @@ maar 60 verbindingen. Zie `web/.env.example` voor het formaat.
 
 ## Uitgaande mail naar eigenaren (README 101)
 
-Staat gebouwd, maar **uit**. Niets wordt verstuurd tot je het zelf aanzet. Volgorde:
+Staat gebouwd, maar **uit**. Niets wordt verstuurd tot je het zelf aanzet.
 
-1. **Afzenderdomein in Resend.** Resend → Domains → een subdomein toevoegen, bijvoorbeeld `mail.vrijstaan.nl`, en de
-   SPF- en DKIM-records bij je domeinbeheerder zetten. Wacht tot Resend "Verified" toont. Een eigen subdomein houdt de
-   inkomende mail veilig als een afzender ooit geblokkeerd wordt.
-2. **Sleutels maken** (willekeurig, minstens 32 tekens, twee verschillende):
-   - `OUTREACH_KEY`: in Vercel én in de database: `insert into internal_secrets (name, value) values ('outreach_key', '<sleutel>')
-     on conflict (name) do update set value = excluded.value;`
-   - `OUTREACH_CRON_KEY`: in Vercel én als GitHub-secret (Settings → Secrets and variables → Actions).
-3. **Vercel-variabelen:** `OUTREACH_FROM` (bijvoorbeeld `VrijStaan <plek@mail.vrijstaan.nl>`), `OUTREACH_REPLY_TO` (het
-   inbound-adres van Resend, waar antwoorden binnenkomen), en optioneel `OUTREACH_BASE_URL` voor de afmeldlink (zonder
-   deze staat het op `NEXT_PUBLIC_SITE_URL`; `vrijstaan.nl` stuurt met een 301 door en een één-klik-afmelding overleeft dat niet).
-   Daarna opnieuw uitrollen.
-4. **Resend-webhook:** voeg bij de bestaande webhook de events `email.delivered`, `email.bounced` en `email.complained`
-   toe. Zonder die events merkt de noodrem een spamklacht niet.
-5. **Migratie toepassen** (`20261102200000_outreach.sql`), pas nadat de code samengevoegd is.
-6. **Voorbeeld bekijken zonder te versturen:** `node --no-warnings --import ./tests/register.mjs scripts/outreach-preview.ts voorbeelden.json uitvoermap` (in `web/`). Het bestand is een lijst plekken zoals `outreach_next` ze geeft; elke mail komt als tekst in beeld en als `.html` in de uitvoermap.
-7. **Proefmail:** zet in de database een plek met je eigen adres (op een eigen domein, niet gmail), roep de route met
-   de hand aan (Actions → Mail naar eigenaren → Run workflow) en kijk naar de mail, de afmeldlink en een antwoord.
-8. **Aanzetten:** `select public.admin_outreach_set(true);` (ingelogd als beheerder). Uitzetten kan altijd met
-   `select public.admin_outreach_set(false);`. Overzicht: `select public.admin_outreach_overview();`.
+**Zonder eigen domein kan het niet.** Resend verstuurt alleen vanaf een domein dat jij kunt verifiëren; `gmail.com` is niet
+van jou. Zonder geverifieerd domein stuurt Resend alleen naar het adres van je eigen Resend-account. Versturen vanaf je
+persoonlijke Gmail (SMTP) doen we bewust niet: ~2.000 koude mails vanaf een privéaccount kan leiden tot een blokkade van je
+hele Google-account. Een domein kost ongeveer € 5 tot 10 per jaar. Controleer eerst of je `vrijstaan.nl` al hebt: de site
+verwijst daar al naar door (zie `COMPANY.email`, `hallo@vrijstaan.nl`). Dan hoef je niets te kopen.
 
-Het dagquotum begint op 25 en verdubbelt elke 3 dagen tot 200; verzenden gebeurt alleen op werkdagen van 08:00 tot 17:00.
-Een spamklacht of meer dan 3% harde bounces zet de campagne zelf uit (`paused_reason`).
+Je Gmail-adres komt nergens in de mail of op de site. Eigenaren zien alleen het afzenderadres op je domein, bijvoorbeeld
+`VrijStaan <plek@mail.jouwdomein.nl>`. Hun antwoorden gaan naar het inbound-adres van Resend (`OUTREACH_REPLY_TO`), niet naar
+je Gmail.
+
+### Stappen, in deze volgorde
+
+1. **Domein.** Heb je er geen: registreer er een bij een registrar (bijvoorbeeld TransIP, Hostnet, Namecheap of Cloudflare).
+   Zet WHOIS-privacy aan.
+2. **Resend → Domains → Add Domain.** Vul een subdomein in, bijvoorbeeld `mail.jouwdomein.nl`. Resend toont drie of vier
+   DNS-records (SPF, DKIM, soms DMARC). Zet die bij je registrar onder DNS-beheer en klik in Resend op **Verify**. Wacht tot de
+   status **Verified** is (minuten tot een uur).
+3. **Twee sleutels maken.** In een terminal: `openssl rand -hex 32`, twee keer. Eén wordt `OUTREACH_KEY`, de andere
+   `OUTREACH_CRON_KEY`. Bewaar ze in je wachtwoordmanager; plak ze nergens openbaar (de repository is openbaar).
+4. **Supabase → SQL Editor:** `insert into internal_secrets (name, value) values ('outreach_key', '<OUTREACH_KEY>') on
+   conflict (name) do update set value = excluded.value;`. Dit werkt pas nadat de migratie is toegepast (stap 7).
+5. **Vercel → project → Settings → Environment Variables** (Production), alle vier:
+   - `OUTREACH_KEY` (stap 3)
+   - `OUTREACH_CRON_KEY` (stap 3)
+   - `OUTREACH_FROM`, bijvoorbeeld `VrijStaan <plek@mail.jouwdomein.nl>`
+   - `OUTREACH_REPLY_TO`, het inbound-adres uit Resend (Emails → Receiving), waar antwoorden binnenkomen
+   - `OUTREACH_BASE_URL`: `https://camperdashboard-vrijstaan.vercel.app` (de afmeld- en privacylink in de mail; werkt ook als
+     de site niet is aangekondigd; `vrijstaan.nl` stuurt met een 301 door en een één-klik-afmelding overleeft dat niet)
+   Daarna **Redeploy**.
+6. **GitHub → Settings → Secrets and variables → Actions → New repository secret:** `OUTREACH_CRON_KEY` (zelfde waarde) en
+   `OUTREACH_PROEF_ADRES` (je eigen adres voor de proefmail; een geheim, want de repository is openbaar).
+7. **Resend → Webhooks:** op de bestaande webhook (`…/api/webhooks/inbound-email`) ook de events `email.delivered`,
+   `email.bounced` en `email.complained` aanvinken. Zonder die events merkt de noodrem een spamklacht niet.
+8. **PR #141 samenvoegen.** Daarna past de agent de migratie `20261102200000_outreach.sql` toe (staat los van de website,
+   dus de live site breekt niet).
+9. **Proefmail.** GitHub → Actions → **Mail naar eigenaren** → Run workflow → vink **proef** aan. Er gaat één voorbeeldmail
+   naar `OUTREACH_PROEF_ADRES`, met `[PROEF]` in het onderwerp, over een verzonnen plek; er wordt niets vastgelegd. Controleer:
+   komt hij aan (niet in spam), staat de afzender goed, werken de privacylink en de afmeldlink?
+   Antwoord erop en kijk of het antwoord in `owner_replies` verschijnt.
+10. **Aanzetten.** Supabase → SQL Editor, ingelogd als beheerder in de site: `select public.admin_outreach_set(true);`. Uitzetten
+    kan altijd: `select public.admin_outreach_set(false);`. Overzicht: `select public.admin_outreach_overview();`.
+
+Het dagquotum begint op 25 en verdubbelt elke 3 dagen tot 200; verzenden gebeurt alleen op werkdagen van 08:00 tot 17:00. Een
+spamklacht of meer dan 3% harde bounces zet de campagne zelf uit (`paused_reason`).
+
+Voorbeelden bekijken zonder te versturen: `node --no-warnings --import ./tests/register.mjs scripts/outreach-preview.ts voorbeelden.json uitvoermap`
+(in `web/`). Het bestand is een lijst plekken zoals `outreach_next` ze geeft; elke mail komt als tekst in beeld en als `.html`
+in de uitvoermap.
 
 ## Scraper uitrollen (edge function `pipeline`)
 

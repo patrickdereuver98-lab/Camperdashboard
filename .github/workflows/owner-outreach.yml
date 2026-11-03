@@ -11,6 +11,11 @@ on:
     # Elke 20 minuten overdag (UTC); het verzendvenster in de database bepaalt wat er echt gebeurt
     - cron: "7,27,47 6-16 * * 1-5"
   workflow_dispatch:
+    inputs:
+      proef:
+        description: "Alleen een proefmail sturen naar het adres in het geheim OUTREACH_PROEF_ADRES (niets naar eigenaren)"
+        type: boolean
+        default: false
 
 concurrency:
   group: owner-outreach
@@ -25,9 +30,16 @@ jobs:
         env:
           OUTREACH_CRON_KEY: ${{ secrets.OUTREACH_CRON_KEY }}
           SITE_URL: ${{ vars.OUTREACH_SITE_URL || 'https://camperdashboard-vrijstaan.vercel.app' }}
+          # Het adres staat in een geheim, niet in de invoer: deze repository is openbaar en invoer is voor iedereen te zien
+          PROEF: ${{ github.event.inputs.proef == 'true' && secrets.OUTREACH_PROEF_ADRES || '' }}
         run: |
           if [ -z "$OUTREACH_CRON_KEY" ]; then echo "OUTREACH_CRON_KEY ontbreekt: niets gedaan"; exit 0; fi
-          code=$(curl -s -o out.json -w "%{http_code}" -X POST \
-            -H "Authorization: Bearer $OUTREACH_CRON_KEY" "$SITE_URL/api/cron/owner-outreach")
+          if [ -n "$PROEF" ]; then
+            code=$(curl -s -o out.json -w "%{http_code}" -G -X POST \
+              -H "Authorization: Bearer $OUTREACH_CRON_KEY" --data-urlencode "proef=$PROEF" "$SITE_URL/api/cron/owner-outreach")
+          else
+            code=$(curl -s -o out.json -w "%{http_code}" -X POST \
+              -H "Authorization: Bearer $OUTREACH_CRON_KEY" "$SITE_URL/api/cron/owner-outreach")
+          fi
           echo "HTTP $code"; cat out.json; echo
           test "$code" = "200" || test "$code" = "503"

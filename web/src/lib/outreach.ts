@@ -145,7 +145,10 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
     ? `Dit heb ik al staan: ${known.map(([f, v]) => `${LABEL[f].toLowerCase()} ${v}`).join(", ")}. Klopt dat niet, zeg het dan gerust.`
     : "";
   const how = "Een paar woorden per regel is genoeg. Vul de puntjes maar in:";
-  const after = "Ik kijk je antwoord na voor ik het op de site zet. Alvast hartelijk bedankt voor de moeite.";
+  const after =
+    "Ik kijk je antwoord na voor ik het op de site zet. Zodra de site live is, stuur ik je een mail met een link naar jullie pagina. " +
+    "Wil je er liever niet op staan, dan kan dat met de link onderaan. Ik heb alleen goede bedoelingen en het blijft voor iedereen gratis. " +
+    "Alvast hartelijk bedankt voor de moeite.";
 
   const askedLines = asked.map((f) => `${LABEL[f]}: ${ASK[f].question}`);
   const fillLines = asked.map((f) => `${LABEL[f]}: ${ASK[f].fill}`);
@@ -170,7 +173,7 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
     "",
     "--",
     `Je krijgt deze mail één keer, omdat dit e-mailadres openbaar bij ${name} staat. Wat ik met gegevens doe, lees je op ${url.privacy}.`,
-    `Geen mail meer van mij? Meld je af: ${url.page}`,
+    `Geen mail meer van mij, of liever niet op de site? Dat kan hier: ${url.page}`,
   ].join("\n");
 
   const p = (x: string) => `<p style="margin:0 0 14px">${x}</p>`;
@@ -187,7 +190,7 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
     p("Vriendelijke groet,<br>VrijStaan") +
     `<p style="margin:24px 0 0;font-size:14px;color:#5b6b61">Je krijgt deze mail één keer, omdat dit e-mailadres openbaar bij ${esc(name)} staat. ` +
     `Wat ik met gegevens doe, lees je in de <a href="${esc(url.privacy)}">privacyverklaring</a>. ` +
-    `Geen mail meer van mij? <a href="${esc(url.page)}">Meld je af</a>.</p></div>`;
+    `Geen mail meer van mij, of liever niet op de site? <a href="${esc(url.page)}">Dat kan hier</a>.</p></div>`;
 
   return {
     to: i.email.trim(),
