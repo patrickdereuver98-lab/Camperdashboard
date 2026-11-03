@@ -12,7 +12,7 @@ import {
   sendViaResend,
 } from "../src/lib/outreach.ts";
 
-const ALL = ["vertrek", "aankomst", "stroom", "lozen"];
+const ALL = ["vertrek", "aankomst", "seizoen", "prijs", "stroom", "lozen"];
 const item = (over: Partial<OutreachItem> = {}): OutreachItem => ({
   token: "11111111-1111-4111-8111-111111111111",
   place_id: "22222222-2222-4222-8222-222222222222",
@@ -24,6 +24,9 @@ const item = (over: Partial<OutreachItem> = {}): OutreachItem => ({
   checkout_until: null,
   checkin_from: null,
   checkin_until: null,
+  open_all_year: null,
+  season: null,
+  price_eur: null,
   power: null,
   dump_station: null,
   missing: ALL,
@@ -46,12 +49,15 @@ test("de mail vraagt wat we missen, noemt wat we weten en verzint niets", () => 
   assert.match(m.text, /Dit heb ik al staan: vertrek uiterlijk 11:00, aankomst vanaf 14:00\. Klopt dat niet, zeg het dan gerust\./);
   const leeg = composeOutreach(item(), "https://site.test");
   assert.doesNotMatch(leeg.text, /Dit heb ik al staan/, "niets bekend: geen regel over wat we weten");
-  for (const f of ["Vertrek", "Aankomst", "Stroom", "Lozen"]) assert.match(leeg.text, new RegExp(`- ${f}: `));
+  for (const f of ["Vertrek", "Aankomst", "Open", "Prijs", "Stroom", "Lozen"]) assert.match(leeg.text, new RegExp(`- ${f}: `));
   // Invulregels met puntjes of ja/nee, geen voorbeeldwaarden die iemand kan overtypen
-  assert.match(leeg.text, /\nVertrek: uiterlijk … uur \(of: vrij vertrek\)\nAankomst: vanaf … uur\nStroom: ja of nee\nLozen: ja of nee\n/);
+  assert.match(leeg.text, /\nVertrek: uiterlijk … uur \(of: vrij vertrek\)\nAankomst: vanaf … uur\nOpen: van … tot … \(of: het hele jaar\)\nPrijs: € … per nacht, alles inbegrepen\nStroom: ja of nee\nLozen: ja of nee\n/);
   assert.doesNotMatch(leeg.text, /\b\d{1,2}:\d{2}\b/);
   // Eén gegeven: eenvoudige kop
   assert.match(composeOutreach(item({ missing: ["lozen"], departure: "vrij", checkin_from: "14:00", power: true }), "https://site.test").text, /Dit ene heb ik nog nodig:/);
+  // Prijs en openingsperiode die we al hebben, tonen we om te laten corrigeren
+  const k = composeOutreach(item({ missing: ["stroom"], departure: "vast", checkout_until: "11:00", checkin_from: "14:00", open_all_year: false, season: "1 april – 1 oktober", price_eur: 22.5, dump_station: true }), "https://site.test");
+  assert.match(k.text, /Dit heb ik al staan: vertrek uiterlijk 11:00, aankomst vanaf 14:00, open 1 april – 1 oktober, prijs vanaf € 22,50 per nacht, lozen ja\./);
   // Niets te vragen is een fout, geen lege mail
   assert.throws(() => composeOutreach(item({ missing: [] })), /Niets te vragen/);
   assert.equal(departureLine({ departure: "vast", checkout_until: null }), "onbekend", "vast zonder tijd is onbekend");

@@ -6,8 +6,11 @@ import { SITE_URL } from "./env";
  * hier staat de mailtekst, de verzending en de lus eromheen. De route heeft geen service-role-sleutel.
  */
 
-/** Waar de mail naar vraagt (besluit eigenaar 3 november 2026: kort en simpel); zelfde als private.outreach_missing */
-export const FACTS = ["vertrek", "aankomst", "stroom", "lozen"] as const;
+/**
+ * Waar de mail naar vraagt (besluit eigenaar 3 november 2026): de zwaarst wegende gegevens voor publicatie en score
+ * (vertrekregel, openingsperiode, prijs, stroom) plus aankomst en lozen; zelfde als private.outreach_missing.
+ */
+export const FACTS = ["vertrek", "aankomst", "seizoen", "prijs", "stroom", "lozen"] as const;
 export type Fact = (typeof FACTS)[number];
 
 export type OutreachItem = {
@@ -21,6 +24,9 @@ export type OutreachItem = {
   checkout_until: string | null;
   checkin_from: string | null;
   checkin_until: string | null;
+  open_all_year: boolean | null;
+  season: string | null;
+  price_eur: number | null;
   power: boolean | null;
   dump_station: boolean | null;
   /** Uit de database (private.outreach_missing): waar de mail naar vraagt */
@@ -76,6 +82,12 @@ export function knownValue(i: OutreachItem, fact: Fact): string | null {
       const v = arrivalLine(i);
       return v === "onbekend" ? null : v;
     }
+    case "seizoen":
+      return i.open_all_year === true ? "het hele jaar open" : i.season?.trim() ? i.season.trim().slice(0, 60) : null;
+    case "prijs":
+      return typeof i.price_eur === "number" && i.price_eur >= 0 && i.price_eur <= 500
+        ? `vanaf € ${i.price_eur.toLocaleString("nl-NL", { minimumFractionDigits: Number.isInteger(i.price_eur) ? 0 : 2 })} per nacht`
+        : null;
     case "stroom":
       return yesNo(i.power);
     case "lozen":
@@ -83,12 +95,17 @@ export function knownValue(i: OutreachItem, fact: Fact): string | null {
   }
 }
 
-const LABEL: Record<Fact, string> = { vertrek: "Vertrek", aankomst: "Aankomst", stroom: "Stroom", lozen: "Lozen" };
+const LABEL: Record<Fact, string> = { vertrek: "Vertrek", aankomst: "Aankomst", seizoen: "Open", prijs: "Prijs", stroom: "Stroom", lozen: "Lozen" };
 
 /** Vraag per gegeven, in gewone woorden, en de invulregel (met "…": wie hem ongewijzigd terugstuurt, levert niets op) */
 const ASK: Record<Fact, { question: string; fill: string }> = {
   vertrek: { question: "tot hoe laat moeten gasten weg, of mogen ze blijven zo lang ze willen?", fill: "uiterlijk … uur (of: vrij vertrek)" },
   aankomst: { question: "vanaf hoe laat mogen gasten komen?", fill: "vanaf … uur" },
+  seizoen: { question: "het hele jaar open, of in welke periode?", fill: "van … tot … (of: het hele jaar)" },
+  prijs: {
+    question: "wat kost een nacht voor een camper met twee personen, inclusief toeristenbelasting, stroom en andere toeslagen?",
+    fill: "€ … per nacht, alles inbegrepen",
+  },
   stroom: { question: "is er stroom op de plek?", fill: "ja of nee" },
   lozen: { question: "kunnen campers hun toilet en afvalwater lozen?", fill: "ja of nee" },
 };

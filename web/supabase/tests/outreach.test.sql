@@ -37,7 +37,7 @@ insert into public.places (id, name, kind, town, email, departure, checkout_unti
 update public.places set merged_into = 'a0000000-0000-4000-8000-000000000001' where id = 'a0000000-0000-4000-8000-000000000007';
 update public.places set open_all_year = true, price_eur = 20, power = true, water = true, dump_station = false
  where id in ('a0000000-0000-4000-8000-00000000000b', 'a0000000-0000-4000-8000-000000000005');
--- Vertrek en aankomst bekend, maar maar één ander gegeven mist: niet genoeg om een mail te rechtvaardigen
+-- Alles bekend op lozen na: toch een mail, met alleen die ene vraag
 insert into public.places (id, name, kind, email, departure, checkout_until, checkin_from, open_all_year, price_eur, power, water, dump_station, status)
   values ('a0000000-0000-4000-8000-00000000000c', 'Bijna compleet', 'camping', 'info@bijnacompleet.nl', 'vast', '11:00', '14:00', true, 20, true, true, null, 'published');
 update public.places set slug = 'camping-de-vlinder' where id = 'a0000000-0000-4000-8000-000000000001';
@@ -66,18 +66,18 @@ do $$ begin assert (select count(*) from private.outreach_log) = 0, 'log gevuld 
 
 -- Wat missen we: alleen belangrijke gegevens, in vaste volgorde
 do $$ begin
-  assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-000000000002')) = array['aankomst','stroom','lozen'];
+  assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-000000000002')) = array['aankomst','seizoen','prijs','stroom','lozen'];
   assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-00000000000b')) = array[]::text[];
   assert private.outreach_missing((select p from public.places p where id = 'a0000000-0000-4000-8000-00000000000c')) = array['lozen'];
 end $$;
 
--- Wie komt in aanmerking: de Vlinder, het Hooi (aankomst onbekend) en één van de keten (Noord: geen vertrekregel gaat voor)
+-- Wie komt in aanmerking: de Vlinder, het Hooi, één van de keten (Noord: geen vertrekregel gaat voor) en Bijna compleet
 do $$
 declare ids uuid[];
 begin
   select array_agg(place_id order by place_id) into ids from private.outreach_candidates();
   assert ids = array['a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002',
-                     'a0000000-0000-4000-8000-000000000008']::uuid[], format('kandidaten: %s', ids);
+                     'a0000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-00000000000c']::uuid[], format('kandidaten: %s', ids);
 end $$;
 
 -- Aanzetten (buiten het verzendvenster van de tests: venster wijd open en ook in het weekend)
@@ -92,7 +92,7 @@ begin
   assert jsonb_array_length(r -> 'items') = 2, 'quotum 2: ' || r::text;
   assert (r -> 'items' -> 0 ->> 'place_id') = 'a0000000-0000-4000-8000-000000000001', 'volgorde: zonder vertrekregel eerst';
   assert (r -> 'items' -> 0 ->> 'email') = 'Info@DeVlinder.nl', 'adres ontbreekt';
-  assert (r -> 'items' -> 0 -> 'missing') = '["vertrek","aankomst","stroom","lozen"]'::jsonb, 'missing: ' || (r -> 'items' -> 0 -> 'missing')::text;
+  assert (r -> 'items' -> 0 -> 'missing') = '["vertrek","aankomst","seizoen","prijs","stroom","lozen"]'::jsonb, 'missing: ' || (r -> 'items' -> 0 -> 'missing')::text;
   assert (r -> 'items' -> 1 ->> 'place_id') = 'a0000000-0000-4000-8000-000000000008', 'keten: de plek zonder regel';
   -- Tweede aanroep zonder iets verstuurd te hebben: geen nieuwe plekken (quotum op) en niets opnieuw (nog geen 30 min)
   r := public.outreach_next('outreach-geheim', 10);
@@ -124,7 +124,7 @@ do $$ begin
 end $$;
 
 -- Met een hoger quotum komt het Hooi aan de beurt
-update private.outreach_config set per_day_start = 4;
+update private.outreach_config set per_day_start = 3;
 set role anon;
 do $$
 declare r jsonb;
