@@ -105,8 +105,8 @@ export function outreachUrls(token: string, base = process.env.OUTREACH_BASE_URL
 }
 
 /**
- * De mail: kort, in de ik-vorm, zonder naam. Eerlijk over wie we zijn: iemand die een gratis gids voor camperaars maakt
- * (nog in aanbouw), geen gast. Er staat geen link naar een plekpagina en geen bewering over bezoekers of een live site.
+ * De mail: kort, vriendelijk, in de ik-vorm, zonder naam. Eerlijk over wie we zijn: een hobbyist die een gratis website
+ * voor camperaars wil maken, geen gast. Er staat geen link naar een plekpagina en geen bewering over bezoekers of een live site.
  * Wel de naam en woonplaats van de plek, wat we al weten (om te laten corrigeren) en precies de vragen die nog open
  * staan. Vaste tekst, geen AI: er staat nooit iets in wat we niet weten.
  */
@@ -120,13 +120,15 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
   if (!asked.length) throw new Error("Niets te vragen");
   const known = FACTS.map((f) => [f, knownValue(i, f)] as const).filter((x): x is readonly [Fact, string] => x[1] !== null);
 
-  const intro = `Ik maak VrijStaan, een gratis gids voor camperaars die nog in aanbouw is. Ik wil de gegevens van ${where} graag goed hebben. Mag ik je daarvoor iets vragen?`;
-  const askedTitle = asked.length === 1 ? "Dit ene weet ik nog niet:" : "Dit weet ik nog niet:";
+  const intro =
+    "Ik ben als hobby bezig met VrijStaan en hoop er iets moois van te maken: een gratis website voor iedereen, met zoveel mogelijk camperplekken en kloppende informatie. " +
+    `Daarom vraag ik graag even bevestiging van de gegevens van ${where}.`;
+  const askedTitle = asked.length === 1 ? "Dit ene heb ik nog nodig:" : "Dit heb ik nog nodig:";
   const knownLine = known.length
     ? `Dit heb ik al staan: ${known.map(([f, v]) => `${LABEL[f].toLowerCase()} ${v}`).join(", ")}. Klopt dat niet, zeg het dan gerust.`
     : "";
   const how = "Een paar woorden per regel is genoeg. Vul de puntjes maar in:";
-  const after = "Ik kijk je antwoord na voor ik het in de gids zet.";
+  const after = "Ik kijk je antwoord na voor ik het op de site zet. Alvast hartelijk bedankt voor de moeite.";
 
   const askedLines = asked.map((f) => `${LABEL[f]}: ${ASK[f].question}`);
   const fillLines = asked.map((f) => `${LABEL[f]}: ${ASK[f].fill}`);
@@ -145,9 +147,8 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
     ...(knownLine ? ["", knownLine] : []),
     "",
     after,
-    "Alvast bedankt.",
     "",
-    "Groet,",
+    "Vriendelijke groet,",
     "VrijStaan",
     "",
     "--",
@@ -165,8 +166,8 @@ export function composeOutreach(i: OutreachItem, base?: string): Mail {
     p(esc(how)) +
     `<p style="margin:0 0 14px;padding:10px 12px;background:#f4f1ea;border-radius:8px">${fillLines.map((l) => esc(l)).join("<br>")}</p>` +
     (knownLine ? p(esc(knownLine)) : "") +
-    p(`${esc(after)}<br>Alvast bedankt.`) +
-    p("Groet,<br>VrijStaan") +
+    p(esc(after)) +
+    p("Vriendelijke groet,<br>VrijStaan") +
     `<p style="margin:24px 0 0;font-size:14px;color:#5b6b61">Je krijgt deze mail één keer, omdat dit e-mailadres openbaar bij ${esc(name)} staat. ` +
     `Wat ik met gegevens doe, lees je in de <a href="${esc(url.privacy)}">privacyverklaring</a>. ` +
     `Geen mail meer van mij? <a href="${esc(url.page)}">Meld je af</a>.</p></div>`;

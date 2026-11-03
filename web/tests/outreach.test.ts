@@ -35,7 +35,8 @@ test("de mail vraagt wat we missen, noemt wat we weten en verzint niets", () => 
     item({ departure: "vast", checkout_until: "11:00", checkin_from: "14:00", missing: ["stroom", "lozen"] }),
     "https://site.test",
   );
-  assert.match(m.text, /Ik maak VrijStaan, een gratis gids voor camperaars die nog in aanbouw is/);
+  assert.match(m.text, /Ik ben als hobby bezig met VrijStaan en hoop er iets moois van te maken: een gratis website voor iedereen/);
+  assert.match(m.text, /Daarom vraag ik graag even bevestiging van de gegevens van Camping De Vlinder in Leek\./);
   assert.match(m.text, /Camping De Vlinder in Leek/);
   const [vragen] = m.text.split("Een paar woorden per regel");
   assert.match(vragen, /- Stroom: is er stroom op de plek\?/);
@@ -50,7 +51,7 @@ test("de mail vraagt wat we missen, noemt wat we weten en verzint niets", () => 
   assert.match(leeg.text, /\nVertrek: uiterlijk … uur \(of: vrij vertrek\)\nAankomst: vanaf … uur\nStroom: ja of nee\nLozen: ja of nee\n/);
   assert.doesNotMatch(leeg.text, /\b\d{1,2}:\d{2}\b/);
   // Eén gegeven: eenvoudige kop
-  assert.match(composeOutreach(item({ missing: ["lozen"], departure: "vrij", checkin_from: "14:00", power: true }), "https://site.test").text, /Dit ene weet ik nog niet:/);
+  assert.match(composeOutreach(item({ missing: ["lozen"], departure: "vrij", checkin_from: "14:00", power: true }), "https://site.test").text, /Dit ene heb ik nog nodig:/);
   // Niets te vragen is een fout, geen lege mail
   assert.throws(() => composeOutreach(item({ missing: [] })), /Niets te vragen/);
   assert.equal(departureLine({ departure: "vast", checkout_until: null }), "onbekend", "vast zonder tijd is onbekend");
