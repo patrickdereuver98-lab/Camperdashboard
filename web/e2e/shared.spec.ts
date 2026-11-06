@@ -38,7 +38,8 @@ test("meedoen vervangt je reis door de gedeelde reis", async ({ page }) => {
   await page.waitForURL(/\/mijn-reis$/);
   await expect(page.getByTestId("shared-card")).toContainText("samen met Anja");
   const state = await page.evaluate(() => ({ reis: JSON.parse(localStorage.getItem("vrijstaan:reis")!), samen: JSON.parse(localStorage.getItem("vrijstaan:samen")!) }));
-  expect(state.reis).toEqual([{ slug: PLACES[0].slug, nights: 2 }, { slug: PLACES[1].slug, nights: 1 }]);
+  // Reisopslag versie 2: { v: 2, stops } (lib/trip-storage.ts)
+  expect(state.reis).toEqual({ v: 2, stops: [{ slug: PLACES[0].slug, nights: 2 }, { slug: PLACES[1].slug, nights: 1 }] });
   expect(state.samen).toEqual({ id: TRIP, name: "Onze reis", code: CODE });
 });
 
