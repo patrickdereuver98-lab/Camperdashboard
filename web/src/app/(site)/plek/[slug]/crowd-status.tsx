@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
-import { CROWD_LABEL, crowdSummary, type CrowdLevel, type CrowdStatus } from "@/lib/crowd";
+import { CROWD_ERROR, CROWD_LABEL, crowdSummary, type CrowdLevel, type CrowdStatus } from "@/lib/crowd";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 import { currentPushSupport, enablePush } from "@/lib/push";
 
@@ -15,6 +15,8 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
   const { session } = useSession();
   const [status, setStatus] = useState<CrowdStatus | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Laden mislukt: dan zeggen we dat, niet "Nog niemand gemeld" (DATA-12)
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<CrowdLevel | null>(null);
   const [mine, setMine] = useState<CrowdLevel | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -23,11 +25,19 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
     let alive = true;
     void supabase()
       .rpc("crowd_status", { p_place_id: placeId })
-      .then(({ data }) => {
-        if (!alive) return;
-        setStatus((data as CrowdStatus) ?? null);
-        setLoaded(true);
-      });
+      .then(
+        ({ data, error }) => {
+          if (!alive) return;
+          setLoadFailed(!!error);
+          setStatus(error ? null : ((data as CrowdStatus) ?? null));
+          setLoaded(true);
+        },
+        () => {
+          if (!alive) return;
+          setLoadFailed(true);
+          setLoaded(true);
+        },
+      );
     return () => {
       alive = false;
     };
@@ -40,11 +50,12 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
     setBusy(null);
     if (error) return setErr(errorMessage(error));
     setStatus(data as CrowdStatus);
+    setLoadFailed(false);
     setMine(level);
   }
 
   // Pas na het laden (in de browser) uitrekenen: "x minuten geleden" hangt af van de klok
-  const summary = loaded ? crowdSummary(status) : null;
+  const summary = !loaded ? null : loadFailed ? CROWD_ERROR : crowdSummary(status);
 
   return (
     <section aria-labelledby="drukte" className="mt-3 rounded-lg border border-line bg-surface p-4" data-testid="crowd">

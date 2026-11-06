@@ -116,7 +116,7 @@ export default async function Home() {
         <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
           {[
             "We vullen niets zelf in: wat we niet weten, staat er als onbekend",
-            "Prijzen met toeristenbelasting, stroom en andere bijkomende kosten",
+            "Bij de prijs staan de toeslagen die de plek zelf noemt",
             "Gratis te gebruiken, je hebt geen account nodig",
           ].map((t) => (
             <li key={t} className="flex items-start gap-2.5">

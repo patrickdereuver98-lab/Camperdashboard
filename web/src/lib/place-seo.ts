@@ -34,11 +34,25 @@ export type AllInPrice = {
   text: string;
   /** Alle toeslagen (toeristenbelasting, stroom) zitten erin en de prijs is vast (geen vanaf-prijs) */
   allIn: boolean;
+  /** Het bedrag is het totaal voor 2 personen met toeristenbelasting, maar niet alles staat vast (stroom) */
+  withTax?: boolean;
 };
 
 /**
- * De prijs met alle toeslagen als die vaststaat; bij een vanaf-prijs het laagste tarief zonder belofte over toeslagen;
- * anders de bekende prijs met de eerlijke vermelding. undefined = onbekend.
+ * Mag er "inclusief toeslagen" of "alles inbegrepen" staan (R22)? Alleen als elke bekende toeslag van de
+ * standaardsituatie meetelt (het totaal van nightTotal staat vast) en het stroomtarief bekend is (stroom telt mee) of
+ * er geen stroom is. Een plek met stroom zonder genoemde stroomprijs: dan weten we niet of stroom erbij komt.
+ */
+export function allSurchargesKnown(p: Pick<Place, "priceEur" | "priceFrom" | "priceExtras" | "touristTaxIncluded"> & { power?: boolean }): boolean {
+  const t = nightTotal(p);
+  if (t.total === undefined || t.from) return false;
+  return t.parts.some((x) => x.label === "Stroom") || p.power === false;
+}
+
+/**
+ * De prijs met alle toeslagen als die vaststaat; met alleen de toeristenbelasting als het stroomtarief onbekend is;
+ * bij een vanaf-prijs het laagste tarief zonder belofte over toeslagen; anders de bekende prijs met de eerlijke
+ * vermelding. undefined = onbekend.
  */
 export function allInPrice(p: MarketingPlace): AllInPrice | undefined {
   if (p.priceEur === 0) return { amount: "Gratis", text: "gratis", allIn: true };
@@ -47,7 +61,8 @@ export function allInPrice(p: MarketingPlace): AllInPrice | undefined {
   const t = nightTotal(p);
   if (t.total !== undefined) {
     const amount = eur(t.total);
-    return { amount, text: `${amount} per nacht voor ${TOTAL_PERSONS} personen, inclusief toeslagen`, allIn: true };
+    if (allSurchargesKnown(p)) return { amount, text: `${amount} per nacht voor ${TOTAL_PERSONS} personen, inclusief toeslagen`, allIn: true };
+    return { amount, text: `${amount} per nacht voor ${TOTAL_PERSONS} personen, incl. toeristenbelasting`, allIn: false, withTax: true };
   }
   if (!price) return undefined;
   return { amount: price.value, text: `${price.value}${price.perNight ? " per nacht" : ""}, toeslagen niet volledig bekend`, allIn: false };

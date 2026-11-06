@@ -43,8 +43,9 @@ const LATE_MIN = timeToMinutes(LATE_CHECKOUT)!;
 const ROOMY_MIN = timeToMinutes(ROOMY_CHECKOUT)!;
 
 export function departureKind(p: DepartureFacts): DepartureKind {
-  if (p.departure === "vrij" || p.departure === "per24")
-    return p.departureCheck === "voorwaardelijk" || p.departureCheck === "afgewezen" ? "onbekend" : "vrij";
+  // Een regel die beheer afwees is onbekend, welke regel het ook was (zelfde als departureShort en departureLong)
+  if (p.departureCheck === "afgewezen") return "onbekend";
+  if (p.departure === "vrij" || p.departure === "per24") return p.departureCheck === "voorwaardelijk" ? "onbekend" : "vrij";
   // Als minuten vergelijken: als tekst staat "9:00" na "11:00"
   const min = p.departure === "vast" ? timeToMinutes(p.checkoutUntil) : undefined;
   if (min !== undefined) {
@@ -224,9 +225,32 @@ export function refinementCount(f: Filters): number {
 const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
 
 /** Is de plek op `date` open volgens het seizoen? `undefined` = onbekend. */
-/** De huidige datum en tijd in Nederland, als lokale Date (de server draait in UTC) */
-export function nowInNL(): Date {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Amsterdam" }));
+const NL_PARTS = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Amsterdam",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+  hourCycle: "h23",
+});
+
+/**
+ * De datum en tijd in Nederland, als lokale Date (de server draait in UTC): jaar, maand, dag, uur en minuut van de
+ * Date zijn die van de klok in Nederland. Via de onderdelen van Intl.DateTimeFormat, niet door een tekst opnieuw te
+ * lezen (TS-13).
+ */
+export function nowInNL(at: Date = new Date()): Date {
+  const part: Record<string, number> = {};
+  for (const { type, value } of NL_PARTS.formatToParts(at)) if (type !== "literal") part[type] = Number(value);
+  return new Date(part.year, part.month - 1, part.day, part.hour, part.minute, part.second);
+}
+
+/** Dag `day` van maand `month` in `year`, afgekapt op de laatste dag van die maand (29 februari in een gewoon jaar is 28) */
+function clampedDate(year: number, month: number, day: number, h = 0, m = 0): Date {
+  const last = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(Math.max(1, day), last), h, m);
 }
 
 /**
@@ -235,8 +259,9 @@ export function nowInNL(): Date {
  */
 export function arrivalClosed(p: Pick<PlaceSummary, "checkinUntil" | "access24h">, now = nowInNL()): boolean {
   if (!p.checkinUntil || p.access24h) return false;
-  const [h, m] = p.checkinUntil.split(":").map(Number);
-  return now.getHours() * 60 + now.getMinutes() > h * 60 + m;
+  const until = timeToMinutes(p.checkinUntil);
+  if (until === undefined) return false;
+  return now.getHours() * 60 + now.getMinutes() > until;
 }
 
 export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date = nowInNL()): boolean | undefined {
@@ -247,8 +272,10 @@ export function isOpenOn(p: Pick<PlaceSummary, "openAllYear" | "season">, date =
   const from = MONTHS.indexOf(m[2]);
   const to = MONTHS.indexOf(m[4]);
   if (from < 0 || to < 0) return undefined;
-  const start = new Date(date.getFullYear(), from, Number(m[1] ?? 1));
-  const end = new Date(date.getFullYear(), to, Number(m[3] ?? new Date(date.getFullYear(), to + 1, 0).getDate()), 23, 59);
+  const year = date.getFullYear();
+  const start = clampedDate(year, from, Number(m[1] ?? 1));
+  // Zonder dag: tot en met de laatste dag van de maand
+  const end = clampedDate(year, to, m[3] ? Number(m[3]) : 31, 23, 59);
   return start <= end ? date >= start && date <= end : date >= start || date <= end;
 }
 
@@ -283,8 +310,7 @@ function recommendScore(p: PlaceSummary): number {
   return confirmed + p.completeness * 2 + rating + (p.imageUrl ? 0.3 : 0) + (kind === "vrij" ? 0.3 : kind === "uitslapers" ? 0.15 : 0);
 }
 
-export function applyFilters(places: PlaceSummary[], f: Filters): Result[] {
-  const now = new Date();
+export function applyFilters(places: PlaceSummary[], f: Filters, now: Date = nowInNL()): Result[] {
   let results: Result[] = [];
   for (const p of places) {
     if (f.province && p.province !== f.province) continue;
