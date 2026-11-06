@@ -3,12 +3,19 @@ import { Suspense } from "react";
 import { CardSkeleton } from "@/components/place-ui";
 import { formatDate } from "@/lib/format";
 import { getStats } from "@/lib/places";
+import { filterRobots } from "@/lib/seo-pages";
 import { Search } from "./search";
 
-export const metadata: Metadata = {
-  title: "Camperplaats zoeken",
-  description: "Zoek camperplaatsen op plaats, provincie, vertrektijd, voorzieningen en prijs.",
-};
+// Elke filtercombinatie is een eigen adres: wel volgen, niet indexeren. Zonder parameters gewoon indexeerbaar.
+export async function generateMetadata({ searchParams }: PageProps<"/zoeken">): Promise<Metadata> {
+  const robots = filterRobots(await searchParams);
+  return {
+    title: "Camperplaats zoeken",
+    description: "Zoek camperplaatsen op plaats, provincie, vertrektijd, voorzieningen en prijs.",
+    alternates: { canonical: "/zoeken" },
+    ...(robots ? { robots } : {}),
+  };
+}
 
 export default async function SearchPage({ searchParams }: PageProps<"/zoeken">) {
   const { updatedAt } = await getStats();

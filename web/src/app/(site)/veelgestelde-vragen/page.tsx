@@ -6,6 +6,7 @@ import { FaqList } from "./faq-list";
 export const metadata: Metadata = {
   title: "Veelgestelde vragen",
   description: "Antwoorden op vragen over VrijStaan, camperplaatsen, prijzen, reviews en privacy.",
+  alternates: { canonical: "/veelgestelde-vragen" },
 };
 
 export default async function FaqPage() {

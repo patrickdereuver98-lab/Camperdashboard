@@ -4,7 +4,7 @@ import { ProsePage, Section } from "@/components/prose";
 import { CompanyIdentity } from "@/components/company-identity";
 import { COMPANY } from "@/lib/company";
 
-export const metadata: Metadata = { title: "Disclaimer", description: "Over de juistheid van de informatie op VrijStaan." };
+export const metadata: Metadata = { title: "Disclaimer", description: "Over de juistheid van de informatie op VrijStaan.", alternates: { canonical: "/disclaimer" } };
 
 export default function DisclaimerPage() {
   return (

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProsePage, Section } from "@/components/prose";
 
-export const metadata: Metadata = { title: "Toegankelijkheid", description: "Hoe VrijStaan bruikbaar is voor iedereen." };
+export const metadata: Metadata = { title: "Toegankelijkheid", description: "Hoe VrijStaan bruikbaar is voor iedereen.", alternates: { canonical: "/toegankelijkheid" } };
 
 export default function AccessibilityPage() {
   return (

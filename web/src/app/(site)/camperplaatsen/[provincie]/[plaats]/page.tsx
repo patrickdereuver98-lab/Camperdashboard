@@ -17,6 +17,7 @@ import {
   indexable,
   inGroup,
   itemListLd,
+  nl,
   provinceFromSlug,
   provinceSlug,
   rankForLanding,
@@ -59,16 +60,17 @@ function mapHref(a: Area) {
 
 export async function generateMetadata({ params }: PageProps<"/camperplaatsen/[provincie]/[plaats]">): Promise<Metadata> {
   const found = await load(params);
-  if (!found) return { title: "Plaats niet gevonden" };
+  // Onbekende plaats of provincie: de pagina geeft 404, maar zeg het ook expliciet tegen zoekmachines
+  if (!found) return { title: "Plaats niet gevonden", robots: { index: false } };
   const { prov, area } = found;
   const c = countsOf(area.places);
   const where = area.kind === "eiland" ? area.name : `${area.name}, ${prov}`;
   return {
     title: area.kind === "eiland" ? areaTitle(area) : `${areaTitle(area)} (${prov})`,
     description:
-      `${c.total === 1 ? "1 camperplaats" : `${c.total} camperplaatsen`} ${area.prep} ${where} met vertrektijd, prijs, voorzieningen en route.` +
-      (c.vrij ? ` ${c.vrij} zonder vaste vertrektijd.` : "") +
-      (c.free ? ` ${c.free} gratis.` : ""),
+      `${c.total === 1 ? "1 camperplaats" : `${nl(c.total)} camperplaatsen`} ${area.prep} ${where} met vertrektijd, prijs, voorzieningen en route.` +
+      (c.vrij ? ` ${nl(c.vrij)} zonder vaste vertrektijd.` : "") +
+      (c.free ? ` ${nl(c.free)} gratis.` : ""),
     alternates: { canonical: areaPath(prov, area.slug) },
     // Te weinig plekken voor een eigen pagina in de zoekresultaten: wel bereikbaar, niet geïndexeerd
     ...(indexable(c.total) ? {} : { robots: { index: false, follow: true } }),
@@ -113,16 +115,16 @@ export default async function AreaPage({ params }: PageProps<"/camperplaatsen/[p
       <PlaceList
         title={ranked.length > SHOWN ? `Uitgelicht ${area.prep} ${area.name}` : `Alle plekken ${area.prep} ${area.name}`}
         places={shown}
-        more={ranked.length > SHOWN ? { href: mapHref(area), label: `Alle ${ranked.length} plekken ${area.prep} ${area.name} bekijken` } : undefined}
+        more={ranked.length > SHOWN ? { href: mapHref(area), label: `Alle ${nl(ranked.length)} plekken ${area.prep} ${area.name} bekijken` } : undefined}
       />
 
-      <LinkChips title={`Plaatsen op ${area.name}`} links={onIsland.map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${a.places.length})` }))} />
+      <LinkChips title={`Plaatsen op ${area.name}`} links={onIsland.map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${nl(a.places.length)})` }))} />
       <LinkChips
         title={`Meer in ${prov}`}
         links={[
           { href: provPath, label: `Alle camperplaatsen in ${prov}` },
           ...groups.map((g) => ({ href: departurePath(g, prov), label: DEPARTURE_SEO[g].title(prov) })),
-          ...nearby.slice(0, 16).map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${a.places.length})` })),
+          ...nearby.slice(0, 16).map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${nl(a.places.length)})` })),
         ]}
       />
     </div>

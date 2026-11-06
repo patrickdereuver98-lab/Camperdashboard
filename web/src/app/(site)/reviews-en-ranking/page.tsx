@@ -6,6 +6,7 @@ import { COMPANY } from "@/lib/company";
 export const metadata: Metadata = {
   title: "Reviews en ranking",
   description: "Hoe VrijStaan reviews controleert, wat we niet controleren en hoe we de volgorde van zoekresultaten bepalen.",
+  alternates: { canonical: "/reviews-en-ranking" },
 };
 
 export default function ReviewsRankingPage() {

@@ -2,7 +2,7 @@
 // de lijst staat in de HTML, zodat zoekmachines en trage telefoons hem meteen hebben.
 import Link from "next/link";
 import { SITE_URL } from "@/lib/env";
-import { breadcrumbLd, ldJson } from "@/lib/seo-pages";
+import { breadcrumbLd, ldJson, nl, type ProvinceLink } from "@/lib/seo-pages";
 import { cardPrice, departureShort } from "@/lib/format";
 import { isIncomplete } from "@/lib/place-status";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
@@ -98,7 +98,8 @@ export function PlaceList({ title, places, more }: { title: string; places: Plac
                   </Link>
                   <span className="block text-sm text-ink-2">
                     {p.kind ? KIND_LABEL[p.kind] : "Camperplaats"} in {p.town}
-                    {p.maxLengthM ? `, tot ${String(p.maxLengthM).replace(".", ",")} m` : ""}
+                    {/* Harde spatie: "13" en "m" niet over twee regels */}
+                    {p.maxLengthM ? `, tot ${String(p.maxLengthM).replace(".", ",")}\u00a0m` : ""}
                   </span>
                   <span className="mt-1.5 block sm:hidden">
                     <Departure place={p} />
@@ -153,6 +154,59 @@ export function LinkChips({ title, links }: { title: string; links: { href: stri
           <li key={l.href}>
             <Link href={l.href} className="inline-flex h-11 items-center rounded-full bg-surface px-4 shadow-low hover:shadow-raised">
               {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Korte uitleg bovenaan een hub (Zonder vertrektijd, Uitslapers, Overige plekken), op de server in de HTML. De eerste
+ * zin staat in beeld; de rest staat achter "Meer over deze lijst", zodat het zoekscherm op een telefoon hoog blijft.
+ */
+export function HubIntro({ lead, more, link }: { lead: string; more: string[]; link?: { href: string; label: string } }) {
+  return (
+    <section aria-label="Over deze lijst" className="bg-surface px-3 pt-3 sm:px-6 lg:bg-transparent lg:pt-6">
+      <p className="max-w-prose text-ink-2">{lead}</p>
+      <details className="group max-w-prose">
+        <summary className="-mx-1 inline-flex h-11 cursor-pointer list-none items-center gap-1 px-1 font-semibold text-forest [&::-webkit-details-marker]:hidden">
+          Meer over deze lijst
+          <Icon name="chevronDown" size={16} className="transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none" />
+        </summary>
+        <div className="space-y-2 pb-3 text-ink-2">
+          {more.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+          {link && (
+            <p>
+              <Link href={link.href} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
+                {link.label}
+              </Link>
+            </p>
+          )}
+        </div>
+      </details>
+    </section>
+  );
+}
+
+/** Blok "Per provincie" onder een hub: twaalf links met het aantal plekken, in de HTML voor zoekmachines */
+export function ProvinceLinks({ title = "Per provincie", links }: { title?: string; links: ProvinceLink[] }) {
+  return (
+    <section aria-labelledby="per-provincie" className="px-3 pt-2 pb-24 sm:px-6 lg:pb-10">
+      <h2 id="per-provincie" className="text-lg font-semibold tracking-tight sm:text-[1.375rem]">
+        {title}
+      </h2>
+      <ul className="mt-3 grid border-t border-line sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-3">
+        {links.map((l) => (
+          <li key={l.href} className="border-b border-line">
+            <Link href={l.href} prefetch={false} className="flex min-h-11 items-center justify-between gap-3 py-2 text-ink hover:text-forest hover:underline">
+              <span className="font-semibold">{l.province}</span>
+              <span className="text-ink-2 tabular-nums">
+                {nl(l.count)} {l.count === 1 ? "plek" : "plekken"}
+              </span>
             </Link>
           </li>
         ))}
