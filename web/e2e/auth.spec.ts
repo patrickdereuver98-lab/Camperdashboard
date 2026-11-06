@@ -123,7 +123,7 @@ test.describe("ingelogd", () => {
     });
     await page.goto("/account");
     await expect(page.getByText("2 plekken, bewaard in je account")).toBeVisible();
-    const trip = await page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis") ?? "[]"));
+    const trip = await page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis") ?? "{}").stops);
     expect(trip).toEqual([{ slug: local, nights: 2 }, { slug: remote, nights: 3 }]);
     await expect.poll(() => pushed.length).toBeGreaterThan(0);
     expect(pushed[0]).toMatchObject({ user_id: USER.id, stops: [{ slug: local, nights: 2 }, { slug: remote, nights: 3 }] });
