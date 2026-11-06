@@ -1,4 +1,4 @@
--- Test voor migratie 20261101130000_mission_control.sql. Draai met run.sh (eigen database).
+-- Test voor migratie 20261102074903_mission_control.sql. Draai met run.sh (eigen database).
 \set ON_ERROR_STOP 1
 
 -- Rollen gesynchroniseerd uit admins

@@ -1,4 +1,4 @@
--- Test voor migratie 20261031220000_geo_bronnen_pdok.sql: een OSM-master (tier 4, één bron) komt door de bronregels
+-- Test voor migratie 20261101002100_geo_bronnen_pdok.sql: een OSM-master (tier 4, één bron) komt door de bronregels
 -- zodra een PDOK-record (tier 2) erbij hoort, maar pas als pdok op toegestaan staat. Draai met run.sh.
 
 do $$

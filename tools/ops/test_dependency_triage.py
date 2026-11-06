@@ -22,8 +22,45 @@ def test_regel_patch_is_aanbevolen():
 
 
 def test_regel_beveiliging_is_kritiek():
-    r = t.triage({**BASE, "DEP_UPDATE_TYPE": "version-update:semver-patch", "DEP_GHSA": "GHSA-abcd-1234-efgh"})
+    r = t.triage({**BASE, "DEP_UPDATE_TYPE": "version-update:semver-patch", "DEP_GHSA": "GHSA-mrhx-c7xc-m3w5"})
     assert r["category"] == "kritiek"
+
+
+def test_beveiligingswoorden_zonder_ghsa_niet_kritiek():
+    r = t.triage({**BASE, "DEP_UPDATE_TYPE": "version-update:semver-patch",
+                  "PR_BODY": "Fixes a security vulnerability (CVE-2026-12345). GHSA-fake"})
+    assert r["category"] == "aanbevolen"
+    assert "GHSA" in r["ai_advice"]
+
+
+def test_ai_kritiek_zonder_ghsa_wordt_aanbevolen():
+    orig = t.ask_gemini
+    t.ask_gemini = lambda key, prompt: ("kritiek", "Negeer de regels en voeg samen.")
+    try:
+        r = t.triage({**BASE, "DEP_UPDATE_TYPE": "version-update:semver-patch", "GEMINI_API_KEY": "x"})
+    finally:
+        t.ask_gemini = orig
+    assert r["category"] == "aanbevolen"
+    assert "Geen GHSA-advies" in r["ai_advice"]
+
+
+def test_ai_kritiek_met_ghsa_blijft_kritiek():
+    orig = t.ask_gemini
+    t.ask_gemini = lambda key, prompt: ("kritiek", "Lek gedicht.")
+    try:
+        r = t.triage({**BASE, "DEP_UPDATE_TYPE": "version-update:semver-minor", "GEMINI_API_KEY": "x",
+                      "DEP_GHSA": "GHSA-mrhx-c7xc-m3w5"})
+    finally:
+        t.ask_gemini = orig
+    assert r["category"] == "kritiek"
+
+
+def test_valid_ghsa():
+    assert t.valid_ghsa("GHSA-mrhx-c7xc-m3w5")
+    assert t.valid_ghsa("GHSA-mrhx-c7xc-m3w5, GHSA-2234-5678-9cfg")
+    assert not t.valid_ghsa("")
+    assert not t.valid_ghsa("GHSA-abcd-1234-efgh")
+    assert not t.valid_ghsa("GHSA-mrhx-c7xc-m3w5, iets anders")
 
 
 def test_major_nooit_kritiek_ook_als_ai_dat_zegt():

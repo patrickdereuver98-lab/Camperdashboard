@@ -1,4 +1,4 @@
--- Test voor migratie 20261102140000_vertrektijd_wachtrij.sql (README 95). Draait na eigenaar_inbox.test.sql.
+-- Test voor migratie 20261102085642_vertrektijd_wachtrij.sql (README 95). Draait na eigenaar_inbox.test.sql.
 \set ON_ERROR_STOP 1
 reset role;
 

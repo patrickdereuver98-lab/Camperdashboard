@@ -1,4 +1,4 @@
--- Tests voor public.promote_geo_master (migraties 20261031090000 en 20261031170000). Draai met web/supabase/tests/run.sh.
+-- Tests voor public.promote_geo_master (migraties 20261030162002 en 20261031175939). Draai met web/supabase/tests/run.sh.
 -- Elke controle is een assert: één fout stopt het script (ON_ERROR_STOP) met de melding.
 
 -- Bestaande plek in places: De Bosrand in Utrecht, met een website (beheer of scraper vulde die)
