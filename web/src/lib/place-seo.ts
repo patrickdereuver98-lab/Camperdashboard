@@ -45,7 +45,8 @@ export type AllInPrice = {
  */
 export function allSurchargesKnown(p: Pick<Place, "priceEur" | "priceFrom" | "priceExtras" | "touristTaxIncluded"> & { power?: boolean }): boolean {
   const t = nightTotal(p);
-  if (t.total === undefined || t.from) return false;
+  // Een totaal met een aanname (bv. toeristenbelasting zonder eenheid) is geen "inclusief toeslagen"
+  if (t.total === undefined || t.from || t.assumed?.length) return false;
   return t.parts.some((x) => x.label === "Stroom") || p.power === false;
 }
 

@@ -75,3 +75,9 @@ test("R22: stroomprijs per nacht bekend: alles inbegrepen; per kWh niet", () => 
   assert.equal(allSurchargesKnown(kwh), false);
   assert.equal(allInPrice(kwh)?.allIn, false);
 });
+
+test("allSurchargesKnown: een totaal met een aanname is niet 'inclusief toeslagen'", async () => {
+  const { allSurchargesKnown } = await import("../src/lib/place-seo");
+  const p = { priceEur: 20, power: false, priceExtras: [{ label: "Toeristenbelasting", amount: 1.2 }] } as Parameters<typeof allSurchargesKnown>[0];
+  assert.equal(allSurchargesKnown(p), false);
+});
