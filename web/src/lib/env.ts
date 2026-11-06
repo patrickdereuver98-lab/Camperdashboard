@@ -8,14 +8,15 @@ const FALLBACK_SITE_URL = "https://vrijstaan.nl";
 
 /**
  * Adres van de site voor canonicals, sitemap en deelkaarten. Op een productiebuild van Vercel (VERCEL_ENV=production)
- * moet NEXT_PUBLIC_SITE_URL gezet zijn: anders zouden canonicals stil naar de terugval wijzen (review november 2026,
+ * hoort NEXT_PUBLIC_SITE_URL gezet te zijn: anders wijzen canonicals naar de terugval, met een waarschuwing in de buildlog (review november 2026,
  * R2). Elders (lokaal, CI, previews) blijft de terugval.
  */
 export function resolveSiteUrl(env: { NEXT_PUBLIC_SITE_URL?: string; VERCEL_ENV?: string }): string {
   const url = env.NEXT_PUBLIC_SITE_URL?.trim();
   if (url) return url.replace(/\/+$/, "");
+  // Waarschuwen, niet stoppen: een harde stop zou ook beveiligingsfixes tegenhouden zolang het domein niet geregeld is
   if (env.VERCEL_ENV === "production")
-    throw new Error("NEXT_PUBLIC_SITE_URL ontbreekt in Vercel (Production). Zet het echte adres van de site, bv. https://www.vrijstaan.nl.");
+    console.warn("[vrijstaan] NEXT_PUBLIC_SITE_URL ontbreekt in Vercel (Production); canonicals wijzen naar de terugval " + FALLBACK_SITE_URL);
   return FALLBACK_SITE_URL;
 }
 
