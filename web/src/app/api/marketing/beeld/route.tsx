@@ -1,9 +1,11 @@
 import { ImageResponse } from "next/og";
 import { ogFonts } from "@/lib/og-fonts";
 import { BRAND_NAME } from "@/lib/brand";
-import { FORMATS, TEMPLATES, slideFor, type ImageFormat, type ImageTemplate } from "@/lib/marketing/images";
+import { FORMATS, slideFor } from "@/lib/marketing/images";
 import { factsFromSummaries } from "@/lib/marketing/public-facts";
 import { getSummaries } from "@/lib/places";
+import { rateLimited } from "@/lib/rate-limit";
+import { beeldParams } from "./params";
 
 // Huisstijl (globals.css): zandpapier, bosgroen, inkt
 const PAPER = "#f5f0e6";
@@ -17,14 +19,16 @@ const CACHE = { "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-wh
 /**
  * GET /api/marketing/beeld?t=cijfers&f=portrait[&p=Gelderland][&i=2]: beeld voor Instagram, Facebook of TikTok.
  * Openbaar zodat het dashboard het als <img> kan tonen en downloaden; vaste teksten, feiten uit de openbare plekken.
+ * Een beeld tekenen kost rekentijd: 20 per minuut per bezoeker (het CDN bewaart elk beeld daarna een dag).
  */
 export async function GET(request: Request) {
-  const sp = new URL(request.url).searchParams;
-  const t = sp.get("t") as ImageTemplate;
-  const f = (sp.get("f") ?? "portrait") as ImageFormat;
-  if (!(t in TEMPLATES) || !(f in FORMATS)) return new Response("Onbekend sjabloon of formaat", { status: 400 });
+  const limited = rateLimited(request, 20, "beeld");
+  if (limited) return limited;
+  const params = beeldParams(new URL(request.url).searchParams);
+  if (!params) return new Response("Onbekend sjabloon, formaat of parameter", { status: 400 });
+  const { t, f } = params;
   const facts = factsFromSummaries(await getSummaries());
-  const slide = slideFor(t, facts, { province: sp.get("p") ?? undefined, slide: Number(sp.get("i")) || 1 });
+  const slide = slideFor(t, facts, { province: params.province, slide: params.slide });
   if (!slide) return new Response("Te weinig plekken om dit eerlijk te tonen", { status: 404 });
   const { w, h } = FORMATS[f];
   const tall = h / w > 1.5;

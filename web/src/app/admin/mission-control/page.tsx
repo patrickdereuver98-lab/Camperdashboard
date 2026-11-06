@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { errorMessage } from "@/lib/supabase-browser";
+import { groupUpdates } from "@/lib/update-triage";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, danger, db, primary, secondary, useQuery, when } from "../ui";
 
 type Tab = "inbox" | "logs" | "updates";
@@ -51,11 +52,16 @@ type Update = {
   old_value: unknown;
   new_value: unknown;
   source: string;
+  submission_id: string | null;
+  owner_reply_id: string | null;
   ai_score: number | null;
   ai_advice: string | null;
   created_at: string;
   places: { name: string; slug: string } | null;
 };
+
+const FIELD_LABEL: Record<string, string> = { verified_at: "bevestigt gegevens" };
+const SOURCE_TONE: Record<string, "green" | "yellow" | "neutral" | "road"> = { eigenaar: "green", "mail (onbevestigd)": "yellow" };
 
 function scoreTone(s: number | null) {
   return s === null ? "neutral" : s >= 70 ? "green" : s >= 40 ? "yellow" : "red";
@@ -66,13 +72,14 @@ function TriageInbox() {
     () =>
       db()
         .from("updates_queue")
-        .select("id, field_changed, old_value, new_value, source, ai_score, ai_advice, created_at, places(name, slug)")
+        .select("id, field_changed, old_value, new_value, source, submission_id, owner_reply_id, ai_score, ai_advice, created_at, places(name, slug)")
         .eq("status", "pending")
         .order("created_at")
         .limit(200),
     [],
   );
-  const rows = (data ?? []) as unknown as Update[];
+  const updates = (data ?? []) as unknown as Update[];
+  const rows = groupUpdates(updates);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -102,7 +109,7 @@ function TriageInbox() {
   async function evaluateAll() {
     setBusy("alle");
     setErr(null);
-    for (const r of rows.filter((r) => r.ai_score === null)) {
+    for (const r of updates.filter((r) => r.ai_score === null)) {
       try {
         await evaluate(r.id);
       } catch (e) {
@@ -119,8 +126,9 @@ function TriageInbox() {
       <div className="flex flex-wrap items-center gap-2">
         <p className="mr-auto text-sm text-ink-2">
           {rows.length} open. Accepteer zet de waarde in de plek met het merkteken van beheer; het AI-advies is alleen een hulpmiddel.
+          Bron &quot;mail (onbevestigd)&quot; komt van een ander adres dan dat van de plek: controleer het eerst bij de eigenaar.
         </p>
-        <button className={secondary} onClick={evaluateAll} disabled={busy !== null || !rows.some((r) => r.ai_score === null)}>
+        <button className={secondary} onClick={evaluateAll} disabled={busy !== null || !updates.some((r) => r.ai_score === null)}>
           {busy === "alle" ? "Bezig…" : "AI-check voor alles zonder score"}
         </button>
         <button className={secondary} onClick={reload}>Vernieuwen</button>
@@ -135,7 +143,7 @@ function TriageInbox() {
           <table className={table}>
             <thead className="border-b border-line">
               <tr>
-                <th className={th}>Plek</th><th className={th}>Veld</th><th className={th}>Oud</th><th className={th}>Nieuw</th>
+                <th className={th}>Plek</th><th className={th}>Bron</th><th className={th}>Veld</th><th className={th}>Oud</th><th className={th}>Nieuw</th>
                 <th className={th}>AI</th><th className={th}>Advies</th><th className={th}>Binnen</th><th className={th}><span className="sr-only">Acties</span></th>
               </tr>
             </thead>
@@ -145,9 +153,10 @@ function TriageInbox() {
                   <td className={td}>
                     {r.places ? <Link href={`/plek/${r.places.slug}`} target="_blank" className="font-semibold text-forest underline">{r.places.name}</Link> : "?"}
                   </td>
-                  <td className={`${td} font-mono`}>{r.field_changed}</td>
-                  <td className={`${td} text-muted`}>{show(r.old_value)}</td>
-                  <td className={`${td} font-semibold`}>{show(r.new_value)}</td>
+                  <td className={td}><Badge tone={SOURCE_TONE[r.source] ?? "neutral"}>{r.source}</Badge></td>
+                  <td className={`${td} font-mono`}>{r.fields.map((f) => FIELD_LABEL[f.field_changed] ?? f.field_changed).join(" + ")}</td>
+                  <td className={`${td} text-muted`}>{r.fields.map((f) => show(f.old_value)).join(", ")}</td>
+                  <td className={`${td} font-semibold`}>{r.fields.map((f) => show(f.new_value)).join(", ")}</td>
                   <td className={td}><Badge tone={scoreTone(r.ai_score)}>{r.ai_score ?? "–"}</Badge></td>
                   <td className={`${td} max-w-xs text-ink-2`}>{r.ai_advice ?? ""}</td>
                   <td className={`${td} whitespace-nowrap text-muted`}>{when(r.created_at)}</td>

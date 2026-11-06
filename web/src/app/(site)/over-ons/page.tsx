@@ -27,7 +27,10 @@ export default async function AboutPage() {
       <Section title="Waar de gegevens vandaan komen">
         <ul>
           <li>OpenStreetMap, de open kaart die vrijwilligers bijhouden (ODbL-licentie).</li>
-          <li>De website van de plek zelf. We lezen alleen wat openbaar is en houden ons aan robots.txt.</li>
+          <li>
+            De website van de plek zelf. We lezen alleen wat openbaar is, nooit achter een inlog of betaalmuur. Wil een
+            eigenaar niet dat we zijn site lezen, dan stoppen we daarmee.
+          </li>
           <li>Meldingen en reviews van camperaars en eigenaren. Die controleren we eerst.</li>
         </ul>
         <p>Bovenaan elke plek staat wanneer we de gegevens voor het laatst hebben bijgewerkt.</p>
