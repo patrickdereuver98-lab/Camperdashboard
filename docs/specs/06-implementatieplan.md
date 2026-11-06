@@ -149,7 +149,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 ## Mijlpaal 6: release ⬜
 
-> Review 5 en 6 november 2026: blokkers en aanpasplan in fases tot de livegang staan in [`docs/review-2026-11.md`](../review-2026-11.md) §4 (punten R1 tot en met R43).
+> Review 5 en 6 november 2026: blokkers en aanpasplan in fases tot de livegang staan in [`docs/review-2026-11.md`](../review-2026-11.md) §4 (punten R1 tot en met R55).
 
 ### Stand bij de bevriezing van v1.0.0-beta (1 november 2026)
 
