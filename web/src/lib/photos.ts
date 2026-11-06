@@ -97,6 +97,37 @@ export function looksLikeGraphic(url: string): boolean {
 }
 
 /**
+ * Stockfoto's (Unsplash, Pexels, Pixabay, Shutterstock, iStock en dergelijke) zijn nooit een foto van de plek: een
+ * metro of een willekeurig bos bij een camping (R44). Op de host, en op de bestandsnaam als de site ze zelf bewaart
+ * ("dino-reichmuth-…-unsplash.jpg", "pexels-matt-hardy-….jpg", "istockphoto-691333546-….jpg", "/unsplash/…").
+ */
+const STOCK = /unsplash|pexels|pixabay|soloist|shutterstock|istockphoto|gettyimages|depositphotos|adobestock|stock\.adobe|dreamstime|123rf|freepik/i;
+
+export function isStockPhoto(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return STOCK.test(u.hostname) || STOCK.test(decodeURIComponent(u.pathname));
+  } catch {
+    return STOCK.test(url);
+  }
+}
+
+/**
+ * Niet geschikt als eerste foto: tekeningen en logo's (looksLikeGraphic), plattegronden en kaarten, en banners of
+ * flyers (vaak met telefoonnummer of tekst). Ze blijven in de galerij, maar achter de echte foto's.
+ */
+export function unfitAsCover(url: string): boolean {
+  if (looksLikeGraphic(url)) return true;
+  let path = url;
+  try {
+    path = decodeURIComponent(new URL(url).pathname);
+  } catch {
+    // Geen geldige URL: op de tekst zelf
+  }
+  return /plattegrond|kaart|(?:^|[/_.-])(?:map|maps|banner|flyer|poster|folder|telefoon|phone)(?:[/_.-]|\d|$)/i.test(path);
+}
+
+/**
  * Score voor de volgorde: echte, grote foto's vooraan, plaatjes die op een tekening of logo lijken achteraan.
  * null = geen foto van de plek of zeker te klein: niet tonen.
  */
@@ -108,6 +139,7 @@ export function photoScore(url: string, original = url): number | null {
     return null;
   }
   if (NOT_THE_PLACE.test(path)) return null;
+  if (isStockPhoto(url) || isStockPhoto(original)) return null;
   // Video's en beelden van keurmerken, boekingssites en sociale media (svr.nl/px/ok.jpg, Facebook-cdn) zijn geen foto van de plek
   if (/\.(webm|mp4|mov|m4v|ogv|avi)$/i.test(path)) return null;
   if (/(^|\.)(svr\.nl|anwb\.nl|acsi\.(eu|nl|com)|zoover\.(nl|com|be)|campercontact\.com|park4night\.com|tripadvisor\.[a-z.]+|booking\.com|google\.[a-z.]+|googleusercontent\.com|facebook\.com|fbcdn\.net|instagram\.com)$/i.test(new URL(url).hostname)) return null;
@@ -136,18 +168,22 @@ export function photoScore(url: string, original = url): number | null {
 }
 
 /**
- * Gefilterd en gesorteerd: beste foto vooraan, bij gelijke score de volgorde van de site. De URL's blijven de
+ * Gefilterd en gesorteerd: echte foto's vóór tekeningen, plattegronden en banners (unfitAsCover, ook bij een hoge
+ * score), daarbinnen de beste foto vooraan en bij gelijke score de volgorde van de site. De URL's blijven de
  * originele; PlacePhoto vraagt de grote versie op en valt bij een fout terug op het origineel.
  */
 export function rankPhotos<P extends { url: string }>(photos: P[]): P[] {
   const seen = new Set<string>();
   return photos
-    .map((p, i) => ({ p, i, score: photoScore(upgradePhotoUrl(p.url), p.url) }))
-    .filter((x): x is { p: P; i: number; score: number } => {
+    .map((p, i) => {
+      const big = upgradePhotoUrl(p.url);
+      return { p, i, score: photoScore(big, p.url), back: unfitAsCover(big) || unfitAsCover(p.url) ? 1 : 0 };
+    })
+    .filter((x): x is { p: P; i: number; score: number; back: number } => {
       if (x.score === null || seen.has(x.p.url)) return false;
       seen.add(x.p.url);
       return true;
     })
-    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .sort((a, b) => a.back - b.back || b.score - a.score || a.i - b.i)
     .map((x) => x.p);
 }

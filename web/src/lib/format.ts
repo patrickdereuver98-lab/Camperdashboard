@@ -56,13 +56,13 @@ export function websiteLabel(url: string) {
   return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 }
 
-/** "11:30" of "9.00" als minuten na middernacht; undefined als het geen geldige tijd is */
+/** "11:30" of "9.00" als minuten na middernacht (00:00 tot en met 23:59); undefined als het geen geldige tijd is */
 export function timeToMinutes(t?: string): number | undefined {
   const m = /^\s*(\d{1,2})[:.](\d{2})\s*$/.exec(t ?? "");
   if (!m) return undefined;
   const h = Number(m[1]);
   const min = Number(m[2]);
-  return h <= 24 && min < 60 ? h * 60 + min : undefined;
+  return h <= 23 && min < 60 ? h * 60 + min : undefined;
 }
 
 type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string; departureCheck?: "bevestigd" | "voorwaardelijk" | "afgewezen" };
@@ -70,12 +70,12 @@ type Departure = { departure?: "vrij" | "per24" | "vast"; checkoutUntil?: string
 /**
  * Korte vertrekregel voor kaarten, kaartpopup en kerngegevens; undefined = onbekend. Een regel uit een bron (website,
  * zoekagent met letterlijk citaat, OSM) is genoeg (besluit eigenaar 18 oktober 2026); alleen een door beheer
- * afgewezen regel tonen we niet.
+ * afgewezen regel tonen we niet, welke regel het ook is (zelfde als `departureKind`: afgewezen is onbekend).
  */
 export function departureShort(p: Departure): string | undefined {
+  if (p.departureCheck === "afgewezen") return undefined;
   if (p.departure === "vrij" || p.departure === "per24") {
     const per24 = p.departure === "per24";
-    if (p.departureCheck === "afgewezen") return undefined;
     if (p.departureCheck === "voorwaardelijk") return per24 ? "Meestal per 24 uur" : "Meestal geen vaste vertrektijd";
   }
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
@@ -89,7 +89,7 @@ export function departureShort(p: Departure): string | undefined {
 export function departureLong(p: Departure): string {
   const claimed = p.departure === "vrij" || p.departure === "per24";
   const per24 = p.departure === "per24";
-  if (!p.departure || (claimed && p.departureCheck === "afgewezen")) return "Onbekend";
+  if (!p.departure || p.departureCheck === "afgewezen") return "Onbekend";
   if (claimed && p.departureCheck === "voorwaardelijk") return per24 ? "Meestal per 24 uur" : "Meestal geen vaste tijd";
   if (p.departure === "vrij") return "Geen vaste vertrektijd";
   if (per24) return "Geen vaste tijd, je betaalt per 24 uur";

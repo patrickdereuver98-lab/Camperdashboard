@@ -74,12 +74,41 @@ export function factLines(f: Facts): FactLine[] {
   return lines.map((l) => ({ ...l, public: l.key === "provinces" ? l.value > 0 : l.value >= PUBLIC_MIN }));
 }
 
-/** Alle getallen die in content mogen staan: de feiten zelf plus vaste getallen uit de app (2 personen, 12:00, 11:00) */
-export function allowedNumbers(f: Facts): Set<number> {
-  const set = new Set<number>([2, 11, 12, 24]);
+/**
+ * Vaste getallen uit de app, alleen in hun eigen patroon (DATA-15): de vertrektijden 11:00 en 12:00, "2 personen"
+ * (de standaardsituatie van de prijs) en "24 uur". Een losse "2" of "12" ("12 gratis plekken") is geen vast getal.
+ */
+export const FIXED_NUMBER_PATTERNS: RegExp[] = [
+  /(?<![\w.,:])(?:11|12)[:.]00(?![\d:])/g,
+  /(?<![\w.,])2 (?:personen|volwassenen)\b/gi,
+  /(?<![\w.,])24 uur\b/gi,
+];
+
+/** Tekst zonder de vaste patronen, zodat alleen de overige getallen tegen de feitenbank worden gecontroleerd */
+export function maskFixedNumbers(text: string): string {
+  return FIXED_NUMBER_PATTERNS.reduce((t, re) => t.replace(re, " "), text);
+}
+
+/**
+ * Alle getallen die in content mogen staan: de feiten zelf. Met `text` ook de vaste getallen (2, 11, 12, 24), maar
+ * alleen als ze in die tekst uitsluitend in hun vaste patroon staan (12:00, 2 personen, 24 uur); een losse "12"
+ * ernaast maakt ze niet toegestaan. Zonder `text`: zoals vroeger, met de vaste getallen (voor bestaande aanroepers).
+ * Beter: controleer `maskFixedNumbers(text)` tegen `allowedNumbers(f, "")`.
+ */
+export function allowedNumbers(f: Facts, text?: string): Set<number> {
+  const set = new Set<number>(text === undefined ? [2, 11, 12, 24] : fixedNumbersAllowed(text));
   for (const l of factLines(f)) if (l.public) set.add(l.value);
   for (const p of f.provinces) if (p.places >= PUBLIC_MIN) set.add(p.places);
   if (f.price.median !== null) set.add(f.price.median);
   if (f.reviews.avg !== null && f.reviews.count >= PUBLIC_MIN) set.add(f.reviews.avg);
   return set;
+}
+
+/** De vaste getallen die in `text` alleen in hun patroon voorkomen (staat er ook een losse "12", dan niet 12) */
+function fixedNumbersAllowed(text: string): number[] {
+  const loose = new Set<number>();
+  for (const m of maskFixedNumbers(text).matchAll(/(?<![\w.,])(\d+)(?![.,]?\d)/g)) loose.add(Number(m[1]));
+  const inPattern = new Set<number>();
+  for (const re of FIXED_NUMBER_PATTERNS) for (const m of text.matchAll(re)) inPattern.add(Number(/\d+/.exec(m[0])![0]));
+  return [...inPattern].filter((n) => !loose.has(n));
 }

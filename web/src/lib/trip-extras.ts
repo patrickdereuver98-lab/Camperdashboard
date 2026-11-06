@@ -1,5 +1,5 @@
 export type Extra = { label: string; amount: number; unit?: string };
-type ExtrasStop = { nights: number; place: { priceEur?: number; priceExtras?: Extra[]; touristTaxIncluded?: boolean } };
+type ExtrasStop = { nights: number; place: { priceEur?: number; priceExtras?: Extra[]; touristTaxIncluded?: boolean; priceFrom?: boolean } };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const perPersonPerNight = (x: Extra) => x.unit === "per persoon per nacht" || (x.label === "Per persoon" && x.unit === "per nacht");
@@ -28,29 +28,59 @@ export type StopSurcharges = {
   stayFromPerPerson?: number;
   /** Toeristenbelasting volgens de plek zelf (per persoon per nacht) */
   touristTax?: number;
-  /** Toeslagen die we niet meetellen: hangt af van je situatie, of de eenheid is onbekend */
+  /** Verplichte toeslag per persoon naast de basisprijs ("Per persoon"), × personen × nachten (R46) */
+  perPerson?: number;
+  /** De plek noemt een regel voor toeristenbelasting (meegeteld of genoemd): dan geen schatting erbij */
+  taxRule?: boolean;
+  /** Meegeteld als per persoon per nacht terwijl de bron alleen "per persoon" of geen eenheid noemde */
+  assumed?: Extra[];
+  /** Toeslagen die we niet meetellen: hangt af van je situatie, of de eenheid past niet */
   listed: Extra[];
 };
 
+/** Eenheden van een overnachtingstoeslag per persoon die we per persoon per nacht rekenen */
+const NIGHTLY_UNITS = new Set([undefined, "per persoon per nacht", "per persoon"]);
+
 /**
- * Losse toeslagen van een stop, zonder iets te verzinnen. We tellen alleen mee wat eenduidig is:
- * - Toeristenbelasting "per persoon per nacht": bedrag × personen × nachten (vervangt dan de schatting).
- * - "Per persoon" per nacht bij een plek zonder basisprijs: dat ís de prijs, × personen × nachten.
- * Alles anders (per persoon naast een basisprijs kan ook "extra volwassene" zijn, hond, stroom, kind, bedragen
- * zonder eenheid) noemen we apart.
+ * Losse toeslagen van een stop. Verplichte kosten per persoon tellen mee, × personen × nachten (R46):
+ * - Toeristenbelasting: per persoon per nacht, ook als de bron alleen "per persoon" of geen eenheid noemt (een
+ *   overnachtingstoeslag per persoon; dan staat hij ook in `assumed`). Een andere eenheid (per nacht, per keer)
+ *   noemen we apart, en dan komt er geen schatting bij (R25).
+ * - "Per persoon" bij een plek zonder basisprijs: dat ís de prijs (alleen als die per nacht is, zie perPersonPrice).
+ * - "Per persoon" naast een basisprijs: verplichte toeslag per persoon per nacht (`perPerson`), met dezelfde eenheden.
+ * Wat van je situatie afhangt (hond, kind, douche, stroom, water, lozen, extra auto, later vertrekken) noemen we apart.
  */
 export function stopSurcharges(s: ExtrasStop, persons: number): StopSurcharges {
   const nights = Math.max(0, s.nights);
   const p = Math.max(1, Math.round(persons));
   const out: StopSurcharges = { listed: [] };
   const pp = perPersonPrice(s.place);
+  const taxApplies = s.place.touristTaxIncluded !== true && s.place.priceEur !== 0;
+  const assume = (x: Extra) => {
+    if (!perPersonPerNight(x)) (out.assumed ??= []).push(x);
+  };
   for (const x of s.place.priceExtras ?? []) {
     if (!(x.amount > 0)) continue;
-    if (x.label === "Toeristenbelasting" && x.unit === "per persoon per nacht" && s.place.touristTaxIncluded !== true && s.place.priceEur !== 0) {
-      out.touristTax = r2(x.amount * p * nights);
+    if (x.label === "Toeristenbelasting") {
+      // Gratis of al in de prijs: niets erbij
+      if (!taxApplies) continue;
+      out.taxRule = true;
+      if (NIGHTLY_UNITS.has(x.unit) && out.touristTax === undefined) {
+        out.touristTax = r2(x.amount * p * nights);
+        assume(x);
+      } else out.listed.push(x);
     } else if (pp?.perNight && x === pp.extra) {
       out.stayFromPerPerson = r2(x.amount * p * nights);
-    } else if (x.label !== "Toeristenbelasting") {
+    } else if (
+      x.label === "Per persoon" &&
+      s.place.priceEur !== undefined &&
+      s.place.priceEur > 0 &&
+      (NIGHTLY_UNITS.has(x.unit) || x.unit === "per nacht") &&
+      out.perPerson === undefined
+    ) {
+      out.perPerson = r2(x.amount * p * nights);
+      assume(x);
+    } else {
       out.listed.push(x);
     }
   }
@@ -68,6 +98,12 @@ export type TripCosts = {
   taxEstimatedNights: number;
   /** Per stop de toeslagen die niet zijn meegeteld */
   listed: { index: number; extras: Extra[] }[];
+  /** Deel van `stay`: verplichte toeslagen per persoon naast de basisprijs (R46) */
+  perPerson?: number;
+  /** Stops waarvan de nachtprijs een vanaf-prijs is (laagste tarief): het totaal kan hoger uitvallen */
+  fromPriceStops?: number;
+  /** Per stop de bedragen die we als per persoon per nacht rekenden zonder dat de bron "per nacht" zei */
+  assumed?: { index: number; extras: Extra[] }[];
 };
 
 export function tripCosts(stops: ExtrasStop[], persons: number, touristTaxEstimate: number): TripCosts {
@@ -75,15 +111,25 @@ export function tripCosts(stops: ExtrasStop[], persons: number, touristTaxEstima
   let unknown = 0;
   let taxKnown = 0;
   let estNights = 0;
+  let perPerson = 0;
+  let fromStops = 0;
   const listed: TripCosts["listed"] = [];
+  const assumed: NonNullable<TripCosts["assumed"]> = [];
   stops.forEach((s, index) => {
     const sur = stopSurcharges(s, persons);
     if (s.place.priceEur !== undefined) stay += s.place.priceEur * s.nights;
     else if (sur.stayFromPerPerson !== undefined) stay += sur.stayFromPerPerson;
     else unknown++;
+    if (sur.perPerson !== undefined) {
+      stay += sur.perPerson;
+      perPerson += sur.perPerson;
+    }
+    if (s.place.priceFrom && s.place.priceEur !== undefined && s.place.priceEur > 0) fromStops++;
     if (sur.touristTax !== undefined) taxKnown += sur.touristTax;
-    else if (s.place.priceEur !== 0 && s.place.touristTaxIncluded !== true) estNights += s.nights;
+    // Schatting alleen als de plek zelf geen belastingregel noemt (R25)
+    else if (!sur.taxRule && s.place.priceEur !== 0 && s.place.touristTaxIncluded !== true) estNights += s.nights;
     if (sur.listed.length) listed.push({ index, extras: sur.listed });
+    if (sur.assumed?.length) assumed.push({ index, extras: sur.assumed });
   });
   const p = Math.max(1, Math.round(persons));
   return {
@@ -93,6 +139,9 @@ export function tripCosts(stops: ExtrasStop[], persons: number, touristTaxEstima
     taxEstimatedNights: estNights,
     tax: r2(taxKnown + p * touristTaxEstimate * estNights),
     listed,
+    perPerson: r2(perPerson),
+    fromPriceStops: fromStops,
+    assumed,
   };
 }
 
