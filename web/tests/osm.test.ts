@@ -124,8 +124,9 @@ test("mapOsm: tweede tag als de eerste onbekend is (electricity na power_supply)
   assert.equal(row.power, true);
 });
 
-test("mapOsm: fee=no zonder charge betekent gratis", () => {
-  assert.equal(mapOsm(el({ tourism: "caravan_site", fee: "no" }))!.price_eur, 0);
+test("mapOsm: fee=no zonder charge is prijs onbekend, geen 0 (review nov. 2026, DATA-10)", () => {
+  assert.equal(mapOsm(el({ tourism: "caravan_site", fee: "no" }))!.price_eur, undefined);
+  assert.equal(mapOsm(el({ tourism: "caravan_site", fee: "no", charge: "gratis" }))!.price_eur, 0);
   assert.equal("price_eur" in mapOsm(el({ tourism: "caravan_site", fee: "yes" }))!, false);
   assert.equal(mapOsm(el({ tourism: "caravan_site", fee: "yes", charge: "12.50 EUR" }))!.price_eur, 12.5);
 });
