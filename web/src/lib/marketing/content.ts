@@ -113,7 +113,8 @@ export function checkContent(v: Variant, channel: Channel, facts: Facts | null):
   const issues: Issue[] = [];
   const text = `${v.title}\n${v.body}\n${v.overlay ?? ""}`;
   if (facts) {
-    const allowed = allowedNumbers(facts);
+    // Vaste getallen (12:00, 2 personen, 24 uur) alleen in hun eigen patroon: een losse "12" moet een feit zijn (DATA-15)
+    const allowed = allowedNumbers(facts, text);
     for (const n of numbersIn(text)) {
       if (Number.isInteger(n.value) && n.value >= 2020 && n.value <= 2035) continue;
       if (Number.isNaN(n.value)) issues.push({ kind: "getal", detail: `Percentage "${n.raw}" staat niet in de feitenbank` });

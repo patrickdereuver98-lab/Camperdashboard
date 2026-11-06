@@ -1,4 +1,4 @@
-// Types voor migratie 20261102180000_marketing_dashboard.sql. Met de hand, omdat de migratie pas live gaat na het
+// Types voor migratie 20261102132558_marketing_dashboard.sql. Met de hand, omdat de migratie pas live gaat na het
 // samenvoegen; weg zodra database.types.ts opnieuw gegenereerd is (zie supabase-browser.ts).
 import type { Json } from "../database.types";
 

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES, summarize } from "@/lib/expenses";
 import { eur, pluralize } from "@/lib/format";
-import { readTripPlaces, useExpenses, usePlaces, useTrip } from "@/lib/store";
+import { readTripPlacesCopy, useExpenses, usePlaces, useTrip } from "@/lib/store";
 import { tripStats } from "@/lib/trip-stats";
 import { Icon } from "@/components/icons";
+import { dataDateText } from "../trip-notes";
 
 const nf = new Intl.NumberFormat("nl-NL");
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -76,8 +77,11 @@ function Tile({ label, value, note }: { label: string; value: string; note?: str
 export function StatsApp() {
   const trip = useTrip();
   const { list } = useExpenses();
-  const { data: live, error } = usePlaces();
-  const places = useMemo(() => live ?? (error ? readTripPlaces() : null), [live, error]);
+  const { data: live, error, cachedAt } = usePlaces();
+  // Zonder bereik: de plekken van je reis zoals ze de vorige keer zijn bewaard, met de datum van die gegevens
+  const offlineCopy = useMemo(() => (error ? readTripPlacesCopy() : null), [error]);
+  const places = live ?? offlineCopy?.places ?? null;
+  const dataDate = dataDateText(live ? cachedAt : offlineCopy?.savedAt);
   const stops = useMemo(() => {
     if (!places) return null;
     const bySlug = new Map(places.map((p) => [p.slug, p]));
@@ -131,6 +135,18 @@ export function StatsApp() {
       <p className="mt-1 text-ink-2">
         {pluralize(t.stops, "stop", "stops")}, {pluralize(t.nights, "nacht", "nachten")}
       </p>
+      {error ? (
+        <p role="status" className="mt-3 rounded-lg bg-sunken px-4 py-3 text-sm text-ink-2" data-testid="stats-data-date">
+          Geen verbinding. Je ziet de gegevens van je reis zoals ze de vorige keer zijn bewaard.
+          {dataDate && ` Gegevens van ${dataDate}.`}
+        </p>
+      ) : (
+        dataDate && (
+          <p className="mt-1 text-sm text-muted" data-testid="stats-data-date">
+            Gegevens van {dataDate}.
+          </p>
+        )
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="stat-tiles">
         <Tile label="Rijden" value={kmLabel} note="Langs je stops" />

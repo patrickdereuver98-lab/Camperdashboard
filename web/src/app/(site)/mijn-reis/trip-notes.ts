@@ -1,4 +1,5 @@
 // Kleine teksten voor Mijn reis, los van React zodat ze te testen zijn.
+import { eur } from "@/lib/format";
 import type { Extra } from "@/lib/trip-extras";
 
 const TIME = new Intl.DateTimeFormat("nl-NL", { hour: "2-digit", minute: "2-digit" });
@@ -46,4 +47,22 @@ export function surchargeNote(extras: Extra[]): string {
   if (optional && unclear) return "Of je sommige betaalt hangt af van je situatie. Bij de andere zegt de plek niet waar het bedrag voor geldt.";
   if (optional) return "Of je deze betaalt hangt af van je situatie.";
   return "De plek zegt niet waar het bedrag voor geldt.";
+}
+
+/**
+ * Hoe we een bedrag rekenden waarvan de plek de eenheid niet (helemaal) noemt: "toeristenbelasting € 1,20, gerekend
+ * per persoon per nacht (de plek noemt geen eenheid)". Zo staat de aanname er altijd bij.
+ */
+export function assumedText(x: Extra): string {
+  const what = x.label === "Toeristenbelasting" ? "toeristenbelasting" : x.label === "Per persoon" ? "toeslag per persoon" : x.label.toLowerCase();
+  const said = x.unit ? `de plek zegt alleen "${x.unit}"` : "de plek noemt geen eenheid";
+  return `${what} ${eur(x.amount)}, gerekend per persoon per nacht (${said})`;
+}
+
+/** "1 plek noemt een vanaf-prijs. Daar betaal je mogelijk meer." Leeg zonder vanaf-prijzen. */
+export function fromPriceNote(stops: number | undefined): string | undefined {
+  if (!stops) return undefined;
+  return stops === 1
+    ? "1 plek noemt alleen een vanaf-prijs. Daar betaal je mogelijk meer."
+    : `${stops} plekken noemen alleen een vanaf-prijs. Daar betaal je mogelijk meer.`;
 }
