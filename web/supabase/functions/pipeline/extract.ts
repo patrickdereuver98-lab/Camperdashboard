@@ -256,10 +256,15 @@ export function extract(pages: string[], base: URL) {
   const AMOUNT = "(\\d{1,2}(?:[.,]\\d{2})?)(?:\\s*,-|\\s*[-–](?=\\s))?";
   const PER = "(?:per|p\\.?|\\/|pro)\\s*(?:nacht|night|dag|camper|plaats|plek|overnachting|24\\s*uur|etmaal|stellplatz|standplaats|kampeerplaats|kampeermiddel|staanplaats|pitch|motorhome|kampeerauto)";
   // Elk gevonden bedrag met de zin ervoor, zodat we toeslagen kunnen herkennen
-  const prices: { amount: number; pitch: boolean }[] = [];
+  const prices: { amount: number; pitch: boolean; camper: boolean }[] = [];
   const PITCH = /camper|caravan|kampeerplaats|standplaats|staanplaats|stellplatz|kampeermiddel|tent|2 personen|twee personen|plaats incl|plek incl/;
+  // Meerdere tarieven ("tent € 12 … camper € 28"): een bedrag bij een camperwoord gaat voor, en een bedrag dat alleen
+  // over een tent gaat is geen nachtprijs voor een camper (review nov. 2026, R19)
+  const CAMPER_PRICE = /camper|motorhome|kampeerauto|wohnmobil|stellplatz/;
+  const TENT = /\btent(en|je|jes)?\b|\btentpla(ats|atsen)\b|\btentplek(ken)?\b/;
+  const VEHICLE = /camper|caravan|kampeermiddel|motorhome|kampeerauto|wohnmobil|stellplatz|vouwwagen/;
   const SURCHARGE =
-    /\bextra\b|campinggast|\bgast(en)?\b|bezoek|\bkind(eren)?\b|volwassene|\bbaby|\bhond(en)?\b|huisdier|\bauto\b|\bboot\b|fiets|wasmachine|droger|toeslag|\bborg\b|annulering|reserveringskosten|administratie|late check|check-?out|laat vertrek|later vertrek|uitchecken/;
+    /\bextra\b|campinggast|\bgast(en)?\b|bezoek|\bkind(eren)?\b|volwassene|\bbaby|\bhond(en)?\b|huisdier|\bauto\b|\bboot\b|fiets|wasmachine|droger|toeslag|\bborg\b|annulering|reserveringskosten|administratie|late check|check-?out|laat vertrek|later vertrek|uitchecken|besteding|consumptiebon|tegoed/;
   for (const re of [
     new RegExp(`€\\s?${AMOUNT}\\s*(?:euro\\s*)?${PER}`, "g"),
     new RegExp(`${AMOUNT}\\s*(?:euro|eur|€)\\s*${PER}`, "g"),
@@ -297,26 +302,29 @@ export function extract(pages: string[], base: URL) {
       const before = text.slice(Math.max(0, m.index! - 50), m.index!);
       const sentence = before.slice(before.lastIndexOf(".") + 1);
       if (SURCHARGE.test((sentence + m[0]).replace(included, " "))) continue;
-      prices.push({ amount: money(m[1]), pitch: PITCH.test(sentence + m[0]) });
+      const unit = sentence + m[0];
+      if (TENT.test(unit) && !VEHICLE.test(unit)) continue;
+      prices.push({ amount: money(m[1]), pitch: PITCH.test(unit), camper: CAMPER_PRICE.test(unit) });
     }
   // schema.org priceRange alleen als er expliciet een nachtprijs staat ("€ 22 per nacht")
   for (const { item } of ld) {
     const range = typeof item.priceRange === "string" ? item.priceRange.toLowerCase() : "";
     const m = /€\s?(\d{1,2}(?:[.,]\d{2})?)\s*(?:,-\s*)?(?:per|p\.?|\/)\s*(?:nacht|night)/.exec(range);
-    if (m) prices.push({ amount: money(m[1]), pitch: true });
+    if (m) prices.push({ amount: money(m[1]), pitch: true, camper: false });
   }
   // Bedragen die we als losse toeslag herkennen (extra persoon, hond, stroom …) zijn geen nachtprijs
   const extras = priceExtras(text);
   const extraAmounts = new Set(extras.map((x) => x.amount));
-  // Bedragen bij een kampeerplek gaan voor; alleen als die er niet zijn, de losse nachtprijzen
+  // Bedragen bij een camper gaan voor, dan die bij een kampeerplek; alleen als die er niet zijn, de losse nachtprijzen
   const inRange = prices.filter((p) => p.amount >= 5 && p.amount <= 75 && !(extraAmounts.has(p.amount) && !p.pitch));
-  const valid = (inRange.some((p) => p.pitch) ? inRange.filter((p) => p.pitch) : inRange).map((p) => p.amount);
+  const best = inRange.some((p) => p.camper) ? inRange.filter((p) => p.camper) : inRange.some((p) => p.pitch) ? inRange.filter((p) => p.pitch) : inRange;
+  const valid = best.map((p) => p.amount);
   if (valid.length) {
     const sorted = [...valid].sort((a, b) => a - b);
     out.price_eur = sorted[0];
     if (sorted[sorted.length - 1] > sorted[0])
       out.price_note = `vanaf € ${sorted[0].toFixed(2).replace(".", ",")} per nacht; hoogste genoemde tarief € ${sorted[sorted.length - 1].toFixed(2).replace(".", ",")}`;
-  } else if (/(gratis|kosteloos|kostenloos) (overnachten|staan|parkeren voor campers|camperplaats)|overnachten is gratis|kostenlos übernachten|free overnight/.test(text)) {
+  } else if (freeOvernight(text)) {
     out.price_eur = 0;
   }
   if (extras.length) out.price_extras = extras;
@@ -495,6 +503,21 @@ export function extract(pages: string[], base: URL) {
   return out as Record<string, unknown> & { fields: string[] };
 }
 
+// ── Gratis overnachten ─────────────────────────────────────────────────────
+const FREE_STAY = /(gratis|kosteloos|kostenloos) (overnachten|staan|parkeren voor campers|camperplaats)|overnachten is gratis|kostenlos übernachten|free overnight/g;
+// "Gratis overnachten, mits u eet in ons restaurant" of "gratis voor kinderen" is geen gratis plek: dan blijft de prijs
+// onbekend (review nov. 2026, R25/DATA-10). Een prijs 0 zet ook de toeristenbelasting uit, dus alleen zonder voorwaarde.
+const FREE_CONDITION =
+  /\bmits\b|op voorwaarde|voorwaarde|besteding|bij (een |uw |je )?(consumptie|aankoop|diner|maaltijd|bezoek aan)|als (u|je|jullie) (bij ons |in ons restaurant )?(eet|eten|dineert|dineren|consumeert|iets (eet|drinkt|besteedt))|klanten|voor (gasten|bezoekers) van|kinderen|\bkind\b|wenn sie|sofern|provided (that|you)|if you (eat|dine)/;
+
+function freeOvernight(text: string): boolean {
+  for (const m of text.matchAll(FREE_STAY)) {
+    const [s, e] = sentenceBounds(text, m.index!);
+    if (!FREE_CONDITION.test(text.slice(s, e))) return true;
+  }
+  return false;
+}
+
 // ── Aankomst- en vertrektijden ─────────────────────────────────────────────
 // De kern van VrijStaan: kun je vertrekken wanneer je wilt? Alleen wat letterlijk op de site staat telt,
 // en we bewaren de zin zelf als bewijs. Tijden voor chalets, verhuur of de receptie tellen niet mee,
@@ -538,6 +561,10 @@ const FREE =
 const FREE_WEAK =
   /(aankomen|komen) en (vertrekken|gaan) (wanneer|op elk|zoals)|vertrekken (wanneer (je|u) (wilt|wil)|op elk (gewenst )?(moment|tijdstip)|wanneer het (je|u) uitkomt)|(arrive|come) and (leave|go) (at )?any ?time|leave (at )?any ?time/g;
 const SEASONAL = /seizoen|uitvalsbasis|jaarplaats|toercaravan|vouwwagen|laten staan|periode|vaste plaats|seizoensplaats|tussen \d+ \w+ en/;
+// Een vrij-uitspraak voor een andere doelgroep zegt niets over de camperplaats: "Voor seizoensgasten en jaarplaatsen
+// hanteren wij geen vaste vertrektijden", "dagrecreanten en wandelaars kunnen vrij in- en uitrijden" (review nov. 2026, R17)
+const AUDIENCE =
+  /seizoens?gast(en)?|seizoensplaats(en)?|seizoenplaats(en)?|jaarplaats(en)?|jaargast(en)?|vaste gasten|dagrecreant(en)?|dagjesmensen|wandelaars?|bezoekers?|groep(en)?\b|groepsterrein/;
 const ACCESS24 =
   /24 ?uur per dag (bereikbaar|toegankelijk|open|geopend|aankomen|inrijden)|24\/7 (bereikbaar|toegankelijk|open|geopend)|dag en nacht (bereikbaar|toegankelijk|aankomen|open|inrijden)|rund um die uhr (geöffnet|zugänglich|anreisen)|jederzeit anreisen|aankomst (is )?(op elk tijdstip|altijd mogelijk|24 uur per dag)|arrive (at )?any ?time/g;
 // Een tijd die direct bij de kampeerplek hoort: "Kampeerplaatsen verlaat je voor 12:00 uur", "uitchecken camping 12.00 uur"
@@ -607,6 +634,38 @@ function euroAmount(s: string): number | undefined {
 }
 
 const asClock = (h: string, m?: string) => `${h.padStart(2, "0")}:${m ?? "00"}`;
+
+/** Waar staat een per-24-uur-regel? `strict`: alleen de letterlijke regels (PER24), geen tarief "€ 12 per 24 uur" */
+function per24At(text: string, strict = false): number | undefined {
+  for (const p of text.matchAll(PER24)) {
+    const [s, e] = sentenceBounds(text, p.index!);
+    const near = text.slice(Math.max(s, p.index! - 60), Math.min(e, p.index! + 60));
+    if (RENTAL.test(near) || /trailer|helling|boten?\b|sloep/.test(near)) continue;
+    return p.index!;
+  }
+  if (strict) return undefined;
+  for (const p of text.matchAll(PER24_PRICE)) {
+    const near = text.slice(Math.max(0, p.index! - 150), p.index! + 120);
+    // Een tarief voor de trailerhelling of een boot zegt niets over de camperplaats
+    if (!CAMPER.test(near) || RENTAL.test(near) || /trailer|helling|boten?\b|sloep/.test(near)) continue;
+    return p.index!;
+  }
+  return undefined;
+}
+
+/**
+ * De vertrekregel die de extractor uit één losse zin leest, met precies dezelfde zinfilters (verhuur, doelgroep,
+ * voorwaarde, vraag, toeslag). Voor de citaatcontrole (quote.ts): een citaat telt alleen als de extractor er zelf
+ * hetzelfde uit leest. "per24" alleen bij een letterlijke per-24-uur-regel, niet bij een tarief "per 24 uur".
+ */
+export function sentenceDeparture(sentence: string): { departure?: "vast" | "vrij" | "per24"; checkout_until?: string } {
+  const raw = sentence.replace(/\s+/g, " ").trim();
+  const text = joinSplit(raw.toLowerCase().replace(/ò/g, "ó"));
+  const r = arrivalDeparture(text, raw.length === text.length ? raw : text);
+  const departure = r.departure as "vast" | "vrij" | "per24" | undefined;
+  if (!departure || (departure === "per24" && per24At(text, true) === undefined)) return {};
+  return departure === "vast" ? { departure, checkout_until: String(r.checkout_until) } : { departure };
+}
 
 export function arrivalDeparture(text: string, raw: string): Record<string, unknown> {
   const hits: TimeHit[] = [];
@@ -761,36 +820,22 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
   for (const f of text.matchAll(FREE)) {
     const [s, e] = sentenceBounds(text, f.index!);
     const local = text.slice(Math.max(s, f.index! - 60), Math.min(e, f.index! + 90));
-    if (RENTAL.test(local) && !CAMPER.test(local)) continue;
+    if ((RENTAL.test(local) && !CAMPER.test(local)) || AUDIENCE.test(local)) continue;
     free = { index: f.index!, camper: CAMPER.test(local) };
     if (free.camper) break;
   }
   if (!free)
     for (const f of text.matchAll(FREE_WEAK)) {
       const near = text.slice(Math.max(0, f.index! - 150), f.index! + 120);
-      if (!CAMPER.test(near) || SEASONAL.test(near) || RENTAL.test(near)) continue;
+      const [s, e] = sentenceBounds(text, f.index!);
+      if (!CAMPER.test(near) || SEASONAL.test(near) || RENTAL.test(near) || AUDIENCE.test(text.slice(s, e))) continue;
       free = { index: f.index!, camper: true, weak: true };
       break;
     }
 
   const res: Record<string, unknown> = {};
   const notes: string[] = [];
-  let per24: number | undefined;
-  for (const p of text.matchAll(PER24)) {
-    const [s, e] = sentenceBounds(text, p.index!);
-    const near = text.slice(Math.max(s, p.index! - 60), Math.min(e, p.index! + 60));
-    if (RENTAL.test(near) || /trailer|helling|boten?\b|sloep/.test(near)) continue;
-    per24 = p.index!;
-    break;
-  }
-  if (per24 === undefined)
-    for (const p of text.matchAll(PER24_PRICE)) {
-      const near = text.slice(Math.max(0, p.index! - 150), p.index! + 120);
-      // Een tarief voor de trailerhelling of een boot zegt niets over de camperplaats
-      if (!CAMPER.test(near) || RENTAL.test(near) || /trailer|helling|boten?\b|sloep/.test(near)) continue;
-      per24 = p.index!;
-      break;
-    }
+  const per24 = per24At(text);
   if (per24 !== undefined && !free && !out) {
     res.departure = "per24";
     notes.push(quote(raw, text, per24));

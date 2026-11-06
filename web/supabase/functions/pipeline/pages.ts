@@ -247,3 +247,31 @@ export function homeCandidates(website: string): string[] {
  */
 export const emptySite = (linkCount: number, fieldCount: number) => linkCount === 0 && fieldCount === 0;
 
+
+/** Bestaat de pagina niet (meer)? 404 en 410 zijn een antwoord, geen hapering: die tellen niet als mislukt. */
+export const gone = (e: unknown) => /HTTP 4(04|10)\b/.test(String(e));
+
+/** Uitkomst van de PDF's van één site: de gelezen teksten en hoeveel er mislukten (R21) */
+export function pdfOutcome(results: { text: string | null; failed: boolean }[]): { texts: string[]; failed: number } {
+  return {
+    texts: results.map((r) => r.text).filter((t): t is string => !!t),
+    failed: results.filter((r) => r.failed).length,
+  };
+}
+
+/**
+ * Werk met een harde grens: na `ms` milliseconden wordt het signaal afgebroken (lopende verzoeken stoppen) en wordt de
+ * belofte afgewezen met `message`, ook als het werk zelf niet op het signaal let (DATA-16).
+ */
+export function withDeadline<T>(work: (signal: AbortSignal) => Promise<T>, ms: number, message: string): Promise<T> {
+  const ac = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      const e = new Error(message);
+      ac.abort(e);
+      reject(e);
+    }, ms);
+  });
+  return Promise.race([work(ac.signal), late]).finally(() => clearTimeout(timer));
+}
