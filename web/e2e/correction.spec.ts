@@ -64,5 +64,6 @@ test("voorzieningenraster: '?' vraagt in de cel zelf, één tik op Ja stuurt het
   await expect(ask).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("group", { name: "Is hier wifi?" }).getByRole("button", { name: "Ja" }).click();
   await expect(page.getByText("Wifi: ja")).toBeVisible();
-  expect(sent).toMatchObject({ p_kind: "correctie", p_payload: { onderwerp: "voorzieningen", voorzieningen: { wifi: { was: null, nieuw: true } } } });
+  // Antwoorden per plek worden gebundeld en een paar seconden na de laatste tik verstuurd (review november, R11)
+  await expect.poll(() => sent, { timeout: 15_000 }).toMatchObject({ p_kind: "correctie", p_payload: { onderwerp: "voorzieningen", voorzieningen: { wifi: { was: null, nieuw: true } } } });
 });
