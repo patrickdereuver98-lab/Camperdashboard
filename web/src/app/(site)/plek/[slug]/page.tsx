@@ -8,12 +8,12 @@ import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, format
 import { knownFacts } from "@/lib/place-facts";
 import { isIncomplete, lastChecked } from "@/lib/place-status";
 import { NavigateButton } from "@/components/navigate";
-import { SITE_URL } from "@/lib/env";
+import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
-import { allInPrice, ogImagePath, seoDescription, seoTitle } from "@/lib/place-seo";
+import { allInPrice, labeledName, ogImagePath, seoDescription, seoTitle } from "@/lib/place-seo";
 import { inBbox } from "@/lib/bbox";
-import { areaPath, breadcrumbLd, ISLANDS, ldJson, provinceSlug } from "@/lib/seo-pages";
+import { areaPath, breadcrumbLd, ISLANDS, ldImages, ldJson, placeTitle, provinceSlug } from "@/lib/seo-pages";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
@@ -42,9 +42,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const place = await getPlace(slug);
-  if (!place) return { title: "Plek niet gevonden" };
-  // "Camperplaats [naam] in [plaats]: [prijs] inclusief toeslagen. Vertrektijd: [tijd]." Onbekend laten we weg.
-  const title = seoTitle(place);
+  // Onbekend adres: de pagina geeft 404, maar zeg het ook expliciet tegen zoekmachines
+  if (!place) return { title: "Plek niet gevonden", robots: { index: false } };
+  // Binnen ±60 tekens; bij "zonder vertrektijd" staat dat in de titel (kernfeit), de prijs als die nog past.
+  // De omschrijving: "Camperplaats [naam] in [plaats]: [prijs] inclusief toeslagen. Vertrektijd: [tijd]." Onbekend laten we weg.
+  const title = placeTitle(place, labeledName(place), seoTitle(place), allInPrice(place)?.amount);
   const description = seoDescription(place);
   const image = { url: ogImagePath(place.slug), width: 1200, height: 630, alt: `${place.name} in ${place.town}: prijs en vertrektijd` };
   return {
@@ -106,7 +108,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     "@type": "Campground",
     name: place.name,
     url: `${SITE_URL}/plek/${place.slug}`,
-    image: photos.length ? photos.map((p) => upgradePhotoUrl(p.url)) : undefined,
+    // Alleen eigen uploads en foto's met toestemming; anders de deelafbeelding (geen foto's van derden doorgeven)
+    image: ldImages(photos, `${SUPABASE_URL}/storage/`, `${SITE_URL}${ogImagePath(place.slug)}`).map(upgradePhotoUrl),
     description: place.description,
     address: { "@type": "PostalAddress", streetAddress: place.street, postalCode: place.postcode, addressLocality: place.town, addressRegion: place.province, addressCountry: "NL" },
     geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lng },
@@ -115,7 +118,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     // Alleen een vaste, leesbare vertrektijd; "geen vaste vertrektijd" heeft geen Schema.org-veld
     checkoutTime: place.departure === "vast" && timeToMinutes(place.checkoutUntil) !== undefined ? place.checkoutUntil : undefined,
     checkinTime: timeToMinutes(place.checkinFrom) !== undefined ? place.checkinFrom : undefined,
-    priceRange: allInPrice(place)?.text,
+    // Alleen het bedrag ("€ 24,70", "vanaf € 18", "Gratis"); de uitleg staat op de pagina
+    priceRange: allInPrice(place)?.amount,
     amenityFeature: amenities.length ? amenities : undefined,
     ...(place.ratingAvg && place.ratingCount
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: place.ratingAvg, bestRating: 10, worstRating: 1, ratingCount: place.ratingCount } }

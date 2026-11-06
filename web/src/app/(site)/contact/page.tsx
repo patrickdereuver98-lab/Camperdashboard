@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { COMPANY } from "@/lib/company";
 import { ContactForm } from "./contact-form";
 
-export const metadata: Metadata = { title: "Contact en support", description: "Stel een vraag, meld een fout of neem contact op met VrijStaan." };
+export const metadata: Metadata = { title: "Contact en support", description: "Stel een vraag, meld een fout of neem contact op met VrijStaan.", alternates: { canonical: "/contact" } };
 
 export default function ContactPage() {
   return (
