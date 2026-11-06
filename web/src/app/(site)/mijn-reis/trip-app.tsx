@@ -17,7 +17,7 @@ import { OpenChip, PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
 import { ExpensesPanel } from "./expenses-panel";
 import { SharedCard } from "./shared-card";
-import { dataDateText, surchargeNote } from "./trip-notes";
+import { assumedText, dataDateText, fromPriceNote, surchargeNote } from "./trip-notes";
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
 type Stop = TripStop & { place: PlaceSummary };
@@ -206,11 +206,14 @@ export function TripApp() {
   // Met een vertrekdatum: per stop aankomst en vertrek, en de nachten waarop de plek volgens het seizoen dicht is
   const startDay = parseDay(tripDate);
   const dated = startDay ? tripDates(startDay, stops) : null;
-  // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag)
-  const fromPrice = stops.some((s) => s.place.priceFrom);
-  // Prijs per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart
+  // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag).
+  // Verplichte kosten per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart.
   const costs = tripCosts(stops, settings.persons, settings.touristTax);
   const { stay, tax, unknownPriceStops } = costs;
+  // Een vanaf-prijs is het laagste tarief: dan is ook het totaal een vanaf-bedrag
+  const fromPrice = (costs.fromPriceStops ?? 0) > 0;
+  const fromNote = fromPriceNote(costs.fromPriceStops);
+  const assumed = costs.assumed ?? [];
   const fuel = totalKm !== null ? (totalKm * settings.litersPer100 * settings.fuelPrice) / 100 : null;
   const total = stay + (fuel ?? 0) + tax;
 
@@ -444,6 +447,11 @@ export function TripApp() {
                 <dt className="text-ink-2">Overnachtingen{fromPrice ? " (vanaf)" : ""}</dt>
                 <dd className="text-right font-semibold">
                   {eur(stay, true)}
+                  {!!costs.perPerson && (
+                    <span className="block text-sm font-normal text-muted" data-testid="per-person">
+                      waarvan {eur(costs.perPerson, true)} toeslag per persoon
+                    </span>
+                  )}
                   {unknownPriceStops > 0 && (
                     <span className="block text-sm font-normal text-muted">
                       + {unknownPriceStops} {unknownPriceStops === 1 ? "plek" : "plekken"} zonder bekende prijs
@@ -464,6 +472,7 @@ export function TripApp() {
                 {/* Eerlijk totaal: ontbreken er prijzen, dan staat dat in het bedrag zelf ("€ 84 + 2 onbekend"), zodat
                     het nooit volledig lijkt (UX-audit, implementatieplan) */}
                 <dd className="text-right font-display text-2xl font-semibold" data-testid="trip-total">
+                  {fromPrice && <span className="block text-sm font-normal tracking-normal text-muted">vanaf</span>}
                   {eur(total, true)}
                   {unknownPriceStops > 0 && <span className="text-lg text-muted"> + {unknownPriceStops} onbekend</span>}
                   {costs.listed.length > 0 && <span className="block text-sm font-normal tracking-normal text-muted">+ toeslagen, niet meegeteld</span>}
@@ -471,9 +480,26 @@ export function TripApp() {
               </div>
             </dl>
             <p className="mt-2 text-sm text-muted">
-              * Berekend met jouw uitgangspunten hieronder. Noemt een plek zelf de toeristenbelasting per persoon per nacht,
-              dan rekenen we met dat bedrag. Gratis plekken en plekken waar de belasting al in de prijs zit tellen niet mee.
+              * Berekend met jouw uitgangspunten hieronder. Noemt een plek zelf een bedrag voor de toeristenbelasting, dan
+              rekenen we met dat bedrag en niet met jouw schatting. Gratis plekken en plekken waar de belasting al in de prijs
+              zit tellen niet mee. Toeslagen per persoon tellen mee voor {pluralize(Math.max(1, Math.round(settings.persons)), "persoon", "personen")}.
             </p>
+            {(assumed.length > 0 || fromNote) && (
+              <div className="mt-3 rounded-xl bg-sunken p-3 text-sm" data-testid="assumptions">
+                <p className="font-semibold">Zo hebben we gerekend</p>
+                {fromNote && <p className="mt-0.5 text-ink-2">{fromNote}</p>}
+                {assumed.length > 0 && (
+                  <ul className="mt-2 space-y-1.5">
+                    {assumed.map(({ index, extras }) => (
+                      <li key={stops[index].slug}>
+                        <span className="font-semibold">{stops[index].place.name}:</span>{" "}
+                        <span className="text-ink-2">{extras.map(assumedText).join("; ")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             {costs.listed.length > 0 && (
               <div className="mt-3 rounded-xl bg-sunken p-3 text-sm" data-testid="surcharges">
                 <p className="font-semibold">+ toeslagen, niet meegeteld</p>
