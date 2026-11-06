@@ -7,6 +7,24 @@ type WebPush = {
   sendNotification(sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: string, opts?: { TTL?: number }): Promise<unknown>;
 };
 
+/**
+ * Twee sleutels vergelijken in constante tijd (SEC-12): eerst beide SHA-256, dan elke byte. Zo verraadt de duur van
+ * de vergelijking niet hoeveel tekens van een geprobeerde sleutel kloppen, ook niet de lengte.
+ */
+export async function sameSecret(given: string | null | undefined, expected: string | null | undefined): Promise<boolean> {
+  if (!given || !expected) return false;
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(given)),
+    crypto.subtle.digest("SHA-256", enc.encode(expected)),
+  ]);
+  const x = new Uint8Array(a);
+  const y = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 /** Stuurt de melding naar alle doelen; geeft terug welke abonnementen verlopen zijn (404/410) */
 export async function sendAll(webpush: WebPush, vapid: Vapid, targets: Target[], payload: { title: string; body: string; url: string }) {
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);

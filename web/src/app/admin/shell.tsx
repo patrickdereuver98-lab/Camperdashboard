@@ -25,12 +25,13 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/instellingen", label: "Instellingen", icon: "settings" },
 ];
 
-type State = "laden" | "uit" | "geen-admin" | "admin" | "herstel";
+type State = "laden" | "uit" | "geen-admin" | "admin" | "herstel" | "fout";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>("laden");
   const [session, setSession] = useState<Session | null>(null);
   const [menu, setMenu] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -38,8 +39,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
     async function check(s: Session | null) {
       setSession(s);
       if (!s) return setState("uit");
-      const { data } = await sb.rpc("is_admin");
-      setState(data ? "admin" : "geen-admin");
+      // Een netwerk- of serverfout is iets anders dan "geen beheerder": dan tonen we een foutmelding met opnieuw proberen
+      const { data, error } = await sb.rpc("is_admin");
+      setState(error ? "fout" : data ? "admin" : "geen-admin");
     }
     void sb.auth.getSession().then(({ data }) => check(data.session));
     const { data: sub } = sb.auth.onAuthStateChange((event, s) => {
@@ -47,9 +49,27 @@ export function AdminShell({ children }: { children: ReactNode }) {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") void check(s);
     });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [attempt]);
 
   if (state === "laden") return <p className="px-4 pt-16 text-center text-muted">Beheeromgeving laden…</p>;
+  if (state === "fout")
+    return (
+      <Gate>
+        <h1 className="font-display text-2xl font-semibold">Beheer is nu niet bereikbaar</h1>
+        <p className="mt-2 text-ink-2">
+          We konden niet controleren of je beheerrechten hebt. Controleer je internetverbinding en probeer het opnieuw.
+        </p>
+        <button
+          className={`${primary} mt-6 w-full`}
+          onClick={() => {
+            setState("laden");
+            setAttempt((a) => a + 1);
+          }}
+        >
+          Opnieuw proberen
+        </button>
+      </Gate>
+    );
   if (state === "uit") return <Login />;
   if (state === "herstel") return <NewPassword onDone={() => setState("admin")} />;
   if (state === "geen-admin")
@@ -200,9 +220,15 @@ function NewPassword({ onDone }: { onDone: () => void }) {
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase().auth.updateUser({ password: String(new FormData(e.currentTarget).get("password")) });
+    const auth = supabase().auth;
+    const { error } = await auth.updateUser({ password: String(new FormData(e.currentTarget).get("password")) });
+    if (error) {
+      setBusy(false);
+      return setErr(errorMessage(error));
+    }
+    // Na een nieuw wachtwoord zijn sessies op andere apparaten niet meer te vertrouwen: die loggen we uit
+    await auth.signOut({ scope: "others" });
     setBusy(false);
-    if (error) return setErr(errorMessage(error));
     onDone();
   }
   return (
