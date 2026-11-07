@@ -51,6 +51,8 @@ const GLYPHS = {
   reserve: <path {...stroke} d="M4 6h16v14H4ZM4 10.5h16M8.5 3.5v4M15.5 3.5v4M9 15.5l2 2 4-4" />,
   spots: <path {...stroke} d="M4 4h16v16H4ZM12 4v16M4 12h16" />,
   surface: <path {...stroke} d="M3 18h18M5 18l2.5-5h9L19 18M8 13l1.5-3h5l1.5 3" />,
+  // Kaartspeld: "Zoek een plek" op de start (ontbrak, waardoor daar een leeg vlak stond; review R52)
+  pin: <path {...stroke} d="M18.5 10c0 4.6-5 9.3-6.5 10.6-1.5-1.3-6.5-6-6.5-10.6a6.5 6.5 0 0 1 13 0ZM12 12.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6Z" />,
 } satisfies Record<string, ReactNode>;
 
 export type SignName = keyof typeof GLYPHS;
@@ -67,15 +69,15 @@ export function Sign({
   size?: number;
   /** on = aanwezig, off = niet aanwezig, unknown = onbekend */
   state?: "on" | "off" | "unknown";
-  /** kleur van het vlak bij "on" */
-  tone?: "forest" | "lake";
+  /** kleur van het vlak bij "on"; neutral = zonder betekenis (bijvoorbeeld "Alle plekken", stijlgids §3) */
+  tone?: "forest" | "lake" | "neutral";
   title?: string;
   className?: string;
 }) {
   const on = state === "on";
   // Rustige lijniconen op een lichte ondergrond; kleur alleen als het iets betekent (docs/stijlgids.md §8)
-  const bg = on ? `var(--${tone}-tint)` : "var(--sunken)";
-  const fg = on ? `var(--${tone})` : state === "off" ? "var(--muted)" : "color-mix(in srgb, var(--muted) 70%, transparent)";
+  const bg = on && tone !== "neutral" ? `var(--${tone}-tint)` : "var(--sunken)";
+  const fg = on ? (tone === "neutral" ? "var(--ink-2)" : `var(--${tone})`) : state === "off" ? "var(--muted)" : "color-mix(in srgb, var(--muted) 70%, transparent)";
   return (
     <svg
       width={size}

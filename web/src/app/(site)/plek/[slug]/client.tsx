@@ -1,19 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, ViewTransition } from "react";
+import { useEffect, useId, useRef, useState, ViewTransition } from "react";
 import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format";
 import { coarse, formatKm, type LatLng } from "@/lib/geo";
 import { NavigateButton } from "@/components/navigate";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
-import { isPossiblyOutdated } from "@/lib/place-status";
+import { CHECK_TERM, isPossiblyOutdated } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import type { Photo, Place as PlaceFacilities, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
 import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
+import { RadioCards } from "@/components/radio-cards";
+import { SuccessNote } from "@/components/success-note";
 import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 import { authErrorMessage, cleanCode, codeErrorMessage, signInWithEmail, useSession, verifyEmailCode } from "@/lib/auth";
 import { clearDraft, loadDraft, saveDraft, type ReviewDraft } from "@/lib/review-draft";
@@ -118,7 +120,7 @@ type RouteState =
   | { s: "ok"; km: number; seconds: number; from: LatLng }
   | { s: "error"; msg: string };
 
-export function RouteCard({ to, name }: { to: LatLng; name: string }) {
+export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
   const [state, setState] = useState<RouteState>({ s: "idle" });
 
   function calculate() {
@@ -134,8 +136,8 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
           const res = await fetch(`/api/route?p=${coarse(from)};${to.lat},${to.lng}`);
           if (!res.ok) throw new Error();
           const r = await res.json();
+          // Rijtijd berekenen is geen route openen: dat telt pas als je een navigatie-app kiest (NavigateButton)
           setState({ s: "ok", km: r.distanceM / 1000, seconds: r.durationS, from });
-          track("route", { naar: name });
         } catch {
           setState({ s: "error", msg: "De rijtijd kon niet worden berekend. Open de route in je navigatie-app." });
         }
@@ -172,7 +174,7 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
             {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}
           </button>
         )}
-        <NavigateButton to={to} name={name} className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest">
+        <NavigateButton to={to} slug={slug} className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest">
           <Icon name="route" size={18} /> Open in navigatie
         </NavigateButton>
       </div>
@@ -248,32 +250,50 @@ export function ReviewList({ reviews }: { reviews: Review[] }) {
   );
 }
 
-function ScorePicker({ label, value, onChange, required }: { label: string; value?: number; onChange: (n: number) => void; required?: boolean }) {
+function ScorePicker({
+  label,
+  value,
+  onChange,
+  required,
+  errorId,
+}: {
+  label: string;
+  value?: number;
+  onChange: (n: number) => void;
+  required?: boolean;
+  /** id van de foutmelding als dit cijfer ontbreekt */
+  errorId?: string;
+}) {
+  const name = useId();
   return (
-    <fieldset>
-      <legend className="mb-2 font-semibold">
+    <div role="radiogroup" aria-labelledby={`${name}-label`} aria-required={required || undefined} aria-invalid={errorId ? true : undefined} aria-describedby={errorId}>
+      <span id={`${name}-label`} className="mb-2 block font-semibold">
         {label}
         {required && <span className="text-alert"> *</span>}
-      </legend>
-      {/* Twee rijen van vijf, zodat elk cijfer een tikdoel van minstens 44 px is */}
+      </span>
+      {/* Echte keuzerondjes (pijltjestoetsen, R31). Twee rijen van vijf, zodat elk cijfer een tikdoel van minstens 44 px is */}
       <div className="grid grid-cols-5 gap-2">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            type="button"
-            aria-pressed={value === n}
-            onClick={() => onChange(n)}
-            className="h-11 rounded-lg border border-line font-display font-semibold aria-pressed:border-forest aria-pressed:bg-forest aria-pressed:text-on-forest"
-          >
-            {n}
-          </button>
+          <label key={n} className="relative flex cursor-pointer">
+            <input
+              type="radio"
+              name={name}
+              value={n}
+              checked={value === n}
+              onChange={() => onChange(n)}
+              className="peer absolute inset-0 z-10 m-0 h-full w-full cursor-pointer appearance-none opacity-0"
+            />
+            <span className="grid h-11 w-full place-items-center rounded-lg border border-line font-display font-semibold transition-colors peer-checked:border-forest peer-checked:bg-forest peer-checked:text-on-forest peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-forest">
+              {n}
+            </span>
+          </label>
         ))}
       </div>
-    </fieldset>
+    </div>
   );
 }
 
-const input = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const input = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 export function WriteReview({ placeId, placeName, slug }: { placeId: string; placeName: string; slug: string }) {
   const { session } = useSession();
@@ -448,14 +468,22 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt!" : `Review voor ${placeName}`}>
         {done ? (
           <div className="pb-4">
-            <p className="text-lg">Je review is ontvangen. We controleren hem en plaatsen hem meestal binnen twee werkdagen.</p>
+            <SuccessNote>
+              <p className="text-lg">Je review is ontvangen. We controleren hem en plaatsen hem meestal binnen twee werkdagen.</p>
+            </SuccessNote>
             <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-lg bg-forest font-semibold text-on-forest">
               Sluiten
             </button>
           </div>
         ) : (
           <form key={formKey} ref={formRef} onSubmit={submit} onChange={persist} className="space-y-5 pb-4" data-testid="review-form">
-            <ScorePicker label="Totaalcijfer" required value={scores.rating} onChange={(n) => setScores((s) => ({ ...s, rating: n }))} />
+            <ScorePicker
+              label="Totaalcijfer"
+              required
+              value={scores.rating}
+              onChange={(n) => setScores((s) => ({ ...s, rating: n }))}
+              errorId={err && !scores.rating ? "review-fout" : undefined}
+            />
             <details className="rounded-lg bg-sunken p-4">
               <summary className="-my-2.5 cursor-pointer py-2.5 font-semibold">Cijfers per onderdeel (optioneel)</summary>
               <div className="mt-4 space-y-4">
@@ -580,7 +608,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
             )}
 
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-            {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
+            {err && <p id="review-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
             <button
               type="submit"
               disabled={busy || (!session && !!sentTo && code.length < 6)}
@@ -609,23 +637,18 @@ function FacilityChoices({ value, onChange }: { value: Record<FacilityKey, Facil
     <fieldset className="space-y-3">
       <legend className="mb-1 font-semibold">Wat is er op deze plek?</legend>
       {FACILITIES.map((fac) => (
-        <div key={fac.key} role="radiogroup" aria-labelledby={`vz-${fac.key}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-          <span id={`vz-${fac.key}`}>{fac.label}</span>
-          <div className="flex gap-1">
-            {ANSWERS.map(([a, l]) => (
-              <button
-                key={l}
-                type="button"
-                role="radio"
-                aria-checked={value[fac.key] === a}
-                onClick={() => onChange(fac.key, a)}
-                className="min-h-11 rounded-lg border border-line px-3 text-sm font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        </div>
+        <RadioCards
+            key={fac.key}
+            groupClassName="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+            label={fac.label}
+            labelId={`vz-${fac.key}`}
+            labelClassName=""
+            options={ANSWERS}
+            value={value[fac.key]}
+            onChange={(a) => onChange(fac.key, a)}
+            className="flex gap-1"
+            cardClassName="min-h-11 px-3 text-sm"
+          />
       ))}
     </fieldset>
   );
@@ -638,11 +661,14 @@ export function ReportProblem({
   label = "Klopt er iets niet? Meld het",
   facilities = {},
   context,
+  quiet = false,
 }: {
   placeId: string;
   placeName: string;
   topic?: string;
   label?: string;
+  /** Rustige tekstlink zonder icoon, voor "Klopt dit niet?" in een cel van het beslisblok */
+  quiet?: boolean;
   /** Extra uitleg voor schermlezers bij een korte knoptekst ("Weet jij dit?" → "De prijs doorgeven") */
   context?: string;
   /** Wat we nu over de voorzieningen weten; beginstand van "Wat is er op deze plek?" */
@@ -686,14 +712,24 @@ export function ReportProblem({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
-        <Icon name={context ? "help" : "alert"} size={18} /> {label}
-        {context && <span className="sr-only"> {context}</span>}
-      </button>
+      {quiet ? (
+        <button type="button" onClick={() => setOpen(true)} className="-my-1 flex min-h-11 items-center font-semibold text-ink-2 underline underline-offset-2 hover:text-forest">
+          {label}
+          {context && <span className="sr-only"> {context}</span>}
+        </button>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
+          <Icon name={context ? "help" : "alert"} size={18} /> {label}
+          {context && <span className="sr-only"> {context}</span>}
+        </button>
+      )}
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je melding" : "Gegevens aanpassen"}>
         {done ? (
           <div className="pb-4">
-            <p className="text-lg">We controleren je melding en passen de gegevens zo nodig aan.</p>
+            <SuccessNote>
+              <p className="text-lg">Je melding is binnen en wacht op controle.</p>
+              <p className="mt-2 text-ink-2">We bekijken hem {CHECK_TERM}. Klopt het, dan passen we de gegevens op de site aan.</p>
+            </SuccessNote>
             <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-lg bg-forest font-semibold text-on-forest">
               Sluiten
             </button>

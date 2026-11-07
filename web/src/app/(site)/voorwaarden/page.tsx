@@ -4,7 +4,7 @@ import { ProsePage, Section } from "@/components/prose";
 import { CompanyIdentity } from "@/components/company-identity";
 import { COMPANY, company } from "@/lib/company";
 
-export const metadata: Metadata = { title: "Gebruiksvoorwaarden", description: "De voorwaarden voor het gebruik van VrijStaan en voor reviews, foto's en meldingen." };
+export const metadata: Metadata = { title: "Gebruiksvoorwaarden", description: "De voorwaarden voor het gebruik van VrijStaan en voor reviews, foto's en meldingen.", alternates: { canonical: "/voorwaarden" } };
 
 export default function TermsPage() {
   const mail = <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>;

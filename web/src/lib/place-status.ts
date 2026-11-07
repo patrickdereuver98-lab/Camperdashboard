@@ -1,12 +1,21 @@
+import { departureKind, type DepartureFacts } from "./search";
 import type { Place } from "./types";
+
+/**
+ * Hoe snel we een inzending (vertrektijd, melding, gegevens van de eigenaar) controleren. Dezelfde termijn als in de
+ * voorwaarden ("Klopt er iets niet?") en bij reviews; één plek, zodat de site overal hetzelfde belooft.
+ */
+export const CHECK_TERM = "meestal binnen twee werkdagen";
 
 /**
  * Onvolledig (PRD, "Wanneer staat een plek online", besluit 18 oktober 2026): de plek haalt de publicatiedrempel en
  * staat online, maar de vertrekregel is onbekend. Op kaart en lijst grijs, op de plekpagina met de vraag om de
  * vertrektijd door te geven. Plekken onder de drempel zijn niet gepubliceerd en komen hier niet langs.
+ * Eén definitie van "onbekend" (R23): dezelfde als de vertrekgroep in `departureKind`, dus ook een regel die beheer
+ * afwees of met een voorwaarde markeerde, en een vaste vertrektijd die we niet kunnen lezen.
  */
-export function isIncomplete(p: Pick<Place, "departure">): boolean {
-  return !p.departure;
+export function isIncomplete(p: DepartureFacts): boolean {
+  return departureKind(p) === "onbekend";
 }
 
 /** Na zoveel maanden zonder controle staat er "mogelijk verouderd" (PRD, "Databronnen") */

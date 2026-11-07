@@ -4,54 +4,22 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { PlaceSummary, Town } from "./types";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
+import { createLocalStore, onStorageFailure, storageFailed, type StoreOptions } from "./local-store";
+import { clampNights, decodeTrip, decodeTripPlaces, encodeTrip, encodeTripPlaces, type TripPlacesCopy } from "./trip-storage";
 
-// ── Kleine localStorage-store met abonnement ───────────────────────────────
+// ── Kleine localStorage-store met abonnement (kern in local-store.ts) ───────
 
-function createStore<T>(key: string, fallback: T, validate: (v: unknown) => v is T) {
-  const listeners = new Set<() => void>();
-  let cache: { raw: string | null; value: T } = { raw: null, value: fallback };
-
-  const read = (): T => {
-    let raw: string | null = null;
-    try {
-      raw = localStorage.getItem(key);
-    } catch {
-      return fallback;
-    }
-    if (raw === cache.raw) return cache.value;
-    let value = fallback;
-    try {
-      const parsed = raw ? JSON.parse(raw) : fallback;
-      if (validate(parsed)) value = parsed;
-    } catch {
-      /* kapotte opslag: begin opnieuw */
-    }
-    cache = { raw, value };
-    return value;
-  };
-
-  const write = (next: T) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {
-      /* privévenster of volle opslag */
-    }
-    listeners.forEach((l) => l());
-  };
-
-  const subscribe = (l: () => void) => {
-    listeners.add(l);
-    const onStorage = (e: StorageEvent) => e.key === key && l();
-    window.addEventListener("storage", onStorage);
-    return () => {
-      listeners.delete(l);
-      window.removeEventListener("storage", onStorage);
-    };
-  };
-
-  const use = () => useSyncExternalStore(subscribe, read, () => fallback);
-  return { read, write, use };
+function createStore<T>(key: string, fallback: T, validate: (v: unknown) => v is T, codec?: StoreOptions<T>) {
+  const store = createLocalStore<T>(key, fallback, {
+    decode: codec?.decode ?? ((v) => (validate(v) ? v : undefined)),
+    encode: codec?.encode,
+  });
+  const use = () => useSyncExternalStore(store.subscribe, store.read, () => fallback);
+  return { read: store.read, write: store.write, use };
 }
+
+/** Of opslaan op dit toestel is mislukt (dan staat alles alleen in het geheugen, tot je de pagina sluit) */
+export const useStorageFailed = () => useSyncExternalStore(onStorageFailure, storageFailed, () => false);
 
 // ── Mijn reis ───────────────────────────────────────────────────────────────
 
@@ -61,21 +29,26 @@ export interface TripStop {
 }
 
 const EMPTY_TRIP: TripStop[] = [];
-const tripStore = createStore<TripStop[]>("vrijstaan:reis", EMPTY_TRIP, (v): v is TripStop[] =>
-  Array.isArray(v) && v.every((s) => typeof s?.slug === "string"),
-);
+// Met versieveld (trip-storage.ts): oude opslag (een losse lijst) wordt bij het lezen omgezet, nachten begrensd
+const tripStore = createStore<TripStop[]>("vrijstaan:reis", EMPTY_TRIP, (v): v is TripStop[] => decodeTrip(v) !== undefined, {
+  decode: decodeTrip,
+  encode: encodeTrip,
+});
+/** De reis zoals hij nu op dit toestel staat (buiten React, bijvoorbeeld na een await) */
+export const readTrip = () => tripStore.read();
+export const writeTrip = (next: TripStop[]) => tripStore.write(decodeTrip(next) ?? EMPTY_TRIP);
 
 export function useTrip() {
   const stops = tripStore.use();
-  const set = tripStore.write;
+  const set = writeTrip;
   return {
     stops,
     has: (slug: string) => stops.some((s) => s.slug === slug),
     toggle: (slug: string) =>
-      set(stops.some((s) => s.slug === slug) ? stops.filter((s) => s.slug !== slug) : [...stops, { slug, nights: 1 }]),
+      set(stops.some((s) => s.slug === slug) ? stops.filter((s) => s.slug !== slug) : [...stops, { slug, nights: clampNights(1) }]),
     remove: (slug: string) => set(stops.filter((s) => s.slug !== slug)),
     setNights: (slug: string, nights: number) =>
-      set(stops.map((s) => (s.slug === slug ? { ...s, nights: Math.max(1, Math.min(21, nights)) } : s))),
+      set(stops.map((s) => (s.slug === slug ? { ...s, nights: clampNights(nights) } : s))),
     move: (from: number, to: number) => {
       if (to < 0 || to >= stops.length) return;
       const next = [...stops];
@@ -83,7 +56,7 @@ export function useTrip() {
       next.splice(to, 0, item);
       set(next);
     },
-    replace: (next: TripStop[]) => set(next),
+    replace: writeTrip,
     clear: () => set([]),
   };
 }
@@ -94,6 +67,7 @@ const EMPTY_VEHICLE: Vehicle = {};
 const vehicleStore = createStore<Vehicle>("vrijstaan:camper", EMPTY_VEHICLE, (v): v is Vehicle => typeof v === "object" && v !== null && !Array.isArray(v));
 export const useVehicle = () => [vehicleStore.use(), (v: Vehicle) => vehicleStore.write(cleanVehicle(v))] as const;
 export const readVehicle = () => vehicleStore.read();
+export const writeVehicle = (v: Vehicle) => vehicleStore.write(cleanVehicle(v));
 
 // ── Samen plannen (gedeelde reis) ─────────────────────────────────────────
 
@@ -107,6 +81,8 @@ export const useSharedLink = () => [sharedStore.use(), sharedStore.write] as con
 
 const EMPTY_EXPENSES: Expense[] = [];
 const expenseStore = createStore<Expense[]>("vrijstaan:uitgaven", EMPTY_EXPENSES, (v): v is Expense[] => Array.isArray(v));
+export const readExpenses = () => expenseStore.read();
+export const writeExpenses = (next: Expense[]) => expenseStore.write(cleanExpenses(next));
 export function useExpenses() {
   const list = expenseStore.use();
   const set = (next: Expense[]) => expenseStore.write(cleanExpenses(next));
@@ -156,13 +132,23 @@ export const writeConsent = (c: Consent) => consentStore.write(c);
 
 // ── Dataset voor zoeken (één keer per sessie) ──────────────────────────────
 
-let placesPromise: Promise<PlaceSummary[]> | null = null;
-let townsPromise: Promise<Town[]> | null = null;
+/**
+ * Header die de service worker (public/sw.js) meegeeft als een antwoord uit zijn cache komt: het moment waarop het
+ * van de server kwam. Ontbreekt hij, dan is het antwoord vers.
+ */
+export const CACHED_AT_HEADER = "x-vrijstaan-opgeslagen";
 
-function once<T>(url: string, slot: "places" | "towns"): Promise<T> {
-  const p = fetch(url).then((r) => {
+type Loaded<T> = { data: T; cachedAt: string | null };
+
+let placesPromise: Promise<Loaded<PlaceSummary[]>> | null = null;
+let townsPromise: Promise<Loaded<Town[]>> | null = null;
+
+function once<T>(url: string, slot: "places" | "towns"): Promise<Loaded<T>> {
+  const p = fetch(url).then(async (r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json() as Promise<T>;
+    const stamp = r.headers.get(CACHED_AT_HEADER);
+    const cachedAt = stamp && !Number.isNaN(Date.parse(stamp)) ? new Date(stamp).toISOString() : null;
+    return { data: (await r.json()) as T, cachedAt };
   });
   p.catch(() => {
     if (slot === "places") placesPromise = null;
@@ -171,13 +157,20 @@ function once<T>(url: string, slot: "places" | "towns"): Promise<T> {
   return p;
 }
 
-function useLoader<T>(get: () => Promise<T>) {
-  const [state, setState] = useState<{ data: T | null; error: boolean }>({ data: null, error: false });
+type LoaderState<T> = {
+  data: T | null;
+  error: boolean;
+  /** Kwam de dataset uit de cache van de service worker: wanneer hij van de server kwam (ISO); anders null */
+  cachedAt: string | null;
+};
+
+function useLoader<T>(get: () => Promise<Loaded<T>>) {
+  const [state, setState] = useState<LoaderState<T>>({ data: null, error: false, cachedAt: null });
   useEffect(() => {
     let alive = true;
     get().then(
-      (data) => alive && setState({ data, error: false }),
-      () => alive && setState({ data: null, error: true }),
+      ({ data, cachedAt }) => alive && setState({ data, error: false, cachedAt }),
+      () => alive && setState({ data: null, error: true, cachedAt: null }),
     );
     return () => {
       alive = false;
@@ -195,22 +188,33 @@ export const useTowns = () => useLoader(getTowns);
 // ── Reisplekken lokaal bewaren, zodat Mijn reis ook zonder bereik werkt ──────
 
 const TRIP_PLACES = "vrijstaan:reis-plekken";
+// Past de kopie niet in de opslag, dan in elk geval voor dit bezoek
+let tripPlacesMemory: TripPlacesCopy | null = null;
 
-export function rememberTripPlaces(places: PlaceSummary[], slugs: string[]) {
+/** Kopie van de reisplekken bewaren, met de datum waarop de gegevens van de server kwamen (`savedAt`, ISO) */
+export function rememberTripPlaces(places: PlaceSummary[], slugs: string[], savedAt: string = new Date().toISOString()) {
+  const copy = encodeTripPlaces(places, slugs, savedAt);
+  tripPlacesMemory = { places: copy.places, savedAt };
   try {
-    localStorage.setItem(TRIP_PLACES, JSON.stringify(places.filter((p) => slugs.includes(p.slug))));
+    localStorage.setItem(TRIP_PLACES, JSON.stringify(copy));
+    tripPlacesMemory = null;
   } catch {
-    /* opslag vol of geblokkeerd: niet erg, dan alleen online */
+    /* opslag vol of geblokkeerd: dan alleen tijdens dit bezoek */
+  }
+}
+
+/** De bewaarde kopie met de datum van de gegevens (null bij een kopie van vóór november 2026) */
+export function readTripPlacesCopy(): TripPlacesCopy {
+  if (tripPlacesMemory) return tripPlacesMemory;
+  try {
+    return decodeTripPlaces(JSON.parse(localStorage.getItem(TRIP_PLACES) ?? "[]"));
+  } catch {
+    return { places: [], savedAt: null };
   }
 }
 
 export function readTripPlaces(): PlaceSummary[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(TRIP_PLACES) ?? "[]");
-    return Array.isArray(v) ? (v as PlaceSummary[]) : [];
-  } catch {
-    return [];
-  }
+  return readTripPlacesCopy().places;
 }
 
 // ── Welkom (onboarding) ─────────────────────────────────────────────────────

@@ -559,6 +559,9 @@ def test_osm_lozen_prijs_lengte():
     assert r.records[0]["faciliteiten"] == {"lozing": True, "prijs_eur": 12.5, "max_lengte_m": 7.5}
     gratis = {"tourism": "caravan_site", "name": "Wei 2", "fee": "no", "maxlength": "40", "sanitary_dump_station": "maybe"}
     r = map_overpass([{"type": "node", "id": 2, "lat": 52.1, "lon": 5.1, "tags": gratis}], "osm", False)
+    # fee=no zonder bedrag is geen prijs 0 maar onbekend (review nov. 2026, DATA-10); charge=gratis wel
+    assert r.records[0]["faciliteiten"] == {}
+    r = map_overpass([{"type": "node", "id": 3, "lat": 52.1, "lon": 5.1, "tags": {**gratis, "charge": "gratis"}}], "osm", False)
     assert r.records[0]["faciliteiten"] == {"prijs_eur": 0.0}
     assert osm_price("2 EUR/hour") is None and osm_price("10 € per persoon") is None and osm_price("gratis") == 0.0
 

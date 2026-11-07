@@ -33,6 +33,16 @@ test("checkContent: verzonnen getal, emoji, uitroepteken, superlatief, u-vorm", 
   assert.deepEqual(kinds, ["emoji", "getal", "getal", "superlatief", "u-vorm", "uitroepteken"]);
 });
 
+test("DATA-15: vaste getallen alleen in hun patroon, een losse 11 of 24 is verzonnen", () => {
+  const ok = { title: "Uitslapen", body: "Blijf tot 11:00, of per 24 uur. Prijs voor 2 personen.", hashtags: ["camper", "nederland", "camperplaats"] };
+  assert.deepEqual(checkContent(ok, "instagram", facts), []);
+  const loose = { title: "Nieuw", body: "Deze week 24 nieuwe plekken, en 11 met stroom.", hashtags: ["camper", "nederland", "camperplaats"] };
+  assert.deepEqual(
+    checkContent(loose, "instagram", facts).map((i) => i.detail),
+    ['"24" staat niet in de feitenbank', '"11" staat niet in de feitenbank'],
+  );
+});
+
 test("checkContent: Google Ads-lengtes", () => {
   const issues = checkContent({ title: "Camperplaatsen met vertrektijd in heel NL", body: "x".repeat(91), hashtags: [] }, "google-ads", facts);
   assert.equal(issues.filter((i) => i.kind === "lengte").length, 2);

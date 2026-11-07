@@ -146,7 +146,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
               <Icon name="sort" size={17} className="mr-1.5 shrink-0 text-muted" />
               {/* Mobiel staat er alleen "Sorteren" (de keuze past niet); een stip als het niet de standaard is */}
               <span className="sm:hidden">Sorteren</span>
-              {filters.sort !== "aanbevolen" && <span className="ml-1 h-2 w-2 rounded-full bg-ember sm:hidden" aria-hidden="true" />}
+              {filters.sort !== "aanbevolen" && <span className="ml-1 h-2 w-2 rounded-full bg-forest sm:hidden" aria-hidden="true" />}
               <select
                 aria-label="Sorteren"
                 value={filters.sort}
@@ -193,7 +193,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
                   <button
                     type="button"
                     onClick={() => update(c.without)}
-                    className="flex h-11 items-center gap-1.5 rounded-full bg-forest-tint pr-3 pl-4 text-sm font-semibold text-forest"
+                    className="flex h-11 items-center gap-1.5 rounded-md border border-forest bg-forest pr-2.5 pl-3 font-semibold whitespace-nowrap text-on-forest"
                     aria-label={`Filter ${c.label} verwijderen`}
                   >
                     {c.label}
@@ -224,8 +224,9 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           </div>
         )}
 
-        <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
-          <h1 className="font-display text-lg leading-snug font-semibold sm:text-2xl">
+        <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`}>
+          {/* Alleen de teller is live: een schermlezer hoort "12 plekken in Gelderland", niet de hele lijst (R30) */}
+          <h1 className="font-display text-h1 font-semibold" aria-live="polite" aria-atomic="true">
             <span key={total} className="animate-fade-in inline-block">
               {total !== undefined ? pluralize(total, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
@@ -303,7 +304,7 @@ function DepartureIntro({ page, filters }: { page?: DeparturePage; filters: Filt
   return (
     <div className="border-b border-line bg-surface px-3 sm:px-6 lg:border-0 lg:bg-transparent lg:pt-6">
         <div className="pt-3 pb-1">
-          <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
+          <h2 className="font-display text-h2 font-semibold">{DEPARTURE_PAGES[page].title}</h2>
           <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
           {page === "overig" && (
             <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
@@ -382,7 +383,7 @@ function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceS
   const options = relaxations(places, filters).slice(0, 4);
   return (
     <div className="mt-6 rounded-lg border border-line bg-surface p-5">
-      <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
+      <h2 className="font-display text-h2 font-semibold">Geen plekken die aan alles voldoen</h2>
       <p className="mt-2 text-ink-2">{options.length ? "Met één aanpassing vind je wel iets:" : "Probeer een andere plaats of streek."}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {options.map((o) => (

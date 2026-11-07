@@ -50,9 +50,20 @@ function Tile({
 }
 
 /**
+ * Vragen we om de vertrektijd? Als er geen bruikbare vertrekregel is: geen regel, een afgewezen of voorwaardelijke
+ * regel, of een vaste tijd die we niet kunnen lezen (zelfde definitie als "onvolledig").
+ */
+export function needsDeparture(place: Place): boolean {
+  const claimed = place.departure === "vrij" || place.departure === "per24";
+  const known = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
+  return !known || isIncomplete(place);
+}
+
+/**
  * Beslisblok (redesign 30 oktober 2026, UX-audit): vier cellen die samen de vraag "kan ik hier vannacht staan?"
  * beantwoorden. Vertrekken is het kernfeit en de enige cel met kleur (bosgroen zonder vaste tijd, meerblauw voor
- * uitslapers). Onbekend staat er eerlijk als "Onbekend", met "Weet jij dit?" om het meteen door te geven.
+ * uitslapers). Onbekend staat er eerlijk als "Onbekend", met "Weet jij dit?" om het meteen door te geven; bij een
+ * bekend gegeven "Klopt dit niet?".
  */
 export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?: number }) {
   const kind = departureKind(place);
@@ -69,15 +80,21 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
       : price.perPerson
         ? price.perNight ? "Per persoon per nacht" : "Per persoon"
         : price.extras || place.touristTaxIncluded === false
-          ? "Plus toeslagen"
+          ? "+ toeslagen"
           : price.perNight
             ? "Per nacht"
             : undefined
     : undefined;
   const arrival = arrivalTile(place);
+  // Onbekend: "Weet jij dit?"; bekend: "Klopt dit niet?" (review R48). De oproep voor een onbekende vertrektijd
+  // staat direct onder dit blok (DecisionDetails), met de knop "Vertrektijd doorgeven".
   const ask = (topic: string, context: string) => (
     <ReportProblem placeId={place.id} placeName={place.name} topic={topic} label="Weet jij dit?" context={context} />
   );
+  const fix = (topic: string, context: string) => (
+    <ReportProblem placeId={place.id} placeName={place.name} topic={topic} label="Klopt dit niet?" context={context} quiet />
+  );
+  const askDeparture = needsDeparture(place);
 
   return (
     <section aria-labelledby="kort">
@@ -90,30 +107,47 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
           known={departureKnown}
           tone={departureKnown ? (late ? "lake" : free ? "forest" : "plain") : "plain"}
           extra={
-            departureKnown && visitors > 0 ? (
-              <span className="flex items-center gap-1 font-semibold text-ink-2" data-testid="departure-visitors">
-                <Icon name="check" size={15} className={late ? "text-lake" : "text-forest"} />
-                Volgens {pluralize(visitors, "bezoeker", "bezoekers")}
-              </span>
-            ) : !departureKnown || isIncomplete(place) ? (
-              <GiveDepartureButton placeId={place.id} placeName={place.name} label="Weet jij dit?" />
-            ) : undefined
+            askDeparture ? undefined : (
+              <>
+                {visitors > 0 && (
+                  <span className="flex items-center gap-1 font-semibold text-ink-2" data-testid="departure-visitors">
+                    <Icon name="check" size={15} className={late ? "text-lake" : "text-forest"} />
+                    Volgens {pluralize(visitors, "bezoeker", "bezoekers")}
+                  </span>
+                )}
+                <GiveDepartureButton placeId={place.id} placeName={place.name} label="Klopt dit niet?" />
+              </>
+            )
           }
         >
           {departureKnown ? departureLong(place) : "Onbekend"}
         </Tile>
-        <Tile sign="euro" label="Prijs" known={!!price} extra={price ? priceSub && <span className="text-ink-2">{priceSub}</span> : ask("prijs", "De prijs doorgeven")}>
+        <Tile
+          sign="euro"
+          label="Prijs"
+          known={!!price}
+          extra={
+            price ? (
+              <>
+                {priceSub && <span className="block text-ink-2">{priceSub}</span>}
+                {fix("prijs", "De prijs aanpassen")}
+              </>
+            ) : (
+              ask("prijs", "De prijs doorgeven")
+            )
+          }
+        >
           {price ? price.value : "Onbekend"}
         </Tile>
         <Tile
           sign="calendar"
           label="Nu open"
           known={place.openAllYear === true || !!place.season}
-          extra={place.openAllYear || place.season ? undefined : ask("seizoen", "De openingsperiode doorgeven")}
+          extra={place.openAllYear || place.season ? fix("seizoen", "De openingsperiode aanpassen") : ask("seizoen", "De openingsperiode doorgeven")}
         >
           <OpenValue place={place} />
         </Tile>
-        <Tile sign="clock" label="Aankomen" known={!!arrival} extra={arrival ? undefined : ask("vertrektijd", "De aankomsttijden doorgeven")}>
+        <Tile sign="clock" label="Aankomen" known={!!arrival} extra={arrival ? fix("vertrektijd", "De aankomsttijden aanpassen") : ask("vertrektijd", "De aankomsttijden doorgeven")}>
           {arrival ?? "Onbekend"}
         </Tile>
       </dl>

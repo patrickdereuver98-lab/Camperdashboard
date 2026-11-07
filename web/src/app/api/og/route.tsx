@@ -3,6 +3,7 @@ import { ogFonts } from "@/lib/og-fonts";
 import { BRAND_DOMAIN, BRAND_NAME } from "@/lib/brand";
 import { allInPrice, departureFact, labeledName } from "@/lib/place-seo";
 import { getPlace } from "@/lib/places";
+import { rateLimited } from "@/lib/rate-limit";
 
 // Kleuren uit het thema "natuur & vrijheid" (globals.css): zandpapier, bosgroen, inkt
 const PAPER = "#f5f0e6";
@@ -21,6 +22,9 @@ const CACHE = { "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-wh
  * Gebruikt als og:image op de plekpagina en als download in Mission Control (tab Marketing).
  */
 export async function GET(request: Request) {
+  // Elke afbeelding kost rekentijd: een simpele lus remmen we af (SEC-12)
+  const limited = rateLimited(request, 60);
+  if (limited) return limited;
   const slug = new URL(request.url).searchParams.get("slug") ?? "";
   if (!SLUG.test(slug)) return new Response("Geef een geldige slug", { status: 400 });
   const place = await getPlace(slug);
@@ -30,10 +34,18 @@ export async function GET(request: Request) {
   const dep = departureFact(place);
   const facts = [
     price && {
+      // "Alles inbegrepen" alleen als elke bekende toeslag meetelt en stroom bekend is of er niet is (R22, lib/place-seo.ts)
       label: price.allIn && place.priceEur !== 0 ? "Prijs, alles inbegrepen" : "Prijs per nacht",
       value: price.amount,
-      // Vanaf-prijs: het laagste tarief, toeslagen komen erbij (geen "alles inbegrepen", zie lib/place-seo.ts)
-      note: price.allIn && place.priceEur !== 0 ? "voor 2 personen" : place.priceFrom ? "plus toeslagen" : undefined,
+      // Vanaf-prijs: het laagste tarief, toeslagen komen erbij
+      note:
+        price.allIn && place.priceEur !== 0
+          ? "voor 2 personen"
+          : price.withTax
+            ? "2 personen, met toeristenbelasting"
+            : place.priceFrom
+              ? "plus toeslagen"
+              : undefined,
     },
     dep && { label: "Vertrektijd", value: dep[0].toUpperCase() + dep.slice(1), note: undefined },
   ].filter(Boolean) as { label: string; value: string; note?: string }[];

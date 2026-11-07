@@ -20,9 +20,9 @@ async function mockRest(page: Page) {
 
 async function fillReview(page: Page) {
   const sheet = page.getByRole("dialog");
-  await sheet.getByRole("group", { name: "Totaalcijfer *" }).getByRole("button", { name: "8", exact: true }).click();
+  await sheet.getByRole("radiogroup", { name: "Totaalcijfer *" }).getByRole("radio", { name: "8", exact: true }).check();
   await sheet.getByLabel("Je ervaring *").fill(body);
-  await sheet.getByRole("radio", { name: "Geen vaste tijd, je vertrekt wanneer je wilt" }).click();
+  await sheet.getByRole("radio", { name: "Geen vaste tijd, je vertrekt wanneer je wilt" }).check();
   return sheet;
 }
 
@@ -78,8 +78,8 @@ test("concept blijft bewaard en de sheet gaat open na terugkomst (#review)", asy
   await page.goto(`/plek/${slug}#review`);
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByLabel("Je ervaring *")).toHaveValue(body);
-  await expect(sheet.getByRole("button", { name: "8", exact: true }).first()).toHaveAttribute("aria-pressed", "true");
-  await expect(sheet.getByRole("radio", { name: "Geen vaste tijd, je vertrekt wanneer je wilt" })).toHaveAttribute("aria-checked", "true");
+  await expect(sheet.getByRole("radio", { name: "8", exact: true }).first()).toBeChecked();
+  await expect(sheet.getByRole("radio", { name: "Geen vaste tijd, je vertrekt wanneer je wilt" })).toBeChecked();
   await expect(sheet.getByLabel("Je naam *")).toHaveValue("Kees Kampeerder");
   await expect(sheet.getByTestId("review-account")).toContainText(USER.email);
   await expect(sheet.getByRole("button", { name: "Review versturen" })).toBeVisible();

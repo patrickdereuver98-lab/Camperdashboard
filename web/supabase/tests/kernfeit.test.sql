@@ -1,4 +1,4 @@
--- Tests voor de migraties 20261031180000 (kernfeit-booster), 20261031190000 (concepten) en 20261031200000
+-- Tests voor de migraties 20261031175940 (kernfeit-booster), 20261031175943 (concepten) en 20261031175944
 -- (servicepunten). Draai met web/supabase/tests/run.sh.
 
 delete from private.verwijderde_plekken;

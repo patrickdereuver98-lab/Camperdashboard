@@ -5,6 +5,7 @@ import { TripApp } from "./trip-app";
 export const metadata: Metadata = {
   title: "Mijn reis",
   description: "Je bewaarde camperplaatsen op volgorde, met echte rijtijden en een kostenoverzicht.",
+  alternates: { canonical: "/mijn-reis" },
 };
 
 export default function TripPage() {

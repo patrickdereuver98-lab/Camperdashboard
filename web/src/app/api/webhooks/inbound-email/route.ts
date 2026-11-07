@@ -1,8 +1,9 @@
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
-import { GEMINI_DEFAULT_MODEL } from "@/lib/gemini";
+import { GEMINI_DEFAULT_MODEL, isTemporaryAiError } from "@/lib/gemini";
 import {
   type Inbound,
   type OwnerReply,
+  UNREAD_REPLY,
   askOwnerReply,
   cleanBody,
   parseInbound,
@@ -18,10 +19,13 @@ const MAX_BYTES = 512_000;
  *
  * 1. Handtekening van Resend controleren (RESEND_WEBHOOK_SECRET, "whsec_…"). Zonder geldige handtekening: 401.
  * 2. Tekst van de mail ophalen (staat niet altijd in de webhook; dan via de Resend-API met RESEND_API_KEY).
- * 3. Gemini bepaalt intent, prijs en vertrektijd (GEMINI_API_KEY). Alleen onderwerp en tekst gaan naar Google.
- * 4. public.log_owner_reply zoekt de plek (id in het onderwerp, anders het e-mailadres), zet wijzigingen in de Triage
- *    Inbox en zet bij een bevestiging vanaf het bekende adres places.verified_at. De route heeft geen
- *    service-role-sleutel: de database controleert OWNER_INBOX_KEY tegen internal_secrets.owner_inbox_key.
+ * 3. Gemini bepaalt intent, prijs en vertrektijd (GEMINI_API_KEY). Alleen onderwerp en tekst gaan naar Google. Een
+ *    prijs of tijd telt alleen als hij letterlijk in de mail staat. Kan Gemini de mail niet lezen (geblokkeerd, geen
+ *    JSON, verkeerde sleutel), dan slaan we hem toch op met intent 'unknown'; alleen bij een tijdelijke storing 502.
+ * 4. public.log_owner_reply zoekt de plek (id in het onderwerp, anders het e-mailadres) en zet wijzigingen en
+ *    bevestigingen als voorstel in de Triage Inbox. Alleen het bekende adres van de plek heet daar 'eigenaar'; een
+ *    ander adres 'mail (onbevestigd)'. De route heeft geen service-role-sleutel: de database controleert
+ *    OWNER_INBOX_KEY tegen internal_secrets.owner_inbox_key.
  *
  * Een 5xx laat Resend het later opnieuw proberen; dezelfde mail twee keer verwerken kan niet (uniek email_id).
  */
@@ -33,6 +37,9 @@ export async function POST(request: Request) {
   const inboxKey = process.env.OWNER_INBOX_KEY;
   if (!secret || !inboxKey) return Response.json({ error: "Inbox niet ingesteld" }, { status: 503 });
 
+  // Eerst de opgegeven lengte, zodat een te grote body niet eens wordt gelezen; daarna de echte lengte
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (!Number.isFinite(declared) || declared > MAX_BYTES) return Response.json({ error: "Te groot" }, { status: 413 });
   const raw = await request.text();
   if (raw.length > MAX_BYTES) return Response.json({ error: "Te groot" }, { status: 413 });
   if (!verifyResendSignature(secret, request.headers, raw)) {
@@ -61,7 +68,10 @@ export async function POST(request: Request) {
     try {
       reply = await askOwnerReply(key, model, inbound.subject, body);
     } catch (e) {
-      return Response.json({ error: e instanceof Error ? e.message : "AI niet bereikbaar" }, { status: 502 });
+      // Tijdelijk (netwerk, 429, 5xx): Resend probeert het later opnieuw. Anders bewaren we de mail ongelezen.
+      if (isTemporaryAiError(e)) return Response.json({ error: e instanceof Error ? e.message : "AI niet bereikbaar" }, { status: 502 });
+      console.error("inbound-email: Gemini kon de mail niet lezen", e instanceof Error ? e.message : e);
+      reply = UNREAD_REPLY;
     }
   }
 

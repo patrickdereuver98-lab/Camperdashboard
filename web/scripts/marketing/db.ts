@@ -16,9 +16,14 @@ export function json(value: unknown): string {
   return `$${tag}$${text}$${tag}$::jsonb`;
 }
 
+/** Argumenten voor psql: de SQL zelf gaat via stdin, niet als argument (argv is begrensd: E2BIG boven ±128 KiB) */
+export const PSQL_ARGS = ["-v", "ON_ERROR_STOP=1", "-X", "-q", "-t", "-A", "-f", "-"] as const;
+
 /** SQL uitvoeren; geeft de ruwe uitvoer terug (psql -tA: één regel per rij, kolommen gescheiden door |) */
 export function sql(statement: string): string {
-  return execFileSync("psql", [url(), "-v", "ON_ERROR_STOP=1", "-X", "-q", "-t", "-A", "-c", statement], {
+  const input = /;\s*$/.test(statement) ? statement : `${statement};`;
+  return execFileSync("psql", [url(), ...PSQL_ARGS], {
+    input: `${input}\n`,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   }).trim();

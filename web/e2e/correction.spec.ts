@@ -29,14 +29,14 @@ test("voorzieningen doorgeven: alleen wat anders is gaat mee, met de oude waarde
 
   // Beginstand = wat we weten; niets aangepast en geen toelichting: niet versturen
   const power = sheet.getByRole("radiogroup", { name: "Stroom" });
-  await expect(power.getByRole("radio", { name: place.power ? "Ja" : "Nee" })).toHaveAttribute("aria-checked", "true");
+  await expect(power.getByRole("radio", { name: place.power ? "Ja" : "Nee" })).toBeChecked();
   await sheet.getByRole("button", { name: "Melding versturen" }).click();
   await expect(sheet.getByRole("alert")).toContainText("Je hebt nog niets aangepast");
   expect(sent).toBeNull();
 
-  await sheet.getByRole("radiogroup", { name: "Lozen" }).getByRole("radio", { name: "Ja" }).click();
+  await sheet.getByRole("radiogroup", { name: "Lozen" }).getByRole("radio", { name: "Ja" }).check();
   await sheet.getByRole("button", { name: "Melding versturen" }).click();
-  await expect(page.getByText("We controleren je melding")).toBeVisible();
+  await expect(page.getByText("Je melding is binnen en wacht op controle.")).toBeVisible();
   expect(sent).toMatchObject({
     p_kind: "correctie",
     p_payload: { onderwerp: "voorzieningen", voorzieningen: { dump_station: { was: null, nieuw: true } } },
@@ -64,5 +64,6 @@ test("voorzieningenraster: '?' vraagt in de cel zelf, één tik op Ja stuurt het
   await expect(ask).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("group", { name: "Is hier wifi?" }).getByRole("button", { name: "Ja" }).click();
   await expect(page.getByText("Wifi: ja")).toBeVisible();
-  expect(sent).toMatchObject({ p_kind: "correctie", p_payload: { onderwerp: "voorzieningen", voorzieningen: { wifi: { was: null, nieuw: true } } } });
+  // Antwoorden per plek worden gebundeld en een paar seconden na de laatste tik verstuurd (review november, R11)
+  await expect.poll(() => sent, { timeout: 15_000 }).toMatchObject({ p_kind: "correctie", p_payload: { onderwerp: "voorzieningen", voorzieningen: { wifi: { was: null, nieuw: true } } } });
 });

@@ -6,14 +6,15 @@ import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, timeToMinutes, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
-import { isIncomplete, lastChecked } from "@/lib/place-status";
+import { lastChecked } from "@/lib/place-status";
 import { NavigateButton } from "@/components/navigate";
-import { SITE_URL } from "@/lib/env";
+import { ContactLink } from "@/components/contact-link";
+import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
-import { allInPrice, ogImagePath, seoDescription, seoTitle } from "@/lib/place-seo";
+import { allInPrice, labeledName, ogImagePath, seoDescription, seoTitle } from "@/lib/place-seo";
 import { inBbox } from "@/lib/bbox";
-import { areaPath, breadcrumbLd, ISLANDS, ldJson, provinceSlug } from "@/lib/seo-pages";
+import { areaPath, breadcrumbLd, ISLANDS, ldImages, ldJson, placeTitle, provinceSlug } from "@/lib/seo-pages";
 import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
@@ -27,7 +28,8 @@ import { OwnerUpdate } from "./owner-update";
 import { ownerValues } from "@/lib/owner-update";
 import { PhotoUpload } from "./photo-upload";
 import { CrowdStatusCard } from "./crowd-status";
-import { DecisionGrid } from "./decision-grid";
+import { DecisionGrid, needsDeparture } from "./decision-grid";
+import { GiveDepartureButton } from "@/components/departure-form";
 import { FacilityGrid } from "./facility-grid";
 import { DistanceFromMe } from "./live-facts";
 import { PlekpulsVraag } from "@/components/plekpuls";
@@ -42,9 +44,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const place = await getPlace(slug);
-  if (!place) return { title: "Plek niet gevonden" };
-  // "Camperplaats [naam] in [plaats]: [prijs] inclusief toeslagen. Vertrektijd: [tijd]." Onbekend laten we weg.
-  const title = seoTitle(place);
+  // Onbekend adres: de pagina geeft 404, maar zeg het ook expliciet tegen zoekmachines
+  if (!place) return { title: "Plek niet gevonden", robots: { index: false } };
+  // Binnen ±60 tekens; bij "zonder vertrektijd" staat dat in de titel (kernfeit), de prijs als die nog past.
+  // De omschrijving: "Camperplaats [naam] in [plaats]: [prijs] inclusief toeslagen. Vertrektijd: [tijd]." Onbekend laten we weg.
+  const title = placeTitle(place, labeledName(place), seoTitle(place), allInPrice(place)?.amount);
   const description = seoDescription(place);
   const image = { url: ogImagePath(place.slug), width: 1200, height: 630, alt: `${place.name} in ${place.town}: prijs en vertrektijd` };
   return {
@@ -106,7 +110,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     "@type": "Campground",
     name: place.name,
     url: `${SITE_URL}/plek/${place.slug}`,
-    image: photos.length ? photos.map((p) => upgradePhotoUrl(p.url)) : undefined,
+    // Alleen eigen uploads en foto's met toestemming; anders de deelafbeelding (geen foto's van derden doorgeven)
+    image: ldImages(photos, `${SUPABASE_URL}/storage/`, `${SITE_URL}${ogImagePath(place.slug)}`).map(upgradePhotoUrl),
     description: place.description,
     address: { "@type": "PostalAddress", streetAddress: place.street, postalCode: place.postcode, addressLocality: place.town, addressRegion: place.province, addressCountry: "NL" },
     geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lng },
@@ -115,7 +120,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     // Alleen een vaste, leesbare vertrektijd; "geen vaste vertrektijd" heeft geen Schema.org-veld
     checkoutTime: place.departure === "vast" && timeToMinutes(place.checkoutUntil) !== undefined ? place.checkoutUntil : undefined,
     checkinTime: timeToMinutes(place.checkinFrom) !== undefined ? place.checkinFrom : undefined,
-    priceRange: allInPrice(place)?.text,
+    // Alleen het bedrag ("€ 24,70", "vanaf € 18", "Gratis"); de uitleg staat op de pagina
+    priceRange: allInPrice(place)?.amount,
     amenityFeature: amenities.length ? amenities : undefined,
     ...(place.ratingAvg && place.ratingCount
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: place.ratingAvg, bestRating: 10, worstRating: 1, ratingCount: place.ratingCount } }
@@ -159,10 +165,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {/* Kop (redesign 30 oktober 2026): naam, plaats, score en afstand in één blik; de rest staat in het beslisblok */}
         <header className="flex flex-col gap-2 pt-3 md:flex-row md:items-start md:justify-between md:pt-6">
           <div className="min-w-0">
-            <h1 className="font-display text-[1.625rem] leading-tight font-semibold text-balance sm:text-4xl">{place.name}</h1>
+            <h1 className="font-display text-h1 font-semibold">{place.name}</h1>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-ink-2">
               <Sign name={KIND_SIGN[place.kind ?? "camperplaats"]} size={20} />
-              {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {address || place.town}, {place.province}
+              {/* "Soort in plaats, provincie"; het adres staat bij Praktisch en contact (review R52) */}
+              {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}, {place.province}
               <a href="#ligging" className="-mx-1 -my-3 inline-block px-1 py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
                 Kaart
               </a>
@@ -213,7 +220,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                <h2 id="voorzieningen" className="font-display text-xl font-semibold sm:text-2xl">Voorzieningen</h2>
+                <h2 id="voorzieningen" className="font-display text-h2 font-semibold">Voorzieningen</h2>
                 <Legend />
               </div>
               <FacilityGrid placeId={place.id} placeName={place.name} values={pickFacilities(place)} />
@@ -222,7 +229,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Over deze plek: alleen hele zinnen uit de eigen tekst van de plek (zie lib/description.ts) */}
             {place.description && (
               <section aria-labelledby="over">
-                <h2 id="over" className="font-display text-xl font-semibold sm:text-2xl">Over deze plek</h2>
+                <h2 id="over" className="font-display text-h2 font-semibold">Over deze plek</h2>
                 <p className="mt-2 max-w-prose text-ink-2">{place.description}</p>
                 <p className="mt-2 text-sm text-muted">Zo beschrijft de plek zichzelf op de eigen website.</p>
               </section>
@@ -238,7 +245,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Reviews */}
             <section aria-labelledby="reviews">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <h2 id="reviews" className="font-display text-xl font-semibold sm:text-2xl">Ervaringen</h2>
+                <h2 id="reviews" className="font-display text-h2 font-semibold">Ervaringen</h2>
                 <WriteReview placeId={place.id} placeName={place.name} slug={place.slug} />
               </div>
               {reviews.length > 0 ? (
@@ -258,7 +265,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 
         {nearby.length > 0 && (
           <section className="mt-10" aria-labelledby="buurt">
-            <h2 id="buurt" className="font-display text-xl font-semibold sm:text-2xl">In de buurt</h2>
+            <h2 id="buurt" className="font-display text-h2 font-semibold">In de buurt</h2>
             <ul className={`${CARD_GRID} -mx-4 mt-3 scroll-px-4 px-4 sm:mx-0 sm:px-0`}>
               {nearby.map(({ place: p, km }) => (
                 <li key={p.id} className={CARD_CELL}>
@@ -285,20 +292,25 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className={`font-display leading-none font-semibold ${price ? "text-lg" : "text-sm text-muted"}`}>{price?.value ?? "Prijs onbekend"}</p>
-            {price?.perNight && <p className="mt-0.5 truncate text-sm leading-tight text-muted">per nacht{price.extras ? " + extra's" : ""}</p>}
+            {/* Eén label voor toeslagen, overal hetzelfde en niet afgekapt (review R52) */}
+            {price && (price.extras || place.touristTaxIncluded === false) ? (
+              <p className="mt-0.5 text-sm leading-tight whitespace-nowrap text-muted">+ toeslagen</p>
+            ) : (
+              price?.perNight && <p className="mt-0.5 text-sm leading-tight whitespace-nowrap text-muted">per nacht</p>
+            )}
           </div>
           <SaveButton slug={place.slug} variant="bar" />
           {tel && (
-            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
+            <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="phone" size={19} />
-            </a>
+            </ContactLink>
           )}
           {place.website && (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
+            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="globe" size={19} />
-            </a>
+            </ContactLink>
           )}
-          <NavigateButton to={place} name={place.name} className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep">
+          <NavigateButton to={place} slug={place.slug} className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep">
             <Icon name="route" size={18} /> Route
           </NavigateButton>
         </div>
@@ -319,14 +331,14 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         </p>
         <div className="mt-4 grid gap-2">
           {place.website && (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
+            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
               <Icon name="globe" size={19} /> {reserveLabel}
-            </a>
+            </ContactLink>
           )}
           {tel && (
-            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
+            <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
               <Icon name="phone" size={19} /> {tel}
-            </a>
+            </ContactLink>
           )}
           {place.email && (
             <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
@@ -338,7 +350,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
       </div>
 
       <section id="ligging" aria-labelledby="ligging-kop" className="scroll-mt-20 space-y-3">
-        <h2 id="ligging-kop" className="font-display text-xl font-semibold sm:text-2xl lg:sr-only">Ligging en route</h2>
+        <h2 id="ligging-kop" className="font-display text-h2 font-semibold lg:sr-only">Ligging en route</h2>
         <PlaceMap
           places={[place, ...nearby]}
           highlight={place.slug}
@@ -346,7 +358,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
           cluster={false}
           className="h-52 overflow-hidden rounded-lg border border-line lg:h-72"
         />
-        <RouteCard to={{ lat: place.lat, lng: place.lng }} name={place.name} />
+        <RouteCard to={{ lat: place.lat, lng: place.lng }} slug={place.slug} />
       </section>
 
       <div className="rounded-lg bg-sunken/60 p-4 text-sm text-ink-2">
@@ -359,7 +371,6 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het weten, dan passen we het aan.</p>}
         <div className="mt-1 flex flex-wrap gap-x-5">
           <ReportProblem placeId={place.id} placeName={place.name} facilities={pickFacilities(place)} />
-          <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
         </div>
       </div>
     </>
@@ -394,15 +405,27 @@ function DecisionDetails({ place }: { place: Place }) {
   const price = cardPrice(place);
   const extras = (place.priceExtras ?? []).filter((x) => x !== lateOption);
   const priceDetails = !!price && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0 || nightTotal(place).total !== undefined);
-  const known = !departureKind(place) || isIncomplete(place);
+  const askDeparture = needsDeparture(place);
   return (
     <section aria-label="Details over tijden en prijs" className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
-      {(note || times.length > 0 || known) && (
+      {/* Oproep (brief, "Oproep vertrektijd"; review R48): de hoofdroute voor nieuwe vertrektijden. Eigenaren vullen
+          het zelf in, direct ernaast: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026). */}
+      {askDeparture && (
+        <div className="px-4 py-3" data-testid="departure-call">
+          <p className="text-ink-2">
+            We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten andere camperaars hoe laat ze
+            weg moeten.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <GiveDepartureButton placeId={place.id} placeName={place.name} />
+            <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de tijden in" />
+          </div>
+        </div>
+      )}
+      {(note || times.length > 0) && (
         <div className="space-y-1 px-4 py-3 text-ink-2">
           {note && <p className="text-sm">{note}</p>}
           {times.length > 0 && <p>{times.join(". ")}.</p>}
-          {/* Eigenaren vullen het zelf in: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026) */}
-          {known && <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de tijden in" />}
         </div>
       )}
       {priceDetails && (
@@ -438,6 +461,12 @@ function DecisionDetails({ place }: { place: Place }) {
           {place.maxLengthM ? `${String(place.maxLengthM).replace(".", ",")} m` : "Onbekend"}
         </span>
       </div>
+      {/* Eigenaarsroute hoog op de pagina, direct onder het beslisblok (review R48) */}
+      {!askDeparture && (
+        <div className="px-4 py-1">
+          <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
+        </div>
+      )}
     </section>
   );
 }
@@ -495,16 +524,18 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
     rows.push({
       label: "Telefoon",
       value: (
-        <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
+        <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
           {tel}
-        </a>
+        </ContactLink>
       ),
     });
   if (place.website)
     rows.push({
       label: "Website",
       value: (
-        <a
+        <ContactLink
+          soort="website"
+          slug={place.slug}
           href={place.website}
           target="_blank"
           rel="noopener noreferrer nofollow"
@@ -512,7 +543,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
           className="-my-3 inline-block py-3 font-semibold break-all text-forest underline underline-offset-2"
         >
           {websiteLabel(place.website)}
-        </a>
+        </ContactLink>
       ),
     });
   if (place.email)
@@ -526,7 +557,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
     });
   return (
     <section aria-labelledby="praktisch">
-      <h2 id="praktisch" className="font-display text-xl font-semibold sm:text-2xl">Praktisch en contact</h2>
+      <h2 id="praktisch" className="font-display text-h2 font-semibold">Praktisch en contact</h2>
       <dl className="mt-3 divide-y divide-line rounded-lg border border-line bg-surface">
         {rows.map((r) => (
           <div key={r.label} className="flex justify-between gap-4 px-4 py-2.5">

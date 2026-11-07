@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SQL-tests voor de geo_master-migraties op een lege Postgres 16 (geen Supabase nodig).
+# SQL-tests voor migraties op een lege Postgres 16 (geen Supabase nodig): geo_master, Mission Control, bewaking, drempel en RLS.
 #   DATABASE_URL=postgres://… web/supabase/tests/run.sh   (bv. de service-container in CI)
 #   web/supabase/tests/run.sh                              (start een tijdelijke cluster met initdb/pg_ctl)
 set -euo pipefail
@@ -19,19 +19,19 @@ fi
 
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/stub_schema.sql
-\i $migrations/20261030120000_geo_master.sql
-\i $migrations/20261031090000_promote_geo_master.sql
-\i $migrations/20261031220000_geo_bronnen_pdok.sql
-\i $migrations/20261031170000_koppelen_zonder_promotie.sql
-\i $migrations/20261031210000_places_lat_lng.sql
+\i $migrations/20261030102938_geo_master.sql
+\i $migrations/20261030162002_promote_geo_master.sql
+\i $migrations/20261101002100_geo_bronnen_pdok.sql
+\i $migrations/20261031175939_koppelen_zonder_promotie.sql
+\i $migrations/20261031183926_places_lat_lng.sql
 \i $here/promote_geo_master.test.sql
 \i $here/pdok_bron.test.sql
-\i $migrations/20261031230000_pdok_toegestaan.sql
+\i $migrations/20261101002102_pdok_toegestaan.sql
 \i $here/pdok_toegestaan.test.sql
 \i $here/stub_scraper.sql
-\i $migrations/20261031180000_kernfeit_booster.sql
-\i $migrations/20261031190000_concepten.sql
-\i $migrations/20261031200000_servicepunten_dichtstbij.sql
+\i $migrations/20261031175940_kernfeit_booster.sql
+\i $migrations/20261031175943_concepten.sql
+\i $migrations/20261031175944_servicepunten_dichtstbij.sql
 \i $here/kernfeit.test.sql
 SQL
 
@@ -41,14 +41,26 @@ psql "$DATABASE_URL" -q -X -c "drop database if exists mission_control" -c "crea
 mc_url="$(python3 -c 'import sys,urllib.parse as u;p=u.urlsplit(sys.argv[1]);print(u.urlunsplit(p._replace(path="/mission_control")))' "$DATABASE_URL")"
 psql "$mc_url" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/mission_control_stub.sql
-\i $migrations/20261101130000_mission_control.sql
+\i $migrations/20261102074903_mission_control.sql
 \i $here/mission_control.test.sql
-\set migration $migrations/20261102120000_eigenaar_inbox.sql
+\set migration $migrations/20261102082358_eigenaar_inbox.sql
 \i $here/eigenaar_inbox.test.sql
-\set migration $migrations/20261102140000_vertrektijd_wachtrij.sql
+\set migration $migrations/20261102085642_vertrektijd_wachtrij.sql
 \i $here/vertrektijd_wachtrij.test.sql
-\set migration $migrations/20261102160000_vertrektijd_voorstel.sql
+\set migration $migrations/20261102105405_vertrektijd_voorstel.sql
 \i $here/vertrektijd_voorstel.test.sql
-\set migration $migrations/20261102180000_marketing_dashboard.sql
+\set migration $migrations/20261102132558_marketing_dashboard.sql
 \i $here/marketing_dashboard.test.sql
+\set migration_ops $migrations/20261106200000_health_en_ops_probe.sql
+\set migration_cron $migrations/20261106200100_cron_rustiger_en_opschonen.sql
+\i $here/ops.test.sql
+SQL
+
+# Publicatiedrempel en leesregel van places (RLS) in een eigen database
+psql "$DATABASE_URL" -q -X -c "drop database if exists drempel" -c "create database drempel"
+dr_url="$(python3 -c 'import sys,urllib.parse as u;p=u.urlsplit(sys.argv[1]);print(u.urlunsplit(p._replace(path="/drempel")))' "$DATABASE_URL")"
+psql "$dr_url" -q -v ON_ERROR_STOP=1 -X <<SQL
+\i $here/drempel_stub.sql
+\set migration $migrations/20261106200200_publicatiedrempel.sql
+\i $here/drempel_rls.test.sql
 SQL

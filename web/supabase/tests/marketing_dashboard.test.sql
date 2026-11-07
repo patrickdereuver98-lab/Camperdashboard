@@ -1,4 +1,4 @@
--- Test voor migratie 20261102180000_marketing_dashboard.sql. Draait in de Mission Control-database (run.sh), na de
+-- Test voor migratie 20261102132558_marketing_dashboard.sql. Draait in de Mission Control-database (run.sh), na de
 -- andere Mission Control-tests.
 \set ON_ERROR_STOP 1
 reset role;

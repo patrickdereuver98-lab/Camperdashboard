@@ -134,10 +134,9 @@ def osm_facilities(tags: dict[str, Any]) -> dict[str, Any]:
     dump = next((b for b in (osm_bool(tags.get(k)) for k in ("sanitary_dump_station", "waste_disposal")) if b is not None), None)
     if dump is not None:
         out["lozing"] = dump
-    fee = osm_bool(tags.get("fee"), extra_false=("free", "gratis"))
+    # Alleen een expliciet bedrag (of charge=gratis) is een prijs; fee=no blijft "prijs onbekend", net als in osm.ts
+    # (review nov. 2026, R25/DATA-10): prijs 0 zou ook de toeristenbelasting uitzetten
     price = osm_price(tags.get("charge"))
-    if price is None and fee is False:
-        price = 0.0
     if price is not None:
         out["prijs_eur"] = price
     try:

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ReportPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 pt-8 sm:px-6">
-      <h1 className="font-display text-3xl font-semibold sm:text-4xl">Meld illegale of onjuiste inhoud</h1>
+      <h1 className="font-display text-h1 font-semibold">Meld illegale of onjuiste inhoud</h1>
       <p className="mt-3 text-lg text-ink-2">
         Zie je op VrijStaan een review, foto of tekst die volgens jou illegaal is, inbreuk maakt op je rechten of niet klopt,
         meld het dan hier. We bekijken elke melding.

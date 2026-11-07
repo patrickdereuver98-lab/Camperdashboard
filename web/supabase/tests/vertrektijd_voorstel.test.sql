@@ -1,4 +1,4 @@
--- Test voor migratie 20261102160000_vertrektijd_voorstel.sql. Draait na vertrektijd_wachtrij.test.sql.
+-- Test voor migratie 20261102105405_vertrektijd_voorstel.sql. Draait na vertrektijd_wachtrij.test.sql.
 \set ON_ERROR_STOP 1
 reset role;
 

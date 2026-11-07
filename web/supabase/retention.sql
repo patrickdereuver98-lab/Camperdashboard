@@ -1,5 +1,5 @@
 -- Bewaartermijnen uit de privacyverklaring automatisch toepassen. Eenmalig uitvoeren in de SQL-editor van Supabase.
--- Zelfde inhoud als het laatste deel van migrations/20261015090000_misbruik_en_bewaartermijnen.sql; de rest van die
+-- Zelfde inhoud als het laatste deel van migrations/20261015082622_misbruik_en_bewaartermijnen.sql; de rest van die
 -- migratie staat al live. Veilig om opnieuw uit te voeren.
 
 -- ── Bewaartermijnen (privacyverklaring) ─────────────────────────────────────
