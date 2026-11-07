@@ -27,7 +27,7 @@ export function HelpList() {
     [places, province],
   );
 
-  if (error) return <p className="mt-4 rounded-xl bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
+  if (error) return <p className="mt-4 rounded-lg bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
 
   return (
     <div className="mt-4">
@@ -53,7 +53,7 @@ export function HelpList() {
       ) : (
         <>
           <p className="mt-3 text-sm text-muted">{list.length.toLocaleString("nl-NL")} plekken</p>
-          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low">
+          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
             {list.slice(0, shown).map((p) => (
               <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">

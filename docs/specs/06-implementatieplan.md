@@ -151,6 +151,8 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 > Review 5 en 6 november 2026: blokkers en aanpasplan in fases tot de livegang staan in [`docs/review-2026-11.md`](../review-2026-11.md) §4 (punten R1 tot en met R55).
 
+- ✅ Fase 2.1 "Eén merk" (golf 2, agent B, 7 november 2026): R49 één `Chip` (uit = rand, aan = vol bosgroen met vinkje, `aria-pressed`) op Zoeken, filtersheet, Dichtbij en uitgaven; R50 redesign ronde 3 (start, Doe mee, Mijn reis, statistieken, samen plannen, landingstabel: 1 px rand, geen schaduw, max. `rounded-lg`) en koppenschaal `text-h1`/`text-h2`/`text-h3` (24/36, 18/22, 16/18 px) op alle koppen van de site; R52 plekkop "Soort in plaats, provincie", één label "+ toeslagen" (actiebalk niet meer afgekapt, beslisblok gelijk), pictogram `pin` toegevoegd en `satisfies` in plaats van de cast; R53 kleurregels (geen rood hartje, "Alle"/afstand/"Gratis" neutraal, reisteller en mededeling bosgroen) en logo-variant tot en met 32 px (ook favicon). Stijlgids §3, §4, §6, §7, §10 en skill `vrijstaan-stijl` bijgewerkt
+
 ### Stand bij de bevriezing van v1.0.0-beta (1 november 2026)
 
 De code voor de soft-launch is af en bevroren: alles op `main`, CI groen, geen `console.log` of TODO's in `web/src`,

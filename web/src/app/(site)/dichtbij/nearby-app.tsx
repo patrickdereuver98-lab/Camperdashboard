@@ -12,6 +12,7 @@ import type { PlaceSummary } from "@/lib/types";
 import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
+import { Chip } from "@/components/chip";
 import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 
@@ -117,7 +118,7 @@ export function NearbyApp() {
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-2xl shadow-lift">
           <Landscape seed="dichtbij" variant={0} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-6 font-display text-2xl font-semibold sm:text-4xl">Waar kun je vannacht staan?</h1>
+        <h1 className="mt-6 font-display text-h1 font-semibold">Waar kun je vannacht staan?</h1>
         <p className="mt-2 text-ink-2 sm:text-lg">
           Deel je locatie en we zetten de plekken om je heen op een rij, gesorteerd op echte rijtijd.
         </p>
@@ -153,45 +154,30 @@ export function NearbyApp() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <section className="min-w-0 px-3 pt-3 pb-8 sm:px-6 sm:pt-5">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-xl font-semibold sm:text-3xl">Dichtbij jou</h1>
+          <h1 className="font-display text-h1 font-semibold">Dichtbij jou</h1>
           <button type="button" onClick={locate} className="flex h-11 items-center gap-1.5 font-semibold text-forest">
             <Icon name="refresh" size={18} /> Opnieuw
           </button>
         </div>
         <ul className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:mt-3 sm:flex-wrap sm:px-0">
           <li className="shrink-0">
-            <button
-              type="button"
-              aria-pressed={openNow}
-              onClick={() => setOpenNow((o) => !o)}
-              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
-            >
+            <Chip pressed={openNow} onClick={() => setOpenNow((o) => !o)} className="pl-1.5">
               <Sign name="calendar" size={24} state={openNow ? "on" : "unknown"} />
               Nu open
-            </button>
+            </Chip>
           </li>
           <li className="shrink-0">
-            <button
-              type="button"
-              aria-pressed={arriveNow}
-              onClick={() => setArriveNow((o) => !o)}
-              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
-            >
+            <Chip pressed={arriveNow} onClick={() => setArriveNow((o) => !o)} className="pl-1.5">
               <Sign name="clock" size={24} state={arriveNow ? "on" : "unknown"} />
               Nu nog aankomen
-            </button>
+            </Chip>
           </li>
           {vehicle.lengthM && (
             <li className="shrink-0">
-              <button
-                type="button"
-                aria-pressed={!lengthOff}
-                onClick={() => setLengthOff((o) => !o)}
-                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
-              >
+              <Chip pressed={!lengthOff} onClick={() => setLengthOff((o) => !o)} className="pl-1.5">
                 <Sign name="length" size={24} state={lengthOff ? "unknown" : "on"} />
                 Mijn camper ({String(vehicle.lengthM).replace(".", ",")} m)
-              </button>
+              </Chip>
             </li>
           )}
           {(
@@ -201,30 +187,20 @@ export function NearbyApp() {
             ] as const
           ).map(([g, label]) => (
             <li key={g} className="shrink-0">
-              <button
-                type="button"
-                aria-pressed={departure === g}
-                onClick={() => setDeparture((d) => (d === g ? undefined : g))}
-                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
-              >
+              <Chip pressed={departure === g} onClick={() => setDeparture((d) => (d === g ? undefined : g))} className="pl-1.5">
                 <Sign name="clock" size={24} state={departure === g ? "on" : "unknown"} />
                 {label}
-              </button>
+              </Chip>
             </li>
           ))}
           {NEARBY_ORDER.map((key) => FACILITIES.find((f) => f.key === key)!).map((f) => {
             const on = facilities.includes(f.key);
             return (
               <li key={f.key} className="shrink-0">
-                <button
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => setFacilities((x) => (on ? x.filter((k) => k !== f.key) : [...x, f.key]))}
-                  className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
-                >
+                <Chip pressed={on} onClick={() => setFacilities((x) => (on ? x.filter((k) => k !== f.key) : [...x, f.key]))} className="pl-1.5">
                   <Sign name={f.icon as SignName} size={24} state={on ? "on" : "unknown"} />
                   {f.label}
-                </button>
+                </Chip>
               </li>
             );
           })}

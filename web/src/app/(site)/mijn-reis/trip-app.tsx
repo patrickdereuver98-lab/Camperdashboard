@@ -127,7 +127,7 @@ export function TripApp() {
     };
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 pb-10">
-        <h1 className="font-display text-2xl font-semibold sm:text-3xl">Gedeelde reis</h1>
+        <h1 className="font-display text-h1 font-semibold">Gedeelde reis</h1>
         <p className="mt-2 text-ink-2">
           Iemand heeft deze reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld
           {incomingDated && incomingDated.length > 0 ? `, van ${shortDay(incomingDated[0].arrive)} tot ${shortDay(incomingDated[incomingDated.length - 1].leave)}` : ""}.
@@ -137,7 +137,7 @@ export function TripApp() {
             const p = bySlug.get(s.slug);
             const dates = incomingDated?.[i];
             return (
-              <li key={s.slug} className="flex items-center gap-3 rounded-xl bg-surface p-3 shadow-low">
+              <li key={s.slug} className="flex items-center gap-3 rounded-lg border border-line bg-surface p-3">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">{i + 1}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p?.name ?? s.slug}</span>
@@ -183,10 +183,10 @@ export function TripApp() {
   if (trip.stops.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-10 text-center sm:pt-14">
-        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-2xl shadow-lift">
+        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-6 font-display text-2xl font-semibold sm:text-4xl">Je reis is nog leeg</h1>
+        <h1 className="mt-6 font-display text-h1 font-semibold">Je reis is nog leeg</h1>
         <p className="mt-2 text-ink-2 sm:text-lg">
           Tik op het hartje bij een plek om hem te bewaren. Hier zet je ze op volgorde en zie je de echte rijtijd en wat de reis ongeveer kost.
         </p>
@@ -234,7 +234,7 @@ export function TripApp() {
     <div className="mx-auto max-w-6xl px-3 pt-3 pb-10 sm:px-6 sm:pt-5">
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
-          <h1 className="font-display text-xl font-semibold sm:text-3xl">Mijn reis</h1>
+          <h1 className="font-display text-h1 font-semibold">Mijn reis</h1>
           <p className="text-sm text-ink-2 sm:text-base">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
@@ -273,7 +273,7 @@ export function TripApp() {
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
-          <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest">
+          <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold hover:border-forest">
             <Icon name="chart" size={18} /> Statistieken
           </Link>
         </div>
@@ -282,7 +282,7 @@ export function TripApp() {
       <div className="mt-4 grid gap-6 sm:mt-6 sm:gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
           {/* Vertrekpunt */}
-          <div className="mb-3 flex items-center gap-3 rounded-xl bg-surface p-3 shadow-low">
+          <div className="mb-3 flex items-center gap-3 rounded-lg border border-line bg-surface p-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sunken text-ink-2">
               <Icon name="locate" size={20} />
             </span>
@@ -325,7 +325,7 @@ export function TripApp() {
           )}
 
           {/* Vertrekdatum: optioneel. Daarmee staat bij elke stop wanneer je er bent en of de plek dan open is */}
-          <div className="mb-3 rounded-xl bg-surface p-3 shadow-low">
+          <div className="mb-3 rounded-lg border border-line bg-surface p-3">
             <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
               <label className="min-w-0 flex-1">
                 <span className="block font-semibold">Vertrekdatum</span>
@@ -362,7 +362,7 @@ export function TripApp() {
                           : `${formatKm(distanceKm(i === 0 ? start! : stops[i - 1].place, s.place))} hemelsbreed`}
                     </div>
                   )}
-                  <div className="rounded-xl bg-surface p-3 shadow-low">
+                  <div className="rounded-lg border border-line bg-surface p-3">
                     <div className="flex gap-3">
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
                         <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
@@ -434,8 +434,8 @@ export function TripApp() {
         </div>
 
         <aside className="min-w-0 space-y-4">
-          <div className="rounded-xl bg-surface p-4 shadow-low sm:p-5">
-            <h2 className="font-display text-xl font-semibold">Overzicht</h2>
+          <div className="rounded-lg border border-line bg-surface p-4 sm:p-5">
+            <h2 className="font-display text-h2 font-semibold">Overzicht</h2>
             <dl className="mt-3 space-y-2">
               <div className="flex justify-between">
                 <dt className="text-ink-2">Rijden</dt>
@@ -485,7 +485,7 @@ export function TripApp() {
               zit tellen niet mee. Toeslagen per persoon tellen mee voor {pluralize(Math.max(1, Math.round(settings.persons)), "persoon", "personen")}.
             </p>
             {(assumed.length > 0 || fromNote) && (
-              <div className="mt-3 rounded-xl bg-sunken p-3 text-sm" data-testid="assumptions">
+              <div className="mt-3 rounded-lg bg-sunken p-3 text-sm" data-testid="assumptions">
                 <p className="font-semibold">Zo hebben we gerekend</p>
                 {fromNote && <p className="mt-0.5 text-ink-2">{fromNote}</p>}
                 {assumed.length > 0 && (
@@ -501,7 +501,7 @@ export function TripApp() {
               </div>
             )}
             {costs.listed.length > 0 && (
-              <div className="mt-3 rounded-xl bg-sunken p-3 text-sm" data-testid="surcharges">
+              <div className="mt-3 rounded-lg bg-sunken p-3 text-sm" data-testid="surcharges">
                 <p className="font-semibold">+ toeslagen, niet meegeteld</p>
                 <p className="mt-0.5 text-ink-2">{surchargeNote(costs.listed.flatMap((l) => l.extras))}</p>
                 <ul className="mt-2 space-y-1.5">
@@ -558,13 +558,13 @@ export function TripApp() {
             user={start}
             cluster={false}
             fitKey={routeKey ?? stops.map((s) => s.slug).join()}
-            className="h-80 rounded-xl shadow-low"
+            className="h-80 rounded-lg border border-line"
           />
           <p className="flex items-center gap-2 text-sm text-muted">
             <Sign name="camper" size={22} /> Route over de weg via OpenRouteService of OSRM.
           </p>
           {confirmClear ? (
-            <div role="alert" className="animate-fade-in rounded-xl bg-alert-tint p-4">
+            <div role="alert" className="animate-fade-in rounded-lg bg-alert-tint p-4">
               <p className="font-semibold text-alert">Je hele reis wissen? Dit kun je niet ongedaan maken.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setConfirmClear(false)} className="h-12 rounded-lg border border-line bg-surface font-semibold">

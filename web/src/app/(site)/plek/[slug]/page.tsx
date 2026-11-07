@@ -163,10 +163,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {/* Kop (redesign 30 oktober 2026): naam, plaats, score en afstand in één blik; de rest staat in het beslisblok */}
         <header className="flex flex-col gap-2 pt-3 md:flex-row md:items-start md:justify-between md:pt-6">
           <div className="min-w-0">
-            <h1 className="font-display text-[1.625rem] leading-tight font-semibold text-balance sm:text-4xl">{place.name}</h1>
+            <h1 className="font-display text-h1 font-semibold">{place.name}</h1>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-ink-2">
               <Sign name={KIND_SIGN[place.kind ?? "camperplaats"]} size={20} />
-              {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {address || place.town}, {place.province}
+              {/* "Soort in plaats, provincie"; het adres staat bij Praktisch en contact (review R52) */}
+              {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}, {place.province}
               <a href="#ligging" className="-mx-1 -my-3 inline-block px-1 py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
                 Kaart
               </a>
@@ -217,7 +218,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                <h2 id="voorzieningen" className="font-display text-xl font-semibold sm:text-2xl">Voorzieningen</h2>
+                <h2 id="voorzieningen" className="font-display text-h2 font-semibold">Voorzieningen</h2>
                 <Legend />
               </div>
               <FacilityGrid placeId={place.id} placeName={place.name} values={pickFacilities(place)} />
@@ -226,7 +227,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Over deze plek: alleen hele zinnen uit de eigen tekst van de plek (zie lib/description.ts) */}
             {place.description && (
               <section aria-labelledby="over">
-                <h2 id="over" className="font-display text-xl font-semibold sm:text-2xl">Over deze plek</h2>
+                <h2 id="over" className="font-display text-h2 font-semibold">Over deze plek</h2>
                 <p className="mt-2 max-w-prose text-ink-2">{place.description}</p>
                 <p className="mt-2 text-sm text-muted">Zo beschrijft de plek zichzelf op de eigen website.</p>
               </section>
@@ -242,7 +243,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Reviews */}
             <section aria-labelledby="reviews">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <h2 id="reviews" className="font-display text-xl font-semibold sm:text-2xl">Ervaringen</h2>
+                <h2 id="reviews" className="font-display text-h2 font-semibold">Ervaringen</h2>
                 <WriteReview placeId={place.id} placeName={place.name} slug={place.slug} />
               </div>
               {reviews.length > 0 ? (
@@ -262,7 +263,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 
         {nearby.length > 0 && (
           <section className="mt-10" aria-labelledby="buurt">
-            <h2 id="buurt" className="font-display text-xl font-semibold sm:text-2xl">In de buurt</h2>
+            <h2 id="buurt" className="font-display text-h2 font-semibold">In de buurt</h2>
             <ul className={`${CARD_GRID} -mx-4 mt-3 scroll-px-4 px-4 sm:mx-0 sm:px-0`}>
               {nearby.map(({ place: p, km }) => (
                 <li key={p.id} className={CARD_CELL}>
@@ -289,7 +290,12 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className={`font-display leading-none font-semibold ${price ? "text-lg" : "text-sm text-muted"}`}>{price?.value ?? "Prijs onbekend"}</p>
-            {price?.perNight && <p className="mt-0.5 truncate text-sm leading-tight text-muted">per nacht{price.extras ? " + extra's" : ""}</p>}
+            {/* Eén label voor toeslagen, overal hetzelfde en niet afgekapt (review R52) */}
+            {price && (price.extras || place.touristTaxIncluded === false) ? (
+              <p className="mt-0.5 text-sm leading-tight whitespace-nowrap text-muted">+ toeslagen</p>
+            ) : (
+              price?.perNight && <p className="mt-0.5 text-sm leading-tight whitespace-nowrap text-muted">per nacht</p>
+            )}
           </div>
           <SaveButton slug={place.slug} variant="bar" />
           {tel && (
@@ -342,7 +348,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
       </div>
 
       <section id="ligging" aria-labelledby="ligging-kop" className="scroll-mt-20 space-y-3">
-        <h2 id="ligging-kop" className="font-display text-xl font-semibold sm:text-2xl lg:sr-only">Ligging en route</h2>
+        <h2 id="ligging-kop" className="font-display text-h2 font-semibold lg:sr-only">Ligging en route</h2>
         <PlaceMap
           places={[place, ...nearby]}
           highlight={place.slug}
@@ -530,7 +536,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
     });
   return (
     <section aria-labelledby="praktisch">
-      <h2 id="praktisch" className="font-display text-xl font-semibold sm:text-2xl">Praktisch en contact</h2>
+      <h2 id="praktisch" className="font-display text-h2 font-semibold">Praktisch en contact</h2>
       <dl className="mt-3 divide-y divide-line rounded-lg border border-line bg-surface">
         {rows.map((r) => (
           <div key={r.label} className="flex justify-between gap-4 px-4 py-2.5">

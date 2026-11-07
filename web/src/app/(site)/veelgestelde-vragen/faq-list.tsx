@@ -22,7 +22,7 @@ export function FaqList({ items }: { items: FaqItem[] }) {
       {groups.length === 0 && <p className="mt-6 text-ink-2">Geen vragen gevonden voor &quot;{q}&quot;.</p>}
       {groups.map((g) => (
         <section key={g} className="mt-8">
-          <h2 className="font-display text-xl font-semibold">{g}</h2>
+          <h2 className="font-display text-h2 font-semibold">{g}</h2>
           <div className="mt-3 divide-y divide-line overflow-hidden rounded-xl bg-surface outline-1 outline-line outline">
             {filtered
               .filter((f) => f.category === g)
