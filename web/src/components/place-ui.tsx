@@ -193,7 +193,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
         aria-pressed={saved}
         className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
       >
-        <Icon name="heart" size={20} filled={saved} className={saved ? "animate-pop text-alert" : ""} />
+        <Icon name="heart" size={20} filled={saved} className={saved ? "animate-pop" : ""} />
         {saved ? "Bewaard" : "Bewaar"}
       </button>
     );
@@ -208,7 +208,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
         variant === "bar" ? "rounded-lg border border-line bg-surface" : variant === "plain" ? "rounded-full" : "rounded-full bg-surface/95 shadow-lift"
       }`}
     >
-      <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop text-alert" : "text-ink"} />
+      <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop text-forest" : "text-ink"} />
     </button>
   );
 }
@@ -305,7 +305,7 @@ export function PlaceCard({
       // (design-audit 2 november 2026). Zonder subgrid-ouder (CARD_GRID) is het een gewone kolom.
       className={`group relative row-span-5 grid grid-rows-subgrid gap-0 overflow-hidden rounded-lg border bg-surface transition-colors duration-150 ${
         active ? "border-forest" : "border-line hover:border-ink-2/40"
-      } has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest outline`}
+      } has-[a:focus-visible]:outline-3 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-forest`}
     >
       {/* Vaste verhouding voor elke kaart, met of zonder foto; overflow-hidden voorkomt dat een grote foto het vak oprekt */}
       <div className="relative aspect-[16/10] overflow-hidden">
@@ -313,7 +313,7 @@ export function PlaceCard({
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="absolute inset-0" />
         </ViewTransition>
         {place.priceEur === 0 && (
-          <span className="absolute top-2 left-2 rounded-md bg-ember px-2 py-0.5 font-display text-sm font-semibold text-on-ember">Gratis</span>
+          <span className="absolute top-2 left-2 rounded-md bg-surface px-2 py-0.5 font-display text-sm font-semibold text-ink">Gratis</span>
         )}
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
@@ -331,7 +331,7 @@ export function PlaceCard({
       </div>
       {/* Waar: naam, soort en plaats, afstand */}
       <div className="min-w-0 px-4 pt-2">
-        <h3 className="line-clamp-2 font-display text-lg leading-snug font-semibold text-ink" title={place.name}>
+        <h3 className="line-clamp-2 font-display text-h3 font-semibold text-ink" title={place.name}>
           <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
             {place.name}
           </Link>
@@ -339,7 +339,7 @@ export function PlaceCard({
         <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
           {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
         </p>
-        {distance && <p className="truncate text-sm font-semibold text-forest">{distance}</p>}
+        {distance && <p className="truncate text-sm font-semibold text-ink-2">{distance}</p>}
       </div>
       {/* Hoe: open of dicht, score. Leeg vak bij een kaart zonder deze gegevens, zodat de rest gelijk blijft */}
       <div className="flex min-w-0 flex-col items-start gap-2 px-4 pt-2 empty:pt-0">
@@ -403,7 +403,7 @@ function PlaceRow({
         </div>
         <div className="flex min-w-0 flex-1 gap-2">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h3 className="truncate font-display text-base leading-snug font-semibold text-ink">
+          <h3 className="truncate font-display text-h3 font-semibold text-ink">
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
@@ -418,7 +418,7 @@ function PlaceRow({
                 <span className="text-muted">({place.ratingCount})</span>
               </span>
             ) : null}
-            {distance && <span className="truncate font-semibold text-forest">{distance}</span>}
+            {distance && <span className="truncate font-semibold text-ink-2">{distance}</span>}
             <OpenChip place={place} onlyClosed />
           </div>
         </div>
@@ -533,7 +533,7 @@ export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () =
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
         </div>
         <div className="min-w-0 flex-1 space-y-1 pr-9">
-          <h2 className="font-display text-[1.0625rem] leading-snug font-semibold">{place.name}</h2>
+          <h2 className="font-display text-h3 font-semibold">{place.name}</h2>
           <p className="truncate text-sm text-ink-2">
             {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
           </p>

@@ -14,6 +14,7 @@ import { Onboarding } from "@/components/onboarding";
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
 const SCRIM = "from-[#14281d]/80 via-[#14281d]/20 to-transparent";
+const TONE_TEXT = { forest: "text-forest", lake: "text-lake", neutral: "text-ink" } as const;
 
 export default async function Home() {
   const [stats, places] = await Promise.all([getStats(), getSummaries()]);
@@ -39,7 +40,8 @@ export default async function Home() {
   const provinces = [...PROVINCES].sort((a, b) => (stats.byProvince[b] ?? 0) - (stats.byProvince[a] ?? 0));
   const destinations = provinces.slice(0, 6).map((prov) => ({ prov, count: stats.byProvince[prov] ?? 0, cover: coverOf(prov) }));
 
-  const ways: { href: string; title: string; text: string; count: number; sign: SignName; tone: "forest" | "lake" }[] = [
+  // Kleur betekent iets (stijlgids §3, review R53): groen = geen vaste vertrektijd, blauw = uitslapers, "Alle" is neutraal
+  const ways: { href: string; title: string; text: string; count: number; sign: SignName; tone: "forest" | "lake" | "neutral" }[] = [
     {
       href: searchHref({ departure: "vrij" }),
       title: "Zonder vertrektijd",
@@ -62,7 +64,7 @@ export default async function Home() {
       text: "Ook plekken waarvan we de vertrektijd nog niet weten.",
       count: stats.total,
       sign: "camper",
-      tone: "forest",
+      tone: "neutral",
     },
   ];
 
@@ -78,7 +80,7 @@ export default async function Home() {
       <Onboarding />
       {/* Kop: één vraag, daaronder de hoofdactie (dichtbij) en het zoekveld (docs/specs/04-ui-ux-brief.md) */}
       <section className="mx-auto w-full max-w-6xl px-3 pt-5 sm:px-6 sm:pt-10">
-        <h1 className="animate-rise font-display text-[1.75rem] leading-[1.1] font-semibold tracking-tight text-ink sm:text-5xl">
+        <h1 className="animate-rise font-display text-h1 font-semibold text-ink">
           Waar sta je vannacht?
         </h1>
         <p className="animate-rise mt-1.5 max-w-xl text-ink-2 [animation-delay:60ms] sm:mt-2 sm:text-lg">
@@ -91,18 +93,18 @@ export default async function Home() {
 
       {/* Hoe wil je staan: het antwoord op de vraag in de kop, direct eronder (concept "Eén vraag") */}
       <section aria-labelledby="hoe" className="mx-auto w-full max-w-6xl px-3 pt-7 sm:px-6 sm:pt-10">
-        <h2 id="hoe" className="font-display text-lg font-semibold sm:text-2xl">Hoe wil je staan?</h2>
-        <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <h2 id="hoe" className="font-display text-h2 font-semibold">Hoe wil je staan?</h2>
+        <ul className="mt-3 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {ways.map((w) => (
             <li key={w.title}>
               <Link href={w.href} className="group flex h-full min-h-19 items-center gap-3.5 px-3.5 py-3 hover:bg-sunken/50 sm:flex-col sm:items-start sm:gap-2 sm:p-5">
                 <Sign name={w.sign} size={36} tone={w.tone} />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[17px] font-semibold">{w.title}</span>
+                  <span className="block font-semibold">{w.title}</span>
                   <span className="mt-0.5 block text-sm text-ink-2">{w.text}</span>
                 </span>
-                <span className={`shrink-0 font-semibold tabular-nums sm:hidden ${w.tone === "lake" ? "text-lake" : "text-forest"}`}>{nf.format(w.count)}</span>
-                <span className={`hidden text-sm font-semibold tabular-nums sm:block ${w.tone === "lake" ? "text-lake" : "text-forest"}`}>
+                <span className={`shrink-0 font-semibold tabular-nums sm:hidden ${TONE_TEXT[w.tone]}`}>{nf.format(w.count)}</span>
+                <span className={`hidden text-sm font-semibold tabular-nums sm:block ${TONE_TEXT[w.tone]}`}>
                   {pluralize(w.count, "plek", "plekken")}
                 </span>
               </Link>
@@ -131,14 +133,14 @@ export default async function Home() {
 
       {/* Populaire bestemmingen met echte foto's */}
       <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-        <h2 className="font-display text-lg font-semibold sm:text-2xl">Populaire bestemmingen</h2>
+        <h2 className="font-display text-h2 font-semibold">Populaire bestemmingen</h2>
         <p className="mt-0.5 text-ink-2">Hier staan de meeste plekken.</p>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-12">
           {destinations.map((d, i) => (
             <li key={d.prov} className={i < 2 ? "col-span-2 sm:col-span-1 lg:col-span-6" : "lg:col-span-3"}>
               <Link
                 href={`/camperplaatsen/${d.prov.toLowerCase()}`}
-                className={`group relative block overflow-hidden bg-sunken shadow-low ${i < 2 ? "h-36 rounded-xl sm:h-56 lg:h-64" : "h-28 rounded-xl sm:h-44"}`}
+                className={`group relative block overflow-hidden rounded-lg border border-line bg-sunken ${i < 2 ? "h-36 sm:h-56 lg:h-64" : "h-28 sm:h-44"}`}
               >
                 <CreditedPhoto
                   src={d.cover?.imageUrl}
@@ -148,7 +150,7 @@ export default async function Home() {
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
                 <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                  <h3 className={`font-display font-semibold text-[#fffcf6] ${i < 2 ? "text-lg sm:text-2xl" : "text-base sm:text-lg"}`}>{d.prov}</h3>
+                  <h3 className="font-display text-h3 font-semibold text-[#fffcf6]">{d.prov}</h3>
                   <p className="text-sm font-semibold text-[#efe9dc]">{nf.format(d.count)} plekken</p>
                 </div>
               </Link>
@@ -160,7 +162,7 @@ export default async function Home() {
             <li key={prov}>
               <Link
                 href={`/camperplaatsen/${prov.toLowerCase()}`}
-                className="flex h-11 items-center gap-1.5 rounded-full bg-surface px-3.5 font-semibold shadow-low transition-shadow hover:shadow-raised"
+                className="flex h-11 items-center gap-1.5 rounded-md border border-line bg-surface px-3.5 font-semibold hover:border-forest"
               >
                 {prov} <span className="font-normal text-muted">{nf.format(stats.byProvince[prov] ?? 0)}</span>
               </Link>
@@ -173,7 +175,7 @@ export default async function Home() {
       {featured.length > 0 && (
         <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
           <div className="mb-3 flex items-end justify-between gap-4">
-            <h2 className="font-display text-lg font-semibold sm:text-2xl">
+            <h2 className="font-display text-h2 font-semibold">
               {stats.freeDeparture > 0 ? "Vertrekken wanneer je wilt" : "Meest complete informatie"}
             </h2>
             <Link href={stats.freeDeparture > 0 ? searchHref({ departure: "vrij" }) : "/zoeken"} className="flex h-11 shrink-0 items-center gap-1 font-semibold whitespace-nowrap text-forest hover:underline">
@@ -192,7 +194,7 @@ export default async function Home() {
 
       {/* Zoeken op voorziening */}
       <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-        <h2 className="font-display text-lg font-semibold sm:text-2xl">Zoek op wat je nodig hebt</h2>
+        <h2 className="font-display text-h2 font-semibold">Zoek op wat je nodig hebt</h2>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-4">
           {facilities
             .filter((f) => f.count > 0)
@@ -200,7 +202,7 @@ export default async function Home() {
               <li key={f.label}>
                 <Link
                   href={f.href}
-                  className="flex h-full min-h-16 items-center gap-2.5 rounded-xl bg-surface p-3 shadow-low transition-shadow hover:shadow-raised sm:min-h-20 sm:gap-3 sm:p-4"
+                  className="flex h-full min-h-16 items-center gap-2.5 rounded-lg border border-line bg-surface p-3 hover:border-forest sm:min-h-20 sm:gap-3 sm:p-4"
                 >
                   <Sign name={f.sign} size={34} />
                   <span className="min-w-0">
@@ -215,29 +217,29 @@ export default async function Home() {
 
       {/* Zo werkt het */}
       <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-        <h2 className="font-display text-lg font-semibold sm:text-2xl">Zo werkt VrijStaan</h2>
+        <h2 className="font-display text-h2 font-semibold">Zo werkt VrijStaan</h2>
         <ol className="mt-3 grid gap-4 md:mt-5 md:grid-cols-3 md:gap-8">
-          {[
+          {([
             {
-              sign: "pin" as SignName,
+              sign: "pin",
               title: "Zoek een plek",
               text: "Typ een plaats, streek of eiland. Of kijk wat er bij jou in de buurt is.",
             },
             {
-              sign: "clock" as SignName,
+              sign: "clock",
               title: "Kijk wanneer je weg moet",
               text: "Bij elke plek zie je de vertrektijd, wat een nacht kost met alle bijkomende kosten, en wat er aan voorzieningen is.",
             },
             {
-              sign: "camper" as SignName,
+              sign: "camper",
               title: "Rij erheen",
               text: "Je ziet hoe lang je nog moet rijden. Met één tik open je de route in je eigen navigatie.",
             },
-          ].map((s, i) => (
+          ] satisfies { sign: SignName; title: string; text: string }[]).map((s, i) => (
             <li key={s.title} className="flex gap-3 border-t border-line pt-4 md:flex-col md:gap-3 md:pt-5">
               <Sign name={s.sign} size={32} />
               <div>
-                <h3 className="font-display text-base font-semibold sm:text-lg">
+                <h3 className="font-display text-h3 font-semibold">
                   <span className="mr-1.5 text-muted tabular-nums">{i + 1}.</span>
                   {s.title}
                 </h3>
@@ -250,10 +252,10 @@ export default async function Home() {
 
       {/* Eigenaren */}
       <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-        <div className="relative overflow-hidden rounded-xl bg-forest-tint">
+        <div className="relative overflow-hidden rounded-lg border border-line bg-surface">
           <div className="relative flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-8">
             <div>
-              <h2 className="font-display text-xl font-semibold text-forest sm:text-2xl">Heb je een camperplaats?</h2>
+              <h2 className="font-display text-h2 font-semibold">Heb je een camperplaats?</h2>
               <p className="mt-1 max-w-xl text-ink-2">
                 Meld je plek aan of vul de gegevens aan, zoals je vertrektijd en tarieven. Aanmelden is gratis.
               </p>
@@ -261,7 +263,7 @@ export default async function Home() {
             <div className="flex shrink-0 flex-col gap-1 sm:items-end">
               <Link
                 href="/plek-aanmelden?soort=eigenaar"
-                className="flex h-12 items-center justify-center rounded-lg bg-forest px-6 font-semibold text-on-forest hover:bg-forest-deep"
+                className="flex h-12 items-center justify-center rounded-md bg-forest px-6 font-semibold text-on-forest hover:bg-forest-deep"
               >
                 Plek aanmelden
               </Link>

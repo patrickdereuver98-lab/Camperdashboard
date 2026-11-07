@@ -65,7 +65,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   if (loadError && ticket === undefined)
     return (
       <div className="mx-auto max-w-xl px-4 pt-12 text-center">
-        <h1 className="font-display text-2xl font-semibold">We konden je bericht niet laden</h1>
+        <h1 className="font-display text-h1 font-semibold">We konden je bericht niet laden</h1>
         <p className="mt-2 text-ink-2">{loadError}</p>
         <button type="button" onClick={load} className="mt-6 h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest">
           Opnieuw proberen
@@ -76,7 +76,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   if (ticket === null)
     return (
       <div className="mx-auto max-w-xl px-4 pt-12 text-center">
-        <h1 className="font-display text-2xl font-semibold">Bericht niet gevonden</h1>
+        <h1 className="font-display text-h1 font-semibold">Bericht niet gevonden</h1>
         <p className="mt-2 text-ink-2">Kijk of je de hele link hebt gebruikt. Plak hem anders opnieuw in je browser.</p>
       </div>
     );
@@ -84,7 +84,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   return (
     <div className="mx-auto max-w-2xl px-4 pt-8 sm:px-6">
       <p className="text-sm text-muted">Bericht #{ticket.number}</p>
-      <h1 className="font-display text-2xl font-semibold sm:text-3xl">{ticket.subject}</h1>
+      <h1 className="font-display text-h1 font-semibold">{ticket.subject}</h1>
       <p className="mt-2 inline-flex rounded-full bg-forest-tint px-3 py-1 text-sm font-semibold text-forest">{STATUS[ticket.status] ?? ticket.status}</p>
       <ol className="mt-6 space-y-3">
         {ticket.messages.map((m, i) => (

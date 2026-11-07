@@ -80,7 +80,7 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
       : price.perPerson
         ? price.perNight ? "Per persoon per nacht" : "Per persoon"
         : price.extras || place.touristTaxIncluded === false
-          ? "Plus toeslagen"
+          ? "+ toeslagen"
           : price.perNight
             ? "Per nacht"
             : undefined

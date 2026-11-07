@@ -20,7 +20,7 @@ function BarChart({ title, bars, caption }: { title: string; bars: Bar[]; captio
   const max = Math.max(...bars.map((b) => b.value), 0);
   if (max <= 0) return null;
   return (
-    <figure className="rounded-2xl bg-surface p-5 shadow-low">
+    <figure className="rounded-lg border border-line bg-surface p-5">
       <figcaption className="font-display text-xl font-semibold">{title}</figcaption>
       {caption && <p className="mt-1 text-sm text-muted">{caption}</p>}
       <ul className="mt-4 space-y-3" role="list">
@@ -66,7 +66,7 @@ function BarChart({ title, bars, caption }: { title: string; bars: Bar[]; captio
 
 function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-2xl bg-surface p-4 shadow-low">
+    <div className="rounded-lg border border-line bg-surface p-4">
       <p className="text-sm text-ink-2">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
       {note && <p className="mt-0.5 text-sm text-muted">{note}</p>}
@@ -116,9 +116,9 @@ export function StatsApp() {
   if (!stops.length && !list.length)
     return (
       <>
-        <h1 className="font-display text-3xl font-semibold">Reisstatistieken</h1>
+        <h1 className="font-display text-h1 font-semibold">Reisstatistieken</h1>
         <p className="mt-3 text-lg text-ink-2">Bewaar plekken in Mijn reis of houd je uitgaven bij. Dan zie je hier je reis in cijfers.</p>
-        <Link href="/mijn-reis" className="mt-6 inline-flex h-12 items-center gap-2 rounded-xl bg-forest px-5 font-semibold text-on-forest">
+        <Link href="/mijn-reis" className="mt-6 inline-flex h-12 items-center gap-2 rounded-md bg-forest px-5 font-semibold text-on-forest">
           <Icon name="heart" size={19} /> Naar Mijn reis
         </Link>
       </>
@@ -131,7 +131,7 @@ export function StatsApp() {
       <Link href="/mijn-reis" className="inline-flex h-11 items-center gap-1 font-semibold text-forest">
         <Icon name="chevronLeft" size={18} /> Mijn reis
       </Link>
-      <h1 className="mt-2 font-display text-3xl font-semibold">Reisstatistieken</h1>
+      <h1 className="mt-2 font-display text-h1 font-semibold">Reisstatistieken</h1>
       <p className="mt-1 text-ink-2">
         {pluralize(t.stops, "stop", "stops")}, {pluralize(t.nights, "nacht", "nachten")}
       </p>

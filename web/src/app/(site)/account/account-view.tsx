@@ -23,7 +23,7 @@ export function AccountView() {
   if (!session)
     return (
       <>
-        <h1 className="font-display text-3xl font-semibold">Mijn account</h1>
+        <h1 className="font-display text-h1 font-semibold">Mijn account</h1>
         <p className="mt-3 text-lg text-ink-2">Log in om je reis op al je apparaten te bewaren.</p>
         <Link href="/inloggen?next=/account" className="mt-6 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
           Inloggen
@@ -81,7 +81,7 @@ export function AccountView() {
           </span>
         )}
         <div className="min-w-0">
-          <h1 className="truncate font-display text-3xl font-semibold">{name}</h1>
+          <h1 className="truncate font-display text-h1 font-semibold">{name}</h1>
           <p className="truncate text-ink-2">{user.email}</p>
         </div>
       </div>

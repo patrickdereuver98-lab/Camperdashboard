@@ -154,7 +154,7 @@ function Documents() {
 
   return (
     <section aria-labelledby="papieren" className="mt-12 border-t border-line pt-8">
-      <h2 id="papieren" className="font-display text-2xl font-semibold">Papieren</h2>
+      <h2 id="papieren" className="font-display text-h2 font-semibold">Papieren</h2>
       <p className="mt-2 text-ink-2">
         Bewaar hier bijvoorbeeld je kentekenbewijs, verzekering of ANWB-pas als PDF of foto. Alleen jij kunt ze zien.
       </p>

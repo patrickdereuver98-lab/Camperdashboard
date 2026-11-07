@@ -41,7 +41,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: { name: string; path: string }
 export function PageHead({ title, intro, updated }: { title: string; intro: string[]; updated?: string }) {
   return (
     <>
-      <h1 className="mt-3 font-display text-2xl font-semibold tracking-tight text-balance sm:text-4xl">{title}</h1>
+      <h1 className="mt-3 font-display text-h1 font-semibold">{title}</h1>
       {updated && <p className="mt-1 text-sm text-muted">Laatste update: {updated}</p>}
       <div className="mt-3 max-w-prose space-y-2 text-ink-2 sm:text-[1.0625rem]">
         {intro.map((line) => (
@@ -76,10 +76,10 @@ export function PlaceList({ title, places, more }: { title: string; places: Plac
   if (!places.length) return null;
   return (
     <section className="mt-8 sm:mt-12" aria-labelledby="lijst">
-      <h2 id="lijst" className="font-display text-lg font-semibold tracking-tight sm:text-[1.375rem]">
+      <h2 id="lijst" className="font-display text-h2 font-semibold">
         {title}
       </h2>
-      <div className="mt-3 overflow-hidden rounded-xl bg-surface shadow-low">
+      <div className="mt-3 overflow-hidden rounded-lg border border-line bg-surface">
         <table className="w-full border-collapse text-left">
           <caption className="sr-only">{title}, met vertrektijd en prijs per nacht</caption>
           <thead>
@@ -148,11 +148,11 @@ export function LinkChips({ title, links }: { title: string; links: { href: stri
   if (!links.length) return null;
   return (
     <section className="mt-8 sm:mt-12">
-      <h2 className="font-display text-lg font-semibold tracking-tight sm:text-[1.375rem]">{title}</h2>
+      <h2 className="font-display text-h2 font-semibold">{title}</h2>
       <ul className="mt-3 flex flex-wrap gap-2">
         {links.map((l) => (
           <li key={l.href}>
-            <Link href={l.href} className="inline-flex h-11 items-center rounded-full bg-surface px-4 shadow-low hover:shadow-raised">
+            <Link href={l.href} className="inline-flex h-11 items-center rounded-md border border-line bg-surface px-4 hover:border-forest">
               {l.label}
             </Link>
           </li>
@@ -196,7 +196,7 @@ export function HubIntro({ lead, more, link }: { lead: string; more: string[]; l
 export function ProvinceLinks({ title = "Per provincie", links }: { title?: string; links: ProvinceLink[] }) {
   return (
     <section aria-labelledby="per-provincie" className="px-3 pt-2 pb-24 sm:px-6 lg:pb-10">
-      <h2 id="per-provincie" className="text-lg font-semibold tracking-tight sm:text-[1.375rem]">
+      <h2 id="per-provincie" className="text-h2 font-semibold">
         {title}
       </h2>
       <ul className="mt-3 grid border-t border-line sm:grid-cols-2 sm:gap-x-6 lg:grid-cols-3">
