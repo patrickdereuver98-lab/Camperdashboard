@@ -7,7 +7,7 @@ import { coarse, formatKm, type LatLng } from "@/lib/geo";
 import { NavigateButton } from "@/components/navigate";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { track } from "@/lib/track";
-import { isPossiblyOutdated } from "@/lib/place-status";
+import { CHECK_TERM, isPossiblyOutdated } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import type { Photo, Place as PlaceFacilities, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
@@ -118,7 +118,7 @@ type RouteState =
   | { s: "ok"; km: number; seconds: number; from: LatLng }
   | { s: "error"; msg: string };
 
-export function RouteCard({ to, name }: { to: LatLng; name: string }) {
+export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
   const [state, setState] = useState<RouteState>({ s: "idle" });
 
   function calculate() {
@@ -134,8 +134,8 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
           const res = await fetch(`/api/route?p=${coarse(from)};${to.lat},${to.lng}`);
           if (!res.ok) throw new Error();
           const r = await res.json();
+          // Rijtijd berekenen is geen route openen: dat telt pas als je een navigatie-app kiest (NavigateButton)
           setState({ s: "ok", km: r.distanceM / 1000, seconds: r.durationS, from });
-          track("route", { naar: name });
         } catch {
           setState({ s: "error", msg: "De rijtijd kon niet worden berekend. Open de route in je navigatie-app." });
         }
@@ -172,7 +172,7 @@ export function RouteCard({ to, name }: { to: LatLng; name: string }) {
             {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}
           </button>
         )}
-        <NavigateButton to={to} name={name} className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest">
+        <NavigateButton to={to} slug={slug} className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest">
           <Icon name="route" size={18} /> Open in navigatie
         </NavigateButton>
       </div>
@@ -638,11 +638,14 @@ export function ReportProblem({
   label = "Klopt er iets niet? Meld het",
   facilities = {},
   context,
+  quiet = false,
 }: {
   placeId: string;
   placeName: string;
   topic?: string;
   label?: string;
+  /** Rustige tekstlink zonder icoon, voor "Klopt dit niet?" in een cel van het beslisblok */
+  quiet?: boolean;
   /** Extra uitleg voor schermlezers bij een korte knoptekst ("Weet jij dit?" → "De prijs doorgeven") */
   context?: string;
   /** Wat we nu over de voorzieningen weten; beginstand van "Wat is er op deze plek?" */
@@ -686,14 +689,22 @@ export function ReportProblem({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
-        <Icon name={context ? "help" : "alert"} size={18} /> {label}
-        {context && <span className="sr-only"> {context}</span>}
-      </button>
+      {quiet ? (
+        <button type="button" onClick={() => setOpen(true)} className="-my-1 flex min-h-11 items-center font-semibold text-ink-2 underline underline-offset-2 hover:text-forest">
+          {label}
+          {context && <span className="sr-only"> {context}</span>}
+        </button>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
+          <Icon name={context ? "help" : "alert"} size={18} /> {label}
+          {context && <span className="sr-only"> {context}</span>}
+        </button>
+      )}
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je melding" : "Gegevens aanpassen"}>
         {done ? (
           <div className="pb-4">
-            <p className="text-lg">We controleren je melding en passen de gegevens zo nodig aan.</p>
+            <p className="text-lg">Je melding is binnen en wacht op controle.</p>
+            <p className="mt-2 text-ink-2">We bekijken hem {CHECK_TERM}. Klopt het, dan passen we de gegevens op de site aan.</p>
             <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-lg bg-forest font-semibold text-on-forest">
               Sluiten
             </button>

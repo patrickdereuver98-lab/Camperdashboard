@@ -151,6 +151,8 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 > Review 5 en 6 november 2026: blokkers en aanpasplan in fases tot de livegang staan in [`docs/review-2026-11.md`](../review-2026-11.md) §4 (punten R1 tot en met R55).
 
+- 🟡 R45, R48, R51 (pakket D, 7 november 2026): doorkliks naar website en telefoon apart geteld en route als eigen teller (`ContactLink`, `NavigateButton`), oproep "Vertrektijd doorgeven" en "Klopt dit niet?" per cel, eigenaarsroute onder het beslisblok, bevestiging met termijn, Dichtbij met voorstellen, "Binnen 30 min" en "Wis filters" (`lib/nearby.ts`). Code af; migratie `20261107120000_doorkliks_website_telefoon.sql` (`admin_stats`, `admin_overview`) pas na samenvoegen live toepassen, tot dan staat bij Website en Gebeld in Statistieken "Onbekend".
+
 ### Stand bij de bevriezing van v1.0.0-beta (1 november 2026)
 
 De code voor de soft-launch is af en bevroren: alles op `main`, CI groen, geen `console.log` of TODO's in `web/src`,

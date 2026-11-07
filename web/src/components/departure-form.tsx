@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
+import { CHECK_TERM } from "@/lib/place-status";
 import type { PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
 import { Sheet } from "./sheet";
@@ -96,15 +97,27 @@ export function DepartureForm({
   );
 }
 
-/** Knop op de plekpagina van een onvolledige plek: opent het formulier van Doe mee voor deze ene plek */
+/**
+ * Knop op de plekpagina: opent het formulier van Doe mee voor deze ene plek. Zonder `label` de knop "Vertrektijd
+ * doorgeven" bij de oproep; met `label` een tekstlink in het beslisblok ("Klopt dit niet?"). Na verzenden staat er
+ * dat het wacht op controle en hoe lang dat meestal duurt.
+ */
 export function GiveDepartureButton({ placeId, placeName, label }: { placeId: string; placeName: string; label?: string }) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   if (sent)
-    return (
-      <p role="status" className="flex min-h-11 items-center gap-1.5 font-semibold text-forest">
-        <Icon name="check" size={18} /> {label ? "Bedankt, we controleren het." : "Bedankt. We controleren het en zetten het daarna op de site."}
+    return label ? (
+      <p role="status" className="flex min-h-11 items-start gap-1.5 py-1 font-semibold text-forest">
+        <Icon name="check" size={18} className="mt-0.5 shrink-0" /> Bedankt. Wacht op controle, {CHECK_TERM}.
       </p>
+    ) : (
+      <div role="status" className="flex items-start gap-2 rounded-lg bg-forest-tint px-3 py-2 text-forest">
+        <Icon name="check" size={18} className="mt-1 shrink-0" />
+        <p>
+          <span className="font-semibold">Bedankt, je vertrektijd is binnen.</span> Hij wacht op controle. Dat doen we {CHECK_TERM}, daarna
+          staat hij op de site.
+        </p>
+      </div>
     );
   return (
     <>
@@ -113,11 +126,12 @@ export function GiveDepartureButton({ placeId, placeName, label }: { placeId: st
         onClick={() => setOpen(true)}
         className={
           label
-            ? "-my-1 flex min-h-11 items-center gap-1.5 font-semibold text-forest underline underline-offset-2"
+            ? "-my-1 flex min-h-11 items-center font-semibold text-ink-2 underline underline-offset-2 hover:text-forest"
             : "flex h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold text-forest transition-colors hover:border-forest"
         }
       >
-        <Icon name="clock" size={18} /> {label ?? "Vertrektijd doorgeven"}
+        {!label && <Icon name="clock" size={18} />}
+        {label ?? "Vertrektijd doorgeven"}
         {label && <span className="sr-only"> De vertrektijd doorgeven</span>}
       </button>
       <DepartureForm

@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
-import { formatDuration } from "@/lib/format";
-import { applyFilters, arrivalClosed, confirmedFirst, DEFAULT_FILTERS, FACILITIES, isOpenOn, nowInNL, type FacilityKey } from "@/lib/search";
+import { coarse, formatKm, type LatLng } from "@/lib/geo";
+import { formatDuration, pluralize } from "@/lib/format";
+import { confirmedFirst, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
+import {
+  activeFilterLabels,
+  clearedChoices,
+  NEARBY_DEFAULTS,
+  nearbySuggestions,
+  nearestPlaces,
+  withinDrive,
+  type Drive,
+  type NearbyChoices,
+} from "@/lib/nearby";
 import { usePlaces, useVehicle } from "@/lib/store";
-import { applyVehicle } from "@/lib/vehicle";
 import { useMediaQuery } from "@/lib/use-media";
 import type { PlaceSummary } from "@/lib/types";
 import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/place-ui";
@@ -16,9 +25,9 @@ import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 
 type Status = "idle" | "locating" | "denied" | "unavailable" | "ready";
-type Drive = { km: number; seconds: number };
 
-const MAX = 30;
+const CHIP =
+  "flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest";
 // Wat je onderweg het eerst wilt weten staat vooraan
 const NEARBY_ORDER: FacilityKey[] = ["power", "dogs", "water", "dumpStation", "toilet", "shower", "wifi"];
 
@@ -26,15 +35,12 @@ export function NearbyApp() {
   const { data: places } = usePlaces();
   const [status, setStatus] = useState<Status>("idle");
   const [pos, setPos] = useState<LatLng | null>(null);
-  const [facilities, setFacilities] = useState<FacilityKey[]>([]);
-  // Voor "vannacht" standaard aan: verbergt alleen plekken die nu zeker dicht zijn
-  const [openNow, setOpenNow] = useState(true);
-  // Ook standaard aan: verbergt alleen plekken waar de laatste aankomsttijd van vandaag al voorbij is
-  const [arriveNow, setArriveNow] = useState(true);
-  const [departure, setDeparture] = useState<"vrij" | "uitslapers" | undefined>(undefined);
-  // Lengte uit Mijn camper, net als bij Zoeken; met de chip zet je het filter uit
+  // "Nu open" en "Nu nog aankomen" staan voor vannacht standaard aan: ze verbergen alleen wat zeker dicht is.
+  // De lengte uit Mijn camper telt mee, net als bij Zoeken; met de chip zet je dat uit.
+  const [choices, setChoices] = useState<NearbyChoices>(NEARBY_DEFAULTS);
+  const { facilities, openNow, arriveNow, departure, lengthOff, within30 } = choices;
+  const set = (patch: Partial<NearbyChoices>) => setChoices((c) => ({ ...c, ...patch }));
   const [vehicle] = useVehicle();
-  const [lengthOff, setLengthOff] = useState(false);
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -69,12 +75,7 @@ export function NearbyApp() {
   // Dichtstbijzijnde plekken hemelsbreed, daarna echte rijafstand
   const nearest = useMemo(() => {
     if (!places || !pos) return null;
-    return applyFilters(places, applyVehicle({ ...DEFAULT_FILTERS, facilities, openNow, departure, lengthOff: lengthOff || undefined }, vehicle))
-      .filter((r) => !arriveNow || !arrivalClosed(r.place, nowInNL()))
-      .map((r) => ({ place: r.place, km: distanceKm(pos, r.place) }))
-      .filter((r) => r.km < 80)
-      .sort((a, b) => a.km - b.km || confirmedFirst(a.place, b.place))
-      .slice(0, MAX);
+    return nearestPlaces(places, pos, { facilities, openNow, arriveNow, departure, lengthOff, within30: false }, vehicle);
   }, [places, pos, facilities, openNow, arriveNow, departure, vehicle, lengthOff]);
 
   useEffect(() => {
@@ -147,7 +148,10 @@ export function NearbyApp() {
     );
   }
 
-  const list = sorted ?? [];
+  const all = sorted ?? [];
+  const list = withinDrive(all, drives, within30);
+  const active = activeFilterLabels(choices, vehicle);
+  const suggestions = places && list.length === 0 ? nearbySuggestions(places, pos, choices, vehicle, { farther: all.length }) : [];
   const pickedPlace = picked ? list.find((r) => r.place.slug === picked)?.place : undefined;
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
@@ -163,8 +167,8 @@ export function NearbyApp() {
             <button
               type="button"
               aria-pressed={openNow}
-              onClick={() => setOpenNow((o) => !o)}
-              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+              onClick={() => set({ openNow: !openNow })}
+              className={CHIP}
             >
               <Sign name="calendar" size={24} state={openNow ? "on" : "unknown"} />
               Nu open
@@ -174,11 +178,17 @@ export function NearbyApp() {
             <button
               type="button"
               aria-pressed={arriveNow}
-              onClick={() => setArriveNow((o) => !o)}
-              className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 text-[0.9375rem] font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+              onClick={() => set({ arriveNow: !arriveNow })}
+              className={`${CHIP} text-[0.9375rem]`}
             >
               <Sign name="clock" size={24} state={arriveNow ? "on" : "unknown"} />
               Nu nog aankomen
+            </button>
+          </li>
+          <li className="shrink-0">
+            <button type="button" aria-pressed={within30} onClick={() => set({ within30: !within30 })} className={CHIP}>
+              <Sign name="camper" size={24} state={within30 ? "on" : "unknown"} />
+              Binnen 30 min
             </button>
           </li>
           {vehicle.lengthM && (
@@ -186,8 +196,8 @@ export function NearbyApp() {
               <button
                 type="button"
                 aria-pressed={!lengthOff}
-                onClick={() => setLengthOff((o) => !o)}
-                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                onClick={() => set({ lengthOff: !lengthOff })}
+                className={CHIP}
               >
                 <Sign name="length" size={24} state={lengthOff ? "unknown" : "on"} />
                 Mijn camper ({String(vehicle.lengthM).replace(".", ",")} m)
@@ -204,8 +214,8 @@ export function NearbyApp() {
               <button
                 type="button"
                 aria-pressed={departure === g}
-                onClick={() => setDeparture((d) => (d === g ? undefined : g))}
-                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                onClick={() => set({ departure: departure === g ? undefined : g })}
+                className={CHIP}
               >
                 <Sign name="clock" size={24} state={departure === g ? "on" : "unknown"} />
                 {label}
@@ -219,8 +229,8 @@ export function NearbyApp() {
                 <button
                   type="button"
                   aria-pressed={on}
-                  onClick={() => setFacilities((x) => (on ? x.filter((k) => k !== f.key) : [...x, f.key]))}
-                  className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-surface pr-3.5 pl-1.5 font-semibold aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
+                  onClick={() => set({ facilities: on ? facilities.filter((k) => k !== f.key) : [...facilities, f.key as FacilityKey] })}
+                  className={CHIP}
                 >
                   <Sign name={f.icon as SignName} size={24} state={on ? "on" : "unknown"} />
                   {f.label}
@@ -252,15 +262,49 @@ export function NearbyApp() {
           {!places
             ? "Plekken laden…"
             : list.length === 0
-              ? "Geen plekken binnen 80 km met deze keuzes."
+              ? within30 && drives && all.length > 0
+                ? "Geen plekken binnen 30 minuten rijden met deze keuzes."
+                : "Geen plekken binnen 80 km met deze keuzes."
               : drives
-                ? `${list.length} plekken, dichtstbij eerst (rijtijd).`
+                ? `${pluralize(list.length, "plek", "plekken")}, dichtstbij eerst (rijtijd).`
                 : driveError
-                  ? `${list.length} plekken, dichtstbij eerst. Rijtijden lukken nu niet, je ziet de afstand hemelsbreed.`
-                  : `${list.length} plekken gevonden. Rijtijden berekenen…`}
+                  ? `${pluralize(list.length, "plek", "plekken")}, dichtstbij eerst. Rijtijden lukken nu niet, je ziet de afstand hemelsbreed.`
+                  : `${pluralize(list.length, "plek", "plekken")} gevonden. Rijtijden berekenen…`}
           {openNow && list.length > 0 && " Wat nu dicht is, staat er niet bij."}
           {arriveNow && list.length > 0 && " Ook niet waar je vandaag niet meer kunt aankomen."}
+          {within30 && driveError && list.length > 0 && " Binnen 30 min werkt pas als de rijtijden er zijn."}
         </p>
+        {places && active.length > 0 && (
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-ink-2" data-testid="nearby-active">
+            <span>Filters: {active.join(", ")}.</span>
+            <button type="button" onClick={() => setChoices(clearedChoices(vehicle))} className="-my-2 min-h-11 font-semibold text-forest underline underline-offset-2">
+              Wis filters
+            </button>
+          </p>
+        )}
+        {places && list.length === 0 && (
+          <div className="mt-3 rounded-lg border border-line bg-surface p-4" data-testid="nearby-empty">
+            <p className="text-ink-2">{suggestions.length ? "Met één aanpassing vind je wel iets:" : "Hier past niets binnen 80 km. Zoek op een plaats verderop."}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {suggestions.map((o) => (
+                <button
+                  key={o.label}
+                  type="button"
+                  onClick={() => setChoices(o.next)}
+                  className="min-h-11 rounded-lg border border-line px-4 text-left font-semibold hover:border-forest hover:text-forest"
+                >
+                  {o.label}
+                  {o.count !== undefined && <span className="font-normal text-muted"> ({o.count})</span>}
+                </button>
+              ))}
+              {!suggestions.length && (
+                <Link href="/zoeken" className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest hover:text-forest">
+                  <Icon name="search" size={18} /> Zoek op plaats
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
         {!places && <CardSkeleton />}
         <ul className={`mt-2 sm:mt-3 ${RESULT_LIST}`}>
           {list.map(({ place, km }) => (

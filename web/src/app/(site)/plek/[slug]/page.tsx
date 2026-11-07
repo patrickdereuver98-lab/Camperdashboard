@@ -6,8 +6,9 @@ import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, timeToMinutes, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
-import { isIncomplete, lastChecked } from "@/lib/place-status";
+import { lastChecked } from "@/lib/place-status";
 import { NavigateButton } from "@/components/navigate";
+import { ContactLink } from "@/components/contact-link";
 import { SITE_URL, SUPABASE_URL } from "@/lib/env";
 import { upgradePhotoUrl } from "@/lib/photos";
 import { OPEN_GRAPH } from "@/lib/meta";
@@ -27,7 +28,8 @@ import { OwnerUpdate } from "./owner-update";
 import { ownerValues } from "@/lib/owner-update";
 import { PhotoUpload } from "./photo-upload";
 import { CrowdStatusCard } from "./crowd-status";
-import { DecisionGrid } from "./decision-grid";
+import { DecisionGrid, needsDeparture } from "./decision-grid";
+import { GiveDepartureButton } from "@/components/departure-form";
 import { FacilityGrid } from "./facility-grid";
 import { DistanceFromMe } from "./live-facts";
 import { PlekpulsVraag } from "@/components/plekpuls";
@@ -293,16 +295,16 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           </div>
           <SaveButton slug={place.slug} variant="bar" />
           {tel && (
-            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
+            <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="phone" size={19} />
-            </a>
+            </ContactLink>
           )}
           {place.website && (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
+            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="globe" size={19} />
-            </a>
+            </ContactLink>
           )}
-          <NavigateButton to={place} name={place.name} className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep">
+          <NavigateButton to={place} slug={place.slug} className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep">
             <Icon name="route" size={18} /> Route
           </NavigateButton>
         </div>
@@ -323,14 +325,14 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         </p>
         <div className="mt-4 grid gap-2">
           {place.website && (
-            <a href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
+            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
               <Icon name="globe" size={19} /> {reserveLabel}
-            </a>
+            </ContactLink>
           )}
           {tel && (
-            <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
+            <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
               <Icon name="phone" size={19} /> {tel}
-            </a>
+            </ContactLink>
           )}
           {place.email && (
             <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
@@ -350,7 +352,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
           cluster={false}
           className="h-52 overflow-hidden rounded-lg border border-line lg:h-72"
         />
-        <RouteCard to={{ lat: place.lat, lng: place.lng }} name={place.name} />
+        <RouteCard to={{ lat: place.lat, lng: place.lng }} slug={place.slug} />
       </section>
 
       <div className="rounded-lg bg-sunken/60 p-4 text-sm text-ink-2">
@@ -363,7 +365,6 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het weten, dan passen we het aan.</p>}
         <div className="mt-1 flex flex-wrap gap-x-5">
           <ReportProblem placeId={place.id} placeName={place.name} facilities={pickFacilities(place)} />
-          <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
         </div>
       </div>
     </>
@@ -398,15 +399,27 @@ function DecisionDetails({ place }: { place: Place }) {
   const price = cardPrice(place);
   const extras = (place.priceExtras ?? []).filter((x) => x !== lateOption);
   const priceDetails = !!price && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0 || nightTotal(place).total !== undefined);
-  const known = !departureKind(place) || isIncomplete(place);
+  const askDeparture = needsDeparture(place);
   return (
     <section aria-label="Details over tijden en prijs" className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
-      {(note || times.length > 0 || known) && (
+      {/* Oproep (brief, "Oproep vertrektijd"; review R48): de hoofdroute voor nieuwe vertrektijden. Eigenaren vullen
+          het zelf in, direct ernaast: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026). */}
+      {askDeparture && (
+        <div className="px-4 py-3" data-testid="departure-call">
+          <p className="text-ink-2">
+            We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten andere camperaars hoe laat ze
+            weg moeten.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <GiveDepartureButton placeId={place.id} placeName={place.name} />
+            <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de tijden in" />
+          </div>
+        </div>
+      )}
+      {(note || times.length > 0) && (
         <div className="space-y-1 px-4 py-3 text-ink-2">
           {note && <p className="text-sm">{note}</p>}
           {times.length > 0 && <p>{times.join(". ")}.</p>}
-          {/* Eigenaren vullen het zelf in: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026) */}
-          {known && <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de tijden in" />}
         </div>
       )}
       {priceDetails && (
@@ -442,6 +455,12 @@ function DecisionDetails({ place }: { place: Place }) {
           {place.maxLengthM ? `${String(place.maxLengthM).replace(".", ",")} m` : "Onbekend"}
         </span>
       </div>
+      {/* Eigenaarsroute hoog op de pagina, direct onder het beslisblok (review R48) */}
+      {!askDeparture && (
+        <div className="px-4 py-1">
+          <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
+        </div>
+      )}
     </section>
   );
 }
@@ -499,16 +518,18 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
     rows.push({
       label: "Telefoon",
       value: (
-        <a href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
+        <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
           {tel}
-        </a>
+        </ContactLink>
       ),
     });
   if (place.website)
     rows.push({
       label: "Website",
       value: (
-        <a
+        <ContactLink
+          soort="website"
+          slug={place.slug}
           href={place.website}
           target="_blank"
           rel="noopener noreferrer nofollow"
@@ -516,7 +537,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
           className="-my-3 inline-block py-3 font-semibold break-all text-forest underline underline-offset-2"
         >
           {websiteLabel(place.website)}
-        </a>
+        </ContactLink>
       ),
     });
   if (place.email)

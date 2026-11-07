@@ -5,6 +5,7 @@ import { DepartureRadios, type DepartureAnswer } from "@/components/departure-ra
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
 import { ownerChanges, OWNER_FIELDS, type OwnerValues } from "@/lib/owner-update";
+import { CHECK_TERM } from "@/lib/place-status";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 
 const input = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
@@ -110,7 +111,8 @@ export function OwnerUpdate({
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt" : "Gegevens aanvullen"}>
         {done ? (
           <div className="pb-4">
-            <p className="text-lg">We controleren je gegevens en zetten ze daarna op de site. Bij een vraag mailen we je.</p>
+            <p className="text-lg">Je gegevens zijn binnen en wachten op controle.</p>
+            <p className="mt-2 text-ink-2">We bekijken ze {CHECK_TERM} en zetten ze daarna op de site. Bij een vraag mailen we je.</p>
             <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-lg bg-forest font-semibold text-on-forest">
               Sluiten
             </button>

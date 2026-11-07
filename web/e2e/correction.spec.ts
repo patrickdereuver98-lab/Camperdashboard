@@ -36,7 +36,7 @@ test("voorzieningen doorgeven: alleen wat anders is gaat mee, met de oude waarde
 
   await sheet.getByRole("radiogroup", { name: "Lozen" }).getByRole("radio", { name: "Ja" }).click();
   await sheet.getByRole("button", { name: "Melding versturen" }).click();
-  await expect(page.getByText("We controleren je melding")).toBeVisible();
+  await expect(page.getByText("Je melding is binnen en wacht op controle.")).toBeVisible();
   expect(sent).toMatchObject({
     p_kind: "correctie",
     p_payload: { onderwerp: "voorzieningen", voorzieningen: { dump_station: { was: null, nieuw: true } } },

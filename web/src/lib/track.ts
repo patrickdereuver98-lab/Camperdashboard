@@ -5,7 +5,12 @@ import { readConsent } from "./store";
 import type { Json } from "./database.types";
 import { supabase } from "./supabase-browser";
 
+/**
+ * "outbound" is een doorklik naar de website of het telefoonnummer van een plek (`soort`: website of telefoon, met
+ * `slug`); een route openen in een navigatie-app is "route" (met `slug` en `app`). Zo telt beheer ze apart.
+ */
 type EventName = "page_view" | "search" | "place_view" | "outbound" | "route" | "save";
+export type OutboundKind = "website" | "telefoon";
 
 let session: string | null = null;
 

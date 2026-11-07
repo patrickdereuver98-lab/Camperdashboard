@@ -554,7 +554,7 @@ export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () =
         <CardPrice place={place} />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <NavigateButton to={place} name={place.name} className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
+        <NavigateButton to={place} slug={place.slug} className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
           <Icon name="route" size={18} /> Route
         </NavigateButton>
         <Link

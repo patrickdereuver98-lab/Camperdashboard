@@ -2,6 +2,12 @@ import { departureKind, type DepartureFacts } from "./search";
 import type { Place } from "./types";
 
 /**
+ * Hoe snel we een inzending (vertrektijd, melding, gegevens van de eigenaar) controleren. Dezelfde termijn als in de
+ * voorwaarden ("Klopt er iets niet?") en bij reviews; één plek, zodat de site overal hetzelfde belooft.
+ */
+export const CHECK_TERM = "meestal binnen twee werkdagen";
+
+/**
  * Onvolledig (PRD, "Wanneer staat een plek online", besluit 18 oktober 2026): de plek haalt de publicatiedrempel en
  * staat online, maar de vertrekregel is onbekend. Op kaart en lijst grijs, op de plekpagina met de vraag om de
  * vertrektijd door te geven. Plekken onder de drempel zijn niet gepubliceerd en komen hier niet langs.
