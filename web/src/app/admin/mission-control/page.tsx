@@ -221,7 +221,7 @@ function SystemLogs() {
         </ul>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <select className="h-10 rounded-lg border border-line bg-surface px-2 text-sm" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Soort">
+        <select className="h-10 rounded-lg border border-field bg-surface px-2 text-sm" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Soort">
           <option value="">Alles</option>
           <option value="api">API-statussen</option>
           <option value="cron">Cron</option>

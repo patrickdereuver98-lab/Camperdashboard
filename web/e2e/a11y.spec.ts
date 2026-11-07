@@ -202,10 +202,44 @@ test("sheet: een keuze maken verplaatst de focus niet", async ({ page }) => {
   await prepare(page);
   await page.goto(PLACE);
   await page.getByRole("button", { name: /Schrijf een review/ }).click();
-  const seven = page.getByRole("dialog").getByRole("button", { name: "7", exact: true }).first();
+  const seven = page.getByRole("dialog").getByRole("radio", { name: "7", exact: true }).first();
   await seven.focus();
-  await page.keyboard.press("Enter");
-  await expect(seven).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Space");
+  await expect(seven).toBeChecked();
   await page.waitForTimeout(200);
   await expect(seven).toBeFocused();
+});
+
+test("keuzerondjes werken met de pijltjestoetsen (R31)", async ({ page }) => {
+  await prepare(page);
+  await page.goto(PLACE);
+  await page.getByRole("button", { name: /Schrijf een review/ }).click();
+  const dialog = page.getByRole("dialog");
+  // De sheet zet na openen zelf de focus (na 50 ms); pas daarna kiezen
+  await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true);
+  const seven = dialog.getByRole("radio", { name: "7", exact: true }).first();
+  await seven.press("Space");
+  await expect(seven).toBeChecked();
+  await page.keyboard.press("ArrowRight");
+  const eight = dialog.getByRole("radio", { name: "8", exact: true }).first();
+  await expect(eight).toBeChecked();
+  await expect(eight).toBeFocused();
+  await expect(seven).not.toBeChecked();
+});
+
+test("fout bij versturen hoort bij het veld: aria-invalid en aria-describedby (R31)", async ({ page }) => {
+  await prepare(page);
+  await page.goto(PLACE);
+  await page.getByRole("button", { name: /Schrijf een review/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Je ervaring *").fill("Rustige plek aan het water, prima voor een nacht. Schoon sanitair.");
+  await dialog.getByLabel("Je naam *").fill("Kees");
+  const email = dialog.getByLabel("Je e-mailadres *");
+  if (await email.count()) await email.fill("kees@example.com");
+  await dialog.locator("button[type=submit]").click();
+  const error = dialog.getByRole("alert");
+  await expect(error).toHaveText("Geef een totaalcijfer.");
+  const group = dialog.getByRole("radiogroup", { name: "Totaalcijfer *" });
+  await expect(group).toHaveAttribute("aria-describedby", (await error.getAttribute("id"))!);
+  await expect(group).toHaveAttribute("aria-invalid", "true");
 });

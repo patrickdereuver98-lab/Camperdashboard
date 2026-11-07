@@ -1,5 +1,6 @@
 "use client";
 
+import { SuccessNote } from "./success-note";
 import { useState } from "react";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { CHECK_TERM } from "@/lib/place-status";
@@ -8,7 +9,7 @@ import { Icon } from "./icons";
 import { Sheet } from "./sheet";
 import { DepartureRadios, type DepartureAnswer } from "./departure-radios";
 
-const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none";
 
 /**
  * Vertrektijd doorgeven als inzending voor beheer (soort "correctie", onderwerp "vertrektijd"). Gebruikt bij Doe mee
@@ -58,7 +59,14 @@ export function DepartureForm({
   return (
     <Sheet open={!!place} onClose={onClose} title={place ? place.name : ""}>
       <form onSubmit={submit} className="space-y-5 pb-4">
-        <DepartureRadios id="dm-vertrek" label="Hoe laat moet je hier weg?" value={kind} onChange={setKind} fieldClass={field} />
+        <DepartureRadios
+          id="dm-vertrek"
+          label="Hoe laat moet je hier weg?"
+          value={kind}
+          onChange={setKind}
+          fieldClass={field}
+          errorId={err && !kind ? "dm-fout" : undefined}
+        />
         <label className="block">
           <span className="mb-1.5 block font-semibold">Hoe weet je dit?</span>
           <select name="how" className={field} defaultValue="zelf gestaan">
@@ -85,7 +93,7 @@ export function DepartureForm({
         </div>
         <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
         {err && (
-          <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">
+          <p id="dm-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">
             {err}
           </p>
         )}
@@ -107,17 +115,17 @@ export function GiveDepartureButton({ placeId, placeName, label }: { placeId: st
   const [sent, setSent] = useState(false);
   if (sent)
     return label ? (
-      <p role="status" className="flex min-h-11 items-start gap-1.5 py-1 font-semibold text-forest">
+      <SuccessNote className="flex min-h-11 items-start gap-1.5 py-1 font-semibold text-forest">
         <Icon name="check" size={18} className="mt-0.5 shrink-0" /> Bedankt. Wacht op controle, {CHECK_TERM}.
-      </p>
+      </SuccessNote>
     ) : (
-      <div role="status" className="flex items-start gap-2 rounded-lg bg-forest-tint px-3 py-2 text-forest">
+      <SuccessNote className="flex items-start gap-2 rounded-lg bg-forest-tint px-3 py-2 text-forest">
         <Icon name="check" size={18} className="mt-1 shrink-0" />
         <p>
           <span className="font-semibold">Bedankt, je vertrektijd is binnen.</span> Hij wacht op controle. Dat doen we {CHECK_TERM}, daarna
           staat hij op de site.
         </p>
-      </div>
+      </SuccessNote>
     );
   return (
     <>

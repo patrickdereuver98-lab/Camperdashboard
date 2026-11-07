@@ -224,8 +224,9 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           </div>
         )}
 
-        <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
-          <h1 className="font-display text-h1 font-semibold">
+        <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`}>
+          {/* Alleen de teller is live: een schermlezer hoort "12 plekken in Gelderland", niet de hele lijst (R30) */}
+          <h1 className="font-display text-h1 font-semibold" aria-live="polite" aria-atomic="true">
             <span key={total} className="animate-fade-in inline-block">
               {total !== undefined ? pluralize(total, "plek", "plekken") : "Plekken laden"}
             </span>{" "}

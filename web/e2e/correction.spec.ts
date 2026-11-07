@@ -29,12 +29,12 @@ test("voorzieningen doorgeven: alleen wat anders is gaat mee, met de oude waarde
 
   // Beginstand = wat we weten; niets aangepast en geen toelichting: niet versturen
   const power = sheet.getByRole("radiogroup", { name: "Stroom" });
-  await expect(power.getByRole("radio", { name: place.power ? "Ja" : "Nee" })).toHaveAttribute("aria-checked", "true");
+  await expect(power.getByRole("radio", { name: place.power ? "Ja" : "Nee" })).toBeChecked();
   await sheet.getByRole("button", { name: "Melding versturen" }).click();
   await expect(sheet.getByRole("alert")).toContainText("Je hebt nog niets aangepast");
   expect(sent).toBeNull();
 
-  await sheet.getByRole("radiogroup", { name: "Lozen" }).getByRole("radio", { name: "Ja" }).click();
+  await sheet.getByRole("radiogroup", { name: "Lozen" }).getByRole("radio", { name: "Ja" }).check();
   await sheet.getByRole("button", { name: "Melding versturen" }).click();
   await expect(page.getByText("Je melding is binnen en wacht op controle.")).toBeVisible();
   expect(sent).toMatchObject({

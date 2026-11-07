@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 import { SITE_URL } from "@/lib/env";
+import { SuccessNote } from "@/components/success-note";
 import { Icon } from "@/components/icons";
 
 // Reden → korte naam in het onderwerp en de categorie van het supportticket
@@ -16,7 +17,7 @@ const REASONS = [
   { value: "anders", label: "Iets anders", short: "anders", category: "overig" },
 ] as const;
 
-const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 /** Een pad als "/plek/x" wordt een volledig adres op vrijstaan.nl */
 function fullUrl(raw: string): string {
@@ -65,7 +66,7 @@ export function ReportForm() {
 
   if (done)
     return (
-      <div className="mt-8 rounded-xl bg-forest-tint p-6">
+      <SuccessNote className="mt-8 rounded-xl bg-forest-tint p-6">
         <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Melding ontvangen (#{done.number})
         </p>
@@ -82,7 +83,7 @@ export function ReportForm() {
         <Link href={`/support/${done.token}`} className="mt-4 inline-flex h-12 items-center rounded-lg bg-forest px-5 font-semibold text-on-forest">
           Naar mijn melding
         </Link>
-      </div>
+      </SuccessNote>
     );
 
   return (

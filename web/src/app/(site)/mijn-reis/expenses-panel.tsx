@@ -8,7 +8,7 @@ import { Icon } from "@/components/icons";
 import { Chip } from "@/components/chip";
 
 const LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.label])) as Record<ExpenseCategory, string>;
-const input = "h-11 w-full rounded-lg border-2 border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const input = "h-11 w-full rounded-lg border-2 border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 const today = () => {
   const d = new Date();
@@ -84,7 +84,16 @@ export function ExpensesPanel({
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1 block text-sm font-semibold">Bedrag in euro</span>
-              <input name="amount" inputMode="decimal" required autoComplete="off" placeholder="24,50" className={input} />
+              <input
+                name="amount"
+                inputMode="decimal"
+                required
+                autoComplete="off"
+                placeholder="24,50"
+                aria-invalid={err ? true : undefined}
+                aria-describedby={err ? "uitgave-fout" : undefined}
+                className={input}
+              />
             </label>
             <label className="block">
               <span className="mb-1 block text-sm font-semibold">Datum</span>
@@ -113,7 +122,7 @@ export function ExpensesPanel({
             <span className="mb-1 block text-sm font-semibold">Notitie (optioneel)</span>
             <input name="note" maxLength={120} autoComplete="off" className={input} />
           </label>
-          {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
+          {err && <p id="uitgave-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
           <div className="flex gap-2">
             <button type="submit" className="h-12 flex-1 rounded-md bg-forest font-semibold text-on-forest">Opslaan</button>
             <button type="button" onClick={() => setOpen(false)} className="h-12 rounded-md px-4 font-semibold">Annuleren</button>

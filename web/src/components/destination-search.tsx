@@ -319,7 +319,7 @@ export function DestinationSearch({
             Waar wil je staan?
           </label>
           <div
-            className={`flex min-w-0 items-center gap-2 rounded-lg text-ink ring-1 ring-line transition-shadow focus-within:ring-2 focus-within:ring-forest ${
+            className={`flex min-w-0 items-center gap-2 rounded-lg text-ink ring-1 ring-field transition-shadow focus-within:ring-2 focus-within:ring-forest ${
               hero ? "h-12 bg-paper px-4 sm:h-14" : "h-11 bg-surface px-3 sm:h-12"
             }`}
           >

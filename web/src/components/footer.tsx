@@ -59,7 +59,8 @@ export function Footer() {
         {COLUMNS.map((c) => (
           <nav key={c.title} aria-label={c.title} className={c.title === "Over VrijStaan" ? "col-span-2 md:col-span-1" : ""}>
             <h2 className="font-display text-base font-semibold text-ink">{c.title}</h2>
-            <ul className={`mt-2 ${c.title === "Over VrijStaan" ? "grid grid-cols-2 gap-x-6 md:block" : ""}`}>
+            {/* Onder 360 px één kolom: "Gebruiksvoorwaarden" past niet in een halve breedte (R27) */}
+            <ul className={`mt-2 ${c.title === "Over VrijStaan" ? "grid grid-cols-1 gap-x-6 min-[360px]:grid-cols-2 md:block" : ""}`}>
               {c.links.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="inline-block py-2.5 text-ink-2 hover:text-forest hover:underline">

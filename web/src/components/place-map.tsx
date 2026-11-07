@@ -7,6 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./place-map.css";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { LatLng } from "@/lib/geo";
+import { MAP_LOCALE_NL } from "@/lib/map-locale";
 import { byClusterSize, CLUSTER_RADIUS, clusterColors, popupProps, toGeoJSON, type MapPlace, type PinProps, type PopupProps } from "@/lib/map-data";
 import { currentTheme } from "@/lib/theme";
 import { useDarkTheme } from "@/lib/use-media";
@@ -152,6 +153,8 @@ export function PlaceMap({
         style: dark ? STYLE_DARK : STYLE_LIGHT,
         ...(camera.current ?? { bounds: NL_BOUNDS, fitBoundsOptions: { padding: 24 } }),
         attributionControl: { compact: true },
+        // Knoppen en meldingen in het Nederlands (R31)
+        locale: MAP_LOCALE_NL,
       });
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
