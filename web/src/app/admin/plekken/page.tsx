@@ -104,7 +104,7 @@ export default function PlacesAdmin() {
     <div className="mx-auto max-w-6xl space-y-4">
       <PageTitle title="Plekken" />
       <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
-        <label className="flex h-12 items-center gap-2 rounded-lg border border-line bg-surface px-3 focus-within:border-forest focus-within:ring-2 focus-within:ring-forest">
+        <label className="flex h-12 items-center gap-2 rounded-lg border border-field bg-surface px-3 focus-within:border-forest focus-within:ring-2 focus-within:ring-forest">
           <Icon name="search" size={20} className="text-muted" />
           <span className="sr-only">Zoek op naam of plaats</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek op naam of plaats" className="h-full flex-1 bg-transparent focus:outline-none" />

@@ -23,6 +23,8 @@ export function VehicleApp() {
   const [settings, setSettings] = useTripSettings();
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Velden met een maat die niet klopt: die krijgen aria-invalid en verwijzen naar de foutmelding (R31)
+  const [bad, setBad] = useState<string[]>([]);
   // Na laden uit de opslag (of na synchronisatie) het formulier opnieuw vullen
   const formKey = JSON.stringify(vehicle);
 
@@ -31,8 +33,9 @@ export function VehicleApp() {
     const f = new FormData(e.currentTarget);
     const raw = Object.fromEntries(f.entries());
     const next = cleanVehicle(raw);
-    const bad = ["lengthM", "heightM", "widthM", "weightKg", "consumption"].filter((k) => String(raw[k] ?? "").trim() && !(k in next));
-    if (bad.length) {
+    const wrong = ["lengthM", "heightM", "widthM", "weightKg", "consumption"].filter((k) => String(raw[k] ?? "").trim() && !(k in next));
+    setBad(wrong);
+    if (wrong.length) {
       setErr("Een of meer maten kloppen niet. Controleer de lengte (3 tot 20 m), hoogte, breedte, gewicht en het verbruik.");
       return;
     }
@@ -50,10 +53,10 @@ export function VehicleApp() {
           <input name="name" maxLength={40} defaultValue={vehicle.name ?? ""} placeholder="Bijvoorbeeld: onze Hymer" className={field} />
         </label>
         <div className="grid grid-cols-2 gap-4">
-          <Num name="lengthM" label="Lengte in meter" value={dec(vehicle.lengthM)} placeholder="7,4" />
-          <Num name="heightM" label="Hoogte in meter" value={dec(vehicle.heightM)} placeholder="2,9" />
-          <Num name="widthM" label="Breedte in meter" value={dec(vehicle.widthM)} placeholder="2,3" />
-          <Num name="weightKg" label="Gewicht in kg" value={vehicle.weightKg ? String(vehicle.weightKg) : ""} placeholder="3500" />
+          <Num name="lengthM" label="Lengte in meter" value={dec(vehicle.lengthM)} placeholder="7,4" invalid={bad.includes("lengthM")} />
+          <Num name="heightM" label="Hoogte in meter" value={dec(vehicle.heightM)} placeholder="2,9" invalid={bad.includes("heightM")} />
+          <Num name="widthM" label="Breedte in meter" value={dec(vehicle.widthM)} placeholder="2,3" invalid={bad.includes("widthM")} />
+          <Num name="weightKg" label="Gewicht in kg" value={vehicle.weightKg ? String(vehicle.weightKg) : ""} placeholder="3500" invalid={bad.includes("weightKg")} />
         </div>
         <label className="block">
           <span className="mb-1.5 block font-semibold">Brandstof</span>
@@ -64,12 +67,12 @@ export function VehicleApp() {
             ))}
           </select>
         </label>
-        <Num name="consumption" label="Verbruik per 100 km (liter of kWh)" value={dec(vehicle.consumption)} placeholder="11" />
+        <Num name="consumption" label="Verbruik per 100 km (liter of kWh)" value={dec(vehicle.consumption)} placeholder="11" invalid={bad.includes("consumption")} />
         <p className="text-sm text-muted">
           Bij het zoeken gebruiken we de lengte. Hoogte en gewicht staan bij te weinig plekken bekend om op te filteren. Het
           verbruik gebruiken we voor de brandstofkosten in Mijn reis.
         </p>
-        {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
+        {err && <p id="camper-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
         <button type="submit" className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest">Bewaren</button>
         {saved && (
           <p role="status" className="flex items-center gap-2 font-semibold text-forest">
@@ -87,11 +90,20 @@ export function VehicleApp() {
   );
 }
 
-function Num({ name, label, value, placeholder }: { name: keyof Vehicle; label: string; value: string; placeholder: string }) {
+function Num({ name, label, value, placeholder, invalid }: { name: keyof Vehicle; label: string; value: string; placeholder: string; invalid?: boolean }) {
   return (
     <label className="block">
       <span className="mb-1.5 block font-semibold">{label}</span>
-      <input name={name} inputMode="decimal" defaultValue={value} placeholder={placeholder} autoComplete="off" className={field} />
+      <input
+        name={name}
+        inputMode="decimal"
+        defaultValue={value}
+        placeholder={placeholder}
+        autoComplete="off"
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? "camper-fout" : undefined}
+        className={`${field} aria-invalid:border-alert`}
+      />
     </label>
   );
 }

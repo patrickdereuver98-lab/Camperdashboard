@@ -40,10 +40,18 @@ export function AdminShell({ children }: { children: ReactNode }) {
       setSession(s);
       if (!s) return setState("uit");
       // Een netwerk- of serverfout is iets anders dan "geen beheerder": dan tonen we een foutmelding met opnieuw proberen
-      const { data, error } = await sb.rpc("is_admin");
-      setState(error ? "fout" : data ? "admin" : "geen-admin");
+      // (R32). Ook een verzoek dat helemaal mislukt (geen antwoord) is een fout, geen "geen beheertoegang".
+      try {
+        const { data, error } = await sb.rpc("is_admin");
+        setState(error ? "fout" : data === true ? "admin" : "geen-admin");
+      } catch {
+        setState("fout");
+      }
     }
-    void sb.auth.getSession().then(({ data }) => check(data.session));
+    void sb.auth.getSession().then(
+      ({ data }) => check(data.session),
+      () => setState("fout"),
+    );
     const { data: sub } = sb.auth.onAuthStateChange((event, s) => {
       if (event === "PASSWORD_RECOVERY") return setState("herstel");
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") void check(s);
@@ -60,6 +68,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           We konden niet controleren of je beheerrechten hebt. Controleer je internetverbinding en probeer het opnieuw.
         </p>
         <button
+          type="button"
           className={`${primary} mt-6 w-full`}
           onClick={() => {
             setState("laden");

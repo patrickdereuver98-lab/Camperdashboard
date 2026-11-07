@@ -334,7 +334,7 @@ export function TripApp() {
                   value={tripDate ?? ""}
                   min={dayValue(new Date())}
                   onChange={(e) => setTripDate(parseDay(e.target.value) ? e.target.value : null)}
-                  className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-base focus:ring-2 focus:ring-forest focus:outline-none"
+                  className="mt-1 h-11 w-full rounded-lg border border-field bg-surface px-3 text-base focus:ring-2 focus:ring-forest focus:outline-none"
                 />
               </label>
               {tripDate && (
@@ -536,7 +536,7 @@ export function TripApp() {
                       min={0}
                       value={settings[k]}
                       onChange={(e) => setSettings({ ...settings, [k]: Number(e.target.value) || 0 })}
-                      className="h-11 w-full rounded-lg border border-line bg-surface px-3"
+                      className="h-11 w-full rounded-lg border border-field bg-surface px-3"
                     />
                   </label>
                 ))}

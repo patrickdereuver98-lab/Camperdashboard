@@ -59,7 +59,7 @@ Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live
 | Snelle chips | Boven de resultaten op Zoeken (redesign 30 oktober 2026, vervangt de vertrektabbladen): Dichtbij, **Zonder vertrektijd** (de enige gekleurde chip: bosgroen, want dat betekent "geen vaste vertrektijd"), Gratis, 8+, Stroom, Lozen. 44 px hoog, 6 px hoek, rand van 1 px, horizontaal scrollbaar op de telefoon; aan = gevuld bosgroen met vinkje. Uitslapers en Overige blijven bereikbaar via de filtersheet en de footer; hun pagina's houden hun eigen kop |
 | Voorzieningenpictogrammen | Lijnicoon op een lichte ondergrond: bosgroen op lichtgroen (aanwezig), lichtgrijs op zand (onbekend), grijs met rode streep (niet aanwezig) |
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
-| Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis); vaste actiebalk op de plekpagina |
+| Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis) tot `lg`; vaste actiebalk op de plekpagina. In de kop op de telefoon: Plek aanmelden, Hulp, licht/donker en Inloggen als icoon (met naam voor schermlezers) |
 | Meldingen | Korte toast na bewaren; inline statusregels (`role="status"`/`role="alert"`) |
 | Foto's van een plek | Beste foto vooraan: een foto van de plek zelf, het eigen logo pas als er niets anders is. Nooit keurmerken of logo's van anderen (SVR, ANWB, Zoover), vlaggen, stockfoto's of miniaturen. We vragen bij bekende beeldbanken (WordPress, Wix, Jimdo, Duda, `?width=`) de grote versie op en vallen terug op het origineel. Te klein voor het vak (galerij < 640 px, kaart < 320 px breed) = niet tonen. Logo's en foto's met een heel andere verhouding staan passend in het vak (niet half bijgesneden), met een vervaagde rand. Regels in `web/src/lib/photos.ts` |
 | Over deze plek | Tekst van de website van de plek, alleen hele Nederlandse zinnen: zonder "Lees meer", "…", links, prijzen, telefoonnummers of SEO-titels. Lukt dat niet, dan geen tekst. Onder de tekst: "Zo beschrijft de plek zichzelf op de eigen website." Regels in `web/src/lib/description.ts` |
@@ -74,7 +74,8 @@ Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live
 
 - Mobiel eerst, één kolom; zijmarge 12–16 px; geen horizontale scroll.
 - Breekpunten (Tailwind): `sm` 640, `md` 768, `lg` 1024 px. Vanaf `lg`: lijst en kaart naast elkaar, plekpagina met
-  zijkolom.
+  zijkolom, en het menu in de kop in plaats van de tabbalk (tot 1024 px, ook op een tablet van 820 px, blijft de
+  tabbalk; R27). Een e2e-test controleert op 320, 360, 390 en 820 px dat niets zijwaarts schuift.
 - Ruimte in stappen van 4 px; hoeken volgens de stijlgids: knoppen en velden 8 px, kaarten 12 px, sheets 16 px.
 
 ## Schermnotities

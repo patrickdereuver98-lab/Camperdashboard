@@ -1,5 +1,6 @@
 "use client";
 
+import { SuccessNote } from "./success-note";
 import { useState } from "react";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import type { PlaceSummary } from "@/lib/types";
@@ -7,7 +8,7 @@ import { Icon } from "./icons";
 import { Sheet } from "./sheet";
 import { DepartureRadios, type DepartureAnswer } from "./departure-radios";
 
-const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none";
 
 /**
  * Vertrektijd doorgeven als inzending voor beheer (soort "correctie", onderwerp "vertrektijd"). Gebruikt bij Doe mee
@@ -57,7 +58,14 @@ export function DepartureForm({
   return (
     <Sheet open={!!place} onClose={onClose} title={place ? place.name : ""}>
       <form onSubmit={submit} className="space-y-5 pb-4">
-        <DepartureRadios id="dm-vertrek" label="Hoe laat moet je hier weg?" value={kind} onChange={setKind} fieldClass={field} />
+        <DepartureRadios
+          id="dm-vertrek"
+          label="Hoe laat moet je hier weg?"
+          value={kind}
+          onChange={setKind}
+          fieldClass={field}
+          errorId={err && !kind ? "dm-fout" : undefined}
+        />
         <label className="block">
           <span className="mb-1.5 block font-semibold">Hoe weet je dit?</span>
           <select name="how" className={field} defaultValue="zelf gestaan">
@@ -84,7 +92,7 @@ export function DepartureForm({
         </div>
         <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
         {err && (
-          <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">
+          <p id="dm-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">
             {err}
           </p>
         )}
@@ -102,9 +110,9 @@ export function GiveDepartureButton({ placeId, placeName, label }: { placeId: st
   const [sent, setSent] = useState(false);
   if (sent)
     return (
-      <p role="status" className="flex min-h-11 items-center gap-1.5 font-semibold text-forest">
+      <SuccessNote className="flex min-h-11 items-center gap-1.5 font-semibold text-forest">
         <Icon name="check" size={18} /> {label ? "Bedankt, we controleren het." : "Bedankt. We controleren het en zetten het daarna op de site."}
-      </p>
+      </SuccessNote>
     );
   return (
     <>

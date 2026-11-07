@@ -20,6 +20,8 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
   const [busy, setBusy] = useState<CrowdLevel | null>(null);
   const [mine, setMine] = useState<CrowdLevel | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Opnieuw proberen na een mislukte laadpoging (R32)
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -41,7 +43,7 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
     return () => {
       alive = false;
     };
-  }, [placeId]);
+  }, [placeId, attempt]);
 
   async function report(level: CrowdLevel) {
     setBusy(level);
@@ -67,6 +69,18 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
             <div>
               <p className={`font-display text-lg leading-tight font-semibold ${summary.level ? "" : "text-muted"}`}>{summary.title}</p>
               <p className="text-sm text-ink-2">{summary.detail}</p>
+              {loadFailed && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoaded(false);
+                    setAttempt((a) => a + 1);
+                  }}
+                  className="mt-2 inline-flex h-11 items-center rounded-md border border-line px-4 font-semibold hover:border-forest"
+                >
+                  Opnieuw proberen
+                </button>
+              )}
             </div>
           </>
         ) : (

@@ -56,7 +56,8 @@ test.describe("inloggen", () => {
     await box.fill("123 456");
     await expect(box).toHaveValue("123456");
     await page.getByRole("button", { name: "Inloggen", exact: true }).click();
-    await page.waitForURL(/\/mijn-reis$/);
+    // Op het pad letten: /inloggen?next=/mijn-reis eindigt ook op /mijn-reis, dan wachtte de test niet
+    await page.waitForURL((u) => u.pathname === "/mijn-reis");
     expect(verify).toMatchObject({ email: "kampeerder@example.com", token: "123456", type: "email" });
   });
 

@@ -27,4 +27,4 @@ export function crowdSummary(s: CrowdStatus | null, now = new Date()): CrowdSumm
 }
 
 /** Wat we tonen als de drukte niet te laden is: een storing is geen "nog niemand gemeld" (DATA-12) */
-export const CROWD_ERROR: CrowdSummary = { title: "Drukte nu niet te laden", detail: "Probeer het later opnieuw.", level: null };
+export const CROWD_ERROR: CrowdSummary = { title: "Drukte nu niet te laden", detail: "Controleer je verbinding en probeer het opnieuw.", level: null };
