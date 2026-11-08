@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { supabase } from "@/lib/supabase-browser";
+import { fieldAria, formError, ticketRules } from "@/lib/form-errors";
+import { FieldError, FormAlert, useFormError } from "@/components/form-error";
 import { SITE_URL } from "@/lib/env";
 import { SuccessNote } from "@/components/success-note";
 import { Icon } from "@/components/icons";
@@ -25,10 +27,12 @@ function fullUrl(raw: string): string {
   return v.startsWith("/") ? `${SITE_URL}${v}` : v;
 }
 
+const F = "melden";
+
 export function ReportForm() {
   const params = useSearchParams();
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const { formRef, error: err, setError: setErr } = useFormError();
   const [done, setDone] = useState<{ number: number; token: string } | null>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -59,7 +63,8 @@ export function ReportForm() {
       p_place_id: null,
     });
     setBusy(false);
-    if (error) return setErr(errorMessage(error));
+    // Het onderwerp maken we uit het adres, het bericht uit de uitleg
+    if (error) return setErr(formError(error, ticketRules({ subject: "url", body: "explanation" })));
     const row = data[0];
     setDone({ number: row.number, token: row.access_token });
   }
@@ -87,7 +92,7 @@ export function ReportForm() {
     );
 
   return (
-    <form onSubmit={submit} className="mt-8 space-y-4">
+    <form ref={formRef} onSubmit={submit} className="mt-8 space-y-4">
       <label className="block">
         <span className="mb-1.5 block font-semibold">Waar gaat je melding over?</span>
         <select name="reason" required defaultValue="" className={field}>
@@ -99,42 +104,56 @@ export function ReportForm() {
           ))}
         </select>
       </label>
-      <label className="block">
-        <span className="mb-1.5 block font-semibold">Adres (URL) van de inhoud</span>
-        <input
-          name="url"
-          required
-          minLength={2}
-          maxLength={500}
-          inputMode="url"
-          autoCapitalize="off"
-          defaultValue={params.get("url") ?? ""}
-          placeholder="https://vrijstaan.nl/plek/…"
-          className={field}
-        />
-        <span className="mt-1 block text-sm text-muted">Het precieze adres van de pagina. Gaat het om één review of foto, schrijf dan in je uitleg welke.</span>
-      </label>
-      <label className="block">
-        <span className="mb-1.5 block font-semibold">Uitleg</span>
-        <textarea
-          name="explanation"
-          required
-          minLength={20}
-          maxLength={4000}
-          rows={6}
-          className={`${field} h-auto py-2`}
-          placeholder="Leg uit waarom deze inhoud volgens jou illegaal of onjuist is. Gaat het om auteursrecht, noem dan ook wie de rechthebbende is."
-        />
-      </label>
+      <div>
+        <label className="block">
+          <span className="mb-1.5 block font-semibold">Adres (URL) van de inhoud</span>
+          <input
+            name="url"
+            required
+            minLength={2}
+            maxLength={500}
+            inputMode="url"
+            autoCapitalize="off"
+            defaultValue={params.get("url") ?? ""}
+            placeholder="https://vrijstaan.nl/plek/…"
+            className={field}
+            {...fieldAria(err, F, "url")}
+          />
+          <span className="mt-1 block text-sm text-muted">Het precieze adres van de pagina. Gaat het om één review of foto, schrijf dan in je uitleg welke.</span>
+        </label>
+        <FieldError error={err} form={F} field="url" />
+      </div>
+      <div>
+        <label className="block">
+          <span className="mb-1.5 block font-semibold">Uitleg</span>
+          <textarea
+            name="explanation"
+            required
+            minLength={20}
+            maxLength={4000}
+            rows={6}
+            className={`${field} h-auto py-2`}
+            placeholder="Leg uit waarom deze inhoud volgens jou illegaal of onjuist is. Gaat het om auteursrecht, noem dan ook wie de rechthebbende is."
+            {...fieldAria(err, F, "explanation")}
+          />
+        </label>
+        <FieldError error={err} form={F} field="explanation" />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-1.5 block font-semibold">Naam</span>
-          <input name="name" required minLength={2} maxLength={80} autoComplete="name" className={field} />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block font-semibold">E-mailadres</span>
-          <input name="email" type="email" required autoComplete="email" className={field} />
-        </label>
+        <div>
+          <label className="block">
+            <span className="mb-1.5 block font-semibold">Naam</span>
+            <input name="name" required minLength={2} maxLength={80} autoComplete="name" className={field} {...fieldAria(err, F, "name")} />
+          </label>
+          <FieldError error={err} form={F} field="name" />
+        </div>
+        <div>
+          <label className="block">
+            <span className="mb-1.5 block font-semibold">E-mailadres</span>
+            <input name="email" type="email" required autoComplete="email" className={field} {...fieldAria(err, F, "email")} />
+          </label>
+          <FieldError error={err} form={F} field="email" />
+        </div>
       </div>
       <p className="text-sm text-muted">
         De wet (art. 16 Digital Services Act) vraagt bij een melding je naam en e-mailadres. We gebruiken ze alleen om je
@@ -147,7 +166,7 @@ export function ReportForm() {
         <span>Ik verklaar te goeder trouw dat de informatie en beweringen in deze melding juist en volledig zijn.</span>
       </label>
       <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-      {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
+      <FormAlert error={err} />
       <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Melding versturen"}
       </button>

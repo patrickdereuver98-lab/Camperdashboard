@@ -48,6 +48,22 @@ test.describe("kleine schermen", () => {
     });
   }
 
+  // WCAG 1.4.4 en 1.4.10 (review november R31): op 320 px met tekst op 200% mag de pagina niet zijwaarts schuiven
+  test("320 px met tekst op 200%: geen horizontaal schuiven", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    for (const path of ["/", "/zoeken", `/plek/${PRERENDERED[0].slug}`, "/contact"]) {
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+      });
+      await page.waitForTimeout(300);
+      const m = await overflow(page);
+      expect(m.scroll, `${path} op 320 px en 200% schuift: ${m.out.join(", ")}`).toBeLessThanOrEqual(m.client);
+      expect(m.body, `${path} op 320 px en 200%: body breder dan het scherm (${m.out.join(", ")})`).toBeLessThanOrEqual(m.client);
+    }
+  });
+
   test("820 px (tablet): tabbalk onderaan, geen desktopmenu in de kop", async ({ page }) => {
     await page.setViewportSize({ width: 820, height: 1180 });
     await page.goto("/zoeken");

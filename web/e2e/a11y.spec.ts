@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, PLACES, PRERENDERED, test } from "./fixtures";
+import { SUPABASE } from "./session";
 
 // WCAG 2.1 AA (lanceervoorwaarde in de PRD): geautomatiseerde controle op de hoofdpagina's, in licht en donker.
 // Daarnaast twee huisregels die axe niet meet (docs/stijlgids.md §2, §4, §5): tekst minstens 14 px en tikdoelen
@@ -242,4 +243,44 @@ test("fout bij versturen hoort bij het veld: aria-invalid en aria-describedby (R
   const group = dialog.getByRole("radiogroup", { name: "Totaalcijfer *" });
   await expect(group).toHaveAttribute("aria-describedby", (await error.getAttribute("id"))!);
   await expect(group).toHaveAttribute("aria-invalid", "true");
+});
+
+test.describe("serverfout na verzenden (R31)", () => {
+  async function fillContact(page: Page) {
+    await page.goto("/contact");
+    await page.getByLabel("Onderwerp").fill("Vraag over een plek");
+    await page.getByLabel("Je bericht").fill("Klopt de vertrektijd van deze plek nog?");
+    await page.getByLabel("Naam").fill("Kees");
+    await page.getByLabel("E-mailadres").fill("kees@example.com");
+  }
+
+  test("fout over één veld staat bij dat veld en het veld krijgt de focus", async ({ page }) => {
+    await prepare(page, { trip: false });
+    await page.route(`${SUPABASE}/rest/v1/rpc/create_ticket**`, (r) =>
+      r.fulfill({
+        status: 400,
+        json: { code: "23514", message: 'new row for relation "tickets" violates check constraint "tickets_email_check"', details: null, hint: null },
+      }),
+    );
+    await fillContact(page);
+    await page.getByRole("button", { name: "Bericht versturen" }).click();
+    const email = page.getByLabel("E-mailadres");
+    await expect(email).toHaveAttribute("aria-invalid", "true");
+    const id = await email.getAttribute("aria-describedby");
+    await expect(page.locator(`#${id}`)).toHaveText(/geldig e-mailadres/);
+    await expect(email).toBeFocused();
+    await expect(page.locator("form [role=alert]")).toHaveCount(0);
+    await expect(page.getByLabel("Naam")).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  test("algemene fout staat boven de knop met role=alert", async ({ page }) => {
+    await prepare(page, { trip: false });
+    await page.route(`${SUPABASE}/rest/v1/rpc/create_ticket**`, (r) =>
+      r.fulfill({ status: 400, json: { code: "P0001", message: "Het is even erg druk. Probeer het later opnieuw of mail ons.", details: null, hint: null } }),
+    );
+    await fillContact(page);
+    await page.getByRole("button", { name: "Bericht versturen" }).click();
+    await expect(page.locator("form [role=alert]")).toHaveText("Het is even erg druk. Probeer het later opnieuw of mail ons.");
+    await expect(page.locator("form [aria-invalid=true]")).toHaveCount(0);
+  });
 });

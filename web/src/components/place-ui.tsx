@@ -384,7 +384,8 @@ function PlaceRow({
         active ? "bg-forest-tint shadow-[inset_3px_0_0_var(--color-forest)]" : "hover:bg-sunken/50"
       }`}
     >
-      <div className="relative w-24 shrink-0 self-stretch overflow-hidden rounded-md sm:w-36">
+      {/* Hooguit 30% van de rij: met grote tekst op een smal scherm houdt de tekst zo ruimte (R31) */}
+      <div className="relative w-[min(6rem,30%)] shrink-0 self-stretch overflow-hidden rounded-md sm:w-36">
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
         </ViewTransition>
@@ -401,8 +402,9 @@ function PlaceRow({
             <SaveButton slug={place.slug} variant="plain" />
           </div>
         </div>
-        <div className="flex min-w-0 flex-1 gap-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {/* Past de prijs er niet naast (grote tekst), dan gaat hij eronder */}
+        <div className="flex min-w-0 flex-1 flex-wrap gap-x-2">
+        <div className="flex min-w-0 flex-[1_1_6rem] flex-col gap-0.5">
           <h3 className="truncate font-display text-h3 font-semibold text-ink">
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
@@ -422,7 +424,7 @@ function PlaceRow({
             <OpenChip place={place} onlyClosed />
           </div>
         </div>
-        <div className="relative z-10 flex shrink-0 flex-col items-end justify-end">
+        <div className="relative z-10 ml-auto flex max-w-full shrink-0 flex-col items-end justify-end">
           <RowPrice place={place} />
         </div>
         </div>
@@ -448,7 +450,7 @@ function RowPrice({ place }: { place: PlaceSummary }) {
   return (
     <div className="text-right leading-tight">
       <p className="font-display text-lg leading-none font-semibold text-ink tabular-nums">{price.value}</p>
-      {sub && <p className="mt-0.5 text-sm whitespace-nowrap text-muted">{sub}</p>}
+      {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
     </div>
   );
 }

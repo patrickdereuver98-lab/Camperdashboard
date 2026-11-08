@@ -69,10 +69,5 @@ export function formValue(form: FormData, name: string): string | null {
   return typeof v === "string" ? v : null;
 }
 
-/** Leesbare foutmelding uit een Supabase/Postgres-fout */
-export function errorMessage(err: unknown): string {
-  const msg = (err as { message?: string })?.message ?? String(err);
-  if (/fetch|network|Failed to fetch/i.test(msg)) return "Geen verbinding. Controleer je internet en probeer het opnieuw.";
-  if (/check constraint|violates/i.test(msg)) return "Niet alle velden zijn goed ingevuld.";
-  return msg.replace(/^.*?ERROR:\s*/i, "");
-}
+/** Leesbare foutmelding uit een Supabase/Postgres-fout (staat in form-errors, zodat de tests hem kunnen laden) */
+export { errorMessage } from "./form-errors";

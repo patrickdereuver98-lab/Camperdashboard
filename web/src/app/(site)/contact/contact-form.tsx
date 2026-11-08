@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { supabase } from "@/lib/supabase-browser";
+import { fieldAria, formError, ticketRules } from "@/lib/form-errors";
+import { FieldError, FormAlert, useFormError } from "@/components/form-error";
 import { SuccessNote } from "@/components/success-note";
 import { Icon } from "@/components/icons";
 
@@ -19,11 +21,13 @@ const CATEGORIES = [
 
 export const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
+const F = "contact";
+
 export function ContactForm() {
   const params = useSearchParams();
   const preset = params.get("onderwerp");
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const { formRef, error: err, setError: setErr } = useFormError();
   const [done, setDone] = useState<{ number: number; token: string } | null>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -41,7 +45,7 @@ export function ContactForm() {
       p_place_id: null,
     });
     setBusy(false);
-    if (error) return setErr(errorMessage(error));
+    if (error) return setErr(formError(error, ticketRules()));
     const row = data[0];
     setDone({ number: row.number, token: row.access_token });
   }
@@ -62,7 +66,7 @@ export function ContactForm() {
     );
 
   return (
-    <form onSubmit={submit} className="mt-8 space-y-4">
+    <form ref={formRef} onSubmit={submit} className="mt-8 space-y-4">
       <label className="block">
         <span className="mb-1.5 block font-semibold">Waar gaat het over?</span>
         <select name="category" defaultValue={CATEGORIES.some(([v]) => v === preset) ? preset! : "vraag"} className={field}>
@@ -71,30 +75,42 @@ export function ContactForm() {
           ))}
         </select>
       </label>
-      <label className="block">
-        <span className="mb-1.5 block font-semibold">Onderwerp</span>
-        <input name="subject" required minLength={3} maxLength={140} className={field} />
-      </label>
-      <label className="block">
-        <span className="mb-1.5 block font-semibold">Je bericht</span>
-        <textarea name="body" required minLength={10} maxLength={5000} rows={6} className={`${field} h-auto py-2`} />
-      </label>
+      <div>
+        <label className="block">
+          <span className="mb-1.5 block font-semibold">Onderwerp</span>
+          <input name="subject" required minLength={3} maxLength={140} className={field} {...fieldAria(err, F, "subject")} />
+        </label>
+        <FieldError error={err} form={F} field="subject" />
+      </div>
+      <div>
+        <label className="block">
+          <span className="mb-1.5 block font-semibold">Je bericht</span>
+          <textarea name="body" required minLength={10} maxLength={5000} rows={6} className={`${field} h-auto py-2`} {...fieldAria(err, F, "body")} />
+        </label>
+        <FieldError error={err} form={F} field="body" />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-1.5 block font-semibold">Naam</span>
-          <input name="name" required minLength={2} maxLength={80} autoComplete="name" className={field} />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block font-semibold">E-mailadres</span>
-          <input name="email" type="email" required autoComplete="email" className={field} />
-        </label>
+        <div>
+          <label className="block">
+            <span className="mb-1.5 block font-semibold">Naam</span>
+            <input name="name" required minLength={2} maxLength={80} autoComplete="name" className={field} {...fieldAria(err, F, "name")} />
+          </label>
+          <FieldError error={err} form={F} field="name" />
+        </div>
+        <div>
+          <label className="block">
+            <span className="mb-1.5 block font-semibold">E-mailadres</span>
+            <input name="email" type="email" required autoComplete="email" className={field} {...fieldAria(err, F, "email")} />
+          </label>
+          <FieldError error={err} form={F} field="email" />
+        </div>
       </div>
       <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       <p className="text-sm text-muted">
         We gebruiken je gegevens alleen om je vraag te beantwoorden. Zie de{" "}
         <Link href="/privacy" className="underline">privacyverklaring</Link>.
       </p>
-      {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
+      <FormAlert error={err} />
       <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Bericht versturen"}
       </button>
