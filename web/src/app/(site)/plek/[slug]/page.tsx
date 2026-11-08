@@ -356,6 +356,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
           highlight={place.slug}
           fitKey={place.slug}
           cluster={false}
+          whenVisible
           className="h-52 overflow-hidden rounded-lg border border-line lg:h-72"
         />
         <RouteCard to={{ lat: place.lat, lng: place.lng }} slug={place.slug} />

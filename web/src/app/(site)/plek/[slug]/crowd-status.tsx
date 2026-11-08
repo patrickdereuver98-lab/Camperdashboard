@@ -26,7 +26,7 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
   useEffect(() => {
     let alive = true;
     void supabase()
-      .rpc("crowd_status", { p_place_id: placeId })
+      .then((sb) => sb.rpc("crowd_status", { p_place_id: placeId }))
       .then(
         ({ data, error }) => {
           if (!alive) return;
@@ -48,7 +48,7 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
   async function report(level: CrowdLevel) {
     setBusy(level);
     setErr(null);
-    const { data, error } = await supabase().rpc("report_crowd", { p_place_id: placeId, p_level: level });
+    const { data, error } = await (await supabase()).rpc("report_crowd", { p_place_id: placeId, p_level: level });
     setBusy(null);
     if (error) return setErr(errorMessage(error));
     setStatus(data as CrowdStatus);
@@ -130,11 +130,13 @@ function WatchToggle({ placeId, userId }: { placeId: string; userId: string }) {
   useEffect(() => {
     let alive = true;
     void supabase()
-      .from("crowd_watches")
-      .select("expires_at, notified_at")
-      .eq("place_id", placeId)
-      .eq("user_id", userId)
-      .maybeSingle()
+      .then((sb) =>
+        sb.from("crowd_watches")
+          .select("expires_at, notified_at")
+          .eq("place_id", placeId)
+          .eq("user_id", userId)
+          .maybeSingle()
+      )
       .then(({ data }) => alive && setOn(!!data && !data.notified_at && new Date(data.expires_at) > new Date()));
     return () => {
       alive = false;
@@ -152,7 +154,7 @@ function WatchToggle({ placeId, userId }: { placeId: string; userId: string }) {
         if (support === "unsupported") throw new Error("Deze browser kan geen meldingen tonen.");
         await enablePush();
       }
-      const { error } = await supabase().rpc("watch_place", { p_place_id: placeId, p_on: !on });
+      const { error } = await (await supabase()).rpc("watch_place", { p_place_id: placeId, p_on: !on });
       if (error) throw error;
       setOn(!on);
       if (!on) setNote("We sturen je één melding zodra iemand meldt dat het hier rustig is. Dit geldt 24 uur.");

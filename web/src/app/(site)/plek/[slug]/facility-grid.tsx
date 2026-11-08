@@ -67,7 +67,7 @@ export function FacilityGrid({ placeId, placeName, values }: { placeId: string; 
     const changes: FacilityChanges = {};
     const { placeId: id, placeName: name, values: now } = place.current;
     for (const k of keys) changes[FACILITY_COLUMN[k]] = { was: now[k] ?? null, nieuw: batch[k]! };
-    const { error } = await supabase().rpc("submit_place", {
+    const { error } = await (await supabase()).rpc("submit_place", {
       p_kind: "correctie",
       p_place_id: id,
       p_payload: { onderwerp: "voorzieningen", plek: name, voorzieningen: changes, toelichting: "" },

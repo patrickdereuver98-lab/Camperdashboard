@@ -22,10 +22,7 @@ export function SharedCard() {
     if (!link || !userId) return;
     let alive = true;
     void supabase()
-      .from("shared_trip_members")
-      .select("user_id, display_name")
-      .eq("trip_id", link.id)
-      .is("left_at", null)
+      .then((sb) => sb.from("shared_trip_members").select("user_id, display_name").eq("trip_id", link.id).is("left_at", null))
       .then(({ data }) => {
         if (alive && data) setMembers(data.filter((m) => m.user_id !== userId).map((m) => m.display_name || "Iemand zonder naam"));
       });
@@ -40,7 +37,7 @@ export function SharedCard() {
   async function start() {
     setBusy(true);
     setErr(null);
-    const { data, error } = await supabase().rpc("create_shared_trip", { p_stops: toJson(trip.stops), p_name: "Onze reis" });
+    const { data, error } = await (await supabase()).rpc("create_shared_trip", { p_stops: toJson(trip.stops), p_name: "Onze reis" });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     setLink(data as { id: string; code: string; name: string });
@@ -49,7 +46,7 @@ export function SharedCard() {
   async function stop() {
     if (!link) return;
     setBusy(true);
-    await supabase().rpc("leave_shared_trip", { p_trip: link.id });
+    await (await supabase()).rpc("leave_shared_trip", { p_trip: link.id });
     setBusy(false);
     setLink(null);
     setMembers(null);

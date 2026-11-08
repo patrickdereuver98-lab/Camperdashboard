@@ -43,7 +43,7 @@ export function AccountView() {
     if (!typedOk) return;
     setErr(null);
     setDeleting(true);
-    const sb = supabase();
+    const sb = await supabase();
     // Eerst je papieren uit de privé-map: die verdwijnen niet vanzelf met het account
     const { data: docs } = await sb.storage.from("vehicle-docs").list(user.id);
     const files = (docs ?? []).filter((d) => d.id).map((d) => `${user.id}/${d.name}`);

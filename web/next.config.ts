@@ -23,6 +23,12 @@ const csp = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // Plekgegevens (lib/places.ts): vijf minuten vers, dan op de achtergrond verversen (TRD: versheid ≤ enkele minuten),
+  // zonder bezoek hooguit een dag bewaard. Beheer ververst meteen na een wijziging met revalidateTag
+  // (api/admin/revalidate, R36). Was "minutes": elke minuut opnieuw ophalen, na een uur weg.
+  cacheLife: {
+    plekken: { stale: 300, revalidate: 300, expire: 86400 },
+  },
   partialPrefetching: true,
   experimental: {
     // Navigaties die mislukken door een wegvallende verbinding worden opnieuw geprobeerd

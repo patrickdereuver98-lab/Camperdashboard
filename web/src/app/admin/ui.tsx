@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage } from "@/lib/supabase-browser";
+import { supabaseClient as supabase } from "@/lib/supabase-client";
 
 /**
  * Kleine hook om een Supabase-query te laden; herlaadt als `deps` veranderen of via reload().

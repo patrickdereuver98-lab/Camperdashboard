@@ -50,7 +50,7 @@ export function ReportForm() {
     ].join("\n");
     setBusy(true);
     setErr(null);
-    const { data, error } = await supabase().rpc("create_ticket", {
+    const { data, error } = await (await supabase()).rpc("create_ticket", {
       p_name: String(f.get("name")),
       p_email: String(f.get("email")),
       p_subject: subject.length > 140 ? `${subject.slice(0, 139)}…` : subject,

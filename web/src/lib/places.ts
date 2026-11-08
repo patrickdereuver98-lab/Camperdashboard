@@ -66,7 +66,14 @@ function withFallback<T>(live: () => Promise<T>, offline: () => T): Promise<Sour
   return withFallbackSource(live, offline, OFFLINE_BUILD);
 }
 
-type Profile = "minutes" | "hours" | "days";
+/**
+ * "plekken": eigen cacheprofiel voor plekgegevens (next.config.ts, R36). Vijf minuten vers, daarna op de achtergrond
+ * verversen; wijzigingen in beheer zijn er meteen via revalidateTag (/api/admin/revalidate, CACHE_TAGS hieronder).
+ */
+type Profile = "plekken" | "minutes" | "hours" | "days";
+
+/** Tags die beheer na een wijziging ververst (api/admin/revalidate) */
+export const CACHE_TAGS = ["places", "reviews", "faq", "settings"] as const;
 
 /**
  * Cacheduur: de gewone voor live gegevens, een korte voor de snapshot bij een storing (DATA-11), zodat oude prijzen
@@ -77,6 +84,7 @@ function setLife(r: Sourced<unknown>, normal: Profile) {
   if (r.fromSnapshot && !OFFLINE_BUILD) cacheLife({ ...SNAPSHOT_LIFE });
   else if (normal === "hours") cacheLife("hours");
   else if (normal === "days") cacheLife("days");
+  else if (normal === "plekken") cacheLife("plekken");
   else cacheLife("minutes");
 }
 
@@ -172,7 +180,7 @@ export async function getSummariesSourced(): Promise<Sourced<PlaceSummary[]>> {
       ),
     () => SNAP.places.map((p) => toSummary(normalize(p, website_photos))),
   );
-  setLife(r, "minutes");
+  setLife(r, "plekken");
   return r;
 }
 
@@ -244,7 +252,7 @@ export async function getSummariesInBbox(bbox: Bbox): Promise<PlaceSummary[]> {
       ).map((r) => toSummary(normalize(toCamel<Place>(r), website_photos))),
     () => SNAP.places.filter((p) => inBbox(p, bbox)).map((p) => toSummary(normalize(p, website_photos))),
   );
-  setLife(r, "minutes");
+  setLife(r, "plekken");
   return r.value;
 }
 
@@ -273,7 +281,7 @@ export async function getPlace(slug: string): Promise<Place | undefined> {
       return p ? normalize(p, website_photos) : undefined;
     },
   );
-  setLife(r, "minutes");
+  setLife(r, "plekken");
   return r.value;
 }
 
@@ -296,7 +304,7 @@ export async function getNearby(place: Pick<Place, "id" | "lat" | "lng">, limit 
       ),
     () => SNAP.places.map((p) => toSummary(normalize(p, website_photos))),
   );
-  setLife(r, "minutes");
+  setLife(r, "plekken");
   return r.value
     .filter((p) => p.id !== place.id)
     .map((p) => ({ place: p, km: distanceKm(place, p) }))
@@ -332,13 +340,13 @@ export async function getLastUpdate(): Promise<string | undefined> {
       )[0]?.verified_at,
     () => SNAP.places.reduce<string | undefined>((m, p) => (p.verifiedAt && (!m || p.verifiedAt > m) ? p.verifiedAt : m), undefined),
   );
-  setLife(r, "minutes");
+  setLife(r, "plekken");
   return r.value;
 }
 
 export async function getReviews(placeId: string): Promise<Review[]> {
   "use cache";
-  cacheTag(`reviews-${placeId}`);
+  cacheTag("reviews", `reviews-${placeId}`);
   const r = await withFallback(
     async () =>
       (
@@ -348,7 +356,7 @@ export async function getReviews(placeId: string): Promise<Review[]> {
       ).map((r) => toCamel<Review>(r)),
     () => SNAP.reviews.filter((r) => r.placeId === placeId),
   );
-  setLife(r, "minutes");
+  setLife(r, "plekken");
   return r.value;
 }
 
@@ -374,8 +382,9 @@ export async function getFaq(): Promise<FaqItem[]> {
 
 export async function getStats() {
   "use cache";
+  cacheTag("places");
   const [sourced, updatedAt] = await Promise.all([getSummariesSourced(), getLastUpdate()]);
-  setLife(sourced, "minutes");
+  setLife(sourced, "plekken");
   const places = sourced.value;
   const byProvince: Record<string, number> = {};
   for (const p of places) byProvince[p.province] = (byProvince[p.province] ?? 0) + 1;
@@ -421,11 +430,12 @@ const FALLBACK_SETTINGS: SiteSettings = { ...DEFAULT_SETTINGS, website_photos: f
 
 export async function getSettings(): Promise<SiteSettings> {
   "use cache";
+  cacheTag("settings");
   const r = await withFallback(async () => {
     const rows = await rest<{ key: string; value: unknown }>("site_settings?select=key,value");
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return { ...DEFAULT_SETTINGS, ...map } as SiteSettings;
   }, () => (OFFLINE_BUILD ? DEFAULT_SETTINGS : FALLBACK_SETTINGS));
-  setLife(r, "minutes");
+  setLife(r, "plekken");
   return r.value;
 }

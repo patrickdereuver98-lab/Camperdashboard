@@ -20,7 +20,7 @@ export async function enablePush(): Promise<void> {
   if (Notification.permission !== "granted" && (await Notification.requestPermission()) !== "granted") {
     throw new Error("Zonder toestemming voor meldingen kunnen we je niets laten weten.");
   }
-  const sb = supabase();
+  const sb = await supabase();
   const { data: key, error } = await sb.rpc("push_public_key");
   if (error || !key) throw new Error("Meldingen zijn op dit moment niet beschikbaar.");
   const reg = await navigator.serviceWorker.ready;

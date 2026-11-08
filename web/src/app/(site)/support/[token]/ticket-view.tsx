@@ -34,7 +34,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
   useEffect(() => {
     let live = true;
     supabase()
-      .rpc("get_ticket", { p_token: token })
+      .then((sb) => sb.rpc("get_ticket", { p_token: token }))
       .then(({ data, error }) => {
         if (!live) return;
         // Geen verbinding is iets anders dan een onbekende link
@@ -55,7 +55,7 @@ export function TicketView({ params }: { params: Promise<{ token: string }> }) {
     const body = String(new FormData(form).get("body"));
     setBusy(true);
     setErr(null);
-    const { error } = await supabase().rpc("reply_ticket", { p_token: token, p_body: body });
+    const { error } = await (await supabase()).rpc("reply_ticket", { p_token: token, p_body: body });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     form.reset();

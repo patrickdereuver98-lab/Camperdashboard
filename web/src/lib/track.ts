@@ -52,12 +52,14 @@ export function track(name: EventName, props: { [key: string]: Json } = {}) {
     session ??= "anoniem";
   }
   void supabase()
-    .rpc("track", { p_name: name, p_path: safePath(location.pathname), p_props: props, p_session: session })
+    .then((sb) => sb.rpc("track", { p_name: name, p_path: safePath(location.pathname), p_props: props, p_session: session }))
     .then(() => undefined, () => undefined);
 }
 
 export function reportError(message: string, context: Record<string, unknown> = {}) {
   void supabase()
-    .rpc("report_client_error", { p_message: message.slice(0, 500), p_context: { ...context, path: safePath(location.pathname) } })
+    .then((sb) =>
+      sb.rpc("report_client_error", { p_message: message.slice(0, 500), p_context: { ...context, path: safePath(location.pathname) } })
+    )
     .then(() => undefined, () => undefined);
 }

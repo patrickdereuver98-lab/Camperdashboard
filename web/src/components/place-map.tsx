@@ -78,6 +78,7 @@ export function PlaceMap({
   departures = true,
   onShowList,
   popup = true,
+  whenVisible = false,
   className = "",
 }: {
   places: MapPlace[];
@@ -95,6 +96,8 @@ export function PlaceMap({
   onShowList?: () => void;
   /** Uit als de pagina zelf een paneel met de gekozen plek toont (MapPick op de telefoon) */
   popup?: boolean;
+  /** MapLibre (±295 KB gz) pas laden als de kaart bijna in beeld komt, bijvoorbeeld onderaan de plekpagina (R35) */
+  whenVisible?: boolean;
   className?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
@@ -106,6 +109,7 @@ export function PlaceMap({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [inView, setInView] = useState(!whenVisible);
   // Licht of donker wisselt live (systeem bij zonsondergang of de zon/maan-knop): dan wordt de kaart opnieuw opgebouwd
   const dark = useDarkTheme();
   // Kaartbeeld van de vorige opbouw, zodat een themawissel de kaart niet laat verspringen
@@ -117,8 +121,21 @@ export function PlaceMap({
     latest.current = { places, onSelect, cluster, departures, popup };
   });
 
+  // Pas opbouwen als het vak binnen een halve schermhoogte van beeld is; zonder IntersectionObserver meteen
+  useEffect(() => {
+    if (inView || !el.current) return;
+    if (typeof IntersectionObserver === "undefined") {
+      void Promise.resolve().then(() => setInView(true));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setInView(true), { rootMargin: "50% 0px" });
+    io.observe(el.current);
+    return () => io.disconnect();
+  }, [inView]);
+
   // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
   useEffect(() => {
+    if (!inView) return;
     // Tijdens hydratatie is dark nog de waarde van de server; de volgende weergave heeft de echte, bouw dan pas
     if (dark !== (currentTheme() === "dark")) return;
     let cancelled = false;
@@ -320,7 +337,7 @@ export function PlaceMap({
     };
     // De kaart wordt één keer opgebouwd (opnieuw na "Opnieuw proberen" en bij een ander thema); updates lopen via de
     // effecten hieronder.
-  }, [attempt, dark]);
+  }, [attempt, dark, inView]);
 
   useEffect(() => {
     const map = mapRef.current;

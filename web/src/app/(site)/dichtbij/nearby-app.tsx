@@ -31,8 +31,9 @@ type Status = "idle" | "locating" | "denied" | "unavailable" | "ready";
 const NEARBY_ORDER: FacilityKey[] = ["power", "dogs", "water", "dumpStation", "toilet", "shower", "wifi"];
 
 export function NearbyApp() {
-  const { data: places } = usePlaces();
   const [status, setStatus] = useState<Status>("idle");
+  // De plekkenlijst pas ophalen als je locatie wordt bepaald (tegelijk met de GPS); niet al op het welkomstscherm (R33)
+  const { data: places } = usePlaces(status === "locating" || status === "ready");
   const [pos, setPos] = useState<LatLng | null>(null);
   // "Nu open" en "Nu nog aankomen" staan voor vannacht standaard aan: ze verbergen alleen wat zeker dicht is.
   // De lengte uit Mijn camper telt mee, net als bij Zoeken; met de chip zet je dat uit.

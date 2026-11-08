@@ -19,7 +19,9 @@ function save(analytics: boolean) {
   writeConsent(consent);
   // Bewijs van toestemming (AVG art. 7): alleen een willekeurig id en de keuze
   void supabase()
-    .rpc("log_consent", { p_consent_id: consent.id, p_analytics: analytics, p_marketing: false, p_version: CONSENT_VERSION })
+    .then((sb) =>
+      sb.rpc("log_consent", { p_consent_id: consent.id, p_analytics: analytics, p_marketing: false, p_version: CONSENT_VERSION })
+    )
     .then(() => undefined, () => undefined);
 }
 

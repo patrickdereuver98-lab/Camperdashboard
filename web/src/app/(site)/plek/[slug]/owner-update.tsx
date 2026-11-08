@@ -88,7 +88,7 @@ export function OwnerUpdate({
     }
     setBusy(true);
     setErr(null);
-    const { error } = await supabase().rpc("submit_place", {
+    const { error } = await (await supabase()).rpc("submit_place", {
       p_kind: "eigenaar",
       p_place_id: placeId,
       p_payload: { plek: placeName, wijzigingen: changes, toelichting: note },
