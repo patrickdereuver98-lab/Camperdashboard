@@ -93,26 +93,26 @@ export function Logo({ size = 34 }: { size?: number }) {
   if (size <= 32)
     return (
       <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-        <rect width="64" height="64" rx="15" fill="#2d5a43" />
-        <circle cx="44" cy="25" r="12.5" fill="#e8915c" />
-        <path d="M44 25v-8.5M44 25l6-3.4" fill="none" stroke="#2d5a43" strokeWidth="3.8" strokeLinecap="round" />
-        <path d={CAMPER} fill="#fffcf6" stroke="#2d5a43" strokeWidth="2" strokeLinejoin="round" />
-        <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#2d5a43" />
-        <circle cx="17.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#2d5a43" strokeWidth="2" />
-        <circle cx="32.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#2d5a43" strokeWidth="2" />
-        <path d="M8 55.5h48" stroke="#fffcf6" strokeWidth="3" strokeLinecap="round" />
+        <rect width="64" height="64" rx="15" fill="#1f4e37" />
+        <circle cx="44" cy="25" r="12.5" fill="#f39a5c" />
+        <path d="M44 25v-8.5M44 25l6-3.4" fill="none" stroke="#1f4e37" strokeWidth="3.8" strokeLinecap="round" />
+        <path d={CAMPER} fill="#fffaef" stroke="#1f4e37" strokeWidth="2" strokeLinejoin="round" />
+        <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#1f4e37" />
+        <circle cx="17.5" cy="49.5" r="3.8" fill="#fffaef" stroke="#1f4e37" strokeWidth="2" />
+        <circle cx="32.5" cy="49.5" r="3.8" fill="#fffaef" stroke="#1f4e37" strokeWidth="2" />
+        <path d="M8 55.5h48" stroke="#fffaef" strokeWidth="3" strokeLinecap="round" />
       </svg>
     );
   const fine = size >= 48;
-  const wheel = { r: fine ? 3.4 : 3.6, fill: "#2d5a43", stroke: "#fffcf6", strokeWidth: fine ? 1.6 : 2 };
+  const wheel = { r: fine ? 3.4 : 3.6, fill: "#1f4e37", stroke: "#fffaef", strokeWidth: fine ? 1.6 : 2 };
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="15" fill="#2d5a43" />
-      <circle cx="44" cy="27" r="11" fill="#e8915c" />
-      <path d="M44 27v-7.5M44 27l5.2-3" fill="none" stroke="#2d5a43" strokeWidth={fine ? 2.6 : 3.4} strokeLinecap="round" />
-      <path d="M0 44.5C11 39.2 21.5 36.5 32 36.5S53 39.2 64 44.5V49A15 15 0 0 1 49 64H15A15 15 0 0 1 0 49Z" fill="#fffcf6" />
-      <path d={CAMPER} fill="#2d5a43" stroke="#fffcf6" strokeWidth={fine ? 1.6 : 2} strokeLinejoin="round" />
-      <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#fffcf6" />
+      <rect width="64" height="64" rx="15" fill="#1f4e37" />
+      <circle cx="44" cy="27" r="11" fill="#f39a5c" />
+      <path d="M44 27v-7.5M44 27l5.2-3" fill="none" stroke="#1f4e37" strokeWidth={fine ? 2.6 : 3.4} strokeLinecap="round" />
+      <path d="M0 44.5C11 39.2 21.5 36.5 32 36.5S53 39.2 64 44.5V49A15 15 0 0 1 49 64H15A15 15 0 0 1 0 49Z" fill="#fffaef" />
+      <path d={CAMPER} fill="#1f4e37" stroke="#fffaef" strokeWidth={fine ? 1.6 : 2} strokeLinejoin="round" />
+      <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#fffaef" />
       <circle cx="17.5" cy="49.5" {...wheel} />
       <circle cx="32.5" cy="49.5" {...wheel} />
     </svg>

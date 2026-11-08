@@ -10,7 +10,7 @@ export type Theme = "light" | "dark";
 export const THEME_KEY = "vrijstaan:thema";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 /** Kleur van de browserbalk, gelijk aan --surface */
-const BAR: Record<Theme, string> = { light: "#fffcf6", dark: "#18201b" };
+const BAR: Record<Theme, string> = { light: "#fffaef", dark: "#18201b" };
 
 /**
  * Draait als inline script in <head> vóór de eerste weergave, zodat er geen lichte flits is bij een donkere keuze.

@@ -10,7 +10,7 @@ Bij een conflict gaan deze regels voor (CLAUDE.md, `docs/stijlgids.md`, skill `v
    marketingwoorden. Toon-preset: `default` of `calm`, nooit "hype".
 2. **Cijfers:** alleen uit de feitenbank (`public.marketing_facts()`, of het overzicht in `/admin/marketing`), met
    de datum erbij. Aantallen onder 50 noem je niet (bijvoorbeeld "plekken zonder vaste vertrektijd"): noem de functie.
-3. **Huisstijl:** zandpapier `#f5f0e6`, bosgroen `#2d5a43`, inkt `#1f2b24`, lettertype Geist
+3. **Huisstijl:** zandpapier `#f7eed9`, bosgroen `#1f4e37`, inkt `#1f2b24`, lettertype Geist
    (`web/public/fonts/Geist-Variable.woff2`). Tekst groot genoeg voor een telefoon zonder geluid.
 4. **Echte app laten zien** via de live site (`https://vrijstaan.nl`) op telefoonformaat, zonder account. Nooit
    gegevens van echte gebruikers in beeld (Mijn reis, account, reviews met namen).

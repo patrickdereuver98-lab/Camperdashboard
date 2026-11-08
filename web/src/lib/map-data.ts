@@ -58,12 +58,12 @@ export const CLUSTER_RADIUS = [16, 21, 27] as const;
 
 /**
  * Vulkleur per grootte, alle drie bosgroen (stijlgids: avondzon is voor de geselecteerde plek, kleur is betekenis).
- * Licht: van licht naar donker. Witte cijfers halen op elk ≥ 4,5:1 (5,1 / 7,9 / 12,4).
+ * Licht: van licht naar donker. Witte cijfers halen op elk ≥ 4,5:1 (5,4 / 9,5 / 13,8).
  * Donker: de lichtste tint zou op de donkere kaart wegvallen, dus daar loopt het van #3f7a5a naar #2d5a43 en draagt
  * een lichtgroene rand (de token --forest in donker) het verschil.
  */
 export function clusterColors(dark: boolean): [string, string, string] {
-  return dark ? ["#3f7a5a", "#336b4e", "#2d5a43"] : ["#3f7a5a", "#2d5a43", "#1c3a2b"];
+  return dark ? ["#3f7a5a", "#336b4e", "#2d5a43"] : ["#3a7556", "#1f4e37", "#14331f"];
 }
 
 /** ["step", point_count, a, 10, b, 50, c] */

@@ -149,10 +149,10 @@ export function PlaceMap({
       const css = getComputedStyle(document.documentElement);
       // Bosgroen zonder vaste vertrektijd, meerblauw voor uitslapers en de route, avondzon voor de geselecteerde plek
       // In donker bewust donkerder dan de tokens --ember en --forest: witte tekst in clusters blijft dan leesbaar
-      const ember = dark ? "#d9783f" : "#b9592a";
-      const forest = dark ? "#3f7a5a" : "#2d5a43";
+      const ember = dark ? "#d9783f" : "#b03f12";
+      const forest = dark ? "#3f7a5a" : "#1f4e37";
       const lake = dark ? "#82bcc8" : "#2f6f7e";
-      const surface = css.getPropertyValue("--surface").trim() || "#fffcf6";
+      const surface = css.getPropertyValue("--surface").trim() || "#fffaef";
       // Grijs voor onvolledige plekken: de token --muted (contrast met de kaartgrond minstens 5:1)
       const muted = css.getPropertyValue("--muted").trim() || (dark ? "#9aa39b" : "#5c665e");
       const ink = css.getPropertyValue("--ink").trim() || "#1f2b24";
@@ -162,7 +162,7 @@ export function PlaceMap({
       // Clusters: groter en donkerder groen naarmate er meer plekken in zitten (map-data.ts). In donker draagt een
       // lichtgroene rand het verschil bij de grotere groepen.
       const clusterFill = clusterColors(dark);
-      const ringLight = css.getPropertyValue("--forest").trim() || "#8dbf9f";
+      const ringLight = css.getPropertyValue("--forest").trim() || "#97cfa9";
       const clusterRing = dark ? byClusterSize([surface, ringLight, ringLight]) : surface;
 
       map = new maplibregl.Map({

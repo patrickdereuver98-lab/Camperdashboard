@@ -32,9 +32,12 @@ pixel. Denk aan een goed gemaakte kaart of reisgids, niet aan een speelse app.
 - Geen `transition: all`, geen `linear` of standaard `ease-in-out`; geen bewegingen die niet uit zichzelf stoppen.
 - Geen tekst onder 14 px, geen tikdoel onder 44 px (onze doelgroep gaat voor).
 
-## 3. Kleur (blijft zoals hij is)
+## 3. Kleur
 
 De kleuren staan vast en zijn goedgekeurd: zandpapier, bosgroen, avondzon, meerblauw (zie `globals.css`).
+Op 8 november 2026 iets voller gemaakt (besluit eigenaar, "geen roze maar wel iets meer"): warmer crème zandpapier
+(`#F7EED9`), dieper bosgroen (`#1F4E37`) en een fellere avondzon (`#B03F12`, donker `#F39A5C`). De verhouding blijft
+ongeveer 60/30/10: zandpapier, bosgroen, één accent.
 Spelregels:
 
 - **Eén accent per scherm.** Bosgroen is de hoofdkleur (knoppen, links, "aanwezig"). Avondzon alleen voor de

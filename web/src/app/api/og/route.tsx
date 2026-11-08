@@ -6,12 +6,12 @@ import { getPlace } from "@/lib/places";
 import { rateLimited } from "@/lib/rate-limit";
 
 // Kleuren uit het thema "natuur & vrijheid" (globals.css): zandpapier, bosgroen, inkt
-const PAPER = "#f5f0e6";
-const SURFACE = "#fffcf6";
-const FOREST = "#2d5a43";
+const PAPER = "#f7eed9";
+const SURFACE = "#fffaef";
+const FOREST = "#1f4e37";
 const INK = "#1f2b24";
 const INK_2 = "#46524a";
-const LINE = "#e0d7c5";
+const LINE = "#e4d6b8";
 
 const SLUG = /^[a-z0-9-]{1,120}$/;
 const CACHE = { "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800" };
