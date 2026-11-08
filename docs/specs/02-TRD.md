@@ -101,7 +101,7 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `scrape-refresh` | elk half uur (:07 en :37) | De 10 plekken die het langst en minstens 30 dagen niet gelezen zijn opnieuw inplannen |
 | `stealth-enqueue` | dagelijks 05:23 | 300 plekken in `private.stealth_queue` zetten voor de stealth-lezer (onleesbaar, weinig gegevens, zonder prijs of vertrektijd, herlezen na 30 dagen) |
 | `bron-opschonen` | dagelijks 04:43 | Opgehaalde tekst ouder dan 30 dagen terugbrengen tot de citaten; oude wachttijden en vergeten leases opruimen |
-| `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd in de SQL-editor (bevat ook tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log) |
+| `retention` | dagelijks 03:17 | `private.apply_retention()`: statistieken, cookiekeuzes, logs, afgewezen reviews, tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log. Live (laatste run 8 november 2026 geslaagd; README 103). Na migratie `20261106200100` ook verwerkte `osm_staging`-rijen ouder dan 14 dagen; de lege cron `retention-cron-log` gaat dan weg |
 
 **Volgorde van gezag bij gegevens:** beheer (`sources.beheer`) > eigen website (`sources.website_fields`) > OSM.
 Een websitewaarde die bij een volgende lezing niet meer op de site staat, wordt gewist.
@@ -122,7 +122,7 @@ omgevingsvariabelen en waar elk geheim staat: `web/.env.example`.
   apparaat afgerond op ±1 km (`coarse()` in `web/src/lib/geo.ts`).
 - Beveiligingsheaders in `web/next.config.ts` (nosniff, referrer-policy, permissions-policy, frame-options).
 - Bewaartermijnen: statistieken 13 maanden, cookiekeuzes 24 maanden, systeemmeldingen 90 dagen, afgewezen reviews
-  3 maanden, tickets 12 maanden na sluiten (laatste nog niet geautomatiseerd).
+  3 maanden, tickets 12 maanden na sluiten. Allemaal automatisch via cron `retention` (live, README 103).
 - Websitefoto's standaard tonen (besluit eigenaar), altijd met bronvermelding ("website domein.nl"), niet zelf
   opgeslagen, verwijdering op verzoek via Meld inhoud; uit te zetten met `website_photos`.
 - Externe foto's lopen via wsrv.nl (gratis, open source, Cloudflare): verkleind naar 320/640/1280 px WebP. Lukt dat

@@ -25,7 +25,7 @@
 | ✅ Publicatiedrempel definitief instellen (0,45) | Agent + Patrick | Cijfers na herscrape | `site_settings.publish_threshold` | 1.509 plekken online, allemaal met contact en 2 van 4 kernfeiten | Herscrape |
 | ✅ Beheeraccounts via uitnodiging | Agent | E-mail Patrick | `private.admin_invites`, trigger | Patrick kan inloggen | Schema |
 | ⬜ Rollen `admin` en `support` echt scheiden | Agent | Besluit Patrick | Policies per rol | Support kan geen instellingen of plekken verwijderen | Besluit |
-| ⬜ Bewaartermijnen activeren | Patrick | Deel "Bewaartermijnen" van `web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
+| ✅ Bewaartermijnen activeren (live, cron `retention` slaagt dagelijks; gecontroleerd 8 november 2026, README 103) | Patrick | Deel "Bewaartermijnen" van `web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` | Cron `retention` | `cron.job` bevat `retention` | — |
 | ✅ Tickets na 12 maanden opruimen | Agent | Privacyverklaring | Uitbreiding van `apply_retention` | Gesloten tickets ouder dan 12 maanden verdwijnen | Bewaartermijnen |
 | ⬜ `web/supabase/schema.sql` opnieuw genereren | Agent | Live database | Actueel schemabestand | Nieuw project op te zetten met schema + seed | — |
 | ✅ Test-infrastructuur: Playwright E2E (mobiel + desktop), unit tests, CI-workflow | Agent | Opdracht Patrick | `web/e2e`, `web/tests`, `.github/workflows/ci.yml` | `npm run test:unit` en `npm run test:e2e` groen | — |
@@ -149,6 +149,8 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 
 ## Mijlpaal 6: release ⬜
 
+> **Statusbord tot 1 januari 2027: [`docs/LANCERING.md`](../LANCERING.md)** (besluit R42, 8 november 2026). Wat daar staat, gaat voor de statussen hieronder; dit plan wordt pas in fase 4 ingekort.
+>
 > Review 5 en 6 november 2026: blokkers en aanpasplan in fases tot de livegang staan in [`docs/review-2026-11.md`](../review-2026-11.md) §4 (punten R1 tot en met R55).
 >
 > ✅ R27, R30, R31, R32 (fase 0.8 en 2.2, 7 november 2026, pakket A toegankelijkheid en kleine schermen): kop past op 320 tot 390 px (Hulp als icoon, naam VrijStaan onder 350 px alleen als logo, desktopmenu en tabbalk wisselen bij `lg` in plaats van `md`), cookiebalk met Ja en Nee even breed op een eigen rij onder 480 px en direct na de kop in de tabvolgorde, footer onder 360 px één kolom; token `--field-border` (3,7:1 licht, 3,6:1 donker) op alle invulvelden en het zoekveld, `::placeholder` in `--muted`, toastlink in `surface`, `scroll-padding-bottom` voor tabbalk en cookiebalk, alleen de resultaatteller `aria-live`; bevestiging na verzenden via `SuccessNote` (`role="status"` met focus); echte keuzerondjes (`RadioCards`, cijferkeuze review) met pijltjestoetsen; fouten met `aria-invalid`/`aria-describedby` (totaalcijfer, vertrektijd, bedrag, campermaten); MapLibre-teksten in het Nederlands (`lib/map-locale.ts`); toegankelijkheidsverklaring bijgewerkt; drukte en beheerpoort met foutstaat en "Opnieuw proberen". Tests: `tests/map-locale.test.ts`, `e2e/small-screens.spec.ts` (`scrollWidth` op 320, 360, 390 en 820 px), foutstaten in `crowd.spec.ts` en `moderation.spec.ts`, pijltjestoetsen en foutkoppeling in `a11y.spec.ts`. Open: serverfouten staan nog onder het formulier in plaats van bij één veld; admin-`Segmented` gebruikt nog `role="radio"` op knoppen (chipvorm, buiten dit pakket); geen reflow-test bij 200% tekstgrootte.
@@ -276,8 +278,8 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 |---|---|---|---|---|---|
 | ✅ Audit en verbeterplan, `web/.env.example` met alle geheimen | Agent | Live project, code, Actions | `docs/beveiliging/verbeterplan.md` | 20 bevindingen met aanpak, checklist van 20 punten getoetst | — |
 | ⬜ B2 en B4: Google-account beveiligen, wachtwoord minimaal 10 tekens in Supabase | Patrick | Verbeterplan | Instellingen | Advisor meldt geen zwak wachtwoordbeleid meer | — |
-| ⬜ B1, B12 en B19: e-mailadres, beheernotitie en `user_id` van reviews afschermen, `admin_reviews()`, oude `submit_review` weg | Agent | Verbeterplan | Migratie, beheerpagina, test | Publieke sleutel krijgt geen `author_email` | Vóór de eerste goedgekeurde review |
-| ⬜ B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
+| 🔄 B1, B12 en B19: e-mailadres, beheernotitie en `user_id` van reviews afschermen, `admin_reviews()`, oude `submit_review` weg. Gebouwd in golf 1 B (migratie `20261106100000`), live na samenvoegen PR #143; op 8 november leest `anon` live nog `author_email` (0 reviews). `places.sources` blijft openbaar | Agent | Verbeterplan | Migratie, beheerpagina, test | Publieke sleutel krijgt geen `author_email` | Vóór de eerste goedgekeurde review |
+| 🔄 B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging. Live (SQL, 8 november): B5, B6, B17 ✅, B11 deels (bewust). In PR #143: B7, B18. Open: B16 | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
 | ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 89 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
 
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜

@@ -4,7 +4,8 @@
 > eigenaar). Hoe alles eruitziet en beweegt (typografie, hoeken, schaduw, iconen, beweging) staat in de
 > **stijlgids `docs/stijlgids.md`**, die bij twijfel voorgaat. Tokens: `web/src/app/globals.css`.
 > Bijgewerkt: 29 oktober 2026 (redesign: start en plekpagina "Eén vraag", kaart "Kaart eerst", landingspagina's
-> "Reisgids"; besluit eigenaar 29 oktober 2026, ontwerpcanvas in README nummer 64).
+> "Reisgids"; besluit eigenaar 29 oktober 2026, ontwerpcanvas in README nummer 64). Gelijkgetrokken met de stijlgids
+> en besluit 75 op 8 november 2026 (README 113): hoeken, schaduw, chips, velden en koppen volgen de stijlgids.
 
 ## Doelgroep en toon
 
@@ -42,33 +43,33 @@ Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live
 
 - **Geist** voor alles: koppen (600, strak gespatieerd), tekst (400), knoppen (500/600) en cijfers (`tabular-nums`).
   Vervangt Fraunces + Inter (besluit eigenaar 12 oktober 2026: "te AI, te kinderlijk"; zie `docs/stijlgids.md` §4).
-- Basis 16 px op de telefoon en 17 px vanaf tablet (`sm`); kleine tekst minimaal 14 px (`text-sm`); koppen 20–28 px op
-  mobiel, tot 36 px op groot scherm. Besluit eigenaar 12 oktober 2026: op de telefoon rustiger en meer op één scherm.
+- Basis 16 px op de telefoon en 17 px vanaf tablet (`sm`); kleine tekst minimaal 14 px (`text-sm`); koppen alleen met
+  `text-h1` (24/36 px), `text-h2` (18/22 px) en `text-h3` (16/18 px), zie stijlgids §4. Besluit eigenaar 12 oktober 2026: op de telefoon rustiger en meer op één scherm.
 - Lettertypes zelf gehost via `next/font` (geen verzoeken naar Google).
 
 ## Componenten
 
 | Component | Regels |
 |---|---|
-| Knoppen | Minstens 44 px hoog (meestal 48–56 px); primair bosgroen, hoofdactie startpagina avondzon; secundair met rand |
-| Formulieren | Velden 48 px, label boven het veld, verplichte velden met `*`, foutmelding onder het veld, numeriek toetsenbord bij getallen |
+| Knoppen | Minstens 44 px hoog (meestal 44–56 px), 8 px hoek, geen schaduw; primair bosgroen, hoofdactie startpagina avondzon; secundair met rand van 1 px |
+| Formulieren | Velden 44 px met 8 px hoek en rand `--field-border` (≥ 3:1), label boven het veld, verplichte velden met `*`, foutmelding onder het veld, numeriek toetsenbord bij getallen |
 | Plekkaart | Twee vormen. **Rij** (zoeken, Dichtbij; redesign 30 oktober 2026): compact, ±105 px hoog, foto 96 px breed links (op `sm` 144 px). Rechts van boven naar onder: vertrekbadge (één regel), naam (één regel, afgekapt), "Soort in plaats", dan score ("8,4 (12)"), afstand en "Gesloten tot …" als de plek nu dicht is. Uiterst rechts het hartje boven de prijs, met één regel eronder: totaal voor 2 personen, "+ toeslagen" of "per nacht". Voorzieningen en aankomst staan op de plekpagina. 8 px hoek en een rand van 1 px, geen schaduw (stijlgids §6 en §7). **Stapel** (start, In de buurt): foto boven, zoals voorheen |
 | Vertrekbadge | Bosgroen vlak met klok-pictogram: "Geen vaste vertrektijd" of "Per 24 uur, geen vaste tijd"; meerblauw bij uitslapers (12:00 of later): "Vertrek uiterlijk 12:00"; neutraal bij 11:00 tot 12:00 en eerder: "Vertrek uiterlijk 11:00". Onvolledige plek (geen vertrekregel): grijs label "Vertrektijd onbekend" (`sunken` met `muted`, contrast 4,8:1 licht en 5,6:1 donker); de tekst zegt het, niet alleen de kleur. Bij een afgewezen of onleesbare regel: geen badge |
 | Kaartstippen | De kleur van een stip is de vertrekregel: bosgroen zonder vaste vertrektijd, meerblauw voor uitslapers, donkergrijs (`ink-2`) bij een vaste tijd vóór 12:00. Plek zonder vertrekregel: holle stip met een ring van 3 px in `muted` (contrast met de kaartgrond 5,0:1 licht, 6,8:1 donker), onder de gekleurde stippen; vorm en kleur verschillen, niet alleen kleur. Gratis plekken hebben geen eigen kleur meer: "Gratis" staat als prijs bij de stip (vanaf zoom 10) en op de kaart in de lijst. Avondzon alleen voor de gekozen plek |
-| Gekozen plek op de kaart | Telefoon (onder `lg`), Zoeken in kaartweergave en Dichtbij: een tik op een stip toont onderaan de kaart een paneel (16 px hoek, `shadow-float`) met foto, naam, "Soort in plaats", vertrekbadge, aankomst, voorzieningen, prijs en de knoppen **Route** (primair) en **Bekijk plek**; sluiten met ×. Groot scherm: popup op de kaart en de kaart in de lijst licht op (`MapPick` in `place-ui.tsx`) |
-| Snelle chips | Boven de resultaten op Zoeken (redesign 30 oktober 2026, vervangt de vertrektabbladen): Dichtbij, **Zonder vertrektijd** (de enige gekleurde chip: bosgroen, want dat betekent "geen vaste vertrektijd"), Gratis, 8+, Stroom, Lozen. 44 px hoog, 6 px hoek, rand van 1 px, horizontaal scrollbaar op de telefoon; aan = gevuld bosgroen met vinkje. Uitslapers en Overige blijven bereikbaar via de filtersheet en de footer; hun pagina's houden hun eigen kop |
+| Gekozen plek op de kaart | Telefoon (onder `lg`), Zoeken in kaartweergave en Dichtbij: een tik op een stip toont onderaan de kaart een paneel (16 px hoek zoals een sheet, `shadow-float`: het zweeft boven de kaart) met foto, naam, "Soort in plaats", vertrekbadge, aankomst, voorzieningen, prijs en de knoppen **Route** (primair) en **Bekijk plek**; sluiten met ×. Groot scherm: popup op de kaart en de kaart in de lijst licht op (`MapPick` in `place-ui.tsx`) |
+| Snelle chips | Boven de resultaten op Zoeken (redesign 30 oktober 2026, vervangt de vertrektabbladen): Dichtbij, **Zonder vertrektijd**, Gratis, 8+, Stroom, Lozen. Eén `Chip` voor alles (review R49): 44 px hoog, 6 px hoek, uit = rand van 1 px op `surface`, aan = gevuld bosgroen met vinkje; geen chip met een eigen kleur. Horizontaal scrollbaar op de telefoon. Uitslapers en Overige blijven bereikbaar via de filtersheet en de footer; hun pagina's houden hun eigen kop |
 | Voorzieningenpictogrammen | Lijnicoon op een lichte ondergrond: bosgroen op lichtgroen (aanwezig), lichtgrijs op zand (onbekend), grijs met rode streep (niet aanwezig) |
 | Bottom sheet | Filters, reviews, meldingen; sluiten met ×, omlaag vegen of tik ernaast |
 | Navigatie | Tabbalk onderaan (Start, Zoeken, Dichtbij, Mijn reis) tot `lg`; vaste actiebalk op de plekpagina. In de kop op de telefoon: Plek aanmelden, Hulp, licht/donker en Inloggen als icoon (met naam voor schermlezers) |
 | Meldingen | Korte toast na bewaren; inline statusregels (`role="status"`/`role="alert"`) |
 | Foto's van een plek | Beste foto vooraan: een foto van de plek zelf, het eigen logo pas als er niets anders is. Nooit keurmerken of logo's van anderen (SVR, ANWB, Zoover), vlaggen, stockfoto's of miniaturen. We vragen bij bekende beeldbanken (WordPress, Wix, Jimdo, Duda, `?width=`) de grote versie op en vallen terug op het origineel. Te klein voor het vak (galerij < 640 px, kaart < 320 px breed) = niet tonen. Logo's en foto's met een heel andere verhouding staan passend in het vak (niet half bijgesneden), met een vervaagde rand. Regels in `web/src/lib/photos.ts` |
 | Over deze plek | Tekst van de website van de plek, alleen hele Nederlandse zinnen: zonder "Lees meer", "…", links, prijzen, telefoonnummers of SEO-titels. Lukt dat niet, dan geen tekst. Onder de tekst: "Zo beschrijft de plek zichzelf op de eigen website." Regels in `web/src/lib/description.ts` |
-| Laatste update | Eén kleine grijze regel bovenaan elke plek- en lijstpagina: "Laatste update: 11 oktober 2026". Geen bronzinnen of "volgens de website" bij losse gegevens (besluit eigenaar). Twee uitzonderingen: foto's houden "Foto: domein.nl" in de hoek, zolang de foto laadt, en de vertrektijd op de plekpagina krijgt de bronzin klein eronder: 14 px (`text-sm`, de kleinste stap), `muted`, compact, als "Bron: “…” (website)" (besluit eigenaar 19 oktober 2026). Op de plekpagina volgt achter de datum ", mogelijk verouderd" (`ink-2`, halfvet) als de laatste controle (`verified_at` of `departure_checked_at`, de jongste) meer dan 12 maanden oud is; zonder die datum geen melding |
+| Laatste update | Eén kleine grijze regel bovenaan elke plek- en lijstpagina: "Laatste update: 11 oktober 2026". Geen bronzinnen of "volgens de website" bij losse gegevens (besluit eigenaar). Eén uitzondering: foto's houden "Foto: domein.nl" in de hoek, zolang de foto laadt. De bronzin van de vertrektijd staat alleen in beheer (besluit eigenaar 23 oktober 2026). Op de plekpagina volgt achter de datum ", mogelijk verouderd" (`ink-2`, halfvet) als de laatste controle (`verified_at` of `departure_checked_at`, de jongste) meer dan 12 maanden oud is; zonder die datum geen melding |
 | Oproep vertrektijd | Op de plekpagina van een onvolledige plek, in het beslisblok onder Vertrekken: "We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten andere camperaars hoe laat ze weg moeten." met een secundaire knop **Vertrektijd doorgeven** (44 px, klok-icoon) die het formulier van Doe mee opent |
 | Legenda | Link "Wat betekenen de icoontjes?" bij de resultaten en bij Voorzieningen; opent een sheet met voorzieningen, kleuren (groen, zand, doorgestreept), vertrekbadges (ook "Vertrektijd onbekend" en de grijze kaartstip) en open/dicht |
-| Diepte | Drie schaduwlagen in `globals.css`: `shadow-low` (kaarten: haarlijn + heel zachte schaduw), `shadow-raised` (hover), `shadow-float` (zoekkaart, sheets). Warm getint. Kaarten tillen 1 px op bij hover (`.lift`) |
-| Hoofdactie en zoeken (start) | Direct onder de kop: knop **Plekken bij mij in de buurt** (avondzon, 56 px, `shadow-float`, naar Dichtbij) en daaronder één zoekveld met knop Zoeken (bosgroen) op één regel; vanaf `lg` naast elkaar. De keuze voor vertrektijd zit niet meer in het zoekveld maar in "Hoe wil je staan?" eronder |
-| Vergelijkingstabel (landingspagina's) | Eén kaart (`shadow-low`, 12 px) met een echte tabel: Plek (naam als link, 44 px tikvlak; "Soort in plaats", maximale lengte als die bekend is) / Vertrek (vertrekbadge; op de telefoon onder de naam) / Per nacht (rechts, "+ toeslagen" eronder als die apart bekend zijn). Geen foto's. Onbekend staat er als "Onbekend" |
+| Diepte | Randen van 1 px in plaats van schaduw (besluit 75, stijlgids §7): blokken, rasters en lijsten hebben `border-line`, hover is een iets donkerdere rand, zonder sprong. `shadow-float` alleen voor wat zweeft (sheets, toast, kaartpop-up) en een knop op een foto. `shadow-low` en `shadow-raised` worden op de site niet meer gebruikt |
+| Hoofdactie en zoeken (start) | Direct onder de kop: knop **Plekken bij mij in de buurt** (avondzon, 56 px, zonder schaduw, naar Dichtbij; de code heeft nog `shadow-float`, fase 2.1 in `docs/LANCERING.md`) en daaronder één zoekveld met knop Zoeken (bosgroen) op één regel; vanaf `lg` naast elkaar. De keuze voor vertrektijd zit niet meer in het zoekveld maar in "Hoe wil je staan?" eronder |
+| Vergelijkingstabel (landingspagina's) | Eén blok (rand van 1 px, 8 px hoek, geen schaduw) met een echte tabel: Plek (naam als link, 44 px tikvlak; "Soort in plaats", maximale lengte als die bekend is) / Vertrek (vertrekbadge; op de telefoon onder de naam) / Per nacht (rechts, "+ toeslagen" eronder als die apart bekend zijn). Geen foto's. Onbekend staat er als "Onbekend" |
 
 ## Layoutregels
 
@@ -76,7 +77,8 @@ Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live
 - Breekpunten (Tailwind): `sm` 640, `md` 768, `lg` 1024 px. Vanaf `lg`: lijst en kaart naast elkaar, plekpagina met
   zijkolom, en het menu in de kop in plaats van de tabbalk (tot 1024 px, ook op een tablet van 820 px, blijft de
   tabbalk; R27). Een e2e-test controleert op 320, 360, 390 en 820 px dat niets zijwaarts schuift.
-- Ruimte in stappen van 4 px; hoeken volgens de stijlgids: knoppen en velden 8 px, kaarten 12 px, sheets 16 px.
+- Ruimte in stappen van 4 px; hoeken volgens de stijlgids §6: blokken en kaarten 8 px (`rounded-lg`), knoppen in een
+  blok, velden en chips 6 tot 8 px, sheets 16 px (alleen bovenaan).
 
 ## Schermnotities
 
@@ -108,7 +110,7 @@ Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live
 
 | Toestand | Weergave |
 |---|---|
-| Hover (desktop) | Iets donkerder of schaduw `shadow-lift` |
+| Hover (desktop) | Iets donkerder vlak of een iets donkerdere rand; geen schaduw en geen sprong |
 | Focus | Bosgroene focusring |
 | Uitgeschakeld | 60–70% dekking, geen hover |
 | Laden | Skeletkaarten, knoptekst "Bezig…" of "Versturen…" |

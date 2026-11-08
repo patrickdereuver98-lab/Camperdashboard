@@ -119,7 +119,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `faq` | id*, category*, question*, answer*, position*, published*, updated_at* | published `true` |
 | `site_settings` | key*, value* (jsonb) | |
 | `admins` | user_id* (→ auth.users), email*, role* (`admin`, `support`), created_at* | role `admin` |
-| `admin_logs` | id*, ts*, kind* (`cron`, `api`, `scraper`, `sync`, `deploy`, `security`), source*, status* (`ok`, `failed`, `warn`, `pending`), message (≤ 1.000), http_status, duration_ms, request_id (pg_net), details* | Migratie `20261101130000_mission_control.sql` (nog niet live). Gevuld door `private.ops_probe()` (cron `ops-probe`, elke 10 min: API-checks via pg_net op PDOK, OSRM, Overpass, OpenFreeMap, wsrv en de eigen site, plus mislukte cron-runs), trigger op `ingest_runs` en `log_dependency`. `ok` 30 dagen bewaard, de rest 180 dagen. Alleen `role = 'admin'` |
+| `admin_logs` | id*, ts*, kind* (`cron`, `api`, `scraper`, `sync`, `deploy`, `security`), source*, status* (`ok`, `failed`, `warn`, `pending`), message (≤ 1.000), http_status, duration_ms, request_id (pg_net), details* | Migratie `20261101130000_mission_control.sql` (live sinds 2 november 2026, README 107). Gevuld door `private.ops_probe()` (cron `ops-probe`, elke 10 min: API-checks via pg_net op PDOK, OSRM, Overpass, OpenFreeMap, wsrv en de eigen site, plus mislukte cron-runs), trigger op `ingest_runs` en `log_dependency`. `ok` 30 dagen bewaard, de rest 180 dagen. Alleen `role = 'admin'` |
 | `updates_queue` | id*, place_id* (→ places, `CASCADE`), field_changed*, old_value, new_value* (jsonb), source* (`doe-mee`, `plekpuls`, `beheer`, `pipeline`, `eigenaar`), owner_reply_id (→ owner_replies), submission_id (→ submissions), user_id, status* (`pending`, `approved`, `rejected`), ai_score (0–100), ai_advice (≤ 300), ai_model, ai_checked_at, decided_by, decided_at, created_at* | Zelfde migratie. Trigger `submissions_to_queue` splitst elke correctie (voorzieningen, `veld`/`voorstel`, vertrektijd) in rijen per veld; een vertrektijd wordt `departure` (regel) en `checkout_until` (tijd), alleen bij verschil (migratie `20261102140000_vertrektijd_wachtrij.sql`); ook een voorstel uit het bronnenonderzoek (`veld` = `vertrektijd`, tekst als "vast, uiterlijk 12:00"). Andere velden komen alleen in de wachtrij als ze in `private.queue_fields()` staan (migratie `20261102160000_vertrektijd_voorstel.sql`). Accepteren via `admin_apply_update(id)` (schrijft `places`, merkteken beheer, `audit_log`; alleen velden uit `private.queue_fields()`), afwijzen via `admin_reject_update(id, notitie)` (rij blijft, status `rejected`). Inzending gaat naar `verwerkt` of `afgewezen` als al haar velden beoordeeld zijn. Alleen `role = 'admin'` |
 | `owner_replies` | id*, email_id* (uniek, id van Resend), received_at*, from_email*, subject, place_id (→ places, `SET NULL`), matched_by (`id`, `email`), sender_matches*, intent* (`confirm`, `update`, `unknown`), price_eur (0–500), departure_time (`HH:MM`), summary (≤ 500), ai_model, outcome* (`queued`, `verified`, `logged`, `no_place`, `ambiguous`), queued* | Migratie `20261102120000_eigenaar_inbox.sql` (README 94). Gevuld door `public.log_owner_reply(geheim, antwoord)` vanuit `/api/webhooks/inbound-email`; geheim in `internal_secrets.owner_inbox_key`. Plek via id in het onderwerp, anders e-mailadres (alleen bij precies één plek). `update` → rijen in `updates_queue` (bron `eigenaar`); `confirm` vanaf het bekende adres → `places.verified_at`. Bewaartermijn 12 maanden (cron `owner-replies-retention`). Alleen `role = 'admin'` |
 | `dependency_updates` | id*, package_name*, version_from, version_to, update_type, ecosystem, category* (`kritiek`, `aanbevolen`, `uitstellen`), ai_advice (≤ 600), ai_model, status* (`auto-merged`, `pending_review`, `rejected`), pr_number, pr_url (alleen github.com), created_at*, updated_at*; uniek op (pr_number, package_name) | Zelfde migratie. Geschreven door `log_dependency(geheim, update)` (anon mag aanroepen; het geheim moet gelijk zijn aan `internal_secrets.dependency_log_key`), via `/api/admin/log-dependency`. Alleen `role = 'admin'` leest |
@@ -254,7 +254,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 
 | Data | Termijn | Geautomatiseerd? |
 |---|---|---|
-| `events` | 13 maanden | Ja, zodra de migratie hieronder is uitgevoerd: `private.apply_retention()`, cron `retention` (03:17) |
+| `events` | 13 maanden | Ja: `private.apply_retention()`, cron `retention` (03:17), live (gecontroleerd 8 november 2026) |
 | `consent_log` | 24 maanden | Idem |
 | `app_logs` | 90 dagen; level `error` 12 maanden | Idem |
 | Afgewezen `reviews` | 3 maanden | Idem |
@@ -262,6 +262,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | Naam en e-mail bij inzendingen | 12 maanden na verwerking, daarna leeggemaakt | Idem |
 | `private.rate_counter` | 2 dagen | Idem |
 | `cron.job_run_details` | 7 dagen | Idem |
+| `osm_staging` (verwerkt) | 14 dagen | Ja, na migratie `20261106200100` (live na samenvoegen PR #143, review R7) |
 | `places` | Zolang relevant; verwijderen op verzoek van de eigenaar | Handmatig |
 | `bron.documents` (tekst) | 30 dagen volledig, daarna alleen de citaten; zonder claims of kandidaten weg | Ja: `bron.prune()`, cron `bron-opschonen` (04:43) |
 | `bron.host_throttle` | 7 dagen | Idem |
@@ -269,9 +270,8 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `seo_daily` | 3 jaar | Idem |
 | `marketing_assets` en bestanden in bucket `marketing` | Tot beheer ze verwijdert (Bibliotheek) | Handmatig |
 
-**Nog uit te voeren door de eigenaar:** het deel "Bewaartermijnen" van
-`web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` in de SQL-editor (de MCP-tool vraagt bij
-`delete` een bevestiging die vanuit een agent-sessie niet doorkomt). De rest van die migratie staat live.
+Het deel "Bewaartermijnen" van `web/supabase/migrations/20261015090000_misbruik_en_bewaartermijnen.sql` staat live;
+de cron `retention` slaagde op 8 november 2026 (README 103).
 
 ## Misbruik beperken
 
