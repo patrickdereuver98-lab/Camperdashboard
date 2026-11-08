@@ -5,22 +5,22 @@
    accenten en meerblauw (lake) voor water en routes. Donker = avond in het bos.
    Zie docs/design.md. */
 :root {
-  --paper: #f7eed9;
-  --surface: #fffaef;
-  --sunken: #f1e6cf;
+  --paper: #f5f0e6;
+  --surface: #fffcf6;
+  --sunken: #ede6d8;
   --ink: #1f2b24;
   --ink-2: #46524a;
   --muted: #5c665e;
-  --line: #e4d6b8;
+  --line: #e0d7c5;
   /* Rand van invoervelden: minstens 3:1 tegen surface en paper (WCAG 1.4.11; --line haalt 1,4:1, review november R30) */
   --field-border: #8a8272;
   --forest: #1f4e37;
   --forest-deep: #14331f;
-  --forest-tint: #dbe9dd;
-  --on-forest: #fffaef;
-  --ember: #b03f12;
-  --ember-tint: #f9dcc6;
-  --on-ember: #fffaef;
+  --forest-tint: #e1ebe2;
+  --on-forest: #fffcf6;
+  --ember: #b9592a;
+  --ember-tint: #f6e2d3;
+  --on-ember: #fffcf6;
   --lake: #2f6f7e;
   --lake-tint: #d9e9ea;
   --alert: #a8321d;
@@ -46,12 +46,12 @@
   --muted: #9aa39b;
   --line: #2c3730;
   --field-border: #6b776f;
-  --forest: #97cfa9;
+  --forest: #8dbf9f;
   --forest-deep: #b9dcc4;
   --forest-tint: #1e3227;
   --on-forest: #0f1612;
-  --ember: #f39a5c;
-  --ember-tint: #3d2416;
+  --ember: #e8915c;
+  --ember-tint: #3a2519;
   --on-ember: #0f1612;
   --lake: #82bcc8;
   --lake-tint: #17303a;

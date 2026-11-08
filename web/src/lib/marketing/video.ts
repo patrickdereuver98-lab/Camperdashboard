@@ -163,7 +163,7 @@ export function buildVideo(template: VideoTemplate, format: VideoFormatKey, fact
   const css = `
 ${opts.fontUrl ? `@font-face{font-family:Geist;src:url(${JSON.stringify(opts.fontUrl)}) format("woff2");font-weight:100 900;font-display:block}` : ""}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:${w}px;height:${h}px;overflow:hidden;background:#f7eed9;color:#1f2b24;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+html,body{width:${w}px;height:${h}px;overflow:hidden;background:#f5f0e6;color:#1f2b24;font-family:Geist,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .scene{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:28px;padding:${format === "vertical" ? "180px 84px" : "90px 84px"}}
 .scene.has-phone{align-items:center;text-align:center;justify-content:${format === "vertical" ? "flex-start" : "center"};gap:${format === "square" ? 24 : 40}px}
 [data-in]{opacity:0;will-change:transform,opacity}
@@ -178,10 +178,10 @@ html,body{width:${w}px;height:${h}px;overflow:hidden;background:#f7eed9;color:#1
 .line::before{content:"";flex:none;width:16px;height:16px;border-radius:8px;background:#1f4e37;transform:translateY(-4px)}
 .caption{font-size:${format === "square" ? 46 : 56}px;line-height:1.15;font-weight:600;max-width:920px}
 .phone{height:${phoneH}px;aspect-ratio:390/844;border-radius:${Math.round(phoneH / 14)}px;background:#1f2b24;padding:${Math.round(phoneH / 70)}px;box-shadow:0 30px 60px -20px rgb(50 38 18/.35)}
-.phone img,.phone .noshot{width:100%;height:100%;border-radius:${Math.round(phoneH / 16)}px;object-fit:cover;object-position:top;display:block;background:#fffaef}
+.phone img,.phone .noshot{width:100%;height:100%;border-radius:${Math.round(phoneH / 16)}px;object-fit:cover;object-position:top;display:block;background:#fffcf6}
 .phone .noshot{display:grid;place-items:center;font-size:40px;color:#5c665e}
 .logo{display:flex;align-items:center;gap:28px;font-size:96px;font-weight:650;color:#1f4e37;letter-spacing:-2px}
-.logo .mark{display:grid;place-items:center;width:132px;height:132px;border-radius:32px;background:#1f4e37;color:#fffaef;font-size:84px}
+.logo .mark{display:grid;place-items:center;width:132px;height:132px;border-radius:32px;background:#1f4e37;color:#fffcf6;font-size:84px}
 .url{font-size:64px;font-weight:600;color:#1f4e37}
 .small{font-size:46px;color:#46524a}
 #progress{position:absolute;left:0;bottom:0;height:10px;background:#1f4e37;opacity:.85}

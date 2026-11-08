@@ -28,12 +28,12 @@
 
 | Token | Licht | Donker | Gebruik |
 |---|---|---|---|
-| `paper` (zandpapier) | `#F7EED9` | `#111713` | Achtergrond |
-| `surface` | `#FFFAEF` | `#18201B` | Kaarten, panelen, header |
-| `sunken` | `#F1E6CF` | `#222C26` | Verzonken vlakken, "onbekend" |
+| `paper` (zandpapier) | `#F5F0E6` | `#111713` | Achtergrond |
+| `surface` | `#FFFCF6` | `#18201B` | Kaarten, panelen, header |
+| `sunken` | `#EDE6D8` | `#222C26` | Verzonken vlakken, "onbekend" |
 | `ink` / `ink-2` / `muted` | `#1F2B24` / `#46524A` / `#5C665E` | `#ECE7DB` / `#C7C2B6` / `#9AA39B` | Tekst |
-| `forest` (bosgroen) | `#1F4E37` | `#97CFA9` | Hoofdkleur: knoppen, links, pictogrammen, "open", **geen vaste vertrektijd** |
-| `ember` (avondzon) | `#B03F12` | `#F39A5C` | Accent: hoofdactie op de startpagina ("Plekken bij mij in de buurt"), geselecteerde plek op de kaart |
+| `forest` (bosgroen) | `#1F4E37` | `#8DBF9F` | Hoofdkleur: knoppen, links, pictogrammen, "open", **geen vaste vertrektijd** |
+| `ember` (avondzon) | `#B9592A` | `#E8915C` | Accent: hoofdactie op de startpagina ("Plekken bij mij in de buurt"), geselecteerde plek op de kaart |
 | `lake` (meerblauw) | `#2F6F7E` | `#82BCC8` | Water en routes op de kaart, **uitslapers** (vertrek 12:00 of later) |
 | `alert` | `#A8321D` | `#F08A72` | Fouten, "niet aanwezig" |
 

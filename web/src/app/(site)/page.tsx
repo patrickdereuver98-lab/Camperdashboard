@@ -150,7 +150,7 @@ export default async function Home() {
                 />
                 <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
                 <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                  <h3 className="font-display text-h3 font-semibold text-[#fffaef]">{d.prov}</h3>
+                  <h3 className="font-display text-h3 font-semibold text-[#fffcf6]">{d.prov}</h3>
                   <p className="text-sm font-semibold text-[#efe9dc]">{nf.format(d.count)} plekken</p>
                 </div>
               </Link>

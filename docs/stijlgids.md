@@ -35,9 +35,9 @@ pixel. Denk aan een goed gemaakte kaart of reisgids, niet aan een speelse app.
 ## 3. Kleur
 
 De kleuren staan vast en zijn goedgekeurd: zandpapier, bosgroen, avondzon, meerblauw (zie `globals.css`).
-Op 8 november 2026 iets voller gemaakt (besluit eigenaar, "geen roze maar wel iets meer"): warmer crème zandpapier
-(`#F7EED9`), dieper bosgroen (`#1F4E37`) en een fellere avondzon (`#B03F12`, donker `#F39A5C`). De verhouding blijft
-ongeveer 60/30/10: zandpapier, bosgroen, één accent.
+Op 8 november 2026 is alleen het bosgroen dieper gemaakt (`#1F4E37`, was `#2D5A43`; besluit eigenaar).
+Een geler zandpapier en een fellere avondzon zijn geprobeerd en afgewezen: de achtergrond las als beige en paste
+minder bij foto's en een rustig naslagwerk.
 Spelregels:
 
 - **Eén accent per scherm.** Bosgroen is de hoofdkleur (knoppen, links, "aanwezig"). Avondzon alleen voor de

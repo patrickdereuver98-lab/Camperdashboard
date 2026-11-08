@@ -2,9 +2,9 @@
 
 // Vervangt de hele layout, dus zonder globals.css: de kleuren van het thema staan hier zelf, ook voor donker.
 const CSS = `
-  :root { --paper: #f7eed9; --ink: #1f2b24; --ink-2: #46524a; --forest: #1f4e37; --on-forest: #fffaef; color-scheme: light; }
+  :root { --paper: #f5f0e6; --ink: #1f2b24; --ink-2: #46524a; --forest: #1f4e37; --on-forest: #fffcf6; color-scheme: light; }
   @media (prefers-color-scheme: dark) {
-    :root { --paper: #111713; --ink: #ece7db; --ink-2: #c7c2b6; --forest: #97cfa9; --on-forest: #0f1612; color-scheme: dark; }
+    :root { --paper: #111713; --ink: #ece7db; --ink-2: #c7c2b6; --forest: #8dbf9f; --on-forest: #0f1612; color-scheme: dark; }
   }
   body { margin: 0; background: var(--paper); color: var(--ink); font-family: system-ui, sans-serif; font-size: 17px; }
   main { max-width: 420px; margin: 0 auto; padding: 64px 20px; }
