@@ -182,6 +182,185 @@ function money(s: string): number {
   return Number(s.replace(/\.(?=\d{3}\b)/, "").replace(",", ".").replace(/[-–]$/, ""));
 }
 
+/** Wat er inbegrepen is weghalen, tot het eind van het blok ("(inclusief toeristenbelasting) . Pipowagen" laat de pipowagen staan) */
+const inclusive = (t: string) => t.replace(/\b(?:incl\.?|inclusief|inkl\.?)[^€.()|]{0,160}/g, " ");
+
+const PRICE_TOKEN = /(?:€\s?\d{1,4}(?:[.,]\d{1,2})?(?:\s*,-|[.,]-)?|\d{1,3}[.,]\d{2}\s*(?:euro|eur)\b)\*?(?:\s*(?:per|p\.?|\/)\s*[a-z]+)*/g;
+// Einde van een gewone zin ("… per nacht. Logees betalen"), niet een afkorting ("excl.", "p.p.p.n.") en niet de " . "
+// die toText tussen blokken en tabelregels zet. Een vraag hoort bij het antwoord erna ("Mag er een bijzettentje bij?
+// Geen probleem … (€ 7,00 per nacht)")
+const SENTENCE_END = /(?<=[a-z0-9)])(?<!\b(?:incl|excl|inkl|exkl|max|min|ca|pers|nr|bijv|resp|st|vs|[a-z]))[.!](?=\s)/g;
+
+/**
+ * Het etiket van een bedrag in een tarievenlijst. `wide`: alle tekst na het vorige bedrag (hooguit 160 tekens).
+ * `near`: daarvan het dichtstbijzijnde blok met woorden, na een eventueel zinseinde: "Extra persoon per nacht . € 6,00"
+ * → "extra persoon per nacht". Een blok dat alleen zegt wat er inbegrepen is ("inclusief water en stroom") telt niet,
+ * dan ook het blok ervoor; een kopje met dubbele punt erboven hoort erbij.
+ */
+function rowLabel(text: string, at: number, depth = 0): { near: string; head: string; wide: string } {
+  const before = text.slice(Math.max(0, at - 160), at);
+  const letters = (t: string) => (inclusive(t).match(/[a-zà-ÿ]/g) ?? []).length;
+  let price = 0;
+  let start = -1;
+  for (const m of before.matchAll(PRICE_TOKEN)) [start, price] = [m.index!, m.index! + m[0].length];
+  // Tweede kolom van dezelfde regel ("Trekkerstentje | € 5,20 per overnachting | € 6,25 per overnachting"): het etiket
+  // van het vorige bedrag
+  if (start >= 0 && depth < 3 && letters(before.slice(price)) < 3) return rowLabel(text, Math.max(0, at - 160) + start, depth + 1);
+  let sentence = price;
+  for (const m of before.matchAll(SENTENCE_END)) if (m.index! + 1 > sentence) sentence = m.index! + 1;
+  const wide = before.slice(price);
+  // Staat het etiket vóór een zinseinde ("Extra tent bij kampeermiddel. € 5,00 per dag"), dan telt dat stuk
+  const parts = (letters(before.slice(sentence)) >= 3 ? before.slice(sentence) : wide).split(/\s\.(?=\s)/);
+  const near: string[] = [];
+  while (parts.length) {
+    near.unshift(parts.pop()!);
+    if (letters(near.join(" . ")) >= 3) break;
+  }
+  const above = parts.pop();
+  const head = above && /:\s*$/.test(above) ? above : near.length > 1 && /:\s*$/.test(near[0]) ? near[0] : "";
+  return { near: near.join(" . "), head, wide };
+}
+
+/** De zin of het blok waarin een bedrag staat, tot het bedrag: "Honden zijn welkom, … de volgende € 5,- per overnachting" */
+function clause(text: string, at: number): string {
+  const before = text.slice(Math.max(0, at - 200), at);
+  const block = before.lastIndexOf(" . ");
+  let cut = block >= 0 ? block + 3 : 0;
+  for (const m of before.matchAll(SENTENCE_END)) if (m.index! + 1 > cut) cut = m.index! + 1;
+  return before.slice(Math.max(0, cut));
+}
+
+// Gidsen, koepels en boekingssites: hun pagina over een plek is geen eigen website, de bedragen erop gaan over de koepel
+// of over andere plekken ("Soortgelijke locaties € 15 /nacht")
+const DIRECTORY_HOSTS = [
+  "svr.nl", "boerderij-campings.nl", "natuurkampeerterreinen.nl", "vekabo.nl", "kleinekampeerterreinen.nl",
+  "campercontact.com", "park4night.com", "acsi.com", "eurocampings.nl", "eurocampings.eu", "anwb.nl", "anwbcamping.nl",
+  "camping.info", "campingtrend.nl", "zoover.nl", "booking.com", "tripadvisor.nl", "tripadvisor.com", "promobil.de", "stellplatz.info", "camperplaatsen.nl", "campings.nl", "kampeerpagina.nl",
+];
+
+export function isDirectorySite(url: URL): boolean {
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  return DIRECTORY_HOSTS.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+type NightPrice = { amount: number; pitch: boolean; camper: boolean; at?: number };
+
+/** Alle bedragen in de tekst die als nachtprijs voor een camper- of kampeerplaats kunnen gelden, met hun soort */
+export function nightPrices(text: string): NightPrice[] {
+  const AMOUNT = "(?<![\\d.,])(\\d{1,2}(?:[.,]\\d{1,2})?)(?![.,]?\\d)(?:\\s*[.,]-|\\s*[-–](?=\\s))?";
+  const PER = "(?:per|p\\.?|\\/|pro)\\s*(?:nacht|night|dag|camper|plaats|plek|overnachting|24\\s*uur|etmaal|stellplatz|standplaats|kampeerplaats|kampeermiddel|staanplaats|pitch|motorhome|kampeerauto)(?![a-z])";
+  // Elk gevonden bedrag met de zin ervoor, zodat we toeslagen kunnen herkennen
+  const prices: NightPrice[] = [];
+  const PITCH = /camper|caravan|kampeerplaats|standplaats|staanplaats|stellplatz|kampeermiddel|tent|2 personen|twee personen|plaats incl|plek incl/;
+  // Meerdere tarieven ("tent € 12 … camper € 28"): een bedrag bij een camperwoord gaat voor, en een bedrag dat alleen
+  // over een tent gaat is geen nachtprijs voor een camper (review nov. 2026, R19)
+  const CAMPER_PRICE = /camper|motorhome|kampeerauto|wohnmobil|stellplatz/;
+  // Ook samenstellingen: trekkerstent, tweepersoonstent, slaaptent, gezinstent (nacontrole 8 november 2026). Niet
+  // "voortent" (hoort bij de caravan) en geen woorden als "content" of "patent"
+  const TENT = /(?<!voor|con|pa|po|compe|la|in|ex)tent(en|je|jes)?\b|\btentpla(ats|atsen)\b|\btentplek(ken)?\b|\btrekkers(?:plaats|plek|veld|terrein)/;
+  const VEHICLE = /camper|caravan|kampeermiddel|motorhome|kampeerauto|wohnmobil|stellplatz|vouwwagen/;
+  const SURCHARGE =
+    /\bextra\b|campinggast|\bgast(en)?\b|bezoek|\bkind(eren)?\b|volwassene|\bbaby|\bhond(en)?\b|huisdier|\bauto\b|\bboot\b|fiets|wasmachine|droger|toeslag|\bborg\b|annulering|reserveringskosten|administratie|late check|check-?out|laat vertrek|later vertrek|uitchecken|besteding|consumptiebon|tegoed/;
+  // Geen nachtprijs voor de plek zelf (nacontrole 8 november 2026: 92 van 136 prijzen onder € 8 waren zo'n bedrag):
+  // logé, bijzettent, een lege of onbewoonde caravan, kachel, parkeren, ligplaats voor een boot, verhuur, voorkeur,
+  // stroomvoorschot, een plaats zonder overnachting, korting, afval
+  const NOT_NIGHT = new RegExp(
+    [
+      // logé, gast, een extra persoon in een huuraccommodatie
+      "\\blog(?:é|e|ee|ees|és|eer[a-z]*)(?![a-z])", "\\bguests?\\b", "vrienden die", "\\b\\d+e persoon",
+      // bijzettent, slaaptent
+      "bijzet-?tent", "slaaptent",
+      // lege, onbewoonde of onbeheerde caravan; een plaats zonder overnachting; geen lid of donateur
+      "\\b(?:lege|leeg|leegstaande?|leegstand|onbewoond|onbemand|onbeheerd)\\b", "zonder\\s+overnachting", "niet-?donateur|geen svr",
+      // kachel, parkeren, ligplaats en boten
+      "kachel", "parkeren|parkeert|(?:extra|tweede|betaalde?) parkeerpla", "ligplaats|jachthaven|\\bboten\\b|schepen|\\bkano|\\bsloep",
+      // verhuur en accommodaties
+      "\\b(?:te )?huur\\b|\\bhuren\\b|verhuur|huurtarie", "pipowagen|trekkershut|\\bhuisje|\\bchalet|b&b|\\bkamers?\\b|ontbijt",
+      "pannenset|verwarming|linnen|beddengoed|handdoek|schoonmaak|kinderbed|kinderzitje|stoeltje|accu|power ?station|draagbaar toilet",
+      // voorkeursboeking, stroomvoorschot en ampère, korting, afval, water vullen
+      "voorkeur", "voorschot", "\\bamp[eè]re", "korting", "afval|per kilo", "water (?:vullen|tanken|bijvullen)",
+      // vroeg aankomen, laat vertrekken, afwezige nachten
+      "vroege aankomst|eerder aankomen|later dan|verlate", "afwezig",
+    ].join("|"),
+  );
+  // Een prijs per persoon in een tarieventabel ("Volwassenen p.p.p.n. € 7,50", "Personen vanaf 13 jaar € 5,00 per nacht",
+  // "Prijs per persoon per overnachting € 5,50") is geen nachtprijs voor de plek
+  const PER_PERSON = /per persoon|\bp\.?\s?p\.?(?:\s?p\.?\s?n\.?)?(?![a-z])|\bpppn\b|per volwassene|\bpersoon per (?:nacht|overnachting|dag)\b|personen vanaf|vanaf \d+ jaar|t\/m \d+ jaar|per pers\b/;
+  for (const re of [
+    new RegExp(`€\\s?${AMOUNT}\\s*(?:euro\\s*)?${PER}`, "g"),
+    new RegExp(`${AMOUNT}\\s*(?:euro|eur|€)\\s*${PER}`, "g"),
+    // Tarieventabel: "camperplaats … € 15,00" (max. 40 tekens ertussen)
+    new RegExp(`(?:camperplaats|camperplek|campertarief|camper|kampeerplaats|kampeerplek|campingplaats|toeristenplaats|passantenplaats|standplaats|staanplaats|stellplatz)(?:[^€.]|\\b(?:excl|incl|pers|max|ca)\\.){0,40}€\\s?${AMOUNT}`, "g"),
+    new RegExp(`(?:overnachting|overnachten|nachttarief|tarief per nacht|prijs per nacht|kosten per nacht|camperstandplaats)[^€.]{0,30}€\\s?${AMOUNT}`, "g"),
+    // Eenheid vóór het bedrag: "tent, caravan of camper, 2 personen, per nacht* € 22,00"
+    // ook met wat er inbegrepen is en een seizoen ertussen: "camper, inclusief 2 personen, …, per nacht: hoogseizoen € 26,50"
+    new RegExp(`(?:camper|caravan|kampeerplaats|standplaats|staanplaats)[^€.]{0,160}per (?:nacht|dag)\\*?:?\\s*(?:[a-z–/ -]{0,30}?)?€\\s?${AMOUNT}`, "g"),
+    // "per caravan per nacht € 18,50"
+    new RegExp(`per (?:camper|caravan|kampeerplaats|standplaats|staanplaats|camperplaats|kampeermiddel)(?: per (?:nacht|dag|overnachting))?\\s*:?\\s*€\\s?${AMOUNT}`, "g"),
+    // Prijs voor een aantal personen zonder eenheid: "2 personen inclusief kampeermiddel, auto, elektriciteit en
+    // toeristenbelasting € 30,12" (De Zeeuwse Vlag, steekproef 24 oktober 2026)
+    new RegExp(`(?:[2-6]|twee|drie|vier)\\s+(?:personen|pers\\.?)\\s+(?:incl\\.?|inclusief)[^€.]{0,160}€\\s?${AMOUNT}`, "g"),
+    // "een overnachting kost 7,50 euro"
+    new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*€\\s?${AMOUNT}`, "g"),
+    new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*${AMOUNT}\\s*euro`, "g"),
+  ])
+    for (const m of text.matchAll(re)) {
+      // Geen weekprijzen, prijzen per persoon/uur/kWh of losse toeslagen
+      const after = text.slice(m.index! + m[0].length, m.index! + m[0].length + 30);
+      // Prijzen per week, maand of seizoen (seizoenplaatsen) tellen niet; "hoogseizoen € 26,50 per nacht" wel
+      if (/(?:per|p\.?|\/|pro)\s*(?:week|maand|seizoen|jaar|monat|saison|month|year)|(?:week|maand|seizoens?|jaar)(?:prijs|tarief|plaats|plaatsen)|seizoensplaats|jaarplaats|monat|month|year/.test(m[0])) continue;
+      // Huur per dag en per week ("BMX-helm: € 5 per dag en € 35 per week"), een deel van een som ("€ 5,00 + € 1,68
+      // toeristenbelasting per extra persoon") of een prijs voor meer nachten ("€ 5,- voor 3 nachten of korter")
+      if (/^\s*(?:en|of|\/)\s*€\s?\d+(?:[.,]\d+)?(?:,-)?\s*per week/.test(after)) continue;
+      if (/^\s*\+\s*(?:\.\s*)?€/.test(after) || /^\s*(?:,-)?\s*voor (?:[2-9]|\d{2,}) (?:nachten|overnachtingen)/.test(after)) continue;
+      // Ook een tweede eenheid: "€ 6,50 per dag per auto", "7,00 euro per nacht, per huisdier"
+      if (/^\s*,?\s*(?:euro\s*)?(?:(?:per|p\.?|\/|pro)\s*(?:nacht|dag|overnachting)\s*,?\s*)?(?:per|p\.?|\/|pro)\s*(?:persoon|pers|p\.?p|person|uur|hour|stunde|kwh|week|maand|hond|dog|kind|huisdier|auto|boot|kilo|kg|set|stuk|keer|beurt|dagdeel|kruiwagen)/.test(after)) continue;
+      // Wat er inbegrepen is ("inclusief 2 personen, 1 auto, elektra, douche") is geen toeslag
+      // Net zo "(excl. toeristenbelasting)": dat zegt dat het bedrag zónder die toeslag is, het is zelf geen toeslag
+      const included = /\b(?:incl\.?|inclusief|inkl\.?)[^€]{0,160}|\(?\b(?:excl\.?|exclusief|exkl\.?)\s[^€)]{0,60}\)?|\bmet (?:stroom|elektra|elektriciteit)\b/g;
+      // Staat vlak vóór de treffer "all-inclusief" of "inclusief" (De Catshoek: "1 plaats all-inclusief, 2 personen, caravan/tent/camper,
+      // elektra, douche … per nacht € 30,50"), dan is wat erna volgt ook inbegrepen
+      const lead = text.slice(Math.max(0, m.index! - 80), m.index!);
+      const li = lead.search(/\b(?:incl\.?|inclusief|inkl\.?)/i);
+      const leadIncl = li >= 0 ? lead.slice(li) : "";
+      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test((leadIncl + m[0]).replace(included, " "))) continue;
+      // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
+      const before = text.slice(Math.max(0, m.index! - 50), m.index!);
+      const sentence = before.slice(before.lastIndexOf(".") + 1);
+      if (SURCHARGE.test((sentence + m[0]).replace(included, " "))) continue;
+      const unit = sentence + m[0];
+      // Vanaf hier het etiket van de regel in een tarievenlijst (nacontrole 8 november 2026).
+      // "€ 5,20 per overnachting | € 6,25": het woord hoort bij het vorige bedrag, niet bij dit bedrag
+      if (m[0].includes("|") && /€\s?\d{1,4}(?:[.,]\d{1,2})?(?:,-)?\s*(?:per|p\.?|\/)\s*$/.test(before)) continue;
+      // Begint de treffer zelf met een etiket ("camper | € 6,90"), dan niet terug naar het vorige bedrag
+      const row = rowLabel(text, m.index!, /^[€\d]/.test(m[0]) ? 0 : 3);
+      const clean = (t: string) => inclusive(t).replace(/\s+/g, " ");
+      const label = clean(`${row.near} ${m[0]}`);
+      const head = clean(row.head);
+      // Noemt het etiket zelf een plek, dan alleen het etiket (met een kopje erboven); anders ook de tekst sinds het
+      // vorige bedrag en de zin ervoor ("Mag er een huisdier mee? Kosten € 7,00 per nacht", "Caravan leeg zonder stroom
+      // € 2,50 per nacht, met stroom € 5,50 per nacht")
+      const own = PITCH.test(label);
+      const scope = own ? `${head} ${label}` : clean(`${unit} ${clause(text, m.index!)} ${row.wide} ${m[0]}`);
+      // Een opsomming van wat erbij hoort ("2 volwassenen, auto, caravan of camper … € 26,35") is geen toeslag; een
+      // regel die met "extra" of "toeslag" begint, of een kopje "Kosten voor laat vertrek:" erboven, wel
+      if (SURCHARGE.test(!own ? scope : /^\W*(?:extra|toeslag|tweede|\d+e)\b/.test(label.trim()) ? label : head)) continue;
+      // Privésanitair noemt een plek met eigen sanitair ("camping plek met privé sanitair € 38,85") óf een toeslag ervoor
+      if (!own && /priv[eé]-?\s?sanitair/.test(scope)) continue;
+      // "… de kosten bedragen € 13,00 per nacht en worden berekend bovenop de kampeertarieven"
+      if (/^[^€]{0,30}\b(?:bovenop|boven op)\b/.test(after)) continue;
+      if (NOT_NIGHT.test(scope) || PER_PERSON.test(label) || /^\W*(?:per )?(?:persoon|personen|volwassenen?)\b/.test(label.trim())) continue;
+      // De dagprijs naast een weekprijs ("€ 35,00 per week en € 7,00 per dag") is huur van iets, geen nachtprijs
+      if (/per week\s*(?:en|of|,|\/)\s*$/.test(before)) continue;
+      if ((TENT.test(unit) && !VEHICLE.test(unit)) || (TENT.test(scope) && !VEHICLE.test(scope))) continue;
+      // Een tent na het bedrag: "€ 14,40 per nacht . 1 persoon . 1 trekkerstent", "€ 15 per overnachting voor 1 persoon met tent"
+      const tail = after.includes("€") ? "" : after;
+      if (TENT.test(tail) && !VEHICLE.test(tail) && !VEHICLE.test(label)) continue;
+      prices.push({ amount: money(m[1]), pitch: PITCH.test(unit), camper: CAMPER_PRICE.test(unit), at: m.index! });
+    }
+  return prices;
+}
+
 export function extract(pages: string[], base: URL) {
   const html = pages.join("\n");
   const text = pages.map(toText).join(" . ");
@@ -253,61 +432,12 @@ export function extract(pages: string[], base: URL) {
   if (mail && !/example|domain|voorbeeld|sentry|wix/i.test(mail)) out.email ??= mail.trim();
 
   // ── Prijs per nacht ─────────────────────────────────────────────────────
-  const AMOUNT = "(\\d{1,2}(?:[.,]\\d{2})?)(?:\\s*,-|\\s*[-–](?=\\s))?";
-  const PER = "(?:per|p\\.?|\\/|pro)\\s*(?:nacht|night|dag|camper|plaats|plek|overnachting|24\\s*uur|etmaal|stellplatz|standplaats|kampeerplaats|kampeermiddel|staanplaats|pitch|motorhome|kampeerauto)";
-  // Elk gevonden bedrag met de zin ervoor, zodat we toeslagen kunnen herkennen
-  const prices: { amount: number; pitch: boolean; camper: boolean }[] = [];
-  const PITCH = /camper|caravan|kampeerplaats|standplaats|staanplaats|stellplatz|kampeermiddel|tent|2 personen|twee personen|plaats incl|plek incl/;
-  // Meerdere tarieven ("tent € 12 … camper € 28"): een bedrag bij een camperwoord gaat voor, en een bedrag dat alleen
-  // over een tent gaat is geen nachtprijs voor een camper (review nov. 2026, R19)
-  const CAMPER_PRICE = /camper|motorhome|kampeerauto|wohnmobil|stellplatz/;
-  const TENT = /\btent(en|je|jes)?\b|\btentpla(ats|atsen)\b|\btentplek(ken)?\b/;
-  const VEHICLE = /camper|caravan|kampeermiddel|motorhome|kampeerauto|wohnmobil|stellplatz|vouwwagen/;
-  const SURCHARGE =
-    /\bextra\b|campinggast|\bgast(en)?\b|bezoek|\bkind(eren)?\b|volwassene|\bbaby|\bhond(en)?\b|huisdier|\bauto\b|\bboot\b|fiets|wasmachine|droger|toeslag|\bborg\b|annulering|reserveringskosten|administratie|late check|check-?out|laat vertrek|later vertrek|uitchecken|besteding|consumptiebon|tegoed/;
-  for (const re of [
-    new RegExp(`€\\s?${AMOUNT}\\s*(?:euro\\s*)?${PER}`, "g"),
-    new RegExp(`${AMOUNT}\\s*(?:euro|eur|€)\\s*${PER}`, "g"),
-    // Tarieventabel: "camperplaats … € 15,00" (max. 40 tekens ertussen)
-    new RegExp(`(?:camperplaats|camperplek|campertarief|camper|kampeerplaats|kampeerplek|campingplaats|toeristenplaats|passantenplaats|standplaats|staanplaats|stellplatz)(?:[^€.]|\\b(?:excl|incl|pers|max|ca)\\.){0,40}€\\s?${AMOUNT}`, "g"),
-    new RegExp(`(?:overnachting|overnachten|nachttarief|tarief per nacht|prijs per nacht|kosten per nacht|camperstandplaats)[^€.]{0,30}€\\s?${AMOUNT}`, "g"),
-    // Eenheid vóór het bedrag: "tent, caravan of camper, 2 personen, per nacht* € 22,00"
-    // ook met wat er inbegrepen is en een seizoen ertussen: "camper, inclusief 2 personen, …, per nacht: hoogseizoen € 26,50"
-    new RegExp(`(?:camper|caravan|kampeerplaats|standplaats|staanplaats)[^€.]{0,160}per (?:nacht|dag)\\*?:?\\s*(?:[a-z–/ -]{0,30}?)?€\\s?${AMOUNT}`, "g"),
-    // "per caravan per nacht € 18,50"
-    new RegExp(`per (?:camper|caravan|kampeerplaats|standplaats|staanplaats|camperplaats|kampeermiddel)(?: per (?:nacht|dag|overnachting))?\\s*:?\\s*€\\s?${AMOUNT}`, "g"),
-    // Prijs voor een aantal personen zonder eenheid: "2 personen inclusief kampeermiddel, auto, elektriciteit en
-    // toeristenbelasting € 30,12" (De Zeeuwse Vlag, steekproef 24 oktober 2026)
-    new RegExp(`(?:[2-6]|twee|drie|vier)\\s+(?:personen|pers\\.?)\\s+(?:incl\\.?|inclusief)[^€.]{0,160}€\\s?${AMOUNT}`, "g"),
-    // "een overnachting kost 7,50 euro"
-    new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*€\\s?${AMOUNT}`, "g"),
-    new RegExp(`(?:overnachting|overnachten|camperplaats|camperplek|staanplaats|een nacht)[^€.]{0,40}?kost(?:en)?\\s*${AMOUNT}\\s*euro`, "g"),
-  ])
-    for (const m of text.matchAll(re)) {
-      // Geen weekprijzen, prijzen per persoon/uur/kWh of losse toeslagen
-      const after = text.slice(m.index! + m[0].length, m.index! + m[0].length + 30);
-      // Prijzen per week, maand of seizoen (seizoenplaatsen) tellen niet; "hoogseizoen € 26,50 per nacht" wel
-      if (/(?:per|p\.?|\/|pro)\s*(?:week|maand|seizoen|jaar|monat|saison|month|year)|(?:week|maand|seizoens?|jaar)(?:prijs|tarief|plaats|plaatsen)|seizoensplaats|jaarplaats|monat|month|year/.test(m[0])) continue;
-      if (/^\s*(?:euro\s*)?(?:per|p\.?|\/|pro)\s*(?:persoon|pers|p\.?p|person|uur|hour|stunde|kwh|week|maand|hond|dog|kind)/.test(after)) continue;
-      // Wat er inbegrepen is ("inclusief 2 personen, 1 auto, elektra, douche") is geen toeslag
-      // Net zo "(excl. toeristenbelasting)": dat zegt dat het bedrag zónder die toeslag is, het is zelf geen toeslag
-      const included = /\b(?:incl\.?|inclusief|inkl\.?)[^€]{0,160}|\(?\b(?:excl\.?|exclusief|exkl\.?)\s[^€)]{0,60}\)?|\bmet (?:stroom|elektra|elektriciteit)\b/g;
-      // Staat vlak vóór de treffer "all-inclusief" of "inclusief" (De Catshoek: "1 plaats all-inclusief, 2 personen, caravan/tent/camper,
-      // elektra, douche … per nacht € 30,50"), dan is wat erna volgt ook inbegrepen
-      const lead = text.slice(Math.max(0, m.index! - 80), m.index!);
-      const li = lead.search(/\b(?:incl\.?|inclusief|inkl\.?)/i);
-      const leadIncl = li >= 0 ? lead.slice(li) : "";
-      if (/p\.?p\.?|per persoon|toeristenbelasting|kurtaxe|douche|stroom|kwh|hond/.test((leadIncl + m[0]).replace(included, " "))) continue;
-      // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
-      const before = text.slice(Math.max(0, m.index! - 50), m.index!);
-      const sentence = before.slice(before.lastIndexOf(".") + 1);
-      if (SURCHARGE.test((sentence + m[0]).replace(included, " "))) continue;
-      const unit = sentence + m[0];
-      if (TENT.test(unit) && !VEHICLE.test(unit)) continue;
-      prices.push({ amount: money(m[1]), pitch: PITCH.test(unit), camper: CAMPER_PRICE.test(unit) });
-    }
+  // Een gids of koepel als website (svr.nl, boerderij-campings.nl) noemt richtprijzen of prijzen van andere plekken:
+  // daar lezen we geen prijs (nacontrole 8 november 2026)
+  const directory = isDirectorySite(base);
+  const prices = directory ? [] : nightPrices(text);
   // schema.org priceRange alleen als er expliciet een nachtprijs staat ("€ 22 per nacht")
-  for (const { item } of ld) {
+  for (const { item } of directory ? [] : ld) {
     const range = typeof item.priceRange === "string" ? item.priceRange.toLowerCase() : "";
     const m = /€\s?(\d{1,2}(?:[.,]\d{2})?)\s*(?:,-\s*)?(?:per|p\.?|\/)\s*(?:nacht|night)/.exec(range);
     if (m) prices.push({ amount: money(m[1]), pitch: true, camper: false });
@@ -324,7 +454,7 @@ export function extract(pages: string[], base: URL) {
     out.price_eur = sorted[0];
     if (sorted[sorted.length - 1] > sorted[0])
       out.price_note = `vanaf € ${sorted[0].toFixed(2).replace(".", ",")} per nacht; hoogste genoemde tarief € ${sorted[sorted.length - 1].toFixed(2).replace(".", ",")}`;
-  } else if (freeOvernight(text)) {
+  } else if (!directory && freeOvernight(text)) {
     out.price_eur = 0;
   }
   if (extras.length) out.price_extras = extras;
