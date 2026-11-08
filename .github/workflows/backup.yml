@@ -1,9 +1,12 @@
 # Wekelijkse back-up van de database, met een echte hersteltest.
 #
 # Het gratis Supabase-plan maakt geen back-ups die je zelf kunt terugzetten. Deze workflow:
-#   1. maakt een dump van de schema's public en private (plekken, reviews, inzendingen, tickets, instellingen);
-#   2. zet die dump terug in een lege Postgres met PostGIS en vergelijkt per tabel het aantal rijen;
-#   3. bewaart de dump 30 dagen als artifact, versleuteld (de repository is openbaar en de dump bevat e-mailadressen).
+#   1. maakt een dump van de schema's public en private (plekken, reviews, inzendingen, tickets, instellingen), plus
+#      CSV-bestanden met de accounts (auth.users: id, e-mail, aanmaakdatum), de metadata van storage (buckets en
+#      objecten, niet de bestanden zelf) en de cron-taken (cron.job);
+#   2. zet die dump en de accounts terug in een lege Postgres met PostGIS en vergelijkt per tabel het aantal rijen;
+#   3. bewaart alles 30 dagen als artifact, versleuteld (de repository is openbaar en de dump bevat e-mailadressen).
+# Zonder geheimen faalt de run: een groene back-up zonder back-up verbergt het probleem.
 #
 # Nodig (Settings → Secrets and variables → Actions → Secrets):
 #   SUPABASE_DB_URL     verbindingsadres uit Supabase → Connect → Session pooler (met wachtwoord)
@@ -38,23 +41,28 @@ jobs:
       TABLES: places reviews submissions tickets ticket_messages faq site_settings admins app_logs consent_log
     steps:
       - name: Geheimen aanwezig?
-        id: gate
         run: |
           if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
-            echo "::warning::SUPABASE_DB_URL of BACKUP_PASSPHRASE ontbreekt; er is geen back-up gemaakt. Zie docs/draaiboek.md."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "::error::SUPABASE_DB_URL of BACKUP_PASSPHRASE ontbreekt; er is geen back-up gemaakt. Zie docs/draaiboek.md."
+            exit 1
           fi
 
       - name: Dump maken
-        if: steps.gate.outputs.run == 'true'
         run: |
           stamp=$(date -u +%Y-%m-%d)
           echo "STAMP=$stamp" >> "$GITHUB_ENV"
           pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges \
             --schema=public --schema=private --file="vrijstaan-$stamp.dump"
           ls -lh "vrijstaan-$stamp.dump"
+          # Accounts, storage-metadata en cron-taken (buiten public/private; alleen wat nodig is om te herstellen)
+          mkdir -p extra
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q \
+            -c "\\copy (select id, email, created_at from auth.users order by created_at) to 'extra/auth_users.csv' csv header" \
+            -c "\\copy (select id, name, public, file_size_limit, allowed_mime_types, created_at from storage.buckets order by id) to 'extra/storage_buckets.csv' csv header" \
+            -c "\\copy (select id, bucket_id, name, owner, created_at, updated_at, metadata from storage.objects order by bucket_id, name) to 'extra/storage_objects.csv' csv header" \
+            -c "\\copy (select jobid, jobname, schedule, command, active from cron.job order by jobid) to 'extra/cron_job.csv' csv header"
+          wc -l extra/*.csv
+          echo "auth_users $(psql "$SUPABASE_DB_URL" -tAc 'select count(*) from auth.users')" > bron-auth.txt
           for t in $TABLES; do
             n=$(psql "$SUPABASE_DB_URL" -tAc "select count(*) from public.$t" 2>/dev/null || echo "-")
             echo "$t $n" >> bron.txt
@@ -62,7 +70,6 @@ jobs:
           cat bron.txt
 
       - name: Hersteltest in een lege database
-        if: steps.gate.outputs.run == 'true'
         run: |
           # Wat Supabase zelf levert, minimaal nagebootst: rollen, schema's en extensies waar tabellen en policies op leunen
           psql "$RESTORE_URL" -v ON_ERROR_STOP=1 <<'SQL'
@@ -71,7 +78,7 @@ jobs:
           create extension postgis schema extensions; create extension pgcrypto schema extensions;
           create extension pg_trgm schema extensions; create extension unaccent schema extensions;
           create extension "uuid-ossp" schema extensions;
-          create table auth.users (id uuid primary key, email text);
+          create table auth.users (id uuid primary key, email text, created_at timestamptz);
           create function auth.uid() returns uuid language sql stable as 'select null::uuid';
           create function auth.role() returns text language sql stable as 'select null::text';
           create function auth.jwt() returns jsonb language sql stable as 'select null::jsonb';
@@ -87,21 +94,27 @@ jobs:
             echo "$t: bron $n, teruggezet $m"
             [ "$n" = "$m" ] || fail=1
           done < bron.txt
+          # Accounts terugzetten in de nagebootste auth.users en tellen
+          psql "$RESTORE_URL" -v ON_ERROR_STOP=1 -X -q -c "\\copy auth.users (id, email, created_at) from 'extra/auth_users.csv' csv header"
+          read -r _ n < bron-auth.txt
+          m=$(psql "$RESTORE_URL" -tAc "select count(*) from auth.users")
+          echo "auth.users: bron $n, teruggezet $m"
+          [ "$n" = "$m" ] || fail=1
+          test -s extra/cron_job.csv || { echo "::error::cron.job is leeg geëxporteerd"; fail=1; }
           test "$fail" = 0 || { echo "::error::De teruggezette database wijkt af van de bron"; exit 1; }
 
       - name: Versleutelen
-        if: steps.gate.outputs.run == 'true'
         run: |
           apt-get update -qq && apt-get install -y -qq gnupg > /dev/null
+          tar -cf "vrijstaan-$STAMP.tar" "vrijstaan-$STAMP.dump" extra
           echo "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
-            --symmetric --cipher-algo AES256 --output "vrijstaan-$STAMP.dump.gpg" "vrijstaan-$STAMP.dump"
-          rm "vrijstaan-$STAMP.dump"
+            --symmetric --cipher-algo AES256 --output "vrijstaan-$STAMP.tar.gpg" "vrijstaan-$STAMP.tar"
+          rm -r "vrijstaan-$STAMP.dump" "vrijstaan-$STAMP.tar" extra
 
       - name: Bewaren (30 dagen)
-        if: steps.gate.outputs.run == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vrijstaan-backup-${{ env.STAMP }}
-          path: vrijstaan-*.dump.gpg
+          path: vrijstaan-*.tar.gpg
           retention-days: 30
           if-no-files-found: error

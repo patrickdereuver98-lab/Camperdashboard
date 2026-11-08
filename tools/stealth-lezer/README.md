@@ -15,7 +15,8 @@ Leest websites van plekken die de gewone scraper niet of nauwelijks kon lezen, m
    startpagina op met een echte browser die Cloudflare-controles oplost, en vraagt de pipeline welke subpagina's
    (`stealth_plan`, `stealth_deeper`). Die keuze is dezelfde als bij de gewone scraper (`pages.ts`).
 3. `stealth_apply` leest alles uit met de gewone extractor en schrijft via `apply_stealth` → `apply_scrape`. Beheer gaat
-   voor, en bij een haperende site wordt niets gewist.
+   voor, en bij een haperende site wordt niets gewist: een pagina met 403, 5xx of een andere fout (niet 404/410) en een
+   mislukte PDF tellen als mislukt (`failed`).
 4. Wat de lezer vond staat in `places.sources.stealth`. Zolang dat zonder fout is, plant de gewone scraper de plek
    niet meer in.
 

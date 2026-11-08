@@ -4,10 +4,13 @@ import { useState } from "react";
 import { DepartureRadios, type DepartureAnswer } from "@/components/departure-radios";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
+import { RadioCards } from "@/components/radio-cards";
+import { SuccessNote } from "@/components/success-note";
 import { ownerChanges, OWNER_FIELDS, type OwnerValues } from "@/lib/owner-update";
+import { CHECK_TERM } from "@/lib/place-status";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 
-const input = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none";
+const input = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none";
 
 const RESERVE: [string, string][] = [
   ["verplicht", "Verplicht"],
@@ -30,22 +33,17 @@ function Choice({ id, name, label, options, value, onChange }: {
   onChange: (v: string) => void;
 }) {
   return (
-    <div role="radiogroup" aria-labelledby={id}>
-      <span id={id} className="mb-1.5 block font-semibold">{label}</span>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {options.map(([v, l]) => (
-          <button
-            key={v}
-            type="button"
-            role="radio"
-            aria-checked={value === v}
-            onClick={() => onChange(value === v ? "" : v)}
-            className="min-h-12 rounded-lg border border-line px-3 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
-          >
-            {l}
-          </button>
-        ))}
-      </div>
+    <div>
+      <RadioCards
+        label={label}
+        labelId={id}
+        options={options}
+        value={value}
+        onChange={onChange}
+        clearable
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+        cardClassName="min-h-12 px-3"
+      />
       <input type="hidden" name={name} value={value} />
     </div>
   );
@@ -90,7 +88,7 @@ export function OwnerUpdate({
     }
     setBusy(true);
     setErr(null);
-    const { error } = await supabase().rpc("submit_place", {
+    const { error } = await (await supabase()).rpc("submit_place", {
       p_kind: "eigenaar",
       p_place_id: placeId,
       p_payload: { plek: placeName, wijzigingen: changes, toelichting: note },
@@ -110,7 +108,10 @@ export function OwnerUpdate({
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt" : "Gegevens aanvullen"}>
         {done ? (
           <div className="pb-4">
-            <p className="text-lg">We controleren je gegevens en zetten ze daarna op de site. Bij een vraag mailen we je.</p>
+            <SuccessNote>
+              <p className="text-lg">Je gegevens zijn binnen en wachten op controle.</p>
+              <p className="mt-2 text-ink-2">We bekijken ze {CHECK_TERM} en zetten ze daarna op de site. Bij een vraag mailen we je.</p>
+            </SuccessNote>
             <button type="button" onClick={() => setOpen(false)} className="mt-6 h-12 w-full rounded-lg bg-forest font-semibold text-on-forest">
               Sluiten
             </button>

@@ -7,7 +7,7 @@ echte data met bron.
 | Map | Wat |
 |---|---|
 | [`web/`](web) | De website en app (Next.js 16, React 19, Tailwind 4, MapLibre) inclusief beheeromgeving op `/admin` |
-| [`web/supabase/`](web/supabase) | Database (`schema.sql`, `seed.sql`) en de data-pipeline (edge function `pipeline`) |
+| [`web/supabase/`](web/supabase) | Database (migraties met nulmigratie, `seed.sql`) en de data-pipeline (edge function `pipeline`) |
 | [`docs/specs/`](docs/specs) | **De zes basisdocumenten**: PRD, TRD, app flow, design brief, backend schema, implementatieplan |
 | [`docs/HANDLEIDING.md`](docs/HANDLEIDING.md) | Stap voor stap: lokaal draaien, online zetten, beheer, data-pipeline |
 | [`docs/onderzoek.md`](docs/onderzoek.md) | Doelgroep- en marktonderzoek (booking.com, trivago, park4night, ACSI, NKC) |

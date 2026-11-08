@@ -3,7 +3,7 @@ import { Geist } from "next/font/google";
 import { preconnect } from "react-dom";
 import "./globals.css";
 import { Header, Runtime, SaveToast, TabBar } from "@/components/chrome";
-import { TripSync } from "@/components/trip-sync";
+import { TripSync } from "@/components/deferred";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SITE_URL } from "@/lib/env";
 import { OPEN_GRAPH } from "@/lib/meta";
@@ -45,12 +45,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <Header />
+        {/* Vroeg in de tabvolgorde: wie met het toetsenbord werkt, komt de cookievraag direct na de kop tegen (R31) */}
+        <CookieBanner />
         <div id="inhoud" className="flex flex-1 flex-col">
           {children}
         </div>
         <TabBar />
         <SaveToast />
-        <CookieBanner />
         <Runtime />
         <TripSync />
       </body>

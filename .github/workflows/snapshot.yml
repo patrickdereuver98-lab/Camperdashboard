@@ -1,5 +1,9 @@
-# Ververst de offline snapshot (web/src/data/snapshot.json) elke week uit de live database en zet de wijziging als
-# PR naar acceptatie. Leest alleen openbare gegevens, met de publieke sleutel die ook in de website zit.
+# Ververst de offline snapshot (web/src/data/snapshot.json) elke week uit de live database. Leest alleen openbare
+# gegevens, met de publieke sleutel die ook in de website zit.
+#
+# De wijziging gaat naar de branch data/snapshot. Daarna probeert de run een PR naar acceptatie te openen. Mag
+# GitHub Actions geen PR's maken (Settings → Actions → General → "Allow GitHub Actions to create and approve pull
+# requests" staat uit), dan blijft de run groen en meldt hij de link om de PR met de hand te openen.
 name: Snapshot verversen
 
 on:
@@ -11,24 +15,45 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: acceptatie
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - name: Snapshot ophalen
         working-directory: web
         run: node scripts/refresh-snapshot.mjs
-      - uses: peter-evans/create-pull-request@v8
-        with:
-          base: acceptatie
-          branch: data/snapshot
-          commit-message: "Data: snapshot ververst uit de live database"
-          title: "Data: snapshot ververst"
-          body: "Automatisch ververst uit de openbare REST-API (alleen gepubliceerde plekken). Controleer het aantal plekken in de CI-log."
-          add-paths: web/src/data/snapshot.json
+      - name: Naar data/snapshot en PR naar acceptatie
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if git diff --quiet -- web/src/data/snapshot.json; then
+            echo "::notice::Snapshot ongewijzigd; niets te doen."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C data/snapshot
+          git add web/src/data/snapshot.json
+          git commit -q -m "Data: snapshot ververst uit de live database"
+          git push --force origin data/snapshot
+          if [ -n "$(gh pr list --repo "$REPO" --head data/snapshot --base acceptatie --state open --json number --jq '.[].number')" ]; then
+            echo "::notice::Branch data/snapshot bijgewerkt; de open PR toont de nieuwe snapshot."
+            exit 0
+          fi
+          if gh pr create --repo "$REPO" --base acceptatie --head data/snapshot --title "Data: snapshot ververst" \
+               --body "Automatisch ververst uit de openbare REST-API (alleen gepubliceerde plekken). Controleer het aantal plekken in de log van de workflow."; then
+            exit 0
+          fi
+          echo "::notice::Snapshot staat op branch data/snapshot, maar Actions mag geen PR maken. Open hem met de hand: https://github.com/$REPO/compare/acceptatie...data/snapshot?expand=1"

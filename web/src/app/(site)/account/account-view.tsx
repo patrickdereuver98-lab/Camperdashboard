@@ -23,7 +23,7 @@ export function AccountView() {
   if (!session)
     return (
       <>
-        <h1 className="font-display text-3xl font-semibold">Mijn account</h1>
+        <h1 className="font-display text-h1 font-semibold">Mijn account</h1>
         <p className="mt-3 text-lg text-ink-2">Log in om je reis op al je apparaten te bewaren.</p>
         <Link href="/inloggen?next=/account" className="mt-6 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
           Inloggen
@@ -43,7 +43,7 @@ export function AccountView() {
     if (!typedOk) return;
     setErr(null);
     setDeleting(true);
-    const sb = supabase();
+    const sb = await supabase();
     // Eerst je papieren uit de privé-map: die verdwijnen niet vanzelf met het account
     const { data: docs } = await sb.storage.from("vehicle-docs").list(user.id);
     const files = (docs ?? []).filter((d) => d.id).map((d) => `${user.id}/${d.name}`);
@@ -81,7 +81,7 @@ export function AccountView() {
           </span>
         )}
         <div className="min-w-0">
-          <h1 className="truncate font-display text-3xl font-semibold">{name}</h1>
+          <h1 className="truncate font-display text-h1 font-semibold">{name}</h1>
           <p className="truncate text-ink-2">{user.email}</p>
         </div>
       </div>
@@ -133,7 +133,7 @@ export function AccountView() {
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}
-                className="h-12 w-full rounded-xl border-2 border-line bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none focus:ring-2 focus:ring-alert"
+                className="h-12 w-full rounded-xl border-2 border-field bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none focus:ring-2 focus:ring-alert"
               />
             </label>
             <div className="mt-3 flex gap-3">

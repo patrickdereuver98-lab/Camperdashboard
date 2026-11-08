@@ -2,11 +2,12 @@ import { DEFAULT_FILTERS, type Filters } from "./search";
 import type { LatLng } from "./geo";
 
 export type QuickChipKey = "dichtbij" | "vrij" | "gratis" | "score" | "stroom" | "lozen";
-export type QuickChip = { key: QuickChipKey; label: string; on: boolean; brand?: boolean; toggle: () => Filters };
+export type QuickChip = { key: QuickChipKey; label: string; on: boolean; toggle: () => Filters };
 
 /**
  * Snelle filters op de zoekpagina (redesign 30 oktober 2026): de keuzes die een camperaar onderweg het vaakst wil.
- * "Zonder vertrektijd" is de kernbelofte en vervangt de tabbladen; daarom als enige in bosgroen (`brand`).
+ * "Zonder vertrektijd" is de kernbelofte en vervangt de tabbladen. Geen eigen kleur meer: een chip is uit (rand) of
+ * aan (bosgroen), anders lijkt hij aan terwijl hij uit staat (review R49).
  */
 export function quickChips(f: Filters, near?: LatLng | null): QuickChip[] {
   const has = (k: Filters["facilities"][number]) => f.facilities.includes(k);
@@ -30,7 +31,6 @@ export function quickChips(f: Filters, near?: LatLng | null): QuickChip[] {
       key: "vrij",
       label: "Zonder vertrektijd",
       on: f.departure === "vrij",
-      brand: true,
       toggle: () => ({ ...f, departure: f.departure === "vrij" ? undefined : "vrij" }),
     },
     { key: "gratis", label: "Gratis", on: f.free, toggle: () => ({ ...f, free: !f.free, maxPrice: undefined }) },

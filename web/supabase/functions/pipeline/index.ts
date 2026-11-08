@@ -23,10 +23,10 @@ import { decodeEntities, extract } from "./extract.ts";
 import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { runMergeMaster, type MasterDb } from "./merge_master.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
-import { verify, type QuoteAnswer } from "./quote.ts";
+import { checkQuote, type QuoteAnswer } from "./quote.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 import { OIDC_AUDIENCE, OIDC_ISSUER, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan, workflowClaimsOk, workflowForAction } from "./stealth.ts";
-import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, pdfMax, FOCUS_PDFS, rankLinks, sitemapsFromRobots } from "./pages.ts";
+import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, pdfMax, FOCUS_PDFS, rankLinks, sitemapsFromRobots, gone, pdfOutcome, withDeadline } from "./pages.ts";
 
 // Supabase edge runtime: werk na het antwoord laten doorlopen
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
@@ -37,7 +37,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 // Versie van de extractor. Vond een oudere versie een kernveld dat deze niet meer vindt, dan wist apply_scrape het: zo
 // verdwijnen fouten van een oude parser na een volledige run. Ophogen bij elke wijziging in extract.ts.
-const PARSER = "43";
+const PARSER = "45";
 
 const UA = "VrijStaanBot/1.0 (+https://vrijstaan.nl/bot; camperplaatsengids)";
 const OVERPASS = [
@@ -122,13 +122,16 @@ async function runOsm(region: string) {
 const robotsCache = new Map<string, string[]>();
 const sitemapCache = new Map<string, string[]>();
 
-async function allowed(url: URL): Promise<boolean> {
+/** Time-out per verzoek, en meteen stoppen als de plek als geheel te lang duurt (runScrape, 45 s) */
+const deadline = (ms: number, outer?: AbortSignal) => (outer ? AbortSignal.any([AbortSignal.timeout(ms), outer]) : AbortSignal.timeout(ms));
+
+async function allowed(url: URL, signal?: AbortSignal): Promise<boolean> {
   if (!robotsCache.has(url.host)) {
     let disallow: string[] = [];
     try {
       const res = await fetch(`${url.protocol}//${url.host}/robots.txt`, {
         headers: { "User-Agent": UA },
-        signal: AbortSignal.timeout(5000),
+        signal: deadline(5000, signal),
       });
       if (res.ok) {
         let applies = false;
@@ -143,6 +146,7 @@ async function allowed(url: URL): Promise<boolean> {
         }
       }
     } catch {
+      if (signal?.aborted) throw signal.reason;
       disallow = [];
     }
     robotsCache.set(url.host, disallow);
@@ -157,20 +161,22 @@ async function allowed(url: URL): Promise<boolean> {
  */
 /** Subpagina's ophalen. Een pagina die ook na een tweede poging niet lukt (geen 404) komt in `failed`: dan haperde de
  *  site, en mag apply_scrape niets wissen wat deze keer ontbreekt. */
-async function fetchPages(hrefs: string[], failed: string[] = []): Promise<(string | null)[]> {
+async function fetchPages(hrefs: string[], failed: string[] = [], signal?: AbortSignal): Promise<(string | null)[]> {
   const out: (string | null)[] = new Array(hrefs.length).fill(null);
   let next = 0;
   const worker = async () => {
     while (next < hrefs.length) {
+      if (signal?.aborted) throw signal.reason;
       const i = next++;
       const url = new URL(hrefs[i]);
       try {
-        out[i] = await fetchPage(url);
+        out[i] = await fetchPage(url, "html", 9000, signal);
       } catch (e) {
-        if (/HTTP 4(04|10)/.test(String(e))) continue;
+        if (gone(e)) continue;
+        if (signal?.aborted) throw signal.reason;
         await new Promise((r) => setTimeout(r, 800));
-        out[i] = await fetchPage(url).catch((e2) => {
-          if (!/HTTP 4(04|10)/.test(String(e2))) failed.push(hrefs[i]);
+        out[i] = await fetchPage(url, "html", 9000, signal).catch((e2) => {
+          if (!gone(e2)) failed.push(hrefs[i]);
           return null;
         });
       }
@@ -180,13 +186,13 @@ async function fetchPages(hrefs: string[], failed: string[] = []): Promise<(stri
   return out;
 }
 
-async function fetchPage(url: URL, accept: "html" | "xml" = "html", timeout = 9000): Promise<string | null> {
+async function fetchPage(url: URL, accept: "html" | "xml" = "html", timeout = 9000, signal?: AbortSignal): Promise<string | null> {
   if (!/^https?:$/.test(url.protocol)) return null;
-  if (!(await allowed(url))) return null;
+  if (!(await allowed(url, signal))) return null;
   const res = await fetch(url, {
     headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "nl,en;q=0.5" },
     redirect: "follow",
-    signal: AbortSignal.timeout(timeout),
+    signal: deadline(timeout, signal),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
@@ -215,7 +221,7 @@ function concat(chunks: Uint8Array[]) {
 }
 
 /** Pagina-adressen uit de sitemap (robots.txt of /sitemap.xml), hoogstens twee niveaus diep */
-async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]> {
+async function sitemapPages(home: URL, signal?: AbortSignal): Promise<{ url: string; text: string }[]> {
   const queue = [...(sitemapCache.get(home.host) ?? []), `${home.origin}/sitemap.xml`];
   const pages: string[] = [];
   for (let i = 0; i < queue.length && i < 4 && pages.length < 500; i++) {
@@ -226,7 +232,8 @@ async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]>
     } catch {
       continue;
     }
-    const xml = await fetchPage(url, "xml").catch(() => null);
+    const xml = await fetchPage(url, "xml", 9000, signal).catch(() => null);
+    if (signal?.aborted) throw signal.reason;
     if (!xml) continue;
     const sm = parseSitemap(xml);
     pages.push(...sm.pages);
@@ -236,12 +243,26 @@ async function sitemapPages(home: URL): Promise<{ url: string; text: string }[]>
   return pages.map((url) => ({ url, text: "" }));
 }
 
-/** Tekst uit een PDF (reglement, tarieven), als eenvoudige HTML zodat de extractor hem net zo leest als een pagina */
-async function fetchPdf(url: URL): Promise<string | null> {
-  if (!(await allowed(url))) return null;
-  const res = await fetch(url, { headers: { "User-Agent": UA }, redirect: "follow", signal: AbortSignal.timeout(12000) });
-  if (!res.ok || !(res.headers.get("content-type") ?? "").includes("pdf")) return null;
+/** Tekst uit een PDF (reglement, tarieven), als eenvoudige HTML zodat de extractor hem net zo leest als een pagina.
+ *  Een HTTP-fout (behalve 404/410) gooit, zodat de aanroeper hem als haperende pagina telt (R21). */
+async function fetchPdf(url: URL, signal?: AbortSignal): Promise<string | null> {
+  if (!(await allowed(url, signal))) return null;
+  const res = await fetch(url, { headers: { "User-Agent": UA }, redirect: "follow", signal: deadline(12000, signal) });
+  if (!res.ok) {
+    if (res.status === 404 || res.status === 410) return null;
+    throw new Error(`HTTP ${res.status}`);
+  }
+  if (!(res.headers.get("content-type") ?? "").includes("pdf")) return null;
   return pdfHtml(new Uint8Array(await res.arrayBuffer()));
+}
+
+type PdfResult = { texts: string[]; failed: number };
+
+/** PDF's lezen. Een PDF die mislukt (HTTP-fout, kapot bestand, time-out) telt als haperende pagina, zodat apply_scrape
+ *  niets wist wat eerder uit die PDF kwam (review nov. 2026, R21). Niet gevonden (404/410) of geen PDF telt niet. */
+async function loadPdfs(jobs: (() => Promise<string | null>)[]): Promise<PdfResult> {
+  const results = await Promise.all(jobs.map((job) => job().then((text) => ({ text, failed: false }), (e) => ({ text: null, failed: !gone(e) }))));
+  return pdfOutcome(results);
 }
 
 async function pdfHtml(buf: Uint8Array): Promise<string | null> {
@@ -253,18 +274,19 @@ async function pdfHtml(buf: Uint8Array): Promise<string | null> {
 }
 
 /** De startpagina, met terugval (zie homeCandidates); bij een time-out één keer opnieuw met meer tijd */
-async function fetchHome(website: string): Promise<{ home: URL; html: string }> {
+async function fetchHome(website: string, signal?: AbortSignal): Promise<{ home: URL; html: string }> {
   let first: unknown;
   for (const [n, href] of homeCandidates(website).entries()) {
     const url = new URL(href);
     // Alleen het eigen adres krijgt een tweede, langere poging; de terugvaladressen één korte
     for (const timeout of n === 0 ? [9000, 15000] : [7000]) {
       try {
-        const html = await fetchPage(url, "html", timeout);
+        const html = await fetchPage(url, "html", timeout, signal);
         if (html) return { home: url, html };
         first ??= new Error("Geen HTML of geblokkeerd door robots.txt");
         break;
       } catch (e) {
+        if (signal?.aborted) throw signal.reason;
         first ??= e;
         if (!(e instanceof DOMException && e.name === "TimeoutError")) break;
       }
@@ -273,8 +295,8 @@ async function fetchHome(website: string): Promise<{ home: URL; html: string }> 
   throw first;
 }
 
-async function collectPages(website: string, focus = false) {
-  const { home, html } = await fetchHome(website);
+async function collectPages(website: string, focus = false, signal?: AbortSignal) {
+  const { home, html } = await fetchHome(website, signal);
   const links = extractLinks(html, home);
   let picked = rankLinks(links, home, undefined, focus);
   // Site van één pagina (menu met "#prijzen"): de sitemap proberen mag, maar de tien vaste adressen raden is zinloos
@@ -283,14 +305,14 @@ async function collectPages(website: string, focus = false) {
   // alleen de herkende pagina's: de kleine-site-regel hieronder mag de sitemap en de vaste adressen niet overslaan
   // (parser 42, eerste versie: 21 plekken raakten daardoor hun vertrektijd kwijt)
   const viaSitemap = needsSitemap(picked);
-  if (viaSitemap) picked = rankLinks([...links, ...(await sitemapPages(home))], home, undefined, focus);
+  if (viaSitemap) picked = rankLinks([...links, ...(await sitemapPages(home, signal))], home, undefined, focus);
   picked = addExtraPages(picked, links, home, needsSitemap(picked), single);
   const failed: string[] = [];
-  const subs = await fetchPages(picked, failed);
+  const subs = await fetchPages(picked, failed, signal);
   const read = subs.filter((x): x is string => !!x);
   // Tweede laag: vanaf de FAQ en huisregels de links die naar aankomst en vertrek wijzen
   const deeper = deeperLinks([html, ...read], home, [home.href, ...picked], focus ? 4 : 3, focus);
-  const more = await fetchPages(deeper, failed);
+  const more = await fetchPages(deeper, failed, signal);
   // PDF's met het reglement of de tarieven: alleen de adressen; lezen gebeurt pas als de pagina's niets opleveren
   const max = pdfMax(focus);
   const pdfs = [...new Set([html, ...read].flatMap((h) => pdfLinks(h, home, max)))].slice(0, max);
@@ -316,8 +338,9 @@ async function verifyFinding(f: Finding) {
   const url = new URL(f.url);
   const raw = /\.pdf($|\?)/i.test(url.pathname) ? await fetchPdf(url) : await fetchPage(url);
   if (!raw) return { id: f.id, ok: false, reason: "pagina niet te lezen" };
-  const fields = verify({ departure: f.departure, checkout: f.checkout, quote: f.quote }, decodeEntities(pageText([raw])));
-  if (!fields) return { id: f.id, ok: false, reason: "zin niet letterlijk op de pagina of zonder tijd" };
+  const check = checkQuote({ departure: f.departure, checkout: f.checkout, quote: f.quote }, decodeEntities(pageText([raw])));
+  if (!check) return { id: f.id, ok: false, reason: "zin niet letterlijk op de pagina of zonder tijd" };
+  const { fields, confirmed } = check;
   const { data: place } = await db.from("places").select("website, departure, sources").eq("id", f.id).single();
   if (!place) return { id: f.id, ok: false, reason: "plek onbekend" };
   const quote = String(fields.times_note);
@@ -330,7 +353,8 @@ async function verifyFinding(f: Finding) {
   // sources.beheer is een lijst met velden die Beheer heeft vastgezet (oudere rijen: een object)
   const beheer = place.sources?.beheer;
   const managed = Array.isArray(beheer) ? beheer.includes("departure") : !!beheer?.departure;
-  if (own && place.departure === null && !managed) {
+  // Alleen als de extractor op deze zin dezelfde regel en tijd leest (R18); anders hooguit een inzending
+  if (own && confirmed && place.departure === null && !managed) {
     const { error } = await db
       .from("places")
       .update({ ...fields, times_note: `${quote} (bron: ${url.href})`.slice(0, 480) })
@@ -348,7 +372,9 @@ async function verifyFinding(f: Finding) {
       voorstel: fields.departure === "vast" ? `vast, uiterlijk ${fields.checkout_until}` : String(fields.departure),
       citaat: quote,
       bron: url.href,
-      toelichting: own
+      toelichting: !confirmed
+        ? "De zin staat op de pagina, maar de automatische lezer leest er niet dezelfde vertrekregel uit (bijvoorbeeld chalets, receptie of een andere doelgroep). Controleer met de hand."
+        : own
         ? "Gevonden op de eigen website, maar de plek heeft al een vertrekregel: vergelijk beide."
         : "Gevonden buiten de eigen website (gids, review of forum). Controleer bij de plek zelf voordat je iets overneemt.",
     },
@@ -357,22 +383,24 @@ async function verifyFinding(f: Finding) {
   return { id: f.id, ok: true, applied: "inzending" };
 }
 
-async function scrapeOne(place: { id: string; website: string; focus?: boolean | null }) {
+async function scrapeOne(place: { id: string; website: string; focus?: boolean | null }, signal?: AbortSignal) {
   // Zonder vertrekregel: huisregels, FAQ, reglement en voorwaarden eerst, en meer PDF's (B1, B2)
-  const { home, html, subs, pdfs, failed, links } = await collectPages(place.website, !!place.focus);
+  const { home, html, subs, pdfs, failed, links } = await collectPages(place.website, !!place.focus, signal);
   const pages = [html];
   for (const sub of subs) if (sub) pages.push(sub);
-  return extractAll(pages, home, () => Promise.all(pdfs.map((href) => fetchPdf(new URL(href)).catch(() => null))), failed.length, links);
+  return extractAll(pages, home, () => loadPdfs(pdfs.map((href) => () => fetchPdf(new URL(href), signal))), failed.length, links);
 }
 
 /** Uitlezen zoals de scraper dat doet, ook voor pagina's die de stealth-lezer aanlevert */
-async function extractAll(pages: string[], home: URL, loadPdfs: () => Promise<(string | null)[]>, failed: number, links: number) {
+async function extractAll(pages: string[], home: URL, pdfs: () => Promise<PdfResult>, failed: number, links: number) {
   let data = extract(pages, home) as Record<string, unknown> & { fields?: string[] };
-  // Geen vertrektijd op de pagina's? Dan de PDF's (reglement, tarieven) erbij; dat kost meer rekentijd
+  // Geen vertrektijd op de pagina's? Dan de PDF's (reglement, tarieven) erbij; dat kost meer rekentijd. Een PDF die
+  // mislukt telt als haperende pagina (R21)
   if (data.departure === undefined) {
-    const extra = (await loadPdfs()).filter((x): x is string => !!x);
-    if (extra.length) {
-      pages.push(...extra);
+    const extra = await pdfs();
+    failed += extra.failed;
+    if (extra.texts.length) {
+      pages.push(...extra.texts);
       data = extract(pages, home) as typeof data;
     }
   }
@@ -425,7 +453,7 @@ async function stealthApply(body: Record<string, unknown>) {
   const data = await extractAll(
     pages,
     home,
-    () => Promise.all(pdfs.map((x) => pdfHtml(b64(x)).catch(() => null))),
+    () => loadPdfs(pdfs.map((x) => () => pdfHtml(b64(x)))),
     Number(body.failed) || 0,
     Number(body.links) || 0,
   );
@@ -497,11 +525,9 @@ async function runScrape(n: number) {
   const results = await Promise.all(
     (batch ?? []).map(async (p: { id: string; website: string }) => {
       try {
-        // Eén trage of dode site mag de batch niet ophouden (pg_net wacht op de traagste aanroep)
-        const data = await Promise.race([
-          scrapeOne(p),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Site te traag (45 s)")), 45_000)),
-        ]);
+        // Eén trage of dode site mag de batch niet ophouden (pg_net wacht op de traagste aanroep). Na 45 s stopt ook het
+        // ophalen zelf (AbortSignal), zodat er geen verzoeken naar die site blijven doorlopen (DATA-16)
+        const data = await withDeadline((signal) => scrapeOne(p, signal), 45_000, "Site te traag (45 s)");
         const { error } = await db.rpc("apply_scrape", { p_id: p.id, p_data: data });
         if (error) throw new Error(`apply_scrape: ${error.message}`);
         return { id: p.id, ok: true, fields: data.fields };

@@ -72,3 +72,18 @@ test.describe("beheer: dubbele plekken", () => {
     await expect.poll(() => body).toEqual([{ a: C, b: D }]);
   });
 });
+
+test("beheerpoort: netwerkfout is geen 'Geen beheertoegang', maar een foutstaat met opnieuw proberen (R32)", async ({ page }) => {
+  await signIn(page);
+  await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
+  let offline = true;
+  await page.route(`${SUPABASE}/rest/v1/rpc/is_admin**`, (r) => (offline ? r.abort("internetdisconnected") : r.fulfill({ json: true })));
+  await page.route(`${SUPABASE}/rest/v1/rpc/admin_duplicate_candidates**`, (r) => r.fulfill({ json: [] }));
+  await page.goto("/admin/dubbelen");
+  await expect(page.getByRole("heading", { name: "Beheer is nu niet bereikbaar" })).toBeVisible();
+  await expect(page.getByText("Geen beheertoegang")).toHaveCount(0);
+  offline = false;
+  await page.getByRole("button", { name: "Opnieuw proberen" }).click();
+  await expect(page.getByRole("heading", { name: "Beheer is nu niet bereikbaar" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Naar de site/ }).first()).toBeVisible();
+});

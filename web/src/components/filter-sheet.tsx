@@ -7,6 +7,7 @@ import { KIND_LABEL, type PlaceKind, type PlaceSummary } from "@/lib/types";
 import Link from "next/link";
 import { useVehicle } from "@/lib/store";
 import { Sheet } from "./sheet";
+import { Chip } from "./chip";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
 
 const PRICES = [10, 15, 20, 25];
@@ -14,24 +15,12 @@ const LENGTHS = [7, 8, 9, 10];
 const SCORES = [7, 8, 9];
 const RADII = [10, 25, 50, 100];
 
-function Toggle({
-  pressed,
-  onClick,
-  children,
-}: {
-  pressed: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+// Keuzes in de sheet: dezelfde chip als boven de resultaten, maar over de hele cel (review R49)
+function Toggle({ pressed, onClick, children }: { pressed: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      onClick={onClick}
-      className="flex min-h-12 items-center gap-2.5 rounded-lg border border-line bg-surface px-3 text-left font-semibold transition-colors aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
-    >
+    <Chip wide pressed={pressed} onClick={onClick}>
       {children}
-    </button>
+    </Chip>
   );
 }
 
@@ -154,7 +143,7 @@ export function FilterSheet({
           ))}
         </div>
         <p className="mt-2 text-sm text-muted">
-          Zonder vertrektijd: de website zegt letterlijk dat je kunt vertrekken wanneer je wilt. Uitslapers: vertrek om 12:00 of later.
+          Zonder vertrektijd: je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf aankomst. Plekken waar dat alleen soms geldt, staan er niet bij. Uitslapers: vertrek om 12:00 of later.
         </p>
       </Section>
 

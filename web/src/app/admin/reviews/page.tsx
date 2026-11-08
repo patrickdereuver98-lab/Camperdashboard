@@ -5,6 +5,7 @@ import { useState } from "react";
 import { errorMessage } from "@/lib/supabase-browser";
 import { Badge, Card, Empty, ErrorNote, PageTitle, Segmented, db, danger, primary, secondary, useQuery, when } from "../ui";
 
+/** Rij uit public.admin_reviews(): het e-mailadres van de schrijver is alleen via die functie te lezen (R9) */
 type Review = {
   id: string;
   author_name: string;
@@ -16,15 +17,17 @@ type Review = {
   visited_month: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
-  places: { name: string; slug: string } | null;
+  place_name: string | null;
+  place_slug: string | null;
 };
+
+type Rpc = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+/** admin_reviews (migratie 20261106100000) staat nog niet in database.types.ts; weg zodra de types opnieuw gegenereerd zijn */
+const rpc = (fn: string, args: Record<string, unknown>) => (db() as unknown as Rpc).rpc(fn, args);
 
 export default function Reviews() {
   const [status, setStatus] = useState<Review["status"]>("pending");
-  const { data, error, loading, reload } = useQuery(
-    () => db().from("reviews").select("*, places(name, slug)").eq("status", status).order("created_at", { ascending: false }).limit(100),
-    [status],
-  );
+  const { data, error, loading, reload } = useQuery(() => rpc("admin_reviews", { p_status: status, p_limit: 100 }), [status]);
   // `status` is in de database tekst met een CHECK; hier als vaste keuze
   const rows = (data ?? []) as Review[];
   const [err, setErr] = useState<string | null>(null);
@@ -65,8 +68,8 @@ export default function Reviews() {
           <Card key={r.id} className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="road">{r.rating}/10</Badge>
-              {r.places && (
-                <Link href={`/plek/${r.places.slug}`} target="_blank" className="font-semibold text-forest underline">{r.places.name}</Link>
+              {r.place_slug && (
+                <Link href={`/plek/${r.place_slug}`} target="_blank" className="font-semibold text-forest underline">{r.place_name ?? r.place_slug}</Link>
               )}
               <span className="text-sm text-muted">{when(r.created_at)}</span>
             </div>

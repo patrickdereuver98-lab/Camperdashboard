@@ -4,6 +4,7 @@ import { NearbyApp } from "./nearby-app";
 export const metadata: Metadata = {
   title: "Camperplaatsen dichtbij",
   description: "Vind camperplaatsen bij jou in de buurt, gesorteerd op echte rijtijd.",
+  alternates: { canonical: "/dichtbij" },
 };
 
 export default function NearbyPage() {

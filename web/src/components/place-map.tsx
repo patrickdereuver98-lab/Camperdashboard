@@ -7,6 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./place-map.css";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
 import type { LatLng } from "@/lib/geo";
+import { MAP_LOCALE_NL } from "@/lib/map-locale";
 import { byClusterSize, CLUSTER_RADIUS, clusterColors, popupProps, toGeoJSON, type MapPlace, type PinProps, type PopupProps } from "@/lib/map-data";
 import { currentTheme } from "@/lib/theme";
 import { useDarkTheme } from "@/lib/use-media";
@@ -59,7 +60,7 @@ function PopupCard({ p, departures }: { p: PopupProps; departures: boolean }) {
           <a href={`/plek/${p.slug}`} className="-my-1 inline-flex h-11 items-center text-sm font-semibold text-forest underline underline-offset-2">
             Bekijk plek
           </a>
-          {departures && <SaveButton slug={p.slug} variant="plain" />}
+          {departures && <SaveButton slug={p.slug} name={p.name} variant="plain" />}
         </div>
       </div>
     </div>
@@ -77,6 +78,7 @@ export function PlaceMap({
   departures = true,
   onShowList,
   popup = true,
+  whenVisible = false,
   className = "",
 }: {
   places: MapPlace[];
@@ -94,6 +96,8 @@ export function PlaceMap({
   onShowList?: () => void;
   /** Uit als de pagina zelf een paneel met de gekozen plek toont (MapPick op de telefoon) */
   popup?: boolean;
+  /** MapLibre (±295 KB gz) pas laden als de kaart bijna in beeld komt, bijvoorbeeld onderaan de plekpagina (R35) */
+  whenVisible?: boolean;
   className?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
@@ -105,6 +109,7 @@ export function PlaceMap({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [inView, setInView] = useState(!whenVisible);
   // Licht of donker wisselt live (systeem bij zonsondergang of de zon/maan-knop): dan wordt de kaart opnieuw opgebouwd
   const dark = useDarkTheme();
   // Kaartbeeld van de vorige opbouw, zodat een themawissel de kaart niet laat verspringen
@@ -116,8 +121,21 @@ export function PlaceMap({
     latest.current = { places, onSelect, cluster, departures, popup };
   });
 
+  // Pas opbouwen als het vak binnen een halve schermhoogte van beeld is; zonder IntersectionObserver meteen
+  useEffect(() => {
+    if (inView || !el.current) return;
+    if (typeof IntersectionObserver === "undefined") {
+      void Promise.resolve().then(() => setInView(true));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setInView(true), { rootMargin: "50% 0px" });
+    io.observe(el.current);
+    return () => io.disconnect();
+  }, [inView]);
+
   // Kaart opbouwen en opruimen (routes blijven onder <Activity> gemount)
   useEffect(() => {
+    if (!inView) return;
     // Tijdens hydratatie is dark nog de waarde van de server; de volgende weergave heeft de echte, bouw dan pas
     if (dark !== (currentTheme() === "dark")) return;
     let cancelled = false;
@@ -152,6 +170,8 @@ export function PlaceMap({
         style: dark ? STYLE_DARK : STYLE_LIGHT,
         ...(camera.current ?? { bounds: NL_BOUNDS, fitBoundsOptions: { padding: 24 } }),
         attributionControl: { compact: true },
+        // Knoppen en meldingen in het Nederlands (R31)
+        locale: MAP_LOCALE_NL,
       });
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
@@ -317,7 +337,7 @@ export function PlaceMap({
     };
     // De kaart wordt één keer opgebouwd (opnieuw na "Opnieuw proberen" en bij een ander thema); updates lopen via de
     // effecten hieronder.
-  }, [attempt, dark]);
+  }, [attempt, dark, inView]);
 
   useEffect(() => {
     const map = mapRef.current;

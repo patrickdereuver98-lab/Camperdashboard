@@ -1,14 +1,16 @@
 "use client";
 
+import { RadioCards } from "@/components/radio-cards";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { FACILITIES } from "@/lib/search";
 import { PROVINCES } from "@/lib/types";
+import { SuccessNote } from "@/components/success-note";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 
-const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 export function SubmitForm() {
   const params = useSearchParams();
@@ -27,7 +29,7 @@ export function SubmitForm() {
     for (const fac of FACILITIES) if (formValue(f, `v_${fac.key}`)) facilities[fac.key] = true;
     setBusy(true);
     setErr(null);
-    const { error } = await supabase().rpc("submit_place", {
+    const { error } = await (await supabase()).rpc("submit_place", {
       p_kind: owner ? "eigenaar" : "nieuw",
       p_place_id: null,
       p_payload: {
@@ -60,33 +62,28 @@ export function SubmitForm() {
 
   if (done)
     return (
-      <div className="mt-8 rounded-xl bg-forest-tint p-6">
+      <SuccessNote className="mt-8 rounded-xl bg-forest-tint p-6">
         <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
         <p className="mt-2 text-ink-2">We controleren de gegevens en zetten de plek online als alles klopt. Dat duurt meestal een paar werkdagen.</p>
-      </div>
+      </SuccessNote>
     );
 
   return (
     <form onSubmit={submit} className="mt-8 space-y-6">
-      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Wie ben je?">
-        {[
-          [false, "Ik ken een plek"],
-          [true, "Ik ben eigenaar"],
-        ].map(([v, l]) => (
-          <button
-            key={String(v)}
-            type="button"
-            role="radio"
-            aria-checked={owner === v}
-            onClick={() => setOwner(v as boolean)}
-            className="h-12 rounded-lg border border-line font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
-          >
-            {l as string}
-          </button>
-        ))}
-      </div>
+      <RadioCards
+        label="Wie ben je?"
+        labelClassName="sr-only"
+        options={[
+          ["kenner", "Ik ken een plek"],
+          ["eigenaar", "Ik ben eigenaar"],
+        ]}
+        value={owner ? "eigenaar" : "kenner"}
+        onChange={(v) => setOwner(v === "eigenaar")}
+        className="grid grid-cols-2 gap-2"
+        cardClassName="min-h-12 justify-center px-2 py-1.5 text-center"
+      />
 
       <fieldset className="space-y-4">
         <legend className="mb-2 font-display text-xl font-semibold">De plek</legend>
@@ -128,31 +125,23 @@ export function SubmitForm() {
 
       <fieldset className="space-y-4">
         <legend className="mb-2 font-display text-xl font-semibold">Wat je zeker weet</legend>
-        <div role="radiogroup" aria-labelledby="vertrek-label">
-          <span id="vertrek-label" className="mb-1.5 block font-semibold">
-            Hoe laat moet je weg?
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            {(
+        <div>
+          <RadioCards
+            label="Hoe laat moet je weg?"
+            labelId="vertrek-label"
+            options={
               [
                 ["", "Weet ik niet"],
                 ["vrij", "Geen vaste tijd"],
                 ["per24", "24 uur na aankomst"],
                 ["vast", "Op een vaste tijd"],
               ] as const
-            ).map(([v, l]) => (
-              <button
-                key={v || "onbekend"}
-                type="button"
-                role="radio"
-                aria-checked={departure === v}
-                onClick={() => setDeparture(v)}
-                className="min-h-12 rounded-lg border border-line px-3 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
-              >
-                {l}
-              </button>
-            ))}
-          </div>
+            }
+            value={departure}
+            onChange={(v) => setDeparture(v)}
+            className="grid grid-cols-2 gap-2"
+            cardClassName="min-h-12 px-3"
+          />
           {departure === "vast" && (
             <label className="mt-3 block">
               <span className="mb-1.5 block font-semibold">Uiterlijk weg om</span>

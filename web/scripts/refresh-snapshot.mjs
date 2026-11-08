@@ -3,17 +3,13 @@
 //
 // Gebruik: node scripts/refresh-snapshot.mjs   (draait wekelijks in .github/workflows/snapshot.yml)
 import { writeFile } from "node:fs/promises";
+import { readPlaceColumns } from "./place-columns.mjs";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://qkrmthrhwmmmwswmfgwc.supabase.co";
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "sb_publishable_EGEUx5L3Df4w18_DgmtbHw_6RUoglht";
 
-// Gelijk houden met PLACE_COLUMNS in src/lib/places.ts
-const PLACE_COLUMNS =
-  "id,slug,name,kind,lat,lng,street,postcode,town,province,description,description_source,price_eur,price_note," +
-  "tourist_tax_included,power,water,dump_station,toilet,shower,wifi,dogs,capacity,max_length_m,surface,open_all_year," +
-  "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
-  "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras," +
-  "departure_check,departure_checked_at,departure_checked_by";
+// Dezelfde kolommen als de site (PLACE_COLUMNS in src/lib/places.ts), rechtstreeks uit die broncode gelezen
+const PLACE_COLUMNS = readPlaceColumns();
 const REVIEW_COLUMNS =
   "id,place_id,author_name,rating,score_location,score_quiet,score_facilities,score_value,title,body,vehicle,visited_month,created_at";
 

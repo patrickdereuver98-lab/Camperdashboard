@@ -7,6 +7,8 @@ import { PRERENDER_LIMIT, rankForPrerender } from "./prerender";
 import { inBbox, type Bbox } from "./bbox";
 import { cleanDescription } from "./description";
 import { rankPhotos } from "./photos";
+import { fetchWithRetry, SNAPSHOT_LIFE, SupabaseError, withFallbackSource, type Sourced } from "./fallback";
+import { isFromPriceNote } from "./price-check";
 import type { Photo, Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
@@ -23,21 +25,6 @@ const SUMMARY_COLUMNS =
   "id,slug,name,kind,lat,lng,town,province,price_eur,price_note,tourist_tax_included,power,water,dump_station,toilet," +
   "shower,wifi,dogs,capacity,max_length_m,open_all_year,season,image_url,image_credit,rating_avg,rating_count," +
   "completeness,departure,checkout_until,price_extras,departure_check,checkin_from,checkin_until,access_24h,access_hours";
-
-class SupabaseError extends Error {
-  constructor(readonly status: number, body: string) {
-    super(`Supabase ${status}: ${body.slice(0, 300)}`);
-  }
-}
-
-/** Bij drukte (429) of een haperende database (5xx) één keer opnieuw proberen voordat we op de snapshot terugvallen */
-async function fetchWithRetry(url: string, init: RequestInit, retries = 1): Promise<Response> {
-  for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) });
-    if (res.ok || attempt >= retries || !(res.status === 429 || res.status >= 500)) return res;
-    await new Promise((r) => setTimeout(r, 300 * 2 ** attempt + Math.random() * 200));
-  }
-}
 
 async function rest<T>(path: string, { all = true } = {}): Promise<T[]> {
   const out: T[] = [];
@@ -74,20 +61,31 @@ export interface FaqItem {
 type Snapshot = { places: Place[]; towns: Town[]; faq: FaqItem[]; reviews: (Review & { placeId: string })[] };
 const SNAP = snapshot as unknown as Snapshot;
 
-async function withFallback<T>(live: () => Promise<T>, offline: () => T): Promise<T> {
-  if (OFFLINE_BUILD) return offline();
-  try {
-    return await live();
-  } catch (err) {
-    // Een 4xx is een fout in onze query of het schema, geen storing. Dan niet stil de snapshot tonen (oude prijzen,
-    // verborgen plekken die terugkomen): de fout gaat door, en Next.js blijft de laatst goede versie serveren.
-    if (err instanceof SupabaseError && err.status < 500) {
-      console.error("[vrijstaan] Supabase weigert de query:", err.message);
-      throw err;
-    }
-    console.error("[vrijstaan] Supabase niet bereikbaar, snapshot gebruikt:", (err as Error).message);
-    return offline();
-  }
+/** Live, of bij een storing (5xx, 408, 425, 429, geen verbinding) de snapshot; zie lib/fallback.ts */
+function withFallback<T>(live: () => Promise<T>, offline: () => T): Promise<Sourced<T>> {
+  return withFallbackSource(live, offline, OFFLINE_BUILD);
+}
+
+/**
+ * "plekken": eigen cacheprofiel voor plekgegevens (next.config.ts, R36). Vijf minuten vers, daarna op de achtergrond
+ * verversen; wijzigingen in beheer zijn er meteen via revalidateTag (/api/admin/revalidate, CACHE_TAGS hieronder).
+ */
+type Profile = "plekken" | "minutes" | "hours" | "days";
+
+/** Tags die beheer na een wijziging ververst (api/admin/revalidate) */
+export const CACHE_TAGS = ["places", "reviews", "faq", "settings"] as const;
+
+/**
+ * Cacheduur: de gewone voor live gegevens, een korte voor de snapshot bij een storing (DATA-11), zodat oude prijzen
+ * en vertrektijden niet uren of dagen in de cache blijven. De offline build gebruikt de snapshot bewust: gewone duur.
+ * Precies één cacheLife-aanroep per keer, binnen de "use cache"-functie die dit aanroept.
+ */
+function setLife(r: Sourced<unknown>, normal: Profile) {
+  if (r.fromSnapshot && !OFFLINE_BUILD) cacheLife({ ...SNAPSHOT_LIFE });
+  else if (normal === "hours") cacheLife("hours");
+  else if (normal === "days") cacheLife("days");
+  else if (normal === "plekken") cacheLife("plekken");
+  else cacheLife("minutes");
 }
 
 // ── Plekken ─────────────────────────────────────────────────────────────────
@@ -148,7 +146,8 @@ function normalize(p: Place, websitePhotos = false): Place {
     imageUrl: cover?.url,
     imageCredit: cover?.credit,
     // "vanaf € x": de laagste genoemde prijs, er zijn duurdere tarieven
-    priceFrom: p.priceEur !== undefined && p.priceEur > 0 && /^vanaf/i.test(p.priceNote ?? "") ? true : undefined,
+    // Alleen de vaste notitie van de scraper ("vanaf € 5,00 per nacht; hoogste …"), geen vrije tekst ("Vanaf 2 nachten")
+    priceFrom: p.priceEur !== undefined && p.priceEur > 0 && isFromPriceNote(p.priceNote) ? true : undefined,
   };
 }
 
@@ -166,21 +165,28 @@ export function toSummary(p: Place): PlaceSummary {
 }
 
 /**
- * Alle plekken als lichte samenvatting. Haalt alleen de kolommen voor kaarten op, zodat pagina's die dit
- * gebruiken (start, zoeken, provincies) geen megabytes aan foto-lijsten en teksten in hun cache meenemen.
+ * Alle plekken als lichte samenvatting, met de bron (live of snapshot). Haalt alleen de kolommen voor kaarten op,
+ * zodat pagina's die dit gebruiken (start, zoeken, provincies) geen megabytes aan foto-lijsten en teksten in hun
+ * cache meenemen.
  */
-export async function getSummaries(): Promise<PlaceSummary[]> {
+export async function getSummariesSourced(): Promise<Sourced<PlaceSummary[]>> {
   "use cache";
-  cacheLife("minutes");
   cacheTag("places");
   const { website_photos } = await getSettings();
-  return withFallback(
+  const r = await withFallback(
     async () =>
       (await rest<Record<string, unknown>>(`places?select=${SUMMARY_COLUMNS}&status=eq.published&order=slug`)).map((r) =>
         toSummary(normalize(toCamel<Place>(r), website_photos)),
       ),
     () => SNAP.places.map((p) => toSummary(normalize(p, website_photos))),
   );
+  setLife(r, "plekken");
+  return r;
+}
+
+/** Alle plekken als lichte samenvatting (zie getSummariesSourced) */
+export async function getSummaries(): Promise<PlaceSummary[]> {
+  return (await getSummariesSourced()).value;
 }
 
 /** Nieuwe slug van een plek die is samengevoegd met een andere; undefined als er niets is samengevoegd */
@@ -234,11 +240,10 @@ export async function getDepartureVisitors(placeId: string): Promise<number> {
  */
 export async function getSummariesInBbox(bbox: Bbox): Promise<PlaceSummary[]> {
   "use cache";
-  cacheLife("minutes");
   cacheTag("places");
   const [w, s, e, n] = bbox;
   const { website_photos } = await getSettings();
-  return withFallback(
+  const r = await withFallback(
     async () =>
       (
         await rest<Record<string, unknown>>(
@@ -247,6 +252,8 @@ export async function getSummariesInBbox(bbox: Bbox): Promise<PlaceSummary[]> {
       ).map((r) => toSummary(normalize(toCamel<Place>(r), website_photos))),
     () => SNAP.places.filter((p) => inBbox(p, bbox)).map((p) => toSummary(normalize(p, website_photos))),
   );
+  setLife(r, "plekken");
+  return r.value;
 }
 
 /**
@@ -255,11 +262,13 @@ export async function getSummariesInBbox(bbox: Bbox): Promise<PlaceSummary[]> {
  */
 export async function getPlace(slug: string): Promise<Place | undefined> {
   "use cache";
-  cacheLife("minutes");
   cacheTag("places", `plek-${slug}`);
-  if (!/^[a-z0-9-]{1,120}$/.test(slug)) return undefined;
+  if (!/^[a-z0-9-]{1,120}$/.test(slug)) {
+    cacheLife("minutes");
+    return undefined;
+  }
   const { website_photos } = await getSettings();
-  return withFallback(
+  const r = await withFallback(
     async () => {
       const [row] = await rest<Record<string, unknown>>(
         `places?select=${PLACE_COLUMNS}&status=eq.published&slug=eq.${encodeURIComponent(slug)}`,
@@ -272,6 +281,8 @@ export async function getPlace(slug: string): Promise<Place | undefined> {
       return p ? normalize(p, website_photos) : undefined;
     },
   );
+  setLife(r, "plekken");
+  return r.value;
 }
 
 export async function getTopPlaceSlugs(limit = PRERENDER_LIMIT): Promise<string[]> {
@@ -281,20 +292,20 @@ export async function getTopPlaceSlugs(limit = PRERENDER_LIMIT): Promise<string[
 /** Plekken in de buurt: alleen een vak rond de plek ophalen (±55 km), niet de hele lijst */
 export async function getNearby(place: Pick<Place, "id" | "lat" | "lng">, limit = 6) {
   "use cache";
-  cacheLife("minutes");
   cacheTag("places");
   const { website_photos } = await getSettings();
   const box =
     `lat=gte.${(place.lat - 0.5).toFixed(3)}&lat=lte.${(place.lat + 0.5).toFixed(3)}` +
     `&lng=gte.${(place.lng - 0.8).toFixed(3)}&lng=lte.${(place.lng + 0.8).toFixed(3)}`;
-  const candidates = await withFallback(
+  const r = await withFallback(
     async () =>
       (await rest<Record<string, unknown>>(`places?select=${SUMMARY_COLUMNS}&status=eq.published&${box}`, { all: false })).map(
         (r) => toSummary(normalize(toCamel<Place>(r), website_photos)),
       ),
     () => SNAP.places.map((p) => toSummary(normalize(p, website_photos))),
   );
-  return candidates
+  setLife(r, "plekken");
+  return r.value
     .filter((p) => p.id !== place.id)
     .map((p) => ({ place: p, km: distanceKm(place, p) }))
     .sort((a, b) => a.km - b.km)
@@ -304,23 +315,23 @@ export async function getNearby(place: Pick<Place, "id" | "lat" | "lng">, limit 
 /** Voor de sitemap: alleen adres en datum */
 export async function getSlugs(): Promise<{ slug: string; verifiedAt?: string }[]> {
   "use cache";
-  cacheLife("hours");
   cacheTag("places");
-  return withFallback(
+  const r = await withFallback(
     async () =>
       (await rest<Record<string, unknown>>("places?select=slug,verified_at&status=eq.published&order=slug")).map((r) =>
         toCamel<{ slug: string; verifiedAt?: string }>(r),
       ),
     () => SNAP.places.map((p) => ({ slug: p.slug, verifiedAt: p.verifiedAt })),
   );
+  setLife(r, "hours");
+  return r.value;
 }
 
 /** Datum van de laatst gecontroleerde plek, voor "Laatste update" bovenaan lijstpagina's */
 export async function getLastUpdate(): Promise<string | undefined> {
   "use cache";
-  cacheLife("minutes");
   cacheTag("places");
-  return withFallback(
+  const r = await withFallback(
     async () =>
       (
         await rest<{ verified_at?: string }>("places?select=verified_at&status=eq.published&verified_at=not.is.null&order=verified_at.desc&limit=1", {
@@ -329,13 +340,14 @@ export async function getLastUpdate(): Promise<string | undefined> {
       )[0]?.verified_at,
     () => SNAP.places.reduce<string | undefined>((m, p) => (p.verifiedAt && (!m || p.verifiedAt > m) ? p.verifiedAt : m), undefined),
   );
+  setLife(r, "plekken");
+  return r.value;
 }
 
 export async function getReviews(placeId: string): Promise<Review[]> {
   "use cache";
-  cacheLife("minutes");
-  cacheTag(`reviews-${placeId}`);
-  return withFallback(
+  cacheTag("reviews", `reviews-${placeId}`);
+  const r = await withFallback(
     async () =>
       (
         await rest<Record<string, unknown>>(
@@ -344,30 +356,36 @@ export async function getReviews(placeId: string): Promise<Review[]> {
       ).map((r) => toCamel<Review>(r)),
     () => SNAP.reviews.filter((r) => r.placeId === placeId),
   );
+  setLife(r, "plekken");
+  return r.value;
 }
 
 export async function getTowns(): Promise<Town[]> {
   "use cache";
-  cacheLife("days");
-  return withFallback(() => rest<Town>("nl_towns?select=name,province,lat,lng&order=name"), () => SNAP.towns);
+  const r = await withFallback(() => rest<Town>("nl_towns?select=name,province,lat,lng&order=name"), () => SNAP.towns);
+  setLife(r, "days");
+  return r.value;
 }
 
 // ── FAQ en statistieken ─────────────────────────────────────────────────────
 
 export async function getFaq(): Promise<FaqItem[]> {
   "use cache";
-  cacheLife("hours");
   cacheTag("faq");
-  return withFallback(
+  const r = await withFallback(
     () => rest<FaqItem>("faq?select=id,category,question,answer,position&published=eq.true&order=category,position"),
     () => SNAP.faq,
   );
+  setLife(r, "hours");
+  return r.value;
 }
 
 export async function getStats() {
   "use cache";
-  cacheLife("minutes");
-  const [places, updatedAt] = await Promise.all([getSummaries(), getLastUpdate()]);
+  cacheTag("places");
+  const [sourced, updatedAt] = await Promise.all([getSummariesSourced(), getLastUpdate()]);
+  setLife(sourced, "plekken");
+  const places = sourced.value;
   const byProvince: Record<string, number> = {};
   for (const p of places) byProvince[p.province] = (byProvince[p.province] ?? 0) + 1;
   return {
@@ -385,6 +403,8 @@ export async function getStats() {
     withPhoto: places.filter((p) => p.imageUrl).length,
     updatedAt,
     byProvince,
+    /** De cijfers komen uit de snapshot (storing of offline build): misschien niet actueel */
+    fromSnapshot: sourced.fromSnapshot,
   };
 }
 
@@ -401,13 +421,21 @@ const DEFAULT_SETTINGS: SiteSettings = {
   announcement: { text: "", enabled: false },
   website_photos: true,
 };
+/**
+ * Bij een storing weten we niet of beheer de websitefoto's heeft uitgezet: dan de veilige kant, geen websitefoto's
+ * (TS-12). Foto's van Wikimedia, onze eigen opslag en met toestemming blijven staan. De offline build gebruikt de
+ * snapshot bewust en houdt de gewone instellingen.
+ */
+const FALLBACK_SETTINGS: SiteSettings = { ...DEFAULT_SETTINGS, website_photos: false };
 
 export async function getSettings(): Promise<SiteSettings> {
   "use cache";
-  cacheLife("minutes");
-  return withFallback(async () => {
+  cacheTag("settings");
+  const r = await withFallback(async () => {
     const rows = await rest<{ key: string; value: unknown }>("site_settings?select=key,value");
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return { ...DEFAULT_SETTINGS, ...map } as SiteSettings;
-  }, () => DEFAULT_SETTINGS);
+  }, () => (OFFLINE_BUILD ? DEFAULT_SETTINGS : FALLBACK_SETTINGS));
+  setLife(r, "plekken");
+  return r.value;
 }

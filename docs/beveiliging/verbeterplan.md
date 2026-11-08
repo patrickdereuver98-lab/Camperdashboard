@@ -10,27 +10,30 @@ probleem, of misbruik is goedkoop. **Laag** = netjes maken, verdediging in de di
 
 ## Samenvatting
 
+Status bijgewerkt op 8 november 2026 met SQL op het live project (grants, cron, functies) en de code van PR #143
+(review november, golf 1). Wat na het samenvoegen live moet, staat in [`docs/LANCERING.md`](../LANCERING.md).
+
 | # | Bevinding | Ernst | Werk | Status |
 |---|---|---|---|---|
-| B1 | E-mailadres en beheernotitie van reviewers worden openbaar zodra een review is goedgekeurd | Hoog | Migratie + beheerpagina | ⬜ |
-| B2 | Wie je Gmail heeft, is beheerder (inlogcode per mail en Google omzeilen het wachtwoord) | Hoog | Instelling Google + optioneel `is_admin()` | ⬜ |
+| B1 | E-mailadres en beheernotitie van reviewers worden openbaar zodra een review is goedgekeurd | Hoog | Migratie + beheerpagina | 🔄 Gebouwd (migratie `20261106100000`, `admin_reviews()`, beheerpagina); live na samenvoegen PR #143. Live op 8 november: `anon` en `authenticated` lezen `author_email`, `admin_note` en `user_id` nog; 0 reviews |
+| B2 | Wie je Gmail heeft, is beheerder (inlogcode per mail en Google omzeilen het wachtwoord) | Hoog | Instelling Google + optioneel `is_admin()` | 🔄 `is_admin()` alleen voor rol admin gebouwd (migratie `20261106100100`, live na PR #143); Google-account bij Patrick |
 | B3 | Inlogmails lopen via de ingebouwde mailer: 2 mails per uur voor de hele site, zonder captcha | Middel | Eigen SMTP + instelling | ⬜ |
 | B4 | Wachtwoordregels alleen in de browser (server: 6 tekens), check op gelekte wachtwoorden uit | Middel | Instelling | ⬜ |
-| B5 | Bezoekers (`anon`) hebben schrijf- en TRUNCATE-rechten op 19 tabellen, alleen RLS houdt ze tegen | Middel | Migratie | ⬜ |
-| B6 | Bewaartermijnen voor statistieken, cookiekeuzes, tickets en reviews draaien nog niet | Middel (AVG) | `retention.sql` uitvoeren | ⬜ |
-| B7 | GitHub Actions op versielabel in plaats van commit-SHA; `keepalive.yml` zonder `permissions` | Middel | Workflows | ⬜ |
+| B5 | Bezoekers (`anon`) hebben schrijf- en TRUNCATE-rechten op 19 tabellen, alleen RLS houdt ze tegen | Middel | Migratie | ✅ Live (8 november: `anon` heeft op geen tabel in `public` nog schrijfrechten) |
+| B6 | Bewaartermijnen voor statistieken, cookiekeuzes, tickets en reviews draaien nog niet | Middel (AVG) | `retention.sql` uitvoeren | ✅ Live (cron `retention` 03:17, laatste run 8 november geslaagd); dode cron `retention-cron-log` gaat weg met migratie `20261106200100` |
+| B7 | GitHub Actions op versielabel in plaats van commit-SHA; `keepalive.yml` zonder `permissions` | Middel | Workflows | ✅ Gebouwd (acties op SHA, `permissions` in elke workflow, ook `keepalive.yml`); actief na samenvoegen PR #143 |
 | B8 | Inlog-URL's van Supabase staan nog op het Vercel-domein, met jokertekens voor previews | Laag | Instelling | ⬜ |
 | B9 | Edge functions vergelijken de pipelinesleutel niet in constante tijd en lezen de body vóór de controle | Laag | Code + uitrol | ⬜ |
 | B10 | `bronnen-mcp` accepteert de sleutel in de URL (komt in logs en geschiedenis) | Laag | Code | ⬜ |
-| B11 | Overbodige `EXECUTE` voor `anon` op `is_admin()`, `is_trip_member()` en `push_public_key()` | Laag | Migratie | ⬜ |
-| B12 | `reviews.user_id` en `places.sources` zijn openbaar leesbaar | Laag | Migratie | ⬜ |
+| B11 | Overbodige `EXECUTE` voor `anon` op `is_admin()`, `is_trip_member()` en `push_public_key()` | Laag | Migratie | 🔄 Deels live: `is_trip_member()` dicht voor `anon`. `is_admin()` blijft (nodig in RLS voor `anon`), `push_public_key()` blijft (publieke sleutel): bewust |
+| B12 | `reviews.user_id` en `places.sources` zijn openbaar leesbaar | Laag | Migratie | 🔄 `reviews.user_id` dicht met B1 (live na PR #143); `places.sources` nog openbaar |
 | B13 | CSP staat `'unsafe-inline'` toe voor scripts; HSTS zonder `preload` | Laag | Later | ⬜ |
 | B14 | Sessies verlopen nooit (refresh-token blijft geldig) | Laag | Instelling (betaald plan) | ⬜ |
 | B15 | Geen centraal overzicht van geheimen en wat te doen bij een lek | Laag | Document | ✅ `web/.env.example` |
 | B16 | Geen melding bij beveiligingsgebeurtenissen (nieuwe beheerder, mislukte beheer-logins); auth-logs blijven 1 dag | Middel | Monitor | ⬜ |
-| B17 | Reizen (`user_trips`, `shared_trips`) begrenzen het aantal stops, niet de grootte per stop | Laag | Migratie | ⬜ |
-| B18 | Wachtwoord wijzigen logt andere sessies niet uit | Laag | Code beheer | ⬜ |
-| B19 | Oude versie van `submit_review` (met vrij e-mailadres, zonder inlogcontrole) staat nog in de database | Laag | Migratie | ⬜ |
+| B17 | Reizen (`user_trips`, `shared_trips`) begrenzen het aantal stops, niet de grootte per stop | Laag | Migratie | ✅ Live (`stops_size`: `pg_column_size(stops) < 200000` op `user_trips` en `shared_trips`) |
+| B18 | Wachtwoord wijzigen logt andere sessies niet uit | Laag | Code beheer | ✅ Gebouwd (andere sessies uitloggen in `admin/shell.tsx`); live na samenvoegen PR #143 |
+| B19 | Oude versie van `submit_review` (met vrij e-mailadres, zonder inlogcontrole) staat nog in de database | Laag | Migratie | 🔄 Live zonder `EXECUTE` voor `anon` en `authenticated`; verwijderd in migratie `20261106100000`, live na samenvoegen PR #143 |
 | B20 | `bronnen-mcp` geeft tekst van webpagina's aan AI-sessies (prompt-injectie) | Laag | Werkwijze | ⬜ |
 
 ## Wat al goed is

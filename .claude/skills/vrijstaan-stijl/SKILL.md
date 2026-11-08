@@ -43,6 +43,10 @@ Niet doen (dit verraadt een tekstgenerator):
   sheets, toast, kaartpop-up, en een knop op een foto.
 - Afronding maximaal `rounded-lg` (8 px) voor blokken, `rounded-md` voor knoppen in een blok; sheets 16 px; chips
   volgens de stijlgids.
+- Koppen met `text-h1`, `text-h2`, `text-h3` (24/36, 18/22, 16/18 px); geen losse maten. Aan/uit-keuzes altijd met
+  `Chip` (uit = rand, aan = vol bosgroen met vinkje).
+- Kleur betekent iets: groen = goed of actie (ook bewaard hartje, tellers), avondzon alleen voor de hoofdactie op de
+  start en de gekozen plek op de kaart, rood alleen voor fouten en "dicht". "Alle", afstand en "Gratis" zijn neutraal.
 - Beweging kort en vloeiend (`--ease-out`, 150–300 ms): als antwoord op een handeling, en content die rustig
   binnenkomt (`.enter`, `.lift`). Alleen `transform` en `opacity`; respecteer `prefers-reduced-motion`.
 - Tikdoelen minstens 44 px, tekst minstens 14 px, contrast minstens 4,5:1 in licht en donker.

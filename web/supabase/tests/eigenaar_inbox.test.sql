@@ -1,4 +1,4 @@
--- Test voor migratie 20261102120000_eigenaar_inbox.sql. Draait na mission_control.test.sql (run.sh, zelfde database).
+-- Test voor migratie 20261102082358_eigenaar_inbox.sql. Draait na mission_control.test.sql (run.sh, zelfde database).
 \set ON_ERROR_STOP 1
 
 reset role;

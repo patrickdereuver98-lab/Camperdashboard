@@ -56,7 +56,7 @@ export function PhotoUpload({ placeId, slug, placeName }: { placeId: string; slu
     try {
       const photo = await preparePhoto(file);
       const path = `${session.user.id}/${crypto.randomUUID()}.${photo.ext}`;
-      const sb = supabase();
+      const sb = await supabase();
       const up = await sb.storage.from("place-photos").upload(path, photo.blob, {
         contentType: photo.ext === "webp" ? "image/webp" : "image/jpeg",
         cacheControl: "31536000",

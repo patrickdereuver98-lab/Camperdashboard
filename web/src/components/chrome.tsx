@@ -62,7 +62,7 @@ function TripBadge({ className = "" }: { className?: string }) {
   return (
     <span
       key={stops.length}
-      className={`animate-pop grid h-6 min-w-6 place-items-center rounded-full bg-ember px-1.5 font-display text-sm font-semibold text-on-ember ${className}`}
+      className={`animate-pop grid h-6 min-w-6 place-items-center rounded-full bg-forest px-1.5 font-display text-sm font-semibold text-on-forest ${className}`}
     >
       {stops.length}
     </span>
@@ -75,16 +75,23 @@ function HeaderView({ pathname }: { pathname: string }) {
   if (pathname.startsWith("/admin")) return null;
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
-      <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 flex min-h-11 items-center rounded-lg bg-ember px-4 font-semibold text-on-ember">
+      <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 flex min-h-11 items-center rounded-lg bg-forest px-4 font-semibold text-on-forest">
         Naar de inhoud
       </a>
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16 sm:gap-4 sm:px-6">
+      {/* flex-wrap: met grote tekst (200%) op 320 px gaan de knoppen naar een tweede regel in plaats van buiten beeld (R31) */}
+      <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-1 px-3 min-[400px]:gap-x-2 min-[400px]:px-4 sm:min-h-16 sm:gap-x-4 sm:px-6">
         {onPlace && <BackButton />}
         <Link href="/" className="flex h-11 items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
           <Logo size={30} />
-          <span className="font-display text-lg font-semibold tracking-tight text-forest sm:text-xl">VrijStaan</span>
+          {/* Op een heel smal scherm (onder 360 px, of met de terugknop erbij) alleen het logo, zodat Inloggen in beeld blijft;
+              de naam staat dan in het aria-label van de link */}
+          <span
+            className={`font-display text-lg font-semibold tracking-tight text-forest sm:text-xl ${onPlace ? "hidden min-[400px]:inline" : "hidden min-[350px]:inline"}`}
+          >
+            VrijStaan
+          </span>
         </Link>
-        <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Hoofdmenu">
+        <nav className="ml-auto hidden items-center gap-1 lg:flex" aria-label="Hoofdmenu">
           {NAV.map((n) => (
             <Link
               key={n.href}
@@ -112,7 +119,7 @@ function HeaderView({ pathname }: { pathname: string }) {
             Plek aanmelden
           </Link>
         </nav>
-        <div className="ml-auto flex items-center gap-1 md:hidden">
+        <div className="ml-auto flex items-center lg:hidden">
           <Link
             href="/plek-aanmelden"
             className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken"
@@ -120,13 +127,14 @@ function HeaderView({ pathname }: { pathname: string }) {
           >
             <Icon name="plus" size={22} />
           </Link>
-          {/* Op een plekpagina staat er ook een terugknop: dan alleen het icoon, anders past de kop niet op 390 px */}
+          {/* Hulp als icoon: met tekst past de kop niet op 360 px en valt Inloggen weg (review november, R27) */}
           <Link
             href="/veelgestelde-vragen"
-            className={`flex h-11 items-center gap-1.5 rounded-xl font-semibold text-ink-2 hover:bg-sunken ${onPlace ? "w-11 justify-center" : "px-2.5"}`}
+            aria-label="Hulp"
+            aria-current={isActive("/veelgestelde-vragen") ? "page" : undefined}
+            className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken aria-[current=page]:text-forest"
           >
             <Icon name="help" size={22} />
-            <span className={onPlace ? "sr-only" : undefined}>Hulp</span>
           </Link>
         </div>
         <ThemeButton />
@@ -150,7 +158,7 @@ function ThemeButton() {
       aria-label="Donkere modus"
       aria-pressed={dark}
       data-testid="theme-button"
-      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-ink-2 hover:bg-sunken hover:text-ink md:ml-1"
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-ink-2 hover:bg-sunken hover:text-ink lg:ml-1"
     >
       <Icon name="moon" size={21} className="dark:hidden" />
       <Icon name="sun" size={22} className="hidden dark:block" />
@@ -170,7 +178,7 @@ function AccountButton({ active }: { active: boolean }) {
       aria-current={active ? "page" : undefined}
       data-testid="account-button"
       data-state={loading ? "loading" : session ? "in" : "out"}
-      className="-mr-1 grid h-11 min-w-11 place-items-center rounded-xl px-1 text-ink-2 hover:bg-sunken aria-[current=page]:text-forest md:ml-1"
+      className="-mr-1 grid h-11 min-w-11 shrink-0 place-items-center rounded-xl px-1 text-ink-2 hover:bg-sunken aria-[current=page]:text-forest lg:ml-1"
     >
       {avatar ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -203,10 +211,10 @@ function TabBarView({ pathname }: { pathname: string }) {
   return (
     <>
     {/* Ruimte zodat de vaste tabbalk geen inhoud bedekt */}
-    <div aria-hidden="true" className="h-[calc(64px+env(safe-area-inset-bottom))] shrink-0 md:hidden" />
+    <div aria-hidden="true" className="h-[calc(64px+env(safe-area-inset-bottom))] shrink-0 lg:hidden" />
     <nav
       aria-label="Hoofdmenu"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="grid grid-cols-4">
         {tabs.map((t) => {
@@ -288,13 +296,13 @@ function SaveToastLive() {
     <div
       key={toast.id}
       role="status"
-      className={`animate-toast fixed left-1/2 z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-xl bg-ink py-2 pr-2 pl-4 text-surface shadow-lift md:bottom-6 ${
+      className={`animate-toast fixed left-1/2 z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-xl bg-ink py-2 pr-2 pl-4 text-surface shadow-lift lg:bottom-6 ${
         onDetail ? "bottom-[calc(88px+env(safe-area-inset-bottom))]" : "bottom-[calc(76px+env(safe-area-inset-bottom))]"
       }`}
     >
-      <Icon name="heart" size={20} filled className="shrink-0 text-ember" />
+      <Icon name="heart" size={20} filled className="shrink-0" />
       <span className="min-w-0 flex-1 truncate font-semibold">Bewaard in Mijn reis</span>
-      <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-lg px-3 font-semibold text-ember underline">
+      <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-lg px-3 font-semibold text-surface underline underline-offset-2">
         Bekijk
       </Link>
     </div>

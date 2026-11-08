@@ -5,7 +5,12 @@ import { readConsent } from "./store";
 import type { Json } from "./database.types";
 import { supabase } from "./supabase-browser";
 
+/**
+ * "outbound" is een doorklik naar de website of het telefoonnummer van een plek (`soort`: website of telefoon, met
+ * `slug`); een route openen in een navigatie-app is "route" (met `slug` en `app`). Zo telt beheer ze apart.
+ */
 type EventName = "page_view" | "search" | "place_view" | "outbound" | "route" | "save";
+export type OutboundKind = "website" | "telefoon";
 
 let session: string | null = null;
 
@@ -47,12 +52,14 @@ export function track(name: EventName, props: { [key: string]: Json } = {}) {
     session ??= "anoniem";
   }
   void supabase()
-    .rpc("track", { p_name: name, p_path: safePath(location.pathname), p_props: props, p_session: session })
+    .then((sb) => sb.rpc("track", { p_name: name, p_path: safePath(location.pathname), p_props: props, p_session: session }))
     .then(() => undefined, () => undefined);
 }
 
 export function reportError(message: string, context: Record<string, unknown> = {}) {
   void supabase()
-    .rpc("report_client_error", { p_message: message.slice(0, 500), p_context: { ...context, path: safePath(location.pathname) } })
+    .then((sb) =>
+      sb.rpc("report_client_error", { p_message: message.slice(0, 500), p_context: { ...context, path: safePath(location.pathname) } })
+    )
     .then(() => undefined, () => undefined);
 }

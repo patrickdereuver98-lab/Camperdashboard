@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useOptimistic, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   applyFilters,
@@ -71,7 +71,11 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
   const { data: places, error } = usePlaces();
   // Tot de hele dataset er is, tonen we de plekken die de server al meegaf (alleen als het om dezelfde zoekopdracht gaat)
   const early = !places && initial?.key === key ? initial : undefined;
-  const results = useMemo(() => (places ? applyFilters(places, filters) : (early?.results ?? null)), [places, filters, early]);
+  // Filteren over ±2.000 plekken kost op een trage telefoon een paar honderd ms: de chips reageren meteen, de lijst
+  // en de kaart volgen met de uitgestelde filters (R36)
+  const deferredFilters = useDeferredValue(filters);
+  const results = useMemo(() => (places ? applyFilters(places, deferredFilters) : (early?.results ?? null)), [places, deferredFilters, early]);
+  const resultsKey = filtersToQuery(deferredFilters);
   const total = early ? early.total : results?.length;
   const [hovered, setHovered] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -86,7 +90,13 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
   const pickedPlace = picked ? mapPlaces.find((p) => p.slug === picked) : undefined;
 
   // Elke vertrekgroep heeft een eigen pagina; een andere groep kiezen gaat naar die pagina
-  const update = (f: Filters) => router.replace(searchHref(f), { scroll: false });
+  // De gekozen filters staan meteen op de knoppen (optimistisch); lijst en kaart volgen zodra het adres is bijgewerkt (R36)
+  const [shown, setShown] = useOptimistic(filters);
+  const update = (f: Filters) =>
+    startTransition(() => {
+      setShown(f);
+      router.replace(searchHref(f), { scroll: false });
+    });
 
   // Oude links (/zoeken?vrij=1 of ?vertrek=…) naar de juiste pagina sturen
   const misplaced = !page && filters.departure ? searchHref(filters) : null;
@@ -125,9 +135,9 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
         <DepartureIntro page={page} filters={filters} />
         <div className="sticky top-14 z-30 border-b border-line bg-surface px-3 pt-2 pb-1 sm:top-16 sm:px-6 sm:pt-3 sm:pb-3 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
-          <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} />
+          <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} places={places} />
           <div className="mt-2 sm:mt-3">
-            <QuickChips filters={filters} onChange={update} />
+            <QuickChips filters={shown} onChange={update} />
           </div>
           {/* Mobiel: één rustige rij zoals bij Booking (filters, sorteren, kaart); groter scherm: knoppen met rand */}
           <div className="mt-1 flex min-w-0 items-center divide-x divide-line sm:mt-3 sm:gap-2 sm:divide-x-0">
@@ -146,10 +156,10 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
               <Icon name="sort" size={17} className="mr-1.5 shrink-0 text-muted" />
               {/* Mobiel staat er alleen "Sorteren" (de keuze past niet); een stip als het niet de standaard is */}
               <span className="sm:hidden">Sorteren</span>
-              {filters.sort !== "aanbevolen" && <span className="ml-1 h-2 w-2 rounded-full bg-ember sm:hidden" aria-hidden="true" />}
+              {shown.sort !== "aanbevolen" && <span className="ml-1 h-2 w-2 rounded-full bg-forest sm:hidden" aria-hidden="true" />}
               <select
                 aria-label="Sorteren"
-                value={filters.sort}
+                value={shown.sort}
                 onChange={(e) => update({ ...filters, sort: e.target.value as SortKey })}
                 className="absolute inset-0 min-w-0 appearance-none truncate bg-transparent opacity-0 focus:outline-none sm:static sm:h-full sm:w-full sm:opacity-100"
               >
@@ -193,7 +203,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
                   <button
                     type="button"
                     onClick={() => update(c.without)}
-                    className="flex h-11 items-center gap-1.5 rounded-full bg-forest-tint pr-3 pl-4 text-sm font-semibold text-forest"
+                    className="flex h-11 items-center gap-1.5 rounded-md border border-forest bg-forest pr-2.5 pl-3 font-semibold whitespace-nowrap text-on-forest"
                     aria-label={`Filter ${c.label} verwijderen`}
                   >
                     {c.label}
@@ -224,8 +234,9 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           </div>
         )}
 
-        <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`} aria-live="polite">
-          <h1 className="font-display text-lg leading-snug font-semibold sm:text-2xl">
+        <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`}>
+          {/* Alleen de teller is live: een schermlezer hoort "12 plekken in Gelderland", niet de hele lijst (R30) */}
+          <h1 className="font-display text-h1 font-semibold" aria-live="polite" aria-atomic="true">
             <span key={total} className="animate-fade-in inline-block">
               {total !== undefined ? pluralize(total, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
@@ -260,7 +271,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
             </div>
           )}
           {results && places && results.length === 0 && <Empty filters={filters} places={places} onChange={update} />}
-          {results && results.length > 0 && <Results key={key} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} />}
+          {results && results.length > 0 && <Results key={resultsKey} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} />}
         </section>
       </div>
 
@@ -303,7 +314,7 @@ function DepartureIntro({ page, filters }: { page?: DeparturePage; filters: Filt
   return (
     <div className="border-b border-line bg-surface px-3 sm:px-6 lg:border-0 lg:bg-transparent lg:pt-6">
         <div className="pt-3 pb-1">
-          <h2 className="font-display text-lg font-semibold sm:text-xl">{DEPARTURE_PAGES[page].title}</h2>
+          <h2 className="font-display text-h2 font-semibold">{DEPARTURE_PAGES[page].title}</h2>
           <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
           {page === "overig" && (
             <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
@@ -382,7 +393,7 @@ function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceS
   const options = relaxations(places, filters).slice(0, 4);
   return (
     <div className="mt-6 rounded-lg border border-line bg-surface p-5">
-      <h2 className="font-display text-xl font-semibold">Geen plekken die aan alles voldoen</h2>
+      <h2 className="font-display text-h2 font-semibold">Geen plekken die aan alles voldoen</h2>
       <p className="mt-2 text-ink-2">{options.length ? "Met één aanpassing vind je wel iets:" : "Probeer een andere plaats of streek."}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {options.map((o) => (

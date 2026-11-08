@@ -16,6 +16,7 @@ import {
   indexable,
   inGroup,
   itemListLd,
+  nl,
   provinceFromSlug,
   provinceSlug,
   rankForLanding,
@@ -30,13 +31,14 @@ export const departureParams = () => PROVINCES.map((p) => ({ provincie: province
 
 export async function departureMetadata(g: SeoDeparture, slug: string): Promise<Metadata> {
   const prov = provinceFromSlug(slug);
-  if (!prov) return {};
+  // Onbekende provincie: de pagina geeft 404, maar zeg het ook expliciet tegen zoekmachines
+  if (!prov) return { title: "Provincie niet gevonden", robots: { index: false } };
   const list = inGroup((await getSummaries()).filter((p) => p.province === prov), g);
   const d = DEPARTURE_SEO[g];
   return {
     title: d.title(prov),
     description: list.length
-      ? `${list.length === 1 ? "1 camperplaats" : `${list.length} camperplaatsen`} in ${prov} waar ${d.rule}. Met prijs, voorzieningen en route.`
+      ? `${list.length === 1 ? "1 camperplaats" : `${nl(list.length)} camperplaatsen`} in ${prov} waar ${d.rule}. Met prijs, voorzieningen en route.`
       : `Camperplaatsen in ${prov} waar ${d.rule}.`,
     alternates: { canonical: departurePath(g, prov) },
     ...(indexable(list.length) ? {} : { robots: { index: false, follow: true } }),
@@ -78,12 +80,12 @@ export async function DepartureProvincePage({ group: g, slug }: { group: SeoDepa
       </div>
 
       <PlaceList
-        title={list.length > SHOWN ? "Uitgelicht" : list.length === 1 ? "De plek" : `Alle ${list.length} plekken`}
+        title={list.length > SHOWN ? "Uitgelicht" : list.length === 1 ? "De plek" : `Alle ${nl(list.length)} plekken`}
         places={shown}
-        more={list.length > SHOWN ? { href: search, label: `Alle ${list.length} plekken bekijken` } : undefined}
+        more={list.length > SHOWN ? { href: search, label: `Alle ${nl(list.length)} plekken bekijken` } : undefined}
       />
 
-      <LinkChips title={`Plaatsen in ${prov}`} links={areas.map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${inGroup(a.places, g).length})` }))} />
+      <LinkChips title={`Plaatsen in ${prov}`} links={areas.map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${nl(inGroup(a.places, g).length)})` }))} />
       <LinkChips
         title="Verder zoeken"
         links={[

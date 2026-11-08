@@ -43,6 +43,20 @@ class TooManyRequests(Exception):
     """429: de site vraagt ons langzamer te gaan. We stoppen met deze plek; de wachtrij probeert het later opnieuw."""
 
 
+class PageFailed(Exception):
+    """403, 5xx en andere fouten (geen 404/410): de pagina haperde. Telt als mislukt, zodat apply_scrape niets wist."""
+
+
+def gone(status: int) -> bool:
+    """404 en 410: de pagina bestaat niet (meer). Dat is een antwoord, geen hapering."""
+    return status in (404, 410)
+
+
+def failed_status(status: int) -> bool:
+    """Telt deze HTTP-status als mislukte pagina? Alles vanaf 400 behalve 404/410 (429 stopt de plek apart)."""
+    return status >= 400 and not gone(status)
+
+
 class HostClock:
     """Hoogstens één verzoek per HOST_DELAY_S seconden per host (www. telt als dezelfde host)."""
 
@@ -161,13 +175,16 @@ class Reader:
         self.session.close()
 
     def html(self, url: str) -> str | None:
-        """HTML na JavaScript; None bij 404/410, een inlogmuur of een andere fout. 429 stopt de plek."""
+        """HTML na JavaScript; None bij 404/410 of een inlogmuur. 429 stopt de plek; 403, 5xx en andere fouten geven
+        PageFailed, zodat de pagina als mislukt telt (review nov. 2026, R21)."""
         self.clock.wait(url)
         page = self.session.fetch(url, network_idle=True)
         if page.status == 429:
             raise TooManyRequests(f"HTTP 429 van {urlsplit(url).hostname}")
-        if page.status >= 400:
+        if gone(page.status):
             return None
+        if failed_status(page.status):
+            raise PageFailed(f"HTTP {page.status}")
         html = page.html_content or ""
         return None if not html or is_login_wall(str(page.url or url), html) else html
 
@@ -257,12 +274,15 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
     for u in deeper.get("pdfs", []):
         try:
             status, ctype, body = reader.raw(u)
-            if status == 200 and "pdf" in ctype and len(body) <= PDF_MAX_BYTES:
-                pdfs.append(base64.b64encode(body).decode())
         except TooManyRequests:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 - mislukte PDF telt als haperende pagina (R21)
+            failed += 1
             continue
+        if failed_status(status):
+            failed += 1
+        elif status == 200 and "pdf" in ctype and len(body) <= PDF_MAX_BYTES:
+            pdfs.append(base64.b64encode(body).decode())
 
     return pipe.call(
         "stealth_apply",

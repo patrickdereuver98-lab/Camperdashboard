@@ -1,3 +1,5 @@
+-- ARCHIEF (8 november 2026, R5): verouderd en onvolledig (mist onder meer 16 tabellen). Niet gebruiken; de database
+-- wordt opgebouwd uit web/supabase/migrations/ (nulmigratie 20261102132558_baseline.sql en alles daarna).
 -- VrijStaan: volledige databasestructuur (tabellen, indexen, functies, triggers, RLS-policies, cron-jobs)
 -- Gegenereerd uit de live Supabase-database. Voer uit op een leeg project (extensies: pg_cron, pg_net, unaccent).
 -- Geheimen staan NIET in dit bestand: zet na het uitvoeren zelf een sleutel in public.internal_secrets
@@ -1266,7 +1268,7 @@ select cron.schedule('osm-collect', '* * * * *', 'select private.collect_osm()')
 
 select cron.schedule('scrape', '15 seconds', 'select private.call_pipeline(''{"action":"scrape","n":8}''::jsonb) where exists (select 1 from private.scrape_queue where done_at is null and next_attempt_at <= now() and attempts < 3)');
 
--- ── Migratie 20261012_places_bbox (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012054155_places_bbox (zie supabase/migrations/) ─────────────────────
 
 create extension if not exists postgis with schema extensions;
 
@@ -1295,7 +1297,7 @@ $$;
 revoke all on function public.places_in_bbox(double precision, double precision, double precision, double precision) from public;
 grant execute on function public.places_in_bbox(double precision, double precision, double precision, double precision) to anon, authenticated;
 
--- ── Migratie 20261012_user_accounts (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012055302_user_accounts (zie supabase/migrations/) ─────────────────────
 -- Accounts voor bezoekers (Google, Apple, Facebook, magic link): profiel en "Mijn reis" in de cloud.
 -- Additief. Elke gebruiker ziet en wijzigt alleen zijn eigen rijen (RLS).
 
@@ -1375,7 +1377,7 @@ end $$;
 revoke all on function public.delete_my_account() from public, anon;
 grant execute on function public.delete_my_account() to authenticated;
 
--- ── Migratie 20261012_place_photos (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012060827_place_photos (zie supabase/migrations/) ─────────────────────
 -- Foto's van bezoekers: opslag in Supabase Storage, moderatie via public.place_photos.
 -- Een foto komt pas in places.photos (en dus op de site) als hij is goedgekeurd.
 
@@ -1453,7 +1455,7 @@ end $$;
 create trigger place_photos_sync before update of status on public.place_photos
   for each row execute function private.sync_place_photo();
 
--- ── Migratie 20261012_moderation (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012061444_moderation (zie supabase/migrations/) ─────────────────────
 -- Fase 4: community-moderatie.
 --   1. Trust-score: foto's van gebruikers met een bewezen geschiedenis gaan automatisch online.
 --   2. Dubbele plekken (OSM en inzendingen op dezelfde plek) vinden en samenvoegen vanuit beheer.
@@ -1641,7 +1643,7 @@ grant execute on function public.place_redirect(text) to anon, authenticated;
 -- Volledige ruimtelijke index (ook concepten), zodat de dubbelen-zoektocht < 0,1 s duurt
 create index if not exists places_geom_all_gist on public.places using gist (geom);
 
--- ── Migratie 20261012_crowd_status (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012132536_crowd_status (zie supabase/migrations/) ─────────────────────
 -- Fase 5a: live drukte. Ingelogde camperaars melden hoe druk het nu is (rustig, druk, vol). De site toont alleen
 -- meldingen van de laatste 3 uur, met aantal en tijdstip; nooit een eigen inschatting.
 
@@ -1707,7 +1709,7 @@ grant execute on function public.crowd_status(uuid) to anon, authenticated;
 -- Meldingen ouder dan 30 dagen zijn niet meer nodig (ook niet voor statistiek)
 select cron.schedule('crowd-retention', '17 3 * * *', $$delete from public.crowd_reports where created_at < now() - interval '30 days'$$);
 
--- ── Migratie 20261012_push (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012133324_push (zie supabase/migrations/) ─────────────────────
 -- Fase 5a-2: pushmelding "nu rustig" voor wie een plek volgt.
 -- VAPID-sleutels: de edge function `push` maakt ze bij het eerste gebruik aan; ze staan in private.secrets en de private
 -- sleutel is alleen voor service_role leesbaar. Abonnementen en volgers: alleen eigen rijen, via RPC's.
@@ -1842,7 +1844,7 @@ end $$;
 create trigger crowd_reports_notify after insert or update of level on public.crowd_reports
   for each row execute function private.crowd_notify();
 
--- ── Migratie 20261012_vehicle (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012133939_vehicle (zie supabase/migrations/) ─────────────────────
 -- Fase 5b: voertuigkluis. Camperprofiel (afmetingen, brandstof, verbruik) per account, en een privé-map voor
 -- documenten (bijvoorbeeld kentekenbewijs of verzekering, als PDF of foto). Alleen de eigenaar kan erbij.
 
@@ -1869,7 +1871,7 @@ create policy "eigen documenten uploaden" on storage.objects for insert to authe
 create policy "eigen documenten weghalen" on storage.objects for delete to authenticated
   using (bucket_id = 'vehicle-docs' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
--- ── Migratie 20261012_expenses (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012181754_expenses (zie supabase/migrations/) ─────────────────────
 -- Fase 5c: uitgaven onderweg (kosten- en brandstoftracker) per account. Zonder account alleen op het toestel.
 create table if not exists public.user_expenses (
   user_id uuid primary key references auth.users (id) on delete cascade,
@@ -1882,7 +1884,7 @@ create policy "eigen uitgaven" on public.user_expenses for all to authenticated
 revoke all on public.user_expenses from anon;
 grant select, insert, update on public.user_expenses to authenticated;
 
--- ── Migratie 20261012_shared_trips (zie supabase/migrations/) ─────────────────────
+-- ── Migratie 20261012182818_shared_trips (zie supabase/migrations/) ─────────────────────
 -- Fase 5e: samen een reis plannen (bijvoorbeeld met je partner). Eén gedeelde reis, realtime bijgewerkt.
 -- Lezen en wijzigen alleen voor leden; meedoen via een geheime uitnodigingscode; laatste wijziging wint.
 

@@ -5,10 +5,10 @@ import { DEFAULT_FILTERS, searchHref } from "../src/lib/search";
 
 const chip = (f = DEFAULT_FILTERS, key: string, near?: { lat: number; lng: number }) => quickChips(f, near).find((c) => c.key === key)!;
 
-test("zes snelle chips, alleen 'Zonder vertrektijd' in bosgroen", () => {
+test("zes snelle chips, allemaal uit bij de standaardfilters (geen chip die aan lijkt, R49)", () => {
   const chips = quickChips(DEFAULT_FILTERS);
   assert.deepEqual(chips.map((c) => c.label), ["Dichtbij", "Zonder vertrektijd", "Gratis", "8+", "Stroom", "Lozen"]);
-  assert.deepEqual(chips.filter((c) => c.brand).map((c) => c.key), ["vrij"]);
+  assert.ok(chips.every((c) => !("brand" in c)));
   assert.ok(chips.every((c) => !c.on));
 });
 

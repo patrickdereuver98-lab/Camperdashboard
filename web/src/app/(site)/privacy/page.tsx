@@ -95,6 +95,12 @@ const ROWS: string[][] = [
     "Zolang nodig om de inzending te verwerken en om te kunnen laten zien waar een wijziging vandaan komt",
   ],
   [
+    "Mail van eigenaren",
+    "Het afzenderadres, het onderwerp, de plek waar de mail over gaat, een korte samenvatting en de prijs of vertrektijd die de eigenaar noemt. De tekst van de mail bewaren we niet in onze database",
+    "Gerechtvaardigd belang: de gegevens van de plek kloppend houden (art. 6 lid 1 sub f)",
+    "12 maanden",
+  ],
+  [
     "Moderatie en beveiliging",
     "Foutmeldingen uit de browser (de melding en de pagina), het aantal inzendingen per e-mailadres om misbruik te beperken, het aantal routeverzoeken per IP-adres (alleen een minuut in het werkgeheugen, nooit opgeslagen) en een logboek van wat beheerders wijzigen",
     "Gerechtvaardigd belang: de site veilig en betrouwbaar houden (art. 6 lid 1 sub f)",
@@ -102,7 +108,7 @@ const ROWS: string[][] = [
   ],
   [
     "Gegevens van plekken en eigenaren",
-    "Zakelijke gegevens die de plek zelf openbaar heeft gemaakt: naam, adres, telefoon, e-mail, website, prijzen en voorzieningen",
+    "Gegevens die de plek zelf openbaar heeft gemaakt: naam, adres, telefoon, e-mail, website, prijzen en voorzieningen. Bij een plek van een particulier of eenmanszaak zijn telefoon en e-mail persoonsgegevens",
     "Gerechtvaardigd belang: een gratis, openbare gids maken (art. 6 lid 1 sub f)",
     "Zolang de plek in de gids staat",
   ],
@@ -169,7 +175,7 @@ export default function PrivacyPage() {
     <ProsePage
       title="Privacyverklaring"
       intro="We verwerken zo weinig persoonsgegevens als we kunnen. Hier lees je welke, waarom, op welke grondslag en hoe lang."
-      updated="22 oktober 2026"
+      updated="6 november 2026"
     >
       <Section title="Wie zijn wij">
         <p>
@@ -289,15 +295,21 @@ export default function PrivacyPage() {
       <Section title="Gegevens over plekken en eigenaren">
         <p>
           De plekken in de gids komen uit OpenStreetMap (ODbL) en van de openbare website van de plek zelf. We nemen daarvan
-          alleen zakelijke gegevens over: naam, adres, telefoon, e-mail, website, prijzen en voorzieningen. Is de eigenaar een
-          natuurlijk persoon, zoals een boer met een camperplek of iemand met een eenmanszaak, dan zijn dit persoonsgegevens
-          die we niet bij die persoon zelf hebben verzameld (art. 14 AVG).
+          over wat camperaars nodig hebben: naam, adres, telefoon, e-mail, website, prijzen en voorzieningen. Is de eigenaar
+          een natuurlijk persoon, zoals een boer met een camperplek of iemand met een eenmanszaak, dan zijn telefoon en
+          e-mail persoonsgegevens die we niet bij die persoon zelf hebben verzameld (art. 14 AVG).
+        </p>
+        <p>
+          De websites lezen we met een programma. Een deel lezen we met een programma dat zich gedraagt als een gewone
+          browser. Dat programma volgt robots.txt niet en leest ook sites die automatische bezoekers weren. Het leest nooit
+          achter een inlog of betaalmuur, en het bezoekt een site rustig, zodat die er geen last van heeft. Wil de eigenaar
+          niet dat we zijn site lezen, dan stoppen we daarmee na een bericht via het formulier hieronder of per mail.
         </p>
         <ul>
           <li>Bron: OpenStreetMap en de website van de plek.</li>
-          <li>Soort gegevens: zakelijke contactgegevens, adres, prijzen en voorzieningen.</li>
+          <li>Soort gegevens: contactgegevens van de plek, adres, prijzen en voorzieningen.</li>
           <li>
-            Grondslag: gerechtvaardigd belang. We maken een gratis, openbare gids en tonen alleen wat het bedrijf zelf al
+            Grondslag: gerechtvaardigd belang. We maken een gratis, openbare gids en tonen alleen wat de plek zelf al
             openbaar heeft gemaakt.
           </li>
           <li>
@@ -335,6 +347,16 @@ export default function PrivacyPage() {
           <li>
             <strong>OpenRouteService</strong> (HeiGIT gGmbH) of <strong>FOSSGIS e.V.</strong> krijgen coördinaten als je een
             rijtijd laat berekenen.
+          </li>
+          <li>
+            <strong>Resend</strong> (Verenigde Staten) ontvangt mail die eigenaren naar ons sturen en geeft die door aan onze
+            server.
+          </li>
+          <li>
+            <strong>Google</strong> (Gemini) leest het onderwerp en de tekst van zo&apos;n mail, zonder het afzenderadres, en
+            zegt ons of de eigenaar iets bevestigt of een nieuwe prijs of vertrektijd noemt. Een mens beslist daarna of we
+            iets aanpassen. Gemini helpt ons ook bij het controleren van wijzigingen die bezoekers doorgeven; daarbij gaan
+            alleen gegevens van de plek mee, niets over jou.
           </li>
           <li>
             <strong>PDOK</strong> (Kadaster) krijgt via onze server de zoekterm als je op een adres, postcode of plaats

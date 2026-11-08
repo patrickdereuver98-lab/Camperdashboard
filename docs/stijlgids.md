@@ -47,6 +47,10 @@ Spelregels:
   getal ≥ 4,5:1). Geen avondzon: die is voor de geselecteerde plek. Een tik zoomt in tot de groep uiteenvalt.
 - **Kleur is betekenis.** Een groene badge betekent "geen vaste vertrektijd", niet "mooi". Grote vlakken zijn
   zandpapier of wit (`surface`); getinte vlakken (`forest-tint`) alleen klein (badge, chip).
+- **Wat géén eigen kleur heeft** (review R53, 7 november 2026): "Alle plekken" is neutraal (`Sign tone="neutral"`,
+  aantal in `ink`); afstand is `ink-2`; het label "Gratis" op een foto is `surface` met `ink`; de teller van Mijn reis,
+  de sorteerstip en de mededelingsbalk zijn bosgroen (actie), niet avondzon. Een bewaard hartje is bosgroen, nooit
+  rood: rood (`alert`) is alleen voor fouten, "dicht" en "niet aanwezig".
 - **Tekst**: `ink` voor koppen en waarden, `ink-2` voor lopende tekst, `muted` voor bijzaken. Nooit zuiver zwart.
 - Contrast minstens 4,5:1 in licht en donker; elke combinatie die nieuw is, eerst meten.
 
@@ -55,15 +59,18 @@ Spelregels:
 **Lettertype: Geist** (variabel, zelf gehost via `next/font`), voor koppen, tekst, knoppen en cijfers. Strak,
 neutraal en goed leesbaar op kleine schermen; vervangt Fraunces + Inter.
 
-| Rol | Telefoon | Vanaf `sm` | Gewicht | Overig |
+| Rol | Telefoon | Vanaf `sm` | Gewicht | Klasse |
 |---|---|---|---|---|
-| Paginakop (h1) | 24 px | 30–36 px | 600 | `tracking-tight`, `text-balance` |
-| Sectiekop (h2) | 18 px | 22 px | 600 | `tracking-tight` |
-| Kaarttitel (h3) | 16 px | 18 px | 600 | `leading-snug` |
+| Paginakop (h1) | 24 px | 36 px | 600 | `text-h1` |
+| Sectiekop (h2) | 18 px | 22 px | 600 | `text-h2` |
+| Kaarttitel (h3) | 16 px | 18 px | 600 | `text-h3` |
 | Tekst | 16 px | 17 px | 400 | regelafstand 1,55, max. ±65 tekens breed |
 | Klein | 14 px | 14 px | 400/500 | minimum voor alle tekst |
 | Prijzen en aantallen | | | 600 | `tabular-nums` |
 
+- Koppen krijgen altijd `text-h1`, `text-h2` of `text-h3` (tokens `--text-h1` enz. in `globals.css`, review R50),
+  samen met `font-display`; nooit een losse maat als `text-3xl sm:text-4xl` of `text-[1.625rem]`. Een kop die
+  kleiner moet ogen (titel in een kaart of pop-up) neemt de lagere stap, bijvoorbeeld een `h2` met `text-h3`.
 - Alleen deze stappen: 16/17 px voor tekst en bediening (knoppen, chips, tabs), 14 px (`text-sm`) voor bijzaken
   (toelichting, fotobron, aantallen in een badge). Geen tussenmaten als 15 px, geen `text-xs`.
 - **Eén uitzondering onder 14 px:** de kaartbronvermelding van MapLibre (© OpenStreetMap e.d.) is 12 px. Het is een
@@ -92,7 +99,7 @@ oudere blokken met 12 of 16 px gaan mee bij hun volgende ronde (zie `docs/specs/
 | Element | Hoek |
 |---|---|
 | Kaarten, blokken, rasters, plekrij | 8 px (`rounded-lg`) |
-| Knoppen, invoervelden, snelle chips, "?"-knop | 6 px (`rounded-md`) |
+| Knoppen, invoervelden, chips (`Chip`), "?"-knop | 6 px (`rounded-md`) |
 | Score en kleine labels | 2–6 px (`rounded-sm` of `rounded-md`) |
 | Sheets | 16 px (`rounded-2xl`), alleen aan de bovenkant |
 | Rond (`rounded-full`) | alleen kleine pictogramknoppen (hartje) en stipjes |
@@ -103,7 +110,9 @@ Besluit eigenaar 30 oktober 2026: randen in plaats van zachte schaduwen. Kaarten
 1 px rand (`border-line`); actief = `border-forest`, hover = iets donkerdere rand. Een raster met cellen is één blok
 met haarlijnen ertussen (`gap-px` op `bg-line`), geen losse tegels. Schaduw alleen nog voor wat echt boven de pagina
 zweeft (sheets, toast, kaartpop-up) en voor een knop op een foto. Sinds ronde 2 (1 november 2026) gebruiken de
-plekpagina, de zoekpagina en Dichtbij geen `shadow-low` of `shadow-raised` meer. De tokens:
+plekpagina, de zoekpagina en Dichtbij geen `shadow-low` of `shadow-raised` meer; sinds ronde 3 (7 november 2026,
+review R50) ook de start, Doe mee, Mijn reis (met statistieken en samen plannen) en de tabel op de landingspagina's
+niet. Daar is ook `rounded-xl`/`rounded-2xl` en de rand van 2 px weg. De tokens:
 
 | Token | Gebruik |
 |---|---|
@@ -137,6 +146,14 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 
 ## 10. Componenten
 
+- **Chip** (`src/components/chip.tsx`, review R49): één vorm voor elke aan/uit-keuze (snelle filters, filtersheet,
+  Dichtbij, categorie bij uitgaven). Uit = 1 px `border-line` op `surface`, tekst `ink`; aan = vol bosgroen met
+  `on-forest` en een vinkje achteraan. Altijd `aria-pressed`. Geen getinte tussenvorm en geen chip met een eigen
+  kleur: een chip die uit staat, mag er nooit aan uitzien. In een raster `wide` (vult de cel, tekst links).
+  De verwijderbare chips met actieve filters op Zoeken hebben de aan-vorm met een kruisje.
+- **Logo** (`Logo` in `icons.tsx`): vanaf 33 px de versie met lichte heuvel; tot en met 32 px (kop, beheer, favicon
+  `app/icon.svg`) de kleine variant met een helemaal groen vlak, lichte camper op een grondlijn en een grotere zon,
+  zodat het merk in de lichte kop een onderkant houdt (de heuvel had daar contrast 1,00:1).
 - **Knop primair**: bosgroen vlak, witte tekst, 44 px hoog, 8 px hoek, geen rand, geen schaduw.
 - **Knop secundair**: `surface`, 1 px haarlijn (`border-line`), tekst `ink`.
 - **Tekstlink**: bosgroen, onderstreept met `underline-offset-2`.

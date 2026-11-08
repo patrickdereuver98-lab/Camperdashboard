@@ -10,8 +10,10 @@ Invoer (omgevingsvariabelen, uit dependabot/fetch-metadata en de PR):
 Uitvoer: JSON-bestand (argument 1) met het voorstel voor log-dependency, en category=… in $GITHUB_OUTPUT.
 
 Spelregels (ook als het model iets anders zegt):
-  - Kritiek alleen bij een beveiligingsupdate (GHSA) of een duidelijke beveiligingsfix, en nooit bij een major-versie.
-    Kritiek wordt automatisch samengevoegd, en alleen na groene CI (gh pr merge --auto).
+  - Kritiek alleen bij een beveiligingsadvies met een geldig GHSA-id uit dependabot/fetch-metadata, en nooit bij een
+    major-versie. Kritiek wordt automatisch samengevoegd, en alleen na groene CI (gh pr merge --auto).
+    Woorden als "security" of "CVE" in titel of release notes, of het oordeel van het model, zijn niet genoeg: die
+    tekst komt van buiten (promptinjectie), dus hooguit Aanbevolen.
   - Een major-versie is nooit Kritiek: daar kijkt een mens naar.
 """
 
@@ -28,6 +30,7 @@ CATEGORIES = ("kritiek", "aanbevolen", "uitstellen")
 MODEL = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
 API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 BODY_MAX = 6000
+GHSA_RE = re.compile(r"^GHSA(-[23456789cfghjmpqrvwx]{4}){3}$")
 
 PROMPT = """Je beoordeelt een automatische pakket-update (Dependabot) voor VrijStaan, een Next.js-site met Supabase.
 Kies precies één categorie:
@@ -53,13 +56,21 @@ def update_type(raw: str) -> str:
     return m.group(1) if m else "onbekend"
 
 
+def valid_ghsa(ghsa: str) -> bool:
+    """Eén of meer GHSA-id's (komma-gescheiden, zoals fetch-metadata ze geeft), elk in het officiële formaat."""
+    ids = [g.strip() for g in (ghsa or "").split(",") if g.strip()]
+    return bool(ids) and all(GHSA_RE.match(g) for g in ids)
+
+
 def rule_based(kind: str, ghsa: str, title: str, body: str) -> tuple[str, str]:
     """Vaste regel als er geen AI is (of als die faalt)."""
-    security = bool(ghsa) or bool(re.search(r"\b(security|vulnerab|CVE-\d{4}-\d+|GHSA-)", f"{title}\n{body}", re.I))
+    hint = bool(re.search(r"\b(security|vulnerab|CVE-\d{4}-\d+|GHSA-)", f"{title}\n{body}", re.I))
     if kind == "major":
         return "uitstellen", "Major-versie: kan breaking changes bevatten. Lees de release notes en test op acceptatie."
-    if security:
+    if valid_ghsa(ghsa):
         return "kritiek", "Beveiligingsupdate zonder major-versie: wordt na groene CI automatisch samengevoegd."
+    if hint:
+        return "aanbevolen", "Noemt een beveiligingsfix, maar zonder GHSA-advies: een mens kijkt en voegt samen."
     if kind in ("minor", "patch"):
         return "aanbevolen", f"{kind.capitalize()}-update zonder bekend beveiligingslek: nakijken en samenvoegen."
     return "uitstellen", "Soort update onbekend: eerst zelf bekijken."
@@ -123,10 +134,13 @@ def triage(env: dict[str, str]) -> dict:
         category, advice = rule_based(kind, ghsa, title, body)
         advice = f"[regel, geen AI] {advice}"
 
-    # Spelregel: nooit automatisch samenvoegen bij een major-versie
+    # Spelregels: nooit automatisch samenvoegen bij een major-versie of zonder GHSA-advies
     if category == "kritiek" and kind == "major":
         category = "aanbevolen"
         advice = f"{advice} (Major-versie: niet automatisch samengevoegd.)"
+    elif category == "kritiek" and not valid_ghsa(ghsa):
+        category = "aanbevolen"
+        advice = f"{advice} (Geen GHSA-advies: niet automatisch samengevoegd.)"
 
     return {
         "package_name": names.split(",")[0].strip()[:214],

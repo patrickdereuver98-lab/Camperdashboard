@@ -22,10 +22,7 @@ export function SharedCard() {
     if (!link || !userId) return;
     let alive = true;
     void supabase()
-      .from("shared_trip_members")
-      .select("user_id, display_name")
-      .eq("trip_id", link.id)
-      .is("left_at", null)
+      .then((sb) => sb.from("shared_trip_members").select("user_id, display_name").eq("trip_id", link.id).is("left_at", null))
       .then(({ data }) => {
         if (alive && data) setMembers(data.filter((m) => m.user_id !== userId).map((m) => m.display_name || "Iemand zonder naam"));
       });
@@ -40,7 +37,7 @@ export function SharedCard() {
   async function start() {
     setBusy(true);
     setErr(null);
-    const { data, error } = await supabase().rpc("create_shared_trip", { p_stops: toJson(trip.stops), p_name: "Onze reis" });
+    const { data, error } = await (await supabase()).rpc("create_shared_trip", { p_stops: toJson(trip.stops), p_name: "Onze reis" });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     setLink(data as { id: string; code: string; name: string });
@@ -49,7 +46,7 @@ export function SharedCard() {
   async function stop() {
     if (!link) return;
     setBusy(true);
-    await supabase().rpc("leave_shared_trip", { p_trip: link.id });
+    await (await supabase()).rpc("leave_shared_trip", { p_trip: link.id });
     setBusy(false);
     setLink(null);
     setMembers(null);
@@ -65,19 +62,19 @@ export function SharedCard() {
   }
 
   return (
-    <section aria-labelledby="samen" className="rounded-2xl bg-surface p-5 shadow-low" data-testid="shared-card">
-      <h2 id="samen" className="font-display text-xl font-semibold">Samen plannen</h2>
+    <section aria-labelledby="samen" className="rounded-lg border border-line bg-surface p-5" data-testid="shared-card">
+      <h2 id="samen" className="font-display text-h2 font-semibold">Samen plannen</h2>
       {!session ? (
         <>
           <p className="mt-2 text-ink-2">Plan je reis samen met je partner of reisgenoten. Wat de een verandert, ziet de ander meteen.</p>
-          <Link href="/inloggen?next=/mijn-reis" className="mt-3 inline-flex h-11 items-center rounded-xl border-2 border-line px-4 font-semibold hover:border-forest">
+          <Link href="/inloggen?next=/mijn-reis" className="mt-3 inline-flex h-11 items-center rounded-md border border-line px-4 font-semibold hover:border-forest">
             Log in om samen te plannen
           </Link>
         </>
       ) : !link ? (
         <>
           <p className="mt-2 text-ink-2">Nodig iemand uit. Jullie zien allebei dezelfde reis, en wijzigingen komen direct bij de ander binnen.</p>
-          <button type="button" onClick={start} disabled={busy} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-forest font-semibold text-on-forest disabled:opacity-60">
+          <button type="button" onClick={start} disabled={busy} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-forest font-semibold text-on-forest disabled:opacity-60">
             <Icon name="user" size={19} /> {busy ? "Even geduld…" : "Samen plannen"}
           </button>
         </>
@@ -90,7 +87,7 @@ export function SharedCard() {
                 ? `Je plant deze reis samen met ${members.join(" en ")}.`
                 : "Nog niemand heeft je uitnodiging geopend. Stuur de link naar je reisgenoot."}
           </p>
-          <button type="button" onClick={share} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-forest">
+          <button type="button" onClick={share} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md border border-line font-semibold hover:border-forest">
             <Icon name={copied ? "check" : "share"} size={19} /> {copied ? "Link gekopieerd" : "Uitnodiging sturen"}
           </button>
           <button type="button" onClick={stop} disabled={busy} className="mt-2 h-11 font-semibold text-ink-2 underline">
