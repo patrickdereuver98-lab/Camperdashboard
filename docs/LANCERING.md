@@ -16,7 +16,6 @@ Eigenaar: **Agent** bouwt, **Patrick** beslist of zet instellingen.
 | 2 | **Vercel Authentication uit** voor Production | Niemand kan de site zien, ook de API en de webhook van Resend niet | R1, README 102 |
 | 3 | **Eigen SMTP** (EU, met SPF/DKIM) en welke dienst | De ingebouwde mailer stuurt enkele mails per uur voor de hele site: inloggen en reviews lopen vast | R10, B3 |
 | 4 | **90%-eis en mailen naar eigenaren**: eis herzien per soort plek, grijze plekken verbergen bij de livegang, of eigenaren mailen (draait README 59 terug; PR #141 staat klaar) | Lanceervoorwaarde 2 wordt bij het huidige tempo niet gehaald | R16, README 110, 112 |
-| 5 | **PR #143 samenvoegen** (golf 1 en 2, naar `acceptatie`) | Pas daarna gaan de migraties en de pipeline hieronder live, ook de fix voor het datalek | Alle R-punten in golf 1 en 2 |
 
 Ook alleen Patrick, geen besluit maar wel nodig: naam en contactadres (of postbus) voor `lib/company.ts`, Google-account
 beveiligen en wachtwoord minimaal 10 tekens in Supabase (B2, B4).
@@ -28,13 +27,20 @@ prijsbelofte (R22), bevriezen (R41), sturing (R42), README 109, 113, 114 en 115.
 
 | Voorwaarde | Stand 8 november | Wat ontbreekt |
 |---|---|---|
-| 1. Juridisch en beheer | ⬜ Niet gehaald | Bedrijfsgegevens leeg in `lib/company.ts` (Patrick), domein en contactadres, site achter Vercel-login, B1 nog open op live (fix in PR #143). Bewaartermijnen draaien wel: cron `retention` slaagde op 8 november om 03:17 UTC |
+| 1. Juridisch en beheer | ⬜ Niet gehaald | Bedrijfsgegevens leeg in `lib/company.ts` (Patrick), domein en contactadres, site achter Vercel-login, B1 dicht sinds 8 november. Bewaartermijnen draaien wel: cron `retention` slaagde op 8 november om 03:17 UTC |
 | 2. Kernbelofte | 🔄 Deels | 1.444 van 2.186 gepubliceerde plekken met vertrekregel (66%), prijs bij 1.249 (57%), doel 90%. Besluit over de eis bij Patrick (besluit 4 hierboven) |
 | 3. Kwaliteit | 🔄 Niet aangetoond | Lab na golf 2: plekpagina TBT 229 ms en LCP 1,1 s, start TBT 179 ms, zoeken TBT 594 ms en LCP 3,0 s (te hoog). WCAG AA-punten uit de review gebouwd. Productie niet meetbaar zolang de site achter een login staat |
 
-## Na het samenvoegen van PR #143 live zetten (Agent)
+## Live gezet na het samenvoegen van PR #143 en #144 (8 november 2026)
 
-Pas na samenvoegen, anders breekt de live site (CLAUDE.md). Volgorde:
+**Gedaan (agent, 8 november ±14:00 UTC):** stap 1 tot en met 3 hieronder. Alle 11 migraties toegepast en met de versie
+van het bestand vastgelegd in `schema_migrations`; pipeline live als versie 65 (parser 45, stub op commit `d6d3bd7`),
+`push` als versie 2; beide starten op en weigeren zonder sleutel. Gecontroleerd: `anon` en `authenticated` lezen
+`author_email` en `admin_note` niet meer, de oude `submit_review` met e-mailadres is weg, `health()` geeft 2.182
+gepubliceerd, 1.444 met vertrekregel, 1.188 met prijs. `get_advisors` (security): alleen de bekende, bewuste meldingen
+plus HIBP (B4, Patrick). `20261108100000_bronnen_en_claims` blijft bewust uit (R41). Stap 4 en 5 blijven bij Patrick.
+
+Volgorde zoals uitgevoerd:
 
 1. Migraties in deze volgorde toepassen (`apply_migration`). Op 8 november stond geen ervan live; de laatste live
    migratie is `20261102132558_marketing_dashboard`.
@@ -49,8 +55,8 @@ Pas na samenvoegen, anders breekt de live site (CLAUDE.md). Volgorde:
    - `20261106200200_publicatiedrempel` (README 38)
    - `20261106300000_controledatum_kernvelden` (R20)
    - `20261107120000_doorkliks_website_telefoon` (R45; tot dan toont Statistieken "Onbekend" bij Website en Gebeld)
-2. Edge function `pipeline` uitrollen met parser 44 (R17 tot en met R21; live staat versie 64) en `push` (live
-   versie 1). De nieuwe versienummers in het implementatieplan zetten.
+2. Edge function `pipeline` uitrollen met parser 45 (R17 tot en met R21, nacontrole prijzen; was versie 64, nu 65) en `push` (was
+   versie 1, nu 2). De nieuwe versienummers in het implementatieplan zetten.
 3. Controleren met SQL: `anon` mag `reviews.author_email`, `admin_note` en `user_id` niet meer lezen; de oude
    `submit_review` met `p_author_email` is weg; `public.health()` bestaat; `is_admin()` kijkt naar de rol; cron
    `retention-cron-log` is weg. Daarna `get_advisors` (security).
@@ -65,34 +71,34 @@ Pas na samenvoegen, anders breekt de live site (CLAUDE.md). Volgorde:
 | 0.1 Bereikbaar (R1, R2) | ⬜ | Patrick | Nee | Domein, Vercel Authentication uit, DNS, `NEXT_PUBLIC_SITE_URL`. Code: ops-probe telt alleen 200 als goed, build waarschuwt zonder site-adres |
 | 0.2 Besluiten (R16, R22, R41, R42) | 🔄 | Patrick | n.v.t. | R22, R41 en R42 besloten op 8 november; R16 open |
 | 0.3 Juridisch (lanceervoorwaarde 1) | ⬜ | Patrick + Agent | Nee | Naam en contactadres aanleveren; agent vult `lib/company.ts` |
-| 0.4 Datalek (R9, B1, B19) | ✅ | Agent | Na #143 | Live leest `anon` nog `author_email` (8 november); er staan 0 reviews. Tot de migratie live staat geen review goedkeuren |
-| 0.5 Geen foute feiten (R17, R20, R21, R44) | ✅ | Agent | Na #143 | Pipeline parser 44 en migratie `20261106300000` |
-| 0.6 Eerlijke teksten (R22, R37) | ✅ | Agent | Na #143 | SEO-titel, deelafbeelding, vertrouwensregel, "Hoe het werkt" en welkomstuitleg zeggen "met de toeslagen die we kennen" of "incl. toeristenbelasting" |
-| 0.7 Ruis weg (R1, R3, R4) | ✅ | Agent + Patrick | Na #143 | Zie stap 4 hierboven voor Patrick |
-| 0.8 Kleine schermen (R27) | ✅ | Agent | Na #143 | Geen |
+| 0.4 Datalek (R9, B1, B19) | ✅ | Agent | Ja, 8 nov | `anon` en `authenticated` lezen `author_email` en `admin_note` niet meer |
+| 0.5 Geen foute feiten (R17, R20, R21, R44) | ✅ | Agent | Ja, 8 nov | Pipeline parser 44 en migratie `20261106300000` |
+| 0.6 Eerlijke teksten (R22, R37) | ✅ | Agent | Ja, 8 nov | SEO-titel, deelafbeelding, vertrouwensregel, "Hoe het werkt" en welkomstuitleg zeggen "met de toeslagen die we kennen" of "incl. toeristenbelasting" |
+| 0.7 Ruis weg (R1, R3, R4) | ✅ | Agent + Patrick | Ja, 8 nov | Zie stap 4 hierboven voor Patrick |
+| 0.8 Kleine schermen (R27) | ✅ | Agent | Ja, 8 nov | Geen |
 
 ## Fase 1: kernbelofte en betrouwbaarheid (14 november tot en met 4 december)
 
 | Werkpakket | Status | Eigenaar | Live | Rest |
 |---|---|---|---|---|
-| 1.1 Meer vertrektijden (R16, R48) | 🔄 | Agent + Patrick | Na #143 | R48 gebouwd (oproep "Vertrektijd doorgeven", "Klopt dit niet?" per cel, bevestiging met termijn). Uitvoering van R16 wacht op het besluit |
-| 1.2 Juiste feiten (R18, R19, R23, R25, R47) | 🔄 | Agent | Na #143 | Code af. Nog doen na de uitrol: de 3 plekken via het citaatpad nalopen en de steekproef van 30 uit de 416 plekken met tentprijsrisico, plus campings onder € 8 in Beheer → Plekken, Verdachte prijzen |
-| 1.3 Meten wat telt (R45, R46) | ✅ | Agent | Na #143 | Migratie `20261107120000` |
-| 1.4 Fouten zien (R3, R7) | ✅ | Agent | Na #143 | `health()` in `monitor.yml` werkt pas met de migratie |
+| 1.1 Meer vertrektijden (R16, R48) | 🔄 | Agent + Patrick | Ja, 8 nov | R48 gebouwd (oproep "Vertrektijd doorgeven", "Klopt dit niet?" per cel, bevestiging met termijn). Uitvoering van R16 wacht op het besluit |
+| 1.2 Juiste feiten (R18, R19, R23, R25, R47) | ✅ | Agent | Ja, 8 nov | Nacontrole 8 november: R18 3 van 3 goed; R19 14 van 29 fout, R47 92 van 136 fout; 42 gecorrigeerd, 64 geleegd (back-up `private.nacontrole_20261108`). Parser 45 live, zodat een nieuwe scrape ze niet terugzet. Nog 18 campings onder € 8 niet te controleren: nakijken in Beheer |
+| 1.3 Meten wat telt (R45, R46) | ✅ | Agent | Ja, 8 nov | Migratie `20261107120000` |
+| 1.4 Fouten zien (R3, R7) | ✅ | Agent | Ja, 8 nov | `health()` in `monitor.yml` werkt pas met de migratie |
 | 1.5 Herbouwbaar (R5, R6, R40) | 🔄 | Agent | Deels | Bestanden hebben de live versienummers, back-up neemt `auth.users`, storage en `cron.job` mee, SQL-tests voor drempel, cron en RLS. Nog: nulmigratie met `web/scripts/dump-schema.sh` (heeft `SUPABASE_DB_URL` nodig) en een herbouwtest in CI |
 | 1.6 Inloggen en mail (R10, R2) | ⬜ | Patrick + Agent | Nee | Wacht op besluit 1 en 3 |
-| 1.7 Niets kwijt (R24, R28, R29, R54) | ✅ | Agent | Na #143 | Geen |
+| 1.7 Niets kwijt (R24, R28, R29, R54) | ✅ | Agent | Ja, 8 nov | Geen |
 
 ## Fase 2: gebruik, ontwerp en snelheid (5 tot en met 18 december)
 
 | Werkpakket | Status | Eigenaar | Live | Rest |
 |---|---|---|---|---|
-| 2.1 Eén merk (R49, R50, R52, R53) | ✅ | Agent | Na #143 | Hoofdactie op de start zonder schaduw (stijlgids §7) |
-| 2.2 Toegankelijk (R30, R31) | ✅ | Agent | Na #143 | Admin-`Segmented` gebruikt nog `role="radio"` op knoppen (alleen beheer) |
-| 2.3 Snel op 4G (R33 tot en met R36) | 🔄 | Agent | Na #143 | R34 en R35 af; R33 en R36 zo ver als besloten (README 114 en 115). Zoeken haalt het doel nog niet (TBT 594 ms, LCP 3,0 s) |
-| 2.4 Reizen zonder wrijving (R51, R54) | ✅ | Agent | Na #143 | Geen |
-| 2.5 Inbox en limieten (R11 tot en met R14, R26) | ✅ | Agent | Na #143 | Geen |
-| 2.6 Vindbaar (R38, R39) | 🔄 | Agent | Na #143 | R38 af; R39 deels (SEO-06 tot en met 15 per punt) |
+| 2.1 Eén merk (R49, R50, R52, R53) | ✅ | Agent | Ja, 8 nov | Hoofdactie op de start zonder schaduw (stijlgids §7) |
+| 2.2 Toegankelijk (R30, R31) | ✅ | Agent | Ja, 8 nov | Admin-`Segmented` gebruikt nog `role="radio"` op knoppen (alleen beheer) |
+| 2.3 Snel op 4G (R33 tot en met R36) | 🔄 | Agent | Ja, 8 nov | R34 en R35 af; R33 en R36 zo ver als besloten (README 114 en 115). Zoeken haalt het doel nog niet (TBT 594 ms, LCP 3,0 s) |
+| 2.4 Reizen zonder wrijving (R51, R54) | ✅ | Agent | Ja, 8 nov | Geen |
+| 2.5 Inbox en limieten (R11 tot en met R14, R26) | ✅ | Agent | Ja, 8 nov | Geen |
+| 2.6 Vindbaar (R38, R39) | 🔄 | Agent | Ja, 8 nov | R38 af; R39 deels (SEO-06 tot en met 15 per punt) |
 
 ## Fase 3: bevriezen en live (19 tot en met 31 december)
 
