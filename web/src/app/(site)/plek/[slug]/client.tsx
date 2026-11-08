@@ -172,7 +172,7 @@ export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
             type="button"
             onClick={calculate}
             disabled={state.s === "locating"}
-            className="flex min-h-11 items-center gap-2 rounded-lg bg-forest px-4 py-2 text-left font-semibold text-on-forest disabled:opacity-60"
+            className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 py-2 text-left font-semibold hover:border-forest disabled:opacity-60"
           >
             <Icon name="locate" size={18} />
             {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}

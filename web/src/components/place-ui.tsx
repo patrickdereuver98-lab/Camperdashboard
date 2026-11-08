@@ -173,7 +173,12 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
 
 // ── Bewaren ─────────────────────────────────────────────────────────────────
 
-export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?: "icon" | "full" | "plain" | "bar" }) {
+/**
+ * Hartje: bewaren in Mijn reis. De naam van de knop noemt de plek en blijft gelijk; aria-pressed zegt of hij bewaard is
+ * (review november R55, anders hoort een schermlezer in een lijst tien keer "Bewaren in mijn reis"). De brede knop op
+ * de plekpagina houdt zijn zichtbare tekst als naam (WCAG 2.5.3); daar staat de plek al in de kop.
+ */
+export function SaveButton({ slug, name, variant = "icon" }: { slug: string; name: string; variant?: "icon" | "full" | "plain" | "bar" }) {
   const trip = useTrip();
   const saved = trip.has(slug);
   const toggle = (e: React.MouseEvent) => {
@@ -202,7 +207,7 @@ export function SaveButton({ slug, variant = "icon" }: { slug: string; variant?:
       type="button"
       onClick={toggle}
       aria-pressed={saved}
-      aria-label={saved ? "Verwijderen uit mijn reis" : "Bewaren in mijn reis"}
+      aria-label={`${name} bewaren in Mijn reis`}
       // "bar": zelfde vierkant met rand als bellen en website in de actiebalk; "icon": op een foto, daar helpt de schaduw
       className={`grid h-11 w-11 place-items-center transition-transform active:scale-90 ${
         variant === "bar" ? "rounded-lg border border-line bg-surface" : variant === "plain" ? "rounded-full" : "rounded-full bg-surface/95 shadow-lift"
@@ -318,7 +323,7 @@ export function PlaceCard({
       </div>
       {/* Boven de link-overlay van de titel, anders opent een tik op het hartje de plek */}
       <div className="absolute top-3 right-3 z-10">
-        <SaveButton slug={place.slug} variant="icon" />
+        <SaveButton slug={place.slug} name={place.name} variant="icon" />
       </div>
       {/* Wanneer eerst: de vertrekregel is waar je op kiest (review 23 oktober 2026), daarna aankomen */}
       <div className="min-w-0 space-y-1 px-4 pt-4">
@@ -387,7 +392,8 @@ function PlaceRow({
       {/* Hooguit 30% van de rij: met grote tekst op een smal scherm houdt de tekst zo ruimte (R31) */}
       <div className="relative w-[min(6rem,30%)] shrink-0 self-stretch overflow-hidden rounded-md sm:w-36">
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
-          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="h-full w-full" />
+          {/* Absoluut: de foto bepaalt de hoogte van de rij niet, dus elke rij is even hoog (R55) */}
+          <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="absolute inset-0 h-full w-full" />
         </ViewTransition>
       </div>
       {/* Vertrektijd is het kernfeit: de regel krijgt de hele breedte naast de foto, alleen het hartje staat ernaast.
@@ -399,7 +405,7 @@ function PlaceRow({
           </div>
           {/* Tikvlak 44 px, met negatieve marge zodat de regel niet hoger wordt; -mr zet het hartje recht boven de prijs */}
           <div className="relative z-10 -my-2.5 -mr-3 shrink-0">
-            <SaveButton slug={place.slug} variant="plain" />
+            <SaveButton slug={place.slug} name={place.name} variant="plain" />
           </div>
         </div>
         {/* Past de prijs er niet naast (grote tekst), dan gaat hij eronder */}
