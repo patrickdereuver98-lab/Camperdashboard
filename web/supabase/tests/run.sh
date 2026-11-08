@@ -5,6 +5,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 migrations="$here/../migrations"
+archief="$here/../archief/migrations"   # migraties tot en met de nulmigratie (geschiedenis, R5)
 
 if [ -z "${DATABASE_URL:-}" ]; then
   bin="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)"
@@ -19,19 +20,19 @@ fi
 
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/stub_schema.sql
-\i $migrations/20261030102938_geo_master.sql
-\i $migrations/20261030162002_promote_geo_master.sql
-\i $migrations/20261101002100_geo_bronnen_pdok.sql
-\i $migrations/20261031175939_koppelen_zonder_promotie.sql
-\i $migrations/20261031183926_places_lat_lng.sql
+\i $archief/20261030102938_geo_master.sql
+\i $archief/20261030162002_promote_geo_master.sql
+\i $archief/20261101002100_geo_bronnen_pdok.sql
+\i $archief/20261031175939_koppelen_zonder_promotie.sql
+\i $archief/20261031183926_places_lat_lng.sql
 \i $here/promote_geo_master.test.sql
 \i $here/pdok_bron.test.sql
-\i $migrations/20261101002102_pdok_toegestaan.sql
+\i $archief/20261101002102_pdok_toegestaan.sql
 \i $here/pdok_toegestaan.test.sql
 \i $here/stub_scraper.sql
-\i $migrations/20261031175940_kernfeit_booster.sql
-\i $migrations/20261031175943_concepten.sql
-\i $migrations/20261031175944_servicepunten_dichtstbij.sql
+\i $archief/20261031175940_kernfeit_booster.sql
+\i $archief/20261031175943_concepten.sql
+\i $archief/20261031175944_servicepunten_dichtstbij.sql
 \i $here/kernfeit.test.sql
 SQL
 
@@ -41,15 +42,15 @@ psql "$DATABASE_URL" -q -X -c "drop database if exists mission_control" -c "crea
 mc_url="$(python3 -c 'import sys,urllib.parse as u;p=u.urlsplit(sys.argv[1]);print(u.urlunsplit(p._replace(path="/mission_control")))' "$DATABASE_URL")"
 psql "$mc_url" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/mission_control_stub.sql
-\i $migrations/20261102074903_mission_control.sql
+\i $archief/20261102074903_mission_control.sql
 \i $here/mission_control.test.sql
-\set migration $migrations/20261102082358_eigenaar_inbox.sql
+\set migration $archief/20261102082358_eigenaar_inbox.sql
 \i $here/eigenaar_inbox.test.sql
-\set migration $migrations/20261102085642_vertrektijd_wachtrij.sql
+\set migration $archief/20261102085642_vertrektijd_wachtrij.sql
 \i $here/vertrektijd_wachtrij.test.sql
-\set migration $migrations/20261102105405_vertrektijd_voorstel.sql
+\set migration $archief/20261102105405_vertrektijd_voorstel.sql
 \i $here/vertrektijd_voorstel.test.sql
-\set migration $migrations/20261102132558_marketing_dashboard.sql
+\set migration $archief/20261102132558_marketing_dashboard.sql
 \i $here/marketing_dashboard.test.sql
 \set migration_ops $migrations/20261106200000_health_en_ops_probe.sql
 \set migration_cron $migrations/20261106200100_cron_rustiger_en_opschonen.sql
