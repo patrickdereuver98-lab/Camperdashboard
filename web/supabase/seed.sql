@@ -1,5 +1,5 @@
 -- VrijStaan: startgegevens (instellingen, provincies, Overpass-querysjablonen, FAQ, woonplaatsen).
--- Uitvoeren na schema.sql. De plekken zelf komen uit de pipeline (OpenStreetMap + websites).
+-- Uitvoeren na de migraties (nulmigratie en alles daarna, zie docs/specs/05-backend-schema.md, "Herbouwen"). De plekken zelf komen uit de pipeline (OpenStreetMap + websites).
 
 insert into public.site_settings (key, value) values ('contact', '{"email": "hallo@vrijstaan.nl", "response_days": 2}') on conflict (key) do nothing;
 insert into public.site_settings (key, value) values ('announcement', '{"text": "", "enabled": false}') on conflict (key) do nothing;

@@ -63,6 +63,12 @@ for f in $(ls "$supa"/migrations/*.sql | sort); do
 done
 echo "$tel migraties toegepast"
 
+# Startgegevens (instellingen, regio's, FAQ, woonplaatsen) moeten op het herbouwde schema passen
+if ! uit="$(psql_run "$DATABASE_URL" -f "$supa/seed.sql" 2>&1)"; then
+  echo "FOUT in seed.sql:" >&2; echo "$uit" >&2; exit 1
+fi
+echo "seed.sql toegepast"
+
 for t in $(ls "$here"/herbouw/*.test.sql 2>/dev/null | sort); do
   if ! uit="$(psql_run "$DATABASE_URL" -f "$t" 2>&1)"; then
     echo "FOUT in test $(basename "$t"):" >&2; echo "$uit" >&2; exit 1

@@ -245,7 +245,7 @@ maar 60 verbindingen. Zie `web/.env.example` voor het formaat.
 | Bevestigingsmail komt niet aan | Controleer de spammap; stel eigen SMTP in (stap 4) |
 | Rijtijden "niet beschikbaar" | De routeserver is tijdelijk onbereikbaar; de site valt terug op hemelsbrede afstand en zegt dat er eerlijk bij. Met `ORS_API_KEY` heb je een tweede bron |
 | Pipeline lijkt stil te staan | **Admin → Logs → Systeem en fouten** en **Data-imports**. Knop **Nieuwe websites lezen** in Instellingen plant ze opnieuw in |
-| Database opnieuw opzetten in een ander project | Voer `web/supabase/schema.sql` en daarna `web/supabase/seed.sql` uit, deploy `web/supabase/functions/pipeline` (zonder JWT-controle), zet een geheime sleutel in `public.internal_secrets` (`name = 'pipeline_key'`) en pas de projectnaam in `private.call_pipeline` aan |
+| Database opnieuw opzetten in een ander project | Voer de bestanden in `web/supabase/migrations/` op volgorde uit (nulmigratie eerst), daarna `web/supabase/seed.sql` en `web/supabase/baseline/cron.sql`, deploy `web/supabase/functions/pipeline` (zonder JWT-controle), zet een geheime sleutel in `public.internal_secrets` (`name = 'pipeline_key'`) en pas de projectnaam in `private.call_pipeline` aan |
 
 
 ## Scraper uitrollen (edge function `pipeline`)

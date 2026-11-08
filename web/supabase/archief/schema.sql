@@ -1,3 +1,5 @@
+-- ARCHIEF (8 november 2026, R5): verouderd en onvolledig (mist onder meer 16 tabellen). Niet gebruiken; de database
+-- wordt opgebouwd uit web/supabase/migrations/ (nulmigratie 20261102132558_baseline.sql en alles daarna).
 -- VrijStaan: volledige databasestructuur (tabellen, indexen, functies, triggers, RLS-policies, cron-jobs)
 -- Gegenereerd uit de live Supabase-database. Voer uit op een leeg project (extensies: pg_cron, pg_net, unaccent).
 -- Geheimen staan NIET in dit bestand: zet na het uitvoeren zelf een sleutel in public.internal_secrets

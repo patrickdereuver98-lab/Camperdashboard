@@ -4,7 +4,7 @@
 --
 -- Live gecontroleerd op 6 november 2026: er is één beheerder, met admins.role = 'admin' en profiles.role = 'admin'.
 -- Die houdt dus toegang. Een support-account ziet in beheer daarna "Geen beheertoegang", tot er een eigen
--- support-omgeving is. Terugdraaien: de vorige definitie staat in schema.sql (select exists ... where user_id = ...).
+-- support-omgeving is. Terugdraaien: de vorige definitie staat in de nulmigratie 20261102132558_baseline.sql (select exists ... where user_id = ...).
 
 create or replace function public.is_admin() returns boolean
  language sql stable security definer set search_path to ''
