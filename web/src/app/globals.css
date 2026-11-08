@@ -14,8 +14,8 @@
   --line: #e0d7c5;
   /* Rand van invoervelden: minstens 3:1 tegen surface en paper (WCAG 1.4.11; --line haalt 1,4:1, review november R30) */
   --field-border: #8a8272;
-  --forest: #2d5a43;
-  --forest-deep: #1c3a2b;
+  --forest: #1f4e37;
+  --forest-deep: #14331f;
   --forest-tint: #e1ebe2;
   --on-forest: #fffcf6;
   --ember: #b9592a;

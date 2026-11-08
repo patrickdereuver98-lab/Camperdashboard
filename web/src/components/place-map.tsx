@@ -150,7 +150,7 @@ export function PlaceMap({
       // Bosgroen zonder vaste vertrektijd, meerblauw voor uitslapers en de route, avondzon voor de geselecteerde plek
       // In donker bewust donkerder dan de tokens --ember en --forest: witte tekst in clusters blijft dan leesbaar
       const ember = dark ? "#d9783f" : "#b9592a";
-      const forest = dark ? "#3f7a5a" : "#2d5a43";
+      const forest = dark ? "#3f7a5a" : "#1f4e37";
       const lake = dark ? "#82bcc8" : "#2f6f7e";
       const surface = css.getPropertyValue("--surface").trim() || "#fffcf6";
       // Grijs voor onvolledige plekken: de token --muted (contrast met de kaartgrond minstens 5:1)

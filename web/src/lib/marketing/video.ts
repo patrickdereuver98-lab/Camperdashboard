@@ -168,23 +168,23 @@ html,body{width:${w}px;height:${h}px;overflow:hidden;background:#f5f0e6;color:#1
 .scene.has-phone{align-items:center;text-align:center;justify-content:${format === "vertical" ? "flex-start" : "center"};gap:${format === "square" ? 24 : 40}px}
 [data-in]{opacity:0;will-change:transform,opacity}
 .kicker{font-size:52px;color:#46524a;font-weight:500}
-.big{font-size:${format === "square" ? 210 : 250}px;line-height:.95;font-weight:650;color:#2d5a43;letter-spacing:-8px;font-variant-numeric:tabular-nums}
+.big{font-size:${format === "square" ? 210 : 250}px;line-height:.95;font-weight:650;color:#1f4e37;letter-spacing:-8px;font-variant-numeric:tabular-nums}
 .big.word{font-size:${format === "square" ? 120 : 140}px;letter-spacing:-4px}
-.mid{font-size:120px;font-weight:650;color:#2d5a43;letter-spacing:-3px;font-variant-numeric:tabular-nums}
+.mid{font-size:120px;font-weight:650;color:#1f4e37;letter-spacing:-3px;font-variant-numeric:tabular-nums}
 .sub{font-size:60px;line-height:1.15;font-weight:550;max-width:900px}
 .title{font-size:${format === "square" ? 80 : 92}px;line-height:1.05;font-weight:650;letter-spacing:-2px;max-width:920px}
 .title.hook{font-size:${format === "square" ? 92 : 110}px}
 .line{font-size:54px;line-height:1.2;color:#1f2b24;display:flex;gap:22px;align-items:baseline;max-width:920px}
-.line::before{content:"";flex:none;width:16px;height:16px;border-radius:8px;background:#2d5a43;transform:translateY(-4px)}
+.line::before{content:"";flex:none;width:16px;height:16px;border-radius:8px;background:#1f4e37;transform:translateY(-4px)}
 .caption{font-size:${format === "square" ? 46 : 56}px;line-height:1.15;font-weight:600;max-width:920px}
 .phone{height:${phoneH}px;aspect-ratio:390/844;border-radius:${Math.round(phoneH / 14)}px;background:#1f2b24;padding:${Math.round(phoneH / 70)}px;box-shadow:0 30px 60px -20px rgb(50 38 18/.35)}
 .phone img,.phone .noshot{width:100%;height:100%;border-radius:${Math.round(phoneH / 16)}px;object-fit:cover;object-position:top;display:block;background:#fffcf6}
 .phone .noshot{display:grid;place-items:center;font-size:40px;color:#5c665e}
-.logo{display:flex;align-items:center;gap:28px;font-size:96px;font-weight:650;color:#2d5a43;letter-spacing:-2px}
-.logo .mark{display:grid;place-items:center;width:132px;height:132px;border-radius:32px;background:#2d5a43;color:#fffcf6;font-size:84px}
-.url{font-size:64px;font-weight:600;color:#2d5a43}
+.logo{display:flex;align-items:center;gap:28px;font-size:96px;font-weight:650;color:#1f4e37;letter-spacing:-2px}
+.logo .mark{display:grid;place-items:center;width:132px;height:132px;border-radius:32px;background:#1f4e37;color:#fffcf6;font-size:84px}
+.url{font-size:64px;font-weight:600;color:#1f4e37}
 .small{font-size:46px;color:#46524a}
-#progress{position:absolute;left:0;bottom:0;height:10px;background:#2d5a43;opacity:.85}
+#progress{position:absolute;left:0;bottom:0;height:10px;background:#1f4e37;opacity:.85}
 `;
   const body = list
     .map((s) => `<section class="scene${s.html.includes('class="phone"') ? " has-phone" : ""}">${s.html}</section>`)

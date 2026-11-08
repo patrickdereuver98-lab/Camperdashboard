@@ -8,7 +8,7 @@ import { rateLimited } from "@/lib/rate-limit";
 // Kleuren uit het thema "natuur & vrijheid" (globals.css): zandpapier, bosgroen, inkt
 const PAPER = "#f5f0e6";
 const SURFACE = "#fffcf6";
-const FOREST = "#2d5a43";
+const FOREST = "#1f4e37";
 const INK = "#1f2b24";
 const INK_2 = "#46524a";
 const LINE = "#e0d7c5";
