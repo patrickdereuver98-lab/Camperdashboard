@@ -12,7 +12,7 @@ export function HomeSearch() {
     <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
       <Link
         href="/dichtbij"
-        className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-lg bg-ember px-6 text-[17px] font-semibold text-on-ember shadow-float transition-[filter] duration-200 hover:brightness-105 active:scale-[0.98] lg:h-auto"
+        className="flex h-14 shrink-0 items-center justify-center gap-2 rounded-lg bg-ember px-6 text-[17px] font-semibold text-on-ember transition-[filter] duration-200 hover:brightness-105 active:scale-[0.98] lg:h-auto"
       >
         <Icon name="locate" size={22} /> Plekken bij mij in de buurt
       </Link>

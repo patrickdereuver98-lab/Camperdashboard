@@ -17,7 +17,7 @@ const SLIDES: { icon: IconName; title: string; lead: string; points: string[] }[
     icon: "clock",
     title: "Welkom bij VrijStaan",
     lead: "Geen lappen tekst, alleen feiten. Per plek zie je meteen:",
-    points: ["of je er met de camper mag staan", "hoe laat je weg moet", "wat een nacht kost, met alle toeslagen"],
+    points: ["of je er met de camper mag staan", "hoe laat je weg moet", "wat een nacht kost, met de toeslagen die we kennen"],
   },
   {
     icon: "refresh",

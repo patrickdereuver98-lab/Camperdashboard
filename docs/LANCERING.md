@@ -67,7 +67,7 @@ Pas na samenvoegen, anders breekt de live site (CLAUDE.md). Volgorde:
 | 0.3 Juridisch (lanceervoorwaarde 1) | ⬜ | Patrick + Agent | Nee | Naam en contactadres aanleveren; agent vult `lib/company.ts` |
 | 0.4 Datalek (R9, B1, B19) | ✅ | Agent | Na #143 | Live leest `anon` nog `author_email` (8 november); er staan 0 reviews. Tot de migratie live staat geen review goedkeuren |
 | 0.5 Geen foute feiten (R17, R20, R21, R44) | ✅ | Agent | Na #143 | Pipeline parser 44 en migratie `20261106300000` |
-| 0.6 Eerlijke teksten (R22, R37) | 🔄 | Agent | Na #143 | SEO-titel, deelafbeelding en vertrouwensregel op de start zijn aangepast. Nog te sterk: stap 2 van "Hoe het werkt" op de start ("met alle bijkomende kosten") en de welkomstuitleg ("met alle toeslagen") |
+| 0.6 Eerlijke teksten (R22, R37) | ✅ | Agent | Na #143 | SEO-titel, deelafbeelding, vertrouwensregel, "Hoe het werkt" en welkomstuitleg zeggen "met de toeslagen die we kennen" of "incl. toeristenbelasting" |
 | 0.7 Ruis weg (R1, R3, R4) | ✅ | Agent + Patrick | Na #143 | Zie stap 4 hierboven voor Patrick |
 | 0.8 Kleine schermen (R27) | ✅ | Agent | Na #143 | Geen |
 
@@ -87,7 +87,7 @@ Pas na samenvoegen, anders breekt de live site (CLAUDE.md). Volgorde:
 
 | Werkpakket | Status | Eigenaar | Live | Rest |
 |---|---|---|---|---|
-| 2.1 Eén merk (R49, R50, R52, R53) | ✅ | Agent | Na #143 | De hoofdactie op de start heeft nog `shadow-float` (stijlgids §7: geen schaduw) |
+| 2.1 Eén merk (R49, R50, R52, R53) | ✅ | Agent | Na #143 | Hoofdactie op de start zonder schaduw (stijlgids §7) |
 | 2.2 Toegankelijk (R30, R31) | ✅ | Agent | Na #143 | Admin-`Segmented` gebruikt nog `role="radio"` op knoppen (alleen beheer) |
 | 2.3 Snel op 4G (R33 tot en met R36) | 🔄 | Agent | Na #143 | R34 en R35 af; R33 en R36 zo ver als besloten (README 114 en 115). Zoeken haalt het doel nog niet (TBT 594 ms, LCP 3,0 s) |
 | 2.4 Reizen zonder wrijving (R51, R54) | ✅ | Agent | Na #143 | Geen |
