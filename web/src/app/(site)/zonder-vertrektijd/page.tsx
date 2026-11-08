@@ -5,7 +5,7 @@ import { HubIntro, ProvinceLinks } from "@/components/seo-ui";
 import { formatDate } from "@/lib/format";
 import { getStats, getSummaries } from "@/lib/places";
 import { filterRobots, hubIntro, provinceLinks } from "@/lib/seo-pages";
-import { Search } from "../zoeken/search";
+import { PlacesPreload, Search } from "../zoeken/search";
 
 // Met zoekparameters (filters, provincie, kaart) wel volgen, niet indexeren; de canonical is altijd het kale adres
 export async function generateMetadata({ searchParams }: PageProps<"/zonder-vertrektijd">): Promise<Metadata> {
@@ -22,6 +22,7 @@ export default async function Page({ searchParams }: PageProps<"/zonder-vertrekt
   const [{ updatedAt }, all] = await Promise.all([getStats(), getSummaries()]);
   return (
     <>
+      <PlacesPreload />
       <HubIntro {...hubIntro("vrij", all)} />
       <Suspense
         fallback={

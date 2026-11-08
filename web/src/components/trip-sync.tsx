@@ -95,13 +95,13 @@ const TRIP: SyncSpec<Stop[]> = {
   read: readTrip,
   write: writeTrip,
   same: sameTrip,
-  pull: (userId) => supabase().from("user_trips").select("stops").eq("user_id", userId).maybeSingle(),
+  pull: (userId) => supabase().then((sb) => sb.from("user_trips").select("stops").eq("user_id", userId).maybeSingle()),
   merge: (local, remote) => {
     const stops = (remote as { stops?: unknown } | null)?.stops;
     const next = mergeTrips(local, stops);
     return { next, push: !remote || !sameTrip(next, mergeTrips([], stops)) };
   },
-  push: (userId, stops) => supabase().from("user_trips").upsert({ user_id: userId, stops: toJson(stops), updated_at: now() }),
+  push: (userId, stops) => supabase().then((sb) => sb.from("user_trips").upsert({ user_id: userId, stops: toJson(stops), updated_at: now() })),
 };
 
 const sameVehicle = (a: Vehicle, b: Vehicle) => JSON.stringify(cleanVehicle(a)) === JSON.stringify(cleanVehicle(b));
@@ -111,13 +111,13 @@ const VEHICLE: SyncSpec<Vehicle> = {
   read: readVehicle,
   write: writeVehicle,
   same: sameVehicle,
-  pull: (userId) => supabase().from("user_vehicles").select("data").eq("user_id", userId).maybeSingle(),
+  pull: (userId) => supabase().then((sb) => sb.from("user_vehicles").select("data").eq("user_id", userId).maybeSingle()),
   merge: (local, remote) => {
     const theirs = cleanVehicle((remote as { data?: unknown } | null)?.data);
     if (!hasVehicle(local) && hasVehicle(theirs)) return { next: theirs, push: false };
     return { next: local, push: hasVehicle(local) && !sameVehicle(local, theirs) };
   },
-  push: (userId, v) => supabase().from("user_vehicles").upsert({ user_id: userId, data: toJson(cleanVehicle(v)), updated_at: now() }),
+  push: (userId, v) => supabase().then((sb) => sb.from("user_vehicles").upsert({ user_id: userId, data: toJson(cleanVehicle(v)), updated_at: now() })),
 };
 
 const sameExpenses = (a: Expense[], b: Expense[]) => JSON.stringify(a) === JSON.stringify(b);
@@ -127,13 +127,13 @@ const EXPENSES: SyncSpec<Expense[]> = {
   read: readExpenses,
   write: writeExpenses,
   same: sameExpenses,
-  pull: (userId) => supabase().from("user_expenses").select("entries").eq("user_id", userId).maybeSingle(),
+  pull: (userId) => supabase().then((sb) => sb.from("user_expenses").select("entries").eq("user_id", userId).maybeSingle()),
   merge: (local, remote) => {
     const entries = (remote as { entries?: unknown } | null)?.entries;
     const next = mergeExpenses(local, entries);
     return { next, push: !remote || !sameExpenses(next, mergeExpenses([], entries)) };
   },
-  push: (userId, entries) => supabase().from("user_expenses").upsert({ user_id: userId, entries: toJson(entries), updated_at: now() }),
+  push: (userId, entries) => supabase().then((sb) => sb.from("user_expenses").upsert({ user_id: userId, entries: toJson(entries), updated_at: now() })),
 };
 
 /** Supabase geeft een fout meestal terug als `{ error }`, maar een netwerkfout kan ook een afwijzing zijn */
@@ -222,10 +222,7 @@ function SharedTripSync({ tick, later }: Retry) {
     if (!tripId || loadedFor === tripId) return;
     let alive = true;
     supabase()
-      .from("shared_trips")
-      .select("stops")
-      .eq("id", tripId)
-      .maybeSingle()
+      .then((sb) => sb.from("shared_trips").select("stops").eq("id", tripId).maybeSingle())
       .then(
         ({ data, error }) => {
           if (!alive) return;
@@ -247,19 +244,28 @@ function SharedTripSync({ tick, later }: Retry) {
   // Wijzigingen van de anderen
   useEffect(() => {
     if (!tripId) return;
-    const sb = supabase();
-    const channel = sb
-      .channel(`reis-${tripId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "shared_trips", filter: `id=eq.${tripId}` }, (payload) => {
-        const remote = mergeTrips([], (payload.new as { stops?: unknown }).stops);
-        if (lastSynced.current && sameTrip(remote, lastSynced.current)) return;
-        if (sending.current && sameTrip(remote, sending.current)) return;
-        lastSynced.current = remote;
-        writeTrip(remote);
-      })
-      .subscribe();
+    let alive = true;
+    let stop = () => undefined as void;
+    void supabase().then(
+      (sb) => {
+        if (!alive) return;
+        const channel = sb
+          .channel(`reis-${tripId}`)
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "shared_trips", filter: `id=eq.${tripId}` }, (payload) => {
+            const remote = mergeTrips([], (payload.new as { stops?: unknown }).stops);
+            if (lastSynced.current && sameTrip(remote, lastSynced.current)) return;
+            if (sending.current && sameTrip(remote, sending.current)) return;
+            lastSynced.current = remote;
+            writeTrip(remote);
+          })
+          .subscribe();
+        stop = () => void sb.removeChannel(channel);
+      },
+      () => undefined,
+    );
     return () => {
-      void sb.removeChannel(channel);
+      alive = false;
+      stop();
     };
   }, [tripId]);
 
@@ -269,7 +275,7 @@ function SharedTripSync({ tick, later }: Retry) {
     const t = setTimeout(() => {
       const current = readTrip();
       sending.current = current;
-      void attempt(() => supabase().from("shared_trips").update({ stops: toJson(current) }).eq("id", tripId)).then((ok) => {
+      void attempt(() => supabase().then((sb) => sb.from("shared_trips").update({ stops: toJson(current) }).eq("id", tripId))).then((ok) => {
         if (ok) lastSynced.current = current;
         else later();
         if (sending.current === current) sending.current = null;

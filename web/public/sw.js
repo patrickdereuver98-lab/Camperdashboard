@@ -217,8 +217,8 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin !== self.location.origin || url.pathname.startsWith("/admin")) return;
 
-  // Plekken en woonplaatsen. Een kaartuitsnede (?bbox=) in een eigen, kleine cache
-  if (url.pathname === "/api/places" || url.pathname === "/api/towns") {
+  // Plekken, de suggestie-index van het zoekvak en woonplaatsen. Een kaartuitsnede (?bbox=) in een eigen, kleine cache
+  if (url.pathname === "/api/places" || url.pathname === "/api/places/suggest" || url.pathname === "/api/towns") {
     event.respondWith(data(event, req, url.search ? AREA : DATA));
     return;
   }

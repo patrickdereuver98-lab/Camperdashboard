@@ -23,8 +23,9 @@ const MAX = 30;
 const NEARBY_ORDER: FacilityKey[] = ["power", "dogs", "water", "dumpStation", "toilet", "shower", "wifi"];
 
 export function NearbyApp() {
-  const { data: places } = usePlaces();
   const [status, setStatus] = useState<Status>("idle");
+  // De plekkenlijst pas ophalen als je locatie wordt bepaald (tegelijk met de GPS); niet al op het welkomstscherm (R33)
+  const { data: places } = usePlaces(status === "locating" || status === "ready");
   const [pos, setPos] = useState<LatLng | null>(null);
   const [facilities, setFacilities] = useState<FacilityKey[]>([]);
   // Voor "vannacht" standaard aan: verbergt alleen plekken die nu zeker dicht zijn

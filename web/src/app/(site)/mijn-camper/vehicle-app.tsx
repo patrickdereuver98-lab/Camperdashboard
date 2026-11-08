@@ -114,8 +114,7 @@ function Documents() {
     if (!uid) return;
     let alive = true;
     void supabase()
-      .storage.from("vehicle-docs")
-      .list(uid, { sortBy: { column: "created_at", order: "desc" } })
+      .then((sb) => sb.storage.from("vehicle-docs").list(uid, { sortBy: { column: "created_at", order: "desc" } }))
       .then(({ data, error }) => {
         if (!alive) return;
         if (error) setErr(errorMessage(error));
@@ -133,21 +132,21 @@ function Documents() {
     if (file.size > 5 * 1024 * 1024) return setErr("Dit bestand is groter dan 5 MB.");
     setBusy(true);
     const safe = file.name.normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").slice(-80) || "document";
-    const { error } = await supabase().storage.from("vehicle-docs").upload(`${uid}/${Date.now()}-${safe}`, file, { contentType: file.type, upsert: false });
+    const { error } = await (await supabase()).storage.from("vehicle-docs").upload(`${uid}/${Date.now()}-${safe}`, file, { contentType: file.type, upsert: false });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     reload();
   }
 
   async function open(name: string) {
-    const { data, error } = await supabase().storage.from("vehicle-docs").createSignedUrl(`${uid}/${name}`, 60);
+    const { data, error } = await (await supabase()).storage.from("vehicle-docs").createSignedUrl(`${uid}/${name}`, 60);
     if (error || !data) return setErr(errorMessage(error));
     window.open(data.signedUrl, "_blank", "noopener");
   }
 
   async function remove(name: string) {
     if (!confirm("Dit document definitief weghalen?")) return;
-    const { error } = await supabase().storage.from("vehicle-docs").remove([`${uid}/${name}`]);
+    const { error } = await (await supabase()).storage.from("vehicle-docs").remove([`${uid}/${name}`]);
     if (error) return setErr(errorMessage(error));
     reload();
   }

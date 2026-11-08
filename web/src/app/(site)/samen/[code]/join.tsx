@@ -33,7 +33,7 @@ export function JoinTrip({ params }: { params: Promise<{ code: string }> }) {
   async function join() {
     setBusy(true);
     setErr(null);
-    const { data, error } = await supabase().rpc("join_shared_trip", { p_code: code });
+    const { data, error } = await (await supabase()).rpc("join_shared_trip", { p_code: code });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     const d = data as { id: string; name: string; stops: unknown };

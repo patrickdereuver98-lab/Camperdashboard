@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { PlaceSummary, Town } from "./types";
+import { decodePlaceIndex, EARLY_PLACES, type PlaceRef } from "./place-index";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
 import { createLocalStore, onStorageFailure, storageFailed, type StoreOptions } from "./local-store";
@@ -142,18 +143,23 @@ type Loaded<T> = { data: T; cachedAt: string | null };
 
 let placesPromise: Promise<Loaded<PlaceSummary[]>> | null = null;
 let townsPromise: Promise<Loaded<Town[]>> | null = null;
+let indexPromise: Promise<Loaded<PlaceRef[]>> | null = null;
 
-function once<T>(url: string, slot: "places" | "towns"): Promise<Loaded<T>> {
-  const p = fetch(url).then(async (r) => {
+const clear = { places: () => (placesPromise = null), towns: () => (townsPromise = null), index: () => (indexPromise = null) };
+
+function once<T>(
+  url: string,
+  slot: keyof typeof clear,
+  decode: (raw: unknown) => T = (raw) => raw as T,
+  started?: Promise<Response>,
+): Promise<Loaded<T>> {
+  const p = (started ?? fetch(url)).then(async (r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const stamp = r.headers.get(CACHED_AT_HEADER);
     const cachedAt = stamp && !Number.isNaN(Date.parse(stamp)) ? new Date(stamp).toISOString() : null;
-    return { data: (await r.json()) as T, cachedAt };
+    return { data: decode(await r.json()), cachedAt };
   });
-  p.catch(() => {
-    if (slot === "places") placesPromise = null;
-    else townsPromise = null;
-  });
+  p.catch(() => clear[slot]());
   return p;
 }
 
@@ -164,9 +170,11 @@ type LoaderState<T> = {
   cachedAt: string | null;
 };
 
-function useLoader<T>(get: () => Promise<Loaded<T>>) {
+/** `enabled` false: (nog) niets ophalen; de pagina vraagt de lijst pas als hij nodig is (R33) */
+function useLoader<T>(get: () => Promise<Loaded<T>>, enabled = true) {
   const [state, setState] = useState<LoaderState<T>>({ data: null, error: false, cachedAt: null });
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
     get().then(
       ({ data, cachedAt }) => alive && setState({ data, error: false, cachedAt }),
@@ -175,15 +183,34 @@ function useLoader<T>(get: () => Promise<Loaded<T>>) {
     return () => {
       alive = false;
     };
-  }, [get]);
+  }, [get, enabled]);
   return state;
 }
 
-const getPlaces = () => (placesPromise ??= once<PlaceSummary[]>("/api/places", "places"));
-const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
+/**
+ * Het verzoek dat de HTML van zoeken al startte (EARLY_PLACES, zie zoeken/search.tsx), één keer te gebruiken.
+ * Mislukt het, dan vraagt de volgende aanroep de lijst gewoon opnieuw.
+ */
+function takeEarlyPlaces(): Promise<Response> | undefined {
+  if (typeof window === "undefined") return undefined;
+  const w = window as unknown as Record<string, Promise<Response> | undefined>;
+  const started = w[EARLY_PLACES];
+  w[EARLY_PLACES] = undefined;
+  return started;
+}
 
-export const usePlaces = () => useLoader(getPlaces);
-export const useTowns = () => useLoader(getTowns);
+const getPlaces = () => (placesPromise ??= once<PlaceSummary[]>("/api/places", "places", undefined, takeEarlyPlaces()));
+const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
+// Is de hele lijst al onderweg of binnen (zoeken), dan daaruit; anders de lichte index
+const fetchIndex = () => (indexPromise ??= once<PlaceRef[]>("/api/places/suggest", "index", decodePlaceIndex));
+const getIndex = () =>
+  placesPromise ? placesPromise.then((r): Loaded<PlaceRef[]> => ({ data: r.data, cachedAt: r.cachedAt }), fetchIndex) : fetchIndex();
+
+/** De hele plekkenlijst (±1,3 MB, ±200 KB gecomprimeerd); alleen waar kaart, filters of reis hem echt nodig hebben */
+export const usePlaces = (enabled = true) => useLoader(getPlaces, enabled);
+export const useTowns = (enabled = true) => useLoader(getTowns, enabled);
+/** Naam, plaats en ligging van alle plekken, voor suggesties in het zoekvak (lib/place-index.ts) */
+export const usePlaceIndex = (enabled = true) => useLoader(getIndex, enabled);
 
 // ── Reisplekken lokaal bewaren, zodat Mijn reis ook zonder bereik werkt ──────
 

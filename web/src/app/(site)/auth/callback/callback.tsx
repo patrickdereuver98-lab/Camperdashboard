@@ -16,22 +16,31 @@ export function Callback() {
   useEffect(() => {
     if (providerError) return;
     const next = safeNext(params.get("next"));
-    const sb = supabase();
     let done = false;
+    let alive = true;
+    let unsubscribe = () => undefined as void;
     const go = () => {
-      if (done) return;
+      if (done || !alive) return;
       done = true;
       router.replace(next);
     };
-    // getSession wacht tot de client de code uit de URL heeft ingewisseld
-    void sb.auth.getSession().then(({ data, error }) => {
-      if (data.session) go();
-      else if (error) setErr(authErrorMessage(error.message));
-    });
-    const { data: sub } = sb.auth.onAuthStateChange((event, session) => session && event === "SIGNED_IN" && go());
+    void supabase().then(
+      (sb) => {
+        if (!alive) return;
+        // getSession wacht tot de client de code uit de URL heeft ingewisseld
+        void sb.auth.getSession().then(({ data, error }) => {
+          if (data.session) go();
+          else if (error && alive) setErr(authErrorMessage(error.message));
+        });
+        const { data: sub } = sb.auth.onAuthStateChange((event, session) => session && event === "SIGNED_IN" && go());
+        unsubscribe = () => sub.subscription.unsubscribe();
+      },
+      () => undefined,
+    );
     const timeout = setTimeout(() => !done && setErr(authErrorMessage("expired")), 10_000);
     return () => {
-      sub.subscription.unsubscribe();
+      alive = false;
+      unsubscribe();
       clearTimeout(timeout);
     };
   }, [params, providerError, router]);

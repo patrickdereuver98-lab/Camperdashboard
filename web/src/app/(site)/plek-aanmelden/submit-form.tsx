@@ -27,7 +27,7 @@ export function SubmitForm() {
     for (const fac of FACILITIES) if (formValue(f, `v_${fac.key}`)) facilities[fac.key] = true;
     setBusy(true);
     setErr(null);
-    const { error } = await supabase().rpc("submit_place", {
+    const { error } = await (await supabase()).rpc("submit_place", {
       p_kind: owner ? "eigenaar" : "nieuw",
       p_place_id: null,
       p_payload: {

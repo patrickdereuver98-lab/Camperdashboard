@@ -30,7 +30,7 @@
 | Pushmeldingen | Supabase Edge Function `push` (Deno, `web-push`), aangeroepen door de database via `pg_net` met dezelfde `x-pipeline-key`; maakt zelf de VAPID-sleutels aan |
 | Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `quote.ts` (citaatcontrole voor de zoekagenten; de AI-lezer is geschrapt op 19 oktober 2026), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
 | Taken | `pg_cron` + `pg_net` in de database (zie Architectuur) |
-| Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en `cacheLife("minutes")`, terugval op de snapshot |
+| Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en het eigen cacheprofiel `plekken` (5 minuten vers, `next.config.ts`), terugval op de snapshot. Na een wijziging in beheer ververst `/api/admin/revalidate` de tags `places`, `reviews`, `faq` en `settings` meteen (`revalidateTag`, alleen met een beheerderstoken) |
 
 ## Authenticatie en rollen
 
@@ -134,7 +134,7 @@ omgevingsvariabelen en waar elk geheim staat: `web/.env.example`.
 |---|---|
 | Eerste weergave plekpagina op 4G | < 2,5 s (LCP), CLS < 0,1 |
 | Zoekresultaten na filteren | < 100 ms (filtering in de browser op samenvattingen) |
-| Versheid van data op de site | ≤ enkele minuten (`cacheLife("minutes")`) |
+| Versheid van data op de site | ≤ enkele minuten (cacheprofiel `plekken`, 5 minuten); wijzigingen in beheer direct (`revalidateTag`) |
 | Website-gegevens | Elke plek met website minstens één keer per volledige ronde gelezen (±4 uur per ronde) |
 | OSM | Elke provincie eens per 7 dagen |
 | Beschikbaarheid | Vercel en Supabase gratis niveau, geen SLA; terugval op de snapshot als Supabase onbereikbaar is |

@@ -34,7 +34,7 @@ export function DepartureForm({
     if (!kind) return setErr("Kies hoe laat je weg moet.");
     setBusy(true);
     setErr(null);
-    const { error } = await supabase().rpc("submit_place", {
+    const { error } = await (await supabase()).rpc("submit_place", {
       p_kind: "correctie",
       p_place_id: place.id,
       p_payload: {

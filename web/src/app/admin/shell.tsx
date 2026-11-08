@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, Logo, type IconName } from "@/components/icons";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage } from "@/lib/supabase-browser";
+import { supabaseClient as supabase } from "@/lib/supabase-client";
 import { ErrorNote, input, primary } from "./ui";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [

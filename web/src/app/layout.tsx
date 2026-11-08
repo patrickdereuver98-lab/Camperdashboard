@@ -3,7 +3,7 @@ import { Geist } from "next/font/google";
 import { preconnect } from "react-dom";
 import "./globals.css";
 import { Header, Runtime, SaveToast, TabBar } from "@/components/chrome";
-import { TripSync } from "@/components/trip-sync";
+import { TripSync } from "@/components/deferred";
 import { CookieBanner } from "@/components/cookie-banner";
 import { SITE_URL } from "@/lib/env";
 import { OPEN_GRAPH } from "@/lib/meta";

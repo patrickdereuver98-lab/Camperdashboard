@@ -67,6 +67,8 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
               kind={kind}
               town={town}
               sizes="large"
+              // Alleen de eerste foto meteen en met voorrang (LCP); de rest pas als je erheen veegt (R35)
+              eager={i === 0}
               className="h-full w-full"
               onFail={() => setFailed((f) => [...f, p.url])}
             />
@@ -338,7 +340,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
   }, [scores, departure]);
 
   async function sendReview(form: FormData) {
-    const sb = supabase();
+    const sb = await supabase();
     const month = String(formValue(form, "month") || "");
     const { error } = await sb.rpc("submit_review", {
       p_place_id: placeId,
@@ -667,7 +669,7 @@ export function ReportProblem({
     }
     setBusy(true);
     setErr(null);
-    const { error } = await supabase().rpc("submit_place", {
+    const { error } = await (await supabase()).rpc("submit_place", {
       p_kind: formValue(f, "owner") ? "eigenaar" : "correctie",
       p_place_id: placeId,
       p_payload: {

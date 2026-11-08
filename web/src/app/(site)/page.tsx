@@ -9,7 +9,7 @@ import { Sign, type SignName } from "@/components/sign";
 import { CreditedPhoto, PlaceCard } from "@/components/place-ui";
 import { CARD_CELL, CARD_GRID } from "@/lib/card-grid";
 import { looksLikeGraphic } from "@/lib/photos";
-import { Onboarding } from "@/components/onboarding";
+import { Onboarding } from "@/components/deferred";
 
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
