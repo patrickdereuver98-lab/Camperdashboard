@@ -10,7 +10,7 @@ const here = new URL(".", import.meta.url);
 const read = (p) => fs.readFileSync(new URL(p, here), "utf8");
 const db = await PGlite.create({ extensions: { pg_trgm, unaccent, pgcrypto } });
 await db.exec(read("stub.sql"));
-await db.exec(read("../../migrations/20261018233000_bronnen_en_claims.sql"));
+await db.exec(read("../../migrations/20261108100000_bronnen_en_claims.sql"));
 try {
   await db.exec(read("cases.sql"));
   const { rows } = await db.query("select count(*)::int as n from pg_temp.result");

@@ -74,3 +74,23 @@ jobs:
       - run: web/supabase/tests/run.sh
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+  # Herbouwtest (R5): schone Supabase-Postgres, nulmigratie plus alle migraties daarna op volgorde, schema na de
+  # nulmigratie gelijk aan de vingerafdruk van live, dan de SQL-tests op het volledige schema (web/supabase/tests/herbouw)
+  herbouw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: supabase/postgres:17.6.1.054
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost" --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: web/supabase/tests/herbouw.sh
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          ADMIN_URL: postgresql://supabase_admin:postgres@localhost:5432/postgres

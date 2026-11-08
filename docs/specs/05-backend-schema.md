@@ -1,8 +1,9 @@
 # 5. Backend Schema
 
 > Doel: vastleggen welke data we opslaan, hoe die samenhangt en wie wat mag.
-> Bron: live database `qkrmthrhwmmmwswmfgwc` op 11 oktober 2026. Let op: `web/supabase/schema.sql` loopt achter
-> (vertrektijden, toeslagen, `admin_stats` ontbreken) en moet opnieuw worden gegenereerd.
+> Bron: live database `qkrmthrhwmmmwswmfgwc` op 11 oktober 2026. Het volledige, actuele schema staat sinds
+> 8 november 2026 in de nulmigratie `web/supabase/migrations/20261102132558_baseline.sql` (zie "Herbouwen");
+> het oude `schema.sql` staat in `web/supabase/archief/` en wordt niet meer bijgewerkt.
 
 ## Entiteiten
 
@@ -150,7 +151,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 
 ### Bronnenlaag (schema `bron`, dataplan Fase 0)
 
-Migratie `20261018233000_bronnen_en_claims.sql`. Het schema staat niet open via de API: geen enkele rol behalve
+Migratie `20261108100000_bronnen_en_claims.sql` (eerder `20261018233000`, nog niet live). Het schema staat niet open via de API: geen enkele rol behalve
 `service_role` mag erin, en alles loopt via de functies hieronder. Niets in deze laag schrijft in `places`;
 overnemen is taak W4.1 van het dataplan.
 
@@ -299,9 +300,52 @@ Exporteren: `export_snapshot()` geeft alle gepubliceerde plekken, woonplaatsen, 
 ## Migraties en startdata
 
 - Wijzigingen via Supabase-migraties (MCP `apply_migration` of de SQL-editor), en dezelfde SQL als bestand in
-  `web/supabase/migrations/` (vanaf 15 oktober 2026). Na elke wijziging `web/supabase/schema.sql` opnieuw genereren,
-  en de TypeScript-types in `web/src/lib/database.types.ts` (MCP `generate_typescript_types`).
+  `web/supabase/migrations/` met de live versie als naam (`list_migrations`). Daarna de TypeScript-types in
+  `web/src/lib/database.types.ts` (MCP `generate_typescript_types`). Wijzigingen via `execute_sql` zonder
+  migratiebestand maken de repo onvolledig: de herbouwtest vangt dat pas bij een nieuwe nulmigratie.
 - Startdata: `web/supabase/seed.sql` (instellingen, FAQ, woonplaatsen, OSM-queries en provincies).
-- Nieuw project opzetten: `schema.sql` → `seed.sql` → edge function `pipeline` deployen (zonder JWT) → sleutel in
-  `internal_secrets` (`pipeline_key`) → projectnaam aanpassen in `private.call_pipeline`.
-- **Opruimen:** de testtabellen `private.probe` en `private.probe2` mogen weg.
+- Nieuw project opzetten: alle bestanden in `web/supabase/migrations/` op volgorde (nulmigratie eerst) → `seed.sql`
+  → `web/supabase/baseline/cron.sql` → edge function `pipeline` deployen (zonder JWT) → sleutel in
+  `public.internal_secrets` (`pipeline_key`) → projectnaam aanpassen in `private.call_pipeline`.
+
+### Herbouwen (review november 2026, R5)
+
+Live en repo liepen uiteen: 32 live migraties stonden niet als bestand in de repo, en een deel van het schema is
+ooit met losse SQL gezet (bijvoorbeeld `osm_regions`, nodig vanaf live migratie `20261011075857`). De oude
+migraties opnieuw afspelen geeft dus niet het live schema. Daarom:
+
+| Wat | Waar |
+|---|---|
+| Nulmigratie (baseline): het live schema van 8 november 2026, tot en met live migratie `20261102132558` plus wat via SQL is gezet. Extensies, schema `private`, 63 tabellen, 117 functies, standaardwaarden, 246 constraints, indexen, 21 triggers (ook op `auth.users`), RLS, 59 policies (ook op `storage.objects`), rechten op tabellen, kolommen, reeksen, functies en schema's, standaardrechten van `postgres`, de realtime-publicatie en de drie buckets. Geen rijen, geen geheimen, geen eigenaren | `web/supabase/migrations/20261102132558_baseline.sql` |
+| Maker (alleen lezen, via de Management API met `SUPABASE_ACCESS_TOKEN` of via `SUPABASE_DB_URL`) | `web/scripts/baseline/maak-baseline.py`, `ddl.sql`, `vingerafdruk.sql` |
+| Vingerafdruk van live (één regel per object, 1.512 regels) | `web/supabase/baseline/vingerafdruk.txt` |
+| Cron-taken (18), los: niet in een testdatabase laten lopen | `web/supabase/baseline/cron.sql` |
+| Live migratieversies op het moment van de nulmigratie (77) | `web/supabase/baseline/migraties.txt` |
+| Geschiedenis: de 77 live migraties (45 bestaande bestanden, 32 letterlijk uit `supabase_migrations.schema_migrations.statements`, waarvan 2 live zonder statements) en `20261019070000_contact_beheerder` (live via SQL gezet), plus het oude `schema.sql` | `web/supabase/archief/` |
+| Herbouwtest | `web/supabase/tests/herbouw.sh`, CI-job `herbouw` |
+
+De nulmigratie vervangt alle migraties tot en met `20261102132558`. Ze heeft de versie van de laatste live migratie
+(zoals `supabase migration squash`), zodat ze op live nooit draait. Wie de Supabase-CLI tegen live gebruikt
+(`supabase db push`), moet eerst de oude versies als teruggedraaid markeren (`supabase migration repair --status
+reverted <versie>` voor de 76 andere versies in `baseline/migraties.txt`); met `apply_migration` via MCP is dat niet
+nodig. Migraties die nog niet live zijn, staan ná de nulmigratie (`20261106…` en later). De bronnenlaag
+(`bronnen_en_claims`, nooit live) is daarom hernummerd van `20261018233000` naar `20261108100000`.
+
+De herbouwtest start een schone `supabase/postgres:17.6.1.054` (Docker of service-container in CI), vult de stub van
+`auth` en `storage` aan met de kolommen die de app gebruikt (`tests/herbouw/platform.sql`, als `supabase_admin`),
+past alle migraties op volgorde toe, vergelijkt het schema direct na de nulmigratie met `vingerafdruk.txt` (elk
+verschil in kolom, constraint, index, functie, trigger, policy of recht laat de test falen), voert `seed.sql` uit
+en draait `tests/herbouw/*.test.sql` op het volledige schema: anon en ingelogde bezoekers zien geen concepten, geen
+`author_email`, `admin_note` of `user_id` van reviews en niets in `private`; `apply_scrape` wist niets bij een halve
+lezing, beheer gaat voor en de controledatum komt alleen bij een kernveld. De oudere SQL-tests op stubs
+(`tests/run.sh`) blijven daarnaast draaien.
+
+Een nieuwe nulmigratie maken (bijvoorbeeld na een reeks live migraties): `python3 web/scripts/baseline/maak-baseline.py`
+schrijft een nieuwe `<laatste live versie>_baseline.sql` en ververst de bestanden in `baseline/`; verplaats daarna de
+vorige nulmigratie en de migraties die erin opgaan naar `archief/migrations/`. `web/scripts/dump-schema.sh` maakt
+met `pg_dump` een controledump om ernaast te leggen (niet vastleggen).
+
+Open: in `private` staan werktabellen met een datum in de naam (`scrape_baseline_20261023`,
+`nacontrole_20261108` en dergelijke); die komen als lege tabellen mee in de nulmigratie. Opruimen kan met een gewone
+migratie.
+- De testtabellen `private.probe` en `private.probe2` zijn weg (live migratie `20261102070235_probe_tabellen_weg`).

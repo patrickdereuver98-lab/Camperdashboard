@@ -48,3 +48,6 @@ next-env.d.ts
 
 # kaartworker, gekopieerd uit node_modules (scripts/copy-maplibre-worker.mjs)
 /public/maplibre-gl-worker.mjs
+
+# controledump van scripts/dump-schema.sh (R5)
+/supabase/baseline/pg_dump/
