@@ -3,7 +3,7 @@
 //   deno run --allow-read tools/data-collectors/test_merge.ts data/mapped_api_data.json [meer lijsten …]
 //
 // Lijsten in volgorde van voorrang. Het script voegt samen, controleert elk master-record tegen de regels van de tabel
-// geo_master (migratie 20261030120000_geo_master.sql) en stuurt alles door upsertMaster met een nep-client, zodat je
+// geo_master (migratie 20261030102938_geo_master.sql) en stuurt alles door upsertMaster met een nep-client, zodat je
 // precies ziet wat er per stuk van 500 naar Supabase zou gaan. Exitcode 1 bij een fout.
 
 import { CHUNK_SIZE, mergeLists, upsertMaster, type MasterDb, type MasterRecord } from "../../web/supabase/functions/pipeline/merge_master.ts";

@@ -68,7 +68,7 @@ test("alleen een naam of maand is geen concept; een cijfer, vertrektijd of tekst
 });
 
 test("migratie: submit_review alleen voor ingelogd met bevestigd e-mailadres, niet voor anon", () => {
-  const sql = readFileSync(new URL("../supabase/migrations/20261022100000_reviews_met_account.sql", import.meta.url), "utf8");
+  const sql = readFileSync(new URL("../supabase/archief/migrations/20261022100000_reviews_met_account.sql", import.meta.url), "utf8");
   const fn = sql.slice(sql.indexOf("create or replace function public.submit_review"), sql.indexOf("revoke all on function public.submit_review"));
   assert.match(fn, /security definer set search_path to ''/);
   assert.match(fn, /auth\.uid\(\)/);

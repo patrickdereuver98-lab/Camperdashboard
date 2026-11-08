@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
-import { CROWD_LABEL, crowdSummary, type CrowdLevel, type CrowdStatus } from "@/lib/crowd";
+import { CROWD_ERROR, CROWD_LABEL, crowdSummary, type CrowdLevel, type CrowdStatus } from "@/lib/crowd";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 import { currentPushSupport, enablePush } from "@/lib/push";
 
@@ -15,47 +15,91 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
   const { session } = useSession();
   const [status, setStatus] = useState<CrowdStatus | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Laden mislukt: dan zeggen we dat, niet "Nog niemand gemeld" (DATA-12)
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<CrowdLevel | null>(null);
   const [mine, setMine] = useState<CrowdLevel | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Opnieuw proberen na een mislukte laadpoging (R32)
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
     void supabase()
-      .rpc("crowd_status", { p_place_id: placeId })
-      .then(({ data }) => {
-        if (!alive) return;
-        setStatus((data as CrowdStatus) ?? null);
-        setLoaded(true);
-      });
+      .then((sb) => sb.rpc("crowd_status", { p_place_id: placeId }))
+      .then(
+        ({ data, error }) => {
+          if (!alive) return;
+          setLoadFailed(!!error);
+          setStatus(error ? null : ((data as CrowdStatus) ?? null));
+          setLoaded(true);
+        },
+        () => {
+          if (!alive) return;
+          setLoadFailed(true);
+          setLoaded(true);
+        },
+      );
     return () => {
       alive = false;
     };
-  }, [placeId]);
+  }, [placeId, attempt]);
 
   async function report(level: CrowdLevel) {
     setBusy(level);
     setErr(null);
-    const { data, error } = await supabase().rpc("report_crowd", { p_place_id: placeId, p_level: level });
+    const { data, error } = await (await supabase()).rpc("report_crowd", { p_place_id: placeId, p_level: level });
     setBusy(null);
     if (error) return setErr(errorMessage(error));
     setStatus(data as CrowdStatus);
+    setLoadFailed(false);
     setMine(level);
   }
 
   // Pas na het laden (in de browser) uitrekenen: "x minuten geleden" hangt af van de klok
-  const summary = loaded ? crowdSummary(status) : null;
+  const summary = !loaded ? null : loadFailed ? CROWD_ERROR : crowdSummary(status);
+  // Nog geen melding: één regel in plaats van een blok, zodat Voorzieningen niet ±180 px naar beneden schuift (R55)
+  const empty = !!summary && !summary.level && !loadFailed;
+
+  // Ook tijdens het laden, want meestal heeft nog niemand iets gemeld: dan verspringt er niets
+  if ((empty || !summary) && !session)
+    return (
+      <section aria-labelledby="drukte" className="mt-3 flex flex-wrap items-center gap-x-3 rounded-lg border border-line bg-surface px-4 py-1.5" data-testid="crowd">
+        <h2 id="drukte" className="font-semibold">Hoe druk is het nu?</h2>
+        <p className={summary ? "text-ink-2" : "text-sm text-muted"} aria-live="polite">{summary ? `${summary.title}.` : "Laden…"}</p>
+        <Link
+          href={`/inloggen?next=${encodeURIComponent(`/plek/${slug}#drukte`)}`}
+          className="inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-2"
+        >
+          Log in om de drukte door te geven
+        </Link>
+      </section>
+    );
 
   return (
     <section aria-labelledby="drukte" className="mt-3 rounded-lg border border-line bg-surface p-4" data-testid="crowd">
       <h2 id="drukte" className="font-semibold">Hoe druk is het nu?</h2>
-      <div className="mt-2 flex min-h-12 items-center gap-3" aria-live="polite">
-        {summary ? (
+      <div className={`mt-2 flex items-center gap-3 ${empty ? "" : "min-h-12"}`} aria-live="polite">
+        {empty ? (
+          <p className="text-ink-2">{summary.title}.</p>
+        ) : summary ? (
           <>
             <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${summary.level ? DOT[summary.level] : "bg-line"}`} aria-hidden="true" />
             <div>
               <p className={`font-display text-lg leading-tight font-semibold ${summary.level ? "" : "text-muted"}`}>{summary.title}</p>
               <p className="text-sm text-ink-2">{summary.detail}</p>
+              {loadFailed && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoaded(false);
+                    setAttempt((a) => a + 1);
+                  }}
+                  className="mt-2 inline-flex h-11 items-center rounded-md border border-line px-4 font-semibold hover:border-forest"
+                >
+                  Opnieuw proberen
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -105,11 +149,13 @@ function WatchToggle({ placeId, userId }: { placeId: string; userId: string }) {
   useEffect(() => {
     let alive = true;
     void supabase()
-      .from("crowd_watches")
-      .select("expires_at, notified_at")
-      .eq("place_id", placeId)
-      .eq("user_id", userId)
-      .maybeSingle()
+      .then((sb) =>
+        sb.from("crowd_watches")
+          .select("expires_at, notified_at")
+          .eq("place_id", placeId)
+          .eq("user_id", userId)
+          .maybeSingle()
+      )
       .then(({ data }) => alive && setOn(!!data && !data.notified_at && new Date(data.expires_at) > new Date()));
     return () => {
       alive = false;
@@ -127,7 +173,7 @@ function WatchToggle({ placeId, userId }: { placeId: string; userId: string }) {
         if (support === "unsupported") throw new Error("Deze browser kan geen meldingen tonen.");
         await enablePush();
       }
-      const { error } = await supabase().rpc("watch_place", { p_place_id: placeId, p_on: !on });
+      const { error } = await (await supabase()).rpc("watch_place", { p_place_id: placeId, p_on: !on });
       if (error) throw error;
       setOn(!on);
       if (!on) setNote("We sturen je één melding zodra iemand meldt dat het hier rustig is. Dit geldt 24 uur.");

@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { editDistance, DEFAULT_FILTERS, normalize, searchHref, searchForm, type Filters } from "@/lib/search";
-import { usePlaces, useTowns } from "@/lib/store";
+import { usePlaceIndex, useTowns } from "@/lib/store";
+import type { PlaceRef } from "@/lib/place-index";
 import { track } from "@/lib/track";
 import { PROVINCES, type Town } from "@/lib/types";
 import { distanceKm } from "@/lib/geo";
@@ -56,9 +57,15 @@ export function DestinationSearch({
   base,
   initial = "",
   onPick,
+  places: given,
   children,
 }: {
   variant?: "hero" | "bar";
+  /**
+   * Plekken die de pagina al heeft (zoeken: de hele lijst; null = nog onderweg). Zonder deze prop haalt het zoekvak
+   * zelf de lichte suggestie-index op, pas als je het gebruikt (R33).
+   */
+  places?: PlaceRef[] | null;
   /** Extra velden tussen het zoekveld en de knop */
   children?: ReactNode;
   /** Verfijningen die behouden blijven bij een nieuwe bestemming */
@@ -78,8 +85,11 @@ export function DestinationSearch({
   const [resolving, setResolving] = useState(false);
   // Antwoord van /api/locatie voor de zoekterm `q`; alleen PDOK-antwoorden (de terugval is dezelfde lijst als hieronder)
   const [remote, setRemote] = useState<{ q: string; items: Location[] } | null>(null);
-  const { data: towns } = useTowns();
-  const { data: places } = usePlaces();
+  // Woonplaatsen en de suggestie-index pas ophalen als je het zoekvak aanraakt of er al iets in staat
+  const [used, setUsed] = useState(initial !== "");
+  const { data: towns } = useTowns(used);
+  const { data: index } = usePlaceIndex(used && given === undefined);
+  const places = given === undefined ? index : given;
   const remoteQuery = cleanQuery(text);
 
   // Adressen, postcodes en alle woonplaatsen: pas vragen als je even stopt met typen
@@ -319,7 +329,7 @@ export function DestinationSearch({
             Waar wil je staan?
           </label>
           <div
-            className={`flex min-w-0 items-center gap-2 rounded-lg text-ink ring-1 ring-line transition-shadow focus-within:ring-2 focus-within:ring-forest ${
+            className={`flex min-w-0 items-center gap-2 rounded-lg text-ink ring-1 ring-field transition-shadow focus-within:ring-2 focus-within:ring-forest ${
               hero ? "h-12 bg-paper px-4 sm:h-14" : "h-11 bg-surface px-3 sm:h-12"
             }`}
           >
@@ -340,9 +350,13 @@ export function DestinationSearch({
                 setNotFound(null);
                 setText(e.target.value);
                 setOpen(true);
+                setUsed(true);
                 setActive(e.target.value ? 1 : 0);
               }}
-              onFocus={() => setOpen(true)}
+              onFocus={() => {
+                setOpen(true);
+                setUsed(true);
+              }}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
               onKeyDown={(e) => {
                 if (e.key === "ArrowDown") {

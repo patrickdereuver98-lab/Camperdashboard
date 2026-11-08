@@ -6,7 +6,8 @@
 #
 # Geen pipeline-sleutel nodig: de run meldt zich aan met een GitHub-OIDC-token (id-token: write). De pipeline
 # accepteert dat alleen van deze workflow op main en alleen voor merge_master en promote (workflowForAction in
-# web/supabase/functions/pipeline/stealth.ts). Sleutels van partner-API's: als secret met de naam uit bronnen.json.
+# web/supabase/functions/pipeline/stealth.ts). Sleutels van partner-API's: als secret met de naam uit bronnen.json, en
+# die naam ook hieronder bij de stap "Bronnen → merge_master → promote" onder env zetten (alleen nodige geheimen, R8).
 # Versleutelde aanleveringen (tools/data-collectors/aanlevering/*.enc): secret AANLEVERING_SLEUTEL.
 name: Dataketen
 
@@ -34,8 +35,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
       - run: pip install -r tools/data-collectors/requirements.txt pytest
@@ -59,8 +62,9 @@ jobs:
       - name: Bronnen → merge_master → promote
         env:
           PIPELINE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/pipeline
-          # Alleen nodig voor ${NAAM} in bronnen.json; de waarden blijven gemaskeerd in de log
-          SECRETS_JSON: ${{ toJSON(secrets) }}
+          # Sleutels voor ${NAAM} in bronnen.json hier één voor één toevoegen, bijvoorbeeld:
+          #   NAAM: ${{ secrets.NAAM }}
+          # (nu gebruikt geen enkele bron een sleutel)
         # Gepland = echt; met de hand = proef, tenzij "proef" uit staat
         run: >
           python tools/data-collectors/run_pipeline.py

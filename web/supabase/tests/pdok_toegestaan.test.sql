@@ -1,4 +1,4 @@
--- Test voor migratie 20261031230000_pdok_toegestaan.sql. Draai met run.sh.
+-- Test voor migratie 20261101002102_pdok_toegestaan.sql. Draai met run.sh.
 do $$
 begin
   assert (select count(*) = 2 from public.geo_bronnen

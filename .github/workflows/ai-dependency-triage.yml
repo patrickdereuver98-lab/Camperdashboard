@@ -1,6 +1,8 @@
 # Dependency-radar: elke Dependabot-PR krijgt een categorie (Kritiek, Aanbevolen, Uitstellen) met advies van
 # Gemini, en komt in Mission Control (tabel dependency_updates) via /api/admin/log-dependency.
-#   Kritiek    → automatisch samenvoegen, maar pas als de CI groen is (gh pr merge --auto). Nooit bij een major-versie.
+#   Kritiek    → automatisch samenvoegen, maar pas als de CI groen is (gh pr merge --auto). Alleen bij een
+#                beveiligingsadvies met GHSA-id van Dependabot, nooit bij een major-versie. Tekst in de PR (release
+#                notes) of het oordeel van Gemini kan Kritiek niet afdwingen.
 #   Aanbevolen → status pending_review: een mens klikt op samenvoegen.
 #   Uitstellen → status pending_review met het advies om te wachten.
 #
@@ -60,7 +62,7 @@ jobs:
 
       - name: Kritiek automatisch samenvoegen na groene CI
         id: merge
-        if: steps.triage.outputs.category == 'kritiek'
+        if: steps.triage.outputs.category == 'kritiek' && startsWith(steps.meta.outputs.ghsa-id, 'GHSA-')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}

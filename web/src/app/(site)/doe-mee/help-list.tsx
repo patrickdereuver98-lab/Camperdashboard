@@ -8,7 +8,7 @@ import { PROVINCES, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { DepartureForm } from "@/components/departure-form";
 
-const field = "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 const PAGE = 20;
 
 /** Gepubliceerde plekken waarvan de vertrektijd nog onbekend is, per provincie, met een snel invulformulier */
@@ -27,7 +27,7 @@ export function HelpList() {
     [places, province],
   );
 
-  if (error) return <p className="mt-4 rounded-xl bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
+  if (error) return <p className="mt-4 rounded-lg bg-alert-tint p-4 text-alert">De plekken konden niet worden geladen. Ververs de pagina.</p>;
 
   return (
     <div className="mt-4">
@@ -53,7 +53,7 @@ export function HelpList() {
       ) : (
         <>
           <p className="mt-3 text-sm text-muted">{list.length.toLocaleString("nl-NL")} plekken</p>
-          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-xl bg-surface shadow-low">
+          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
             {list.slice(0, shown).map((p) => (
               <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">

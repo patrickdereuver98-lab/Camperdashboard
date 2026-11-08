@@ -19,7 +19,9 @@ function save(analytics: boolean) {
   writeConsent(consent);
   // Bewijs van toestemming (AVG art. 7): alleen een willekeurig id en de keuze
   void supabase()
-    .rpc("log_consent", { p_consent_id: consent.id, p_analytics: analytics, p_marketing: false, p_version: CONSENT_VERSION })
+    .then((sb) =>
+      sb.rpc("log_consent", { p_consent_id: consent.id, p_analytics: analytics, p_marketing: false, p_version: CONSENT_VERSION })
+    )
     .then(() => undefined, () => undefined);
 }
 
@@ -63,7 +65,7 @@ export function CookieBanner() {
       aria-labelledby="cookie-titel"
       // Een balk over de volle breedte met een haarlijn, direct boven de navigatie; geen zwevend kaartje (besluit eigenaar
       // 30 oktober 2026)
-      className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-50 max-h-[70vh] overflow-y-auto border-t border-line bg-surface md:bottom-0"
+      className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-50 max-h-[70vh] overflow-y-auto border-t border-line bg-surface lg:bottom-0"
     >
       <div className={`mx-auto max-w-3xl ${details ? "p-4" : "py-1.5 pr-1.5 pl-4"}`}>
         {details ? (
@@ -105,9 +107,10 @@ export function CookieBanner() {
           </>
         ) : (
           <>
-            {/* Eén rij: vraag links, twee even zware knoppen rechts (richtlijn Autoriteit Persoonsgegevens) */}
-            <div className="flex items-center gap-2">
-              <p id="cookie-titel" className="min-w-0 flex-1 text-sm leading-snug text-ink-2">
+            {/* Vraag links, twee even zware knoppen rechts (richtlijn Autoriteit Persoonsgegevens). Op een smal scherm
+                staan de knoppen onder de vraag, even breed, zodat "Nee" nooit wegvalt (review november, R27). */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+              <p id="cookie-titel" className="min-w-0 basis-full text-sm leading-snug text-ink-2 min-[480px]:basis-0 min-[480px]:flex-1">
                 Mogen we bezoek tellen, zonder cookies van derden?{" "}
                 <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
                   Zelf instellen
@@ -117,7 +120,7 @@ export function CookieBanner() {
                 type="button"
                 onClick={() => close(true)}
                 aria-label="Ja, tel mijn bezoek"
-                className="min-h-11 shrink-0 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint"
+                className="min-h-11 flex-1 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint min-[480px]:flex-none"
               >
                 Ja
               </button>
@@ -125,7 +128,7 @@ export function CookieBanner() {
                 type="button"
                 onClick={() => close(false)}
                 aria-label="Nee, alleen wat nodig is"
-                className="min-h-11 shrink-0 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint"
+                className="min-h-11 flex-1 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint min-[480px]:flex-none"
               >
                 Nee
               </button>

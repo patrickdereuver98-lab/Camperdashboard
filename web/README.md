@@ -26,11 +26,11 @@ Zonder internet (bijvoorbeeld in CI) bouwen met de meegeleverde snapshot: `VRIJS
 | `src/lib/` | Data (`places.ts`), zoeken en filters (`search.ts`), routes (`routing.ts`), opslag op het toestel (`store.ts`) |
 | `src/data/snapshot.json` | Kopie van de data voor offline bouwen en als vangnet als Supabase onbereikbaar is |
 | `public/sw.js` | Service worker: app-shell, eerder bekeken pagina's en kaarttegels offline |
-| `supabase/schema.sql` | Volledige databasestructuur, functies, RLS en cron-jobs |
+| `supabase/migrations/*_baseline.sql` | Nulmigratie: het volledige live schema (tabellen, functies, RLS, rechten), zie `docs/specs/05-backend-schema.md`, "Herbouwen" |
 | `supabase/seed.sql` | Startgegevens (instellingen, FAQ, provincies, woonplaatsen, Overpass-sjablonen) |
 | `supabase/functions/pipeline/` | Edge function: OpenStreetMap-import en website-scraper |
 | `supabase/functions/push/` | Edge function: pushmeldingen (test: `deno test push/notify_test.ts`, zie de kop van dat bestand) |
-| `supabase/migrations/` | Losse wijzigingen na `schema.sql`, in volgorde uit te voeren (bovenaan staat of ze live al zijn toegepast) |
+| `supabase/migrations/` | Nulmigratie en de wijzigingen daarna, in volgorde uit te voeren (`supabase/tests/herbouw.sh` test dat op een schone database; oudere migraties staan in `supabase/archief/`). De bestandsnaam begint met de versie zoals Supabase die live bijhoudt (`list_migrations`) |
 | `e2e/`, `tests/` | Playwright-tests (`npm run test:e2e`, na `npm run build:offline`) en unit tests (`npm run test:unit`). `e2e/a11y.spec.ts` controleert WCAG 2.1 AA met axe (licht en donker), tekst ≥ 14 px en tikdoelen ≥ 44 px |
 
 ## Data
@@ -41,8 +41,9 @@ Een plek gaat pas online als er contact is, minstens twee van prijs/openingsperi
 gewogen score minstens 70% is (instelbaar in `/admin/instellingen`, uitleg in de handleiding).
 Meer uitleg: [`../docs/HANDLEIDING.md`](../docs/HANDLEIDING.md).
 
-Snapshot verversen (na een `select public.export_snapshot();` in de Supabase SQL-editor, uitvoer opgeslagen als bestand):
+Snapshot verversen: gebeurt wekelijks vanzelf (`.github/workflows/snapshot.yml`). Met de hand, uit de openbare API van
+Supabase (precies wat de site zelf mag lezen):
 
 ```bash
-python3 scripts/write_snapshot.py export.json
+node scripts/refresh-snapshot.mjs
 ```

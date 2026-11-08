@@ -212,8 +212,9 @@ export function mapOsm(e: Record<string, unknown>) {
   if (!isMotorhomePlace(t)) return null;
   if (/^(private|no)$/i.test(t.access ?? "") || osmBool(t.disused) === true || t["disused:tourism"] || t["abandoned:tourism"]) return null;
 
-  const fee = osmBool(t.fee, "fee");
-  const price = parsePrice(t.charge) ?? (fee === false ? 0 : undefined);
+  // Alleen een expliciet bedrag (of charge=gratis) is een prijs. fee=no zegt niet of het nu nog gratis is en zou als
+  // prijs 0 ook de toeristenbelasting uitzetten; die plek blijft dus "prijs onbekend" (review nov. 2026, R25/DATA-10)
+  const price = parsePrice(t.charge);
   const capacity = Number(t["capacity:motorhome"] ?? t["capacity:caravans"] ?? t.capacity);
   const maxlength = Number((t.maxlength ?? "").replace(",", "."));
   const description = t["description:nl"] ?? t.description;

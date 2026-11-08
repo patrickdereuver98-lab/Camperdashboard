@@ -32,6 +32,14 @@ const FACILITY_COLUMNS = "power, water, dump_station, toilet, shower, wifi, dogs
 
 const KIND = { nieuw: "Nieuwe plek", correctie: "Correctie", eigenaar: "Eigenaar" } as const;
 
+type Rpc = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+/**
+ * admin_take_submission en admin_set_submission (migratie 20261106100300) staan nog niet in database.types.ts; weg
+ * zodra de types opnieuw gegenereerd zijn. Beide werken in één transactie en handelen de voorstellen van deze inzending
+ * in de Triage Inbox mee af.
+ */
+const rpc = (fn: string, args: Record<string, unknown>) => (db() as unknown as Rpc).rpc(fn, args);
+
 export default function Submissions() {
   const [status, setStatus] = useState<Submission["status"]>("nieuw");
   const { data, error, loading, reload } = useQuery(
@@ -83,7 +91,7 @@ function Item({ s, onChange }: { s: Submission; onChange: () => void }) {
   const [note, setNote] = useState(s.admin_note ?? "");
   const [err, setErr] = useState<string | null>(null);
   async function set(status: Submission["status"]) {
-    const { error } = await db().from("submissions").update({ status, admin_note: note || null }).eq("id", s.id);
+    const { error } = await rpc("admin_set_submission", { p_id: s.id, p_status: status, p_note: note || null });
     if (error) setErr(errorMessage(error));
     else onChange();
   }
@@ -143,9 +151,9 @@ const describe = (d: { departure: string | null; checkout_until: string | null }
   departureLong({ departure: (d.departure ?? undefined) as DepartureChange["departure"] | undefined, checkoutUntil: d.checkout_until ?? undefined });
 
 /**
- * Een vertrektijd van een bezoeker met één klik op de plek zetten. Het veld krijgt het merkteken van beheer, zodat de
- * scraper het niet terugdraait; de oude waarde komt in de notitie. Een nieuwe "geen vaste tijd" of "per 24 uur" staat
- * daarna bij Vertrektijden om te bevestigen, net als elke andere wijziging van de vertrekregel.
+ * Een vertrektijd van een bezoeker met één klik op de plek zetten (admin_take_submission, één transactie). Het veld
+ * krijgt het merkteken van beheer, zodat de scraper het niet terugdraait, en een controledatum; de oude waarde komt in
+ * de notitie. Een nieuwe "geen vaste tijd" of "per 24 uur" staat daarna bij Vertrektijden om de bron te bevestigen.
  */
 function DepartureTakeover({ s, note, onDone }: { s: Submission; note: string; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -153,7 +161,6 @@ function DepartureTakeover({ s, note, onDone }: { s: Submission; note: string; o
   const change = departureFromSubmission(s.payload);
   if (!change || !s.place_id || !s.places) return null;
   const place = s.places;
-  const placeId = s.place_id;
   if ("reason" in change) {
     return (
       <p className="rounded-lg bg-sunken px-4 py-3 text-sm text-ink-2">
@@ -169,16 +176,13 @@ function DepartureTakeover({ s, note, onDone }: { s: Submission; note: string; o
   async function takeOver() {
     setBusy(true);
     setErr(null);
-    const mark = await db().rpc("admin_mark_beheer", { p_place_id: placeId, p_fields: ["departure", "checkout_until"] });
-    const upd = mark.error ? mark : await db().from("places").update(target).eq("id", placeId);
-    const done = upd.error
-      ? upd
-      : await db()
-          .from("submissions")
-          .update({ status: "verwerkt", admin_note: [note.trim(), `Vertrektijd overgenomen (was: ${now}).`].filter(Boolean).join("\n") })
-          .eq("id", s.id);
+    const { error } = await rpc("admin_take_submission", {
+      p_id: s.id,
+      p_fields: target,
+      p_note: [note.trim(), `Vertrektijd overgenomen (was: ${now}).`].filter(Boolean).join("\n"),
+    });
     setBusy(false);
-    if (done.error) setErr(errorMessage(done.error));
+    if (error) setErr(errorMessage(error));
     else onDone();
   }
 
@@ -211,9 +215,9 @@ function facilityText(changes: Record<string, FacilityChange>): Record<string, C
 }
 
 /**
- * Voorzieningen van een bezoeker met één klik op de plek zetten. Zelfde werkwijze als de vertrektijd: eerst het
- * merkteken van beheer (de scraper draait het dan niet terug), dan de plek, dan de inzending op verwerkt met de oude
- * waarden in de notitie. Alleen wat nu nog anders is, wordt overgenomen.
+ * Voorzieningen van een bezoeker met één klik op de plek zetten. Zelfde werkwijze als de vertrektijd: merkteken van
+ * beheer, plek en inzending in één transactie (admin_take_submission), met de oude waarden in de notitie. Alleen wat
+ * nu nog anders is, wordt overgenomen.
  */
 function FacilityTakeover({ s, note, onDone }: { s: Submission; note: string; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -221,7 +225,6 @@ function FacilityTakeover({ s, note, onDone }: { s: Submission; note: string; on
   const proposed = facilitiesFromSubmission(s.payload);
   if (!proposed || !s.place_id || !s.places) return null;
   const place = s.places;
-  const placeId = s.place_id;
   const todo: Partial<Record<FacilityColumn, boolean>> = {};
   for (const [col, v] of Object.entries(proposed) as [FacilityColumn, boolean][]) if (place[col] !== v) todo[col] = v;
   const fields = Object.keys(todo) as FacilityColumn[];
@@ -230,16 +233,13 @@ function FacilityTakeover({ s, note, onDone }: { s: Submission; note: string; on
     setBusy(true);
     setErr(null);
     const was = fields.map((col) => `${facilityLabel(col)}: ${yesNo(place[col])}`).join(", ");
-    const mark = await db().rpc("admin_mark_beheer", { p_place_id: placeId, p_fields: fields });
-    const upd = mark.error ? mark : await db().from("places").update(todo).eq("id", placeId);
-    const done = upd.error
-      ? upd
-      : await db()
-          .from("submissions")
-          .update({ status: "verwerkt", admin_note: [note.trim(), `Voorzieningen overgenomen (was: ${was}).`].filter(Boolean).join("\n") })
-          .eq("id", s.id);
+    const { error } = await rpc("admin_take_submission", {
+      p_id: s.id,
+      p_fields: todo,
+      p_note: [note.trim(), `Voorzieningen overgenomen (was: ${was}).`].filter(Boolean).join("\n"),
+    });
     setBusy(false);
-    if (done.error) setErr(errorMessage(done.error));
+    if (error) setErr(errorMessage(error));
     else onDone();
   }
 

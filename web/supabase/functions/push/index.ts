@@ -3,12 +3,13 @@
 //   { "action": "notify", "place_id": "<uuid>" }  → volgers van deze plek melden dat het er rustig is
 //   { "action": "keys" }                          → VAPID-sleutels aanmaken als ze er nog niet zijn
 //
-// Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key (net als `pipeline`).
+// Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key (net als `pipeline`),
+// vergeleken in constante tijd (sameSecret).
 // De VAPID-sleutels maakt deze functie zelf aan en bewaart ze in de database; de private sleutel verlaat Supabase nooit.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
-import { sendAll, type Target, type Vapid } from "./notify.ts";
+import { sameSecret, sendAll, type Target, type Vapid } from "./notify.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -28,7 +29,7 @@ async function vapid(): Promise<Vapid> {
 Deno.serve(async (req) => {
   const key = req.headers.get("x-pipeline-key");
   const { data: secret } = await db.from("internal_secrets").select("value").eq("name", "pipeline_key").single();
-  if (!key || !secret || key !== secret.value) return new Response("Forbidden", { status: 403 });
+  if (!(await sameSecret(key, secret?.value))) return new Response("Forbidden", { status: 403 });
 
   const body = await req.json().catch(() => ({}));
   try {

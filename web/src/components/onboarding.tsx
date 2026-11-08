@@ -17,15 +17,15 @@ const SLIDES: { icon: IconName; title: string; lead: string; points: string[] }[
     icon: "clock",
     title: "Welkom bij VrijStaan",
     lead: "Geen lappen tekst, alleen feiten. Per plek zie je meteen:",
-    points: ["of je er met de camper mag staan", "hoe laat je weg moet", "wat een nacht kost, met alle toeslagen"],
+    points: ["of je er met de camper mag staan", "hoe laat je weg moet", "wat een nacht kost, met de toeslagen die we kennen"],
   },
   {
     icon: "refresh",
     title: "Actueel, met jouw hulp",
-    lead: "Jij helpt mee met één tik op de knop.",
+    lead: "Jij helpt mee als je er bent geweest.",
     points: [
       "Bij elke plek staat wanneer we hem voor het laatst nakeken",
-      "Klopt iets niet meer? Met één tik laat je het weten",
+      "Klopt iets niet meer? Op de pagina van de plek geef je het door",
       "Wat we niet weten, staat er als onbekend",
     ],
   },
@@ -33,7 +33,7 @@ const SLIDES: { icon: IconName; title: string; lead: string; points: string[] }[
     icon: "sliders",
     title: "Sneller op je plek",
     lead: "Filter op wat echt telt.",
-    points: ["Geen vaste vertrektijd of pas om 12:00 weg", "Stroom, lozen en gratis met één tik", "De lengte van je eigen camper"],
+    points: ["Geen vaste vertrektijd of pas om 12:00 weg", "Stroom, lozen en gratis met één tik boven de lijst", "De lengte van je eigen camper"],
   },
 ];
 

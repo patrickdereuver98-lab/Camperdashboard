@@ -9,7 +9,7 @@ Partnerdata en open data samenvoegen tot één masterlijst (`geo_master` in Supa
 | 2b | `map_api_data.py` | Ruwe API-respons (GeoJSON, Overpass of een lijst objecten) omzetten naar de standaardvorm |
 | 2c | `pdok.py` | PDOK en gemeentelijke open data (WFS 2.0, OGC API Features of GeoJSON) ophalen per laag en omzetten |
 | 3 | `web/supabase/functions/pipeline/merge_master.ts` | Lijsten ontdubbelen en in stukken van 500 upserten (pipeline-actie `merge_master`) |
-| 4 | `promote_geo_master` (migratie `20261031090000`) | `geo_master` → `places` volgens de bronregels (pipeline-actie `promote`) |
+| 4 | `promote_geo_master` (migratie `20261030162002`) | `geo_master` → `places` volgens de bronregels (pipeline-actie `promote`) |
 | alles | `run_pipeline.py` + `bronnen.json` | De hele keten in één run; wekelijks via de workflow `data_pipeline.yml` |
 
 ## Standaardvorm

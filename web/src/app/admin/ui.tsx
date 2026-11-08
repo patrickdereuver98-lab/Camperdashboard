@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { errorMessage, supabase } from "@/lib/supabase-browser";
+import { errorMessage } from "@/lib/supabase-browser";
+import { supabaseClient as supabase } from "@/lib/supabase-client";
 
 /**
  * Kleine hook om een Supabase-query te laden; herlaadt als `deps` veranderen of via reload().
@@ -85,8 +86,8 @@ export function Empty({ children }: { children: ReactNode }) {
 }
 
 export const input =
-  "h-12 w-full rounded-lg border border-line bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest disabled:opacity-60";
-export const textarea = "w-full rounded-lg border border-line bg-surface px-3 py-2 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+  "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest disabled:opacity-60";
+export const textarea = "w-full rounded-lg border border-field bg-surface px-3 py-2 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 export const button = "inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 font-semibold transition-colors disabled:opacity-50";
 export const primary = `${button} bg-forest text-on-forest hover:bg-forest-deep`;
 export const secondary = `${button} border border-line bg-surface hover:border-forest`;

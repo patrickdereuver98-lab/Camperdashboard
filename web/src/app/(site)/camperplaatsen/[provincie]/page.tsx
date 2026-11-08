@@ -15,6 +15,7 @@ import {
   indexable,
   inGroup,
   itemListLd,
+  nl,
   provinceFromSlug,
   provinceSlug,
   rankForLanding,
@@ -31,12 +32,13 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/camperplaatsen/[provincie]">): Promise<Metadata> {
   const prov = provinceFromSlug((await params).provincie);
-  if (!prov) return {};
+  // Onbekende provincie: de pagina geeft 404, maar zeg het ook expliciet tegen zoekmachines
+  if (!prov) return { title: "Provincie niet gevonden", robots: { index: false } };
   const c = countsOf((await getSummaries()).filter((p) => p.province === prov));
   return {
     title: `Camperplaatsen in ${prov}`,
     description: c.total
-      ? `${c.total} camperplaatsen in ${prov} met vertrektijd, prijs, voorzieningen en route.${c.vrij ? ` ${c.vrij} zonder vaste vertrektijd.` : ""}${c.free ? ` ${c.free} gratis.` : ""}`
+      ? `${nl(c.total)} camperplaatsen in ${prov} met vertrektijd, prijs, voorzieningen en route.${c.vrij ? ` ${nl(c.vrij)} zonder vaste vertrektijd.` : ""}${c.free ? ` ${nl(c.free)} gratis.` : ""}`
       : `Camperplaatsen in ${prov} met vertrektijd, prijs, voorzieningen en route.`,
     alternates: { canonical: `/camperplaatsen/${provinceSlug(prov)}` },
   };
@@ -70,25 +72,25 @@ export default async function ProvincePage({ params }: PageProps<"/camperplaatse
         </ActionLink>
         {groups.map((g) => (
           <ActionLink key={g} href={departurePath(g, prov)}>
-            {DEPARTURE_SEO[g].short} ({inGroup(places, g).length})
+            {DEPARTURE_SEO[g].short} ({nl(inGroup(places, g).length)})
           </ActionLink>
         ))}
-        {c.free > 0 && <ActionLink href={searchHref({ province: prov, where: prov, free: true })}>Gratis plekken ({c.free})</ActionLink>}
+        {c.free > 0 && <ActionLink href={searchHref({ province: prov, where: prov, free: true })}>Gratis plekken ({nl(c.free)})</ActionLink>}
       </div>
 
       <PlaceList
         title={ranked.length > SHOWN ? `Uitgelicht in ${prov}` : `Alle plekken in ${prov}`}
         places={shown}
-        more={ranked.length > SHOWN ? { href: searchHref({ province: prov, where: prov }), label: `Alle ${ranked.length} plekken in ${prov} bekijken` } : undefined}
+        more={ranked.length > SHOWN ? { href: searchHref({ province: prov, where: prov }), label: `Alle ${nl(ranked.length)} plekken in ${prov} bekijken` } : undefined}
       />
 
-      <LinkChips title="Eilanden" links={islands.map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${a.places.length})` }))} />
+      <LinkChips title="Eilanden" links={islands.map((a) => ({ href: areaPath(prov, a.slug), label: `${a.name} (${nl(a.places.length)})` }))} />
 
       {/* Plaatsen met genoeg plekken hebben een eigen pagina; de rest opent het zoekscherm rond die plaats */}
       <LinkChips
         title="Op plaatsnaam"
         links={towns.map((a) => {
-          if (indexable(a.places.length)) return { href: areaPath(prov, a.slug), label: `${a.name} (${a.places.length})` };
+          if (indexable(a.places.length)) return { href: areaPath(prov, a.slug), label: `${a.name} (${nl(a.places.length)})` };
           const p = a.places[0];
           return { href: searchHref({ where: a.name, center: { lat: p.lat, lng: p.lng }, radiusKm: 10 }), label: a.name };
         })}

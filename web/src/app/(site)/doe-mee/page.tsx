@@ -23,21 +23,21 @@ export default async function HelpPage() {
   const stats = await getStats();
   return (
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
-      <h1 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">Doe mee</h1>
+      <h1 className="font-display text-h1 font-semibold">Doe mee</h1>
       <p className="mt-3 max-w-prose text-lg text-ink-2">
         VrijStaan wordt beter met wat camperaars zelf weten. Ben je ergens geweest, of ken je een plek die hier nog niet staat?
         Vul het in. We kijken alles na voordat het online komt.
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <a href="#vertrektijden" className="flex items-center gap-4 rounded-xl bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
+        <a href="#vertrektijden" className="flex items-center gap-4 rounded-lg border border-line bg-surface p-4 hover:border-forest">
           <Sign name="clock" size={44} />
           <span>
             <span className="block font-display text-lg font-semibold">Vertrektijd invullen</span>
             <span className="block text-sm text-muted">Van {nf.format(stats.unknownDeparture)} plekken weten we het nog niet</span>
           </span>
         </a>
-        <Link href="/plek-aanmelden" className="flex items-center gap-4 rounded-xl bg-surface p-4 shadow-low transition-shadow hover:shadow-raised">
+        <Link href="/plek-aanmelden" className="flex items-center gap-4 rounded-lg border border-line bg-surface p-4 hover:border-forest">
           <Sign name="camper" size={44} />
           <span>
             <span className="block font-display text-lg font-semibold">Plek aanmelden</span>
@@ -46,8 +46,8 @@ export default async function HelpPage() {
         </Link>
       </div>
 
-      <section aria-labelledby="eigenaar" className="mt-6 rounded-xl bg-surface p-4 shadow-low">
-        <h2 id="eigenaar" className="font-display text-lg font-semibold">Heb je zelf een camperplaats of camping?</h2>
+      <section aria-labelledby="eigenaar" className="mt-6 rounded-lg border border-line bg-surface p-4">
+        <h2 id="eigenaar" className="font-display text-h2 font-semibold">Heb je zelf een camperplaats of camping?</h2>
         <p className="mt-1 text-ink-2">
           Zoek je plek op en tik daar op de knop voor eigenaren. Dan vul je de vertrektijd, de prijs en de rest zelf in. We
           kijken het na en zetten het daarna op de site.
@@ -58,7 +58,7 @@ export default async function HelpPage() {
       </section>
 
       <section id="vertrektijden" className="mt-12 scroll-mt-24">
-        <h2 className="font-display text-2xl font-semibold">Weet jij hoe laat je hier weg moet?</h2>
+        <h2 className="font-display text-h2 font-semibold">Weet jij hoe laat je hier weg moet?</h2>
         <p className="mt-1 text-ink-2">Kies je provincie en tik op een plek waar je bent geweest.</p>
         <HelpList />
       </section>

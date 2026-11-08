@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MotionConfig, motion } from "motion/react";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
-import { readTripPlaces, rememberTripPlaces, usePlaces, useTrip, useTripDate, useTripSettings, type TripStop } from "@/lib/store";
+import { readTripPlacesCopy, rememberTripPlaces, usePlaces, useTrip, useTripDate, useTripSettings, type TripStop } from "@/lib/store";
 import { closedText, dayValue, parseDay, shortDay, tripDates } from "@/lib/trip-dates";
 import { tripCosts } from "@/lib/trip-extras";
 import type { PlaceSummary } from "@/lib/types";
@@ -17,6 +17,7 @@ import { OpenChip, PlacePhoto } from "@/components/place-ui";
 import { Sign } from "@/components/sign";
 import { ExpensesPanel } from "./expenses-panel";
 import { SharedCard } from "./shared-card";
+import { assumedText, dataDateText, fromPriceNote, surchargeNote } from "./trip-notes";
 
 type RouteData = { distanceM: number; durationS: number; legs: { distanceM: number; durationS: number }[]; geometry: [number, number][] };
 type Stop = TripStop & { place: PlaceSummary };
@@ -41,13 +42,25 @@ export function TripApp() {
   const trip = useTrip();
   const router = useRouter();
   const params = useSearchParams();
-  const { data: livePlaces, error: placesError } = usePlaces();
-  // Zonder bereik: de plekken van je reis zoals ze de vorige keer zijn bewaard
-  const places = useMemo(() => livePlaces ?? (placesError ? readTripPlaces() : null), [livePlaces, placesError]);
+  const { data: livePlaces, error: placesError, cachedAt } = usePlaces();
+  // Zonder bereik: de plekken van je reis zoals ze de vorige keer zijn bewaard, met de datum van die gegevens
+  const offlineCopy = useMemo(() => (placesError ? readTripPlacesCopy() : null), [placesError]);
+  const places = livePlaces ?? offlineCopy?.places ?? null;
+  // Kwamen de gegevens uit de cache van de app of uit de kopie op dit toestel: van wanneer ze zijn
+  const dataDate = dataDateText(livePlaces ? cachedAt : offlineCopy?.savedAt);
   const slugsKey = trip.stops.map((s) => s.slug).join(",");
   useEffect(() => {
-    if (livePlaces) rememberTripPlaces(livePlaces, slugsKey.split(","));
-  }, [livePlaces, slugsKey]);
+    if (livePlaces) rememberTripPlaces(livePlaces, slugsKey.split(","), cachedAt ?? new Date().toISOString());
+  }, [livePlaces, slugsKey, cachedAt]);
+  // De plekpagina's van de reis vast op dit toestel zetten (service worker), zodat ze onderweg zonder bereik openen
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!("serviceWorker" in navigator)) return;
+      const paths = slugsKey ? slugsKey.split(",").map((slug) => `/plek/${slug}`) : [];
+      navigator.serviceWorker.controller?.postMessage({ type: "bewaar-plekken", paths });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [slugsKey]);
   const [settings, setSettings] = useTripSettings();
   const [tripDate, setTripDate] = useTripDate();
   const [start, setStart] = useState<LatLng | null>(null);
@@ -56,8 +69,9 @@ export function TripApp() {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
-  // Gedeelde reis: /mijn-reis?r=slug.2,slug.1
+  // Gedeelde reis: /mijn-reis?r=slug.2,slug.1, met vertrekdatum &d=2026-11-06
   const incoming = params.get("r");
+  const incomingDate = parseDay(params.get("d")) ? params.get("d") : null;
   const incomingStops = useMemo<TripStop[] | null>(() => {
     if (!incoming) return null;
     return incoming
@@ -102,18 +116,37 @@ export function TripApp() {
     // Eerst laten zien wat er gedeeld is; pas daarna toevoegen of vervangen
     const bySlug = new Map((places ?? []).map((p) => [p.slug, p]));
     const merged = [...trip.stops, ...incomingStops.filter((s) => !trip.has(s.slug))];
+    // De vertrekdatum van de afzender reist mee: dan per stop de datums, en waar de plek volgens het seizoen dicht is
+    const incomingStart = parseDay(incomingDate);
+    const incomingDated = incomingStart ? tripDates(incomingStart, incomingStops.map((s) => ({ nights: s.nights, place: bySlug.get(s.slug) ?? {} }))) : null;
+    // Vervangen of een lege reis: de datum van de gedeelde reis. Toevoegen: je eigen datum blijft, als je die had
+    const take = (next: TripStop[], keepOwnDate: boolean) => {
+      trip.replace(next);
+      if (incomingDate && !(keepOwnDate && tripDate)) setTripDate(incomingDate);
+      router.replace("/mijn-reis");
+    };
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 pb-10">
-        <h1 className="font-display text-2xl font-semibold sm:text-3xl">Gedeelde reis</h1>
-        <p className="mt-2 text-ink-2">Iemand heeft deze reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld.</p>
+        <h1 className="font-display text-h1 font-semibold">Gedeelde reis</h1>
+        <p className="mt-2 text-ink-2">
+          Iemand heeft deze reis met {pluralize(incomingStops.length, "stop", "stops")} met je gedeeld
+          {incomingDated && incomingDated.length > 0 ? `, van ${shortDay(incomingDated[0].arrive)} tot ${shortDay(incomingDated[incomingDated.length - 1].leave)}` : ""}.
+        </p>
         <ol className="mt-5 space-y-2">
           {incomingStops.map((s, i) => {
             const p = bySlug.get(s.slug);
+            const dates = incomingDated?.[i];
             return (
-              <li key={s.slug} className="flex items-center gap-3 rounded-xl bg-surface p-3 shadow-low">
+              <li key={s.slug} className="flex items-center gap-3 rounded-lg border border-line bg-surface p-3">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">{i + 1}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p?.name ?? s.slug}</span>
+                  {dates && (
+                    <span className="block text-sm font-semibold text-ink-2" data-testid="shared-stop-dates">
+                      {shortDay(dates.arrive)} tot {shortDay(dates.leave)}
+                      {dates.closedNights.length > 0 && <span className="block font-normal text-alert">Volgens het seizoen dicht op {closedText(dates.closedNights)}</span>}
+                    </span>
+                  )}
                   <span className="block truncate text-sm text-muted">
                     {p ? `${p.town}, ` : ""}
                     {pluralize(s.nights, "nacht", "nachten")}
@@ -127,15 +160,15 @@ export function TripApp() {
         <div className="mt-6 grid gap-2">
           {trip.stops.length > 0 ? (
             <>
-              <button type="button" onClick={() => { trip.replace(merged); router.replace("/mijn-reis"); }} className="h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest">
+              <button type="button" onClick={() => take(merged, true)} className="h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest">
                 Toevoegen aan mijn reis
               </button>
-              <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-lg border border-line px-6 font-semibold">
+              <button type="button" onClick={() => take(incomingStops, false)} className="h-12 rounded-lg border border-line px-6 font-semibold">
                 Mijn reis vervangen ({pluralize(trip.stops.length, "stop", "stops")} gaan weg)
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => { trip.replace(incomingStops); router.replace("/mijn-reis"); }} className="h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest">
+            <button type="button" onClick={() => take(incomingStops, false)} className="h-12 rounded-lg bg-forest px-6 font-semibold text-on-forest">
               Bewaar deze reis
             </button>
           )}
@@ -150,10 +183,10 @@ export function TripApp() {
   if (trip.stops.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-10 text-center sm:pt-14">
-        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-2xl shadow-lift">
+        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
-        <h1 className="mt-6 font-display text-2xl font-semibold sm:text-4xl">Je reis is nog leeg</h1>
+        <h1 className="mt-6 font-display text-h1 font-semibold">Je reis is nog leeg</h1>
         <p className="mt-2 text-ink-2 sm:text-lg">
           Tik op het hartje bij een plek om hem te bewaren. Hier zet je ze op volgorde en zie je de echte rijtijd en wat de reis ongeveer kost.
         </p>
@@ -173,15 +206,22 @@ export function TripApp() {
   // Met een vertrekdatum: per stop aankomst en vertrek, en de nachten waarop de plek volgens het seizoen dicht is
   const startDay = parseDay(tripDate);
   const dated = startDay ? tripDates(startDay, stops) : null;
-  // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag)
-  const fromPrice = stops.some((s) => s.place.priceFrom);
-  // Prijs per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart
+  // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag).
+  // Verplichte kosten per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart.
   const costs = tripCosts(stops, settings.persons, settings.touristTax);
   const { stay, tax, unknownPriceStops } = costs;
+  // Een vanaf-prijs is het laagste tarief: dan is ook het totaal een vanaf-bedrag
+  const fromPrice = (costs.fromPriceStops ?? 0) > 0;
+  const fromNote = fromPriceNote(costs.fromPriceStops);
+  const assumed = costs.assumed ?? [];
   const fuel = totalKm !== null ? (totalKm * settings.litersPer100 * settings.fuelPrice) / 100 : null;
   const total = stay + (fuel ?? 0) + tax;
 
-  const shareUrl = typeof window !== "undefined" ? `${location.origin}/mijn-reis?r=${trip.stops.map((s) => `${s.slug}.${s.nights}`).join(",")}` : "";
+  // De vertrekdatum gaat mee, zodat de ontvanger dezelfde datums ziet
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${location.origin}/mijn-reis?r=${trip.stops.map((s) => `${s.slug}.${s.nights}`).join(",")}${startDay && tripDate ? `&d=${tripDate}` : ""}`
+      : "";
   const gmaps = (() => {
     const pts = stops.map((s) => `${s.place.lat},${s.place.lng}`);
     const dest = pts.pop()!;
@@ -194,15 +234,22 @@ export function TripApp() {
     <div className="mx-auto max-w-6xl px-3 pt-3 pb-10 sm:px-6 sm:pt-5">
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
-          <h1 className="font-display text-xl font-semibold sm:text-3xl">Mijn reis</h1>
+          <h1 className="font-display text-h1 font-semibold">Mijn reis</h1>
           <p className="text-sm text-ink-2 sm:text-base">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
         </div>
-        {placesError && (
-          <p role="status" className="w-full rounded-lg bg-sunken px-4 py-3 text-sm text-ink-2">
+        {placesError ? (
+          <p role="status" className="w-full rounded-lg bg-sunken px-4 py-3 text-sm text-ink-2" data-testid="trip-data-date">
             Geen verbinding. Je ziet de gegevens van je reis zoals ze de vorige keer zijn bewaard.
+            {dataDate && ` Gegevens van ${dataDate}.`}
           </p>
+        ) : (
+          dataDate && (
+            <p className="w-full text-sm text-muted" data-testid="trip-data-date">
+              Gegevens van {dataDate}.
+            </p>
+          )
         )}
         <div className="flex flex-wrap gap-2">
           <button
@@ -226,7 +273,7 @@ export function TripApp() {
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
-          <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest">
+          <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold hover:border-forest">
             <Icon name="chart" size={18} /> Statistieken
           </Link>
         </div>
@@ -235,7 +282,7 @@ export function TripApp() {
       <div className="mt-4 grid gap-6 sm:mt-6 sm:gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
           {/* Vertrekpunt */}
-          <div className="mb-3 flex items-center gap-3 rounded-xl bg-surface p-3 shadow-low">
+          <div className="mb-3 flex items-center gap-3 rounded-lg border border-line bg-surface p-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sunken text-ink-2">
               <Icon name="locate" size={20} />
             </span>
@@ -278,7 +325,7 @@ export function TripApp() {
           )}
 
           {/* Vertrekdatum: optioneel. Daarmee staat bij elke stop wanneer je er bent en of de plek dan open is */}
-          <div className="mb-3 rounded-xl bg-surface p-3 shadow-low">
+          <div className="mb-3 rounded-lg border border-line bg-surface p-3">
             <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
               <label className="min-w-0 flex-1">
                 <span className="block font-semibold">Vertrekdatum</span>
@@ -287,7 +334,7 @@ export function TripApp() {
                   value={tripDate ?? ""}
                   min={dayValue(new Date())}
                   onChange={(e) => setTripDate(parseDay(e.target.value) ? e.target.value : null)}
-                  className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-base focus:ring-2 focus:ring-forest focus:outline-none"
+                  className="mt-1 h-11 w-full rounded-lg border border-field bg-surface px-3 text-base focus:ring-2 focus:ring-forest focus:outline-none"
                 />
               </label>
               {tripDate && (
@@ -315,7 +362,7 @@ export function TripApp() {
                           : `${formatKm(distanceKm(i === 0 ? start! : stops[i - 1].place, s.place))} hemelsbreed`}
                     </div>
                   )}
-                  <div className="rounded-xl bg-surface p-3 shadow-low">
+                  <div className="rounded-lg border border-line bg-surface p-3">
                     <div className="flex gap-3">
                       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
                         <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
@@ -387,8 +434,8 @@ export function TripApp() {
         </div>
 
         <aside className="min-w-0 space-y-4">
-          <div className="rounded-xl bg-surface p-4 shadow-low sm:p-5">
-            <h2 className="font-display text-xl font-semibold">Overzicht</h2>
+          <div className="rounded-lg border border-line bg-surface p-4 sm:p-5">
+            <h2 className="font-display text-h2 font-semibold">Overzicht</h2>
             <dl className="mt-3 space-y-2">
               <div className="flex justify-between">
                 <dt className="text-ink-2">Rijden</dt>
@@ -400,6 +447,11 @@ export function TripApp() {
                 <dt className="text-ink-2">Overnachtingen{fromPrice ? " (vanaf)" : ""}</dt>
                 <dd className="text-right font-semibold">
                   {eur(stay, true)}
+                  {!!costs.perPerson && (
+                    <span className="block text-sm font-normal text-muted" data-testid="per-person">
+                      waarvan {eur(costs.perPerson, true)} toeslag per persoon
+                    </span>
+                  )}
                   {unknownPriceStops > 0 && (
                     <span className="block text-sm font-normal text-muted">
                       + {unknownPriceStops} {unknownPriceStops === 1 ? "plek" : "plekken"} zonder bekende prijs
@@ -420,6 +472,7 @@ export function TripApp() {
                 {/* Eerlijk totaal: ontbreken er prijzen, dan staat dat in het bedrag zelf ("€ 84 + 2 onbekend"), zodat
                     het nooit volledig lijkt (UX-audit, implementatieplan) */}
                 <dd className="text-right font-display text-2xl font-semibold" data-testid="trip-total">
+                  {fromPrice && <span className="block text-sm font-normal tracking-normal text-muted">vanaf</span>}
                   {eur(total, true)}
                   {unknownPriceStops > 0 && <span className="text-lg text-muted"> + {unknownPriceStops} onbekend</span>}
                   {costs.listed.length > 0 && <span className="block text-sm font-normal tracking-normal text-muted">+ toeslagen, niet meegeteld</span>}
@@ -427,13 +480,30 @@ export function TripApp() {
               </div>
             </dl>
             <p className="mt-2 text-sm text-muted">
-              * Berekend met jouw uitgangspunten hieronder. Noemt een plek zelf de toeristenbelasting per persoon per nacht,
-              dan rekenen we met dat bedrag. Gratis plekken en plekken waar de belasting al in de prijs zit tellen niet mee.
+              * Berekend met jouw uitgangspunten hieronder. Noemt een plek zelf een bedrag voor de toeristenbelasting, dan
+              rekenen we met dat bedrag en niet met jouw schatting. Gratis plekken en plekken waar de belasting al in de prijs
+              zit tellen niet mee. Toeslagen per persoon tellen mee voor {pluralize(Math.max(1, Math.round(settings.persons)), "persoon", "personen")}.
             </p>
+            {(assumed.length > 0 || fromNote) && (
+              <div className="mt-3 rounded-lg bg-sunken p-3 text-sm" data-testid="assumptions">
+                <p className="font-semibold">Zo hebben we gerekend</p>
+                {fromNote && <p className="mt-0.5 text-ink-2">{fromNote}</p>}
+                {assumed.length > 0 && (
+                  <ul className="mt-2 space-y-1.5">
+                    {assumed.map(({ index, extras }) => (
+                      <li key={stops[index].slug}>
+                        <span className="font-semibold">{stops[index].place.name}:</span>{" "}
+                        <span className="text-ink-2">{extras.map(assumedText).join("; ")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             {costs.listed.length > 0 && (
-              <div className="mt-3 rounded-xl bg-sunken p-3 text-sm" data-testid="surcharges">
+              <div className="mt-3 rounded-lg bg-sunken p-3 text-sm" data-testid="surcharges">
                 <p className="font-semibold">+ toeslagen, niet meegeteld</p>
-                <p className="mt-0.5 text-ink-2">Of je deze betaalt hangt af van je situatie, of de plek zegt niet waar het bedrag per geldt.</p>
+                <p className="mt-0.5 text-ink-2">{surchargeNote(costs.listed.flatMap((l) => l.extras))}</p>
                 <ul className="mt-2 space-y-1.5">
                   {costs.listed.map(({ index, extras }) => (
                     <li key={stops[index].slug}>
@@ -466,7 +536,7 @@ export function TripApp() {
                       min={0}
                       value={settings[k]}
                       onChange={(e) => setSettings({ ...settings, [k]: Number(e.target.value) || 0 })}
-                      className="h-11 w-full rounded-lg border border-line bg-surface px-3"
+                      className="h-11 w-full rounded-lg border border-field bg-surface px-3"
                     />
                   </label>
                 ))}
@@ -488,13 +558,13 @@ export function TripApp() {
             user={start}
             cluster={false}
             fitKey={routeKey ?? stops.map((s) => s.slug).join()}
-            className="h-80 rounded-xl shadow-low"
+            className="h-80 rounded-lg border border-line"
           />
           <p className="flex items-center gap-2 text-sm text-muted">
             <Sign name="camper" size={22} /> Route over de weg via OpenRouteService of OSRM.
           </p>
           {confirmClear ? (
-            <div role="alert" className="animate-fade-in rounded-xl bg-alert-tint p-4">
+            <div role="alert" className="animate-fade-in rounded-lg bg-alert-tint p-4">
               <p className="font-semibold text-alert">Je hele reis wissen? Dit kun je niet ongedaan maken.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setConfirmClear(false)} className="h-12 rounded-lg border border-line bg-surface font-semibold">

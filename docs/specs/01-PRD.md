@@ -92,16 +92,18 @@ Besluit 18 oktober 2026: alle bruikbare informatie wordt gebruikt, ook reviews e
 - Volgorde: eerst alle data gebruiken die er al is. Daarna eventueel een automatische mailronde aan eigenaren met
   vragen en een akkoord, waarvan de antwoorden automatisch worden verwerkt.
 - Een gegeven ouder dan **12 maanden** krijgt op de site "mogelijk verouderd". Websites worden elke 30 dagen opnieuw
-  gelezen.
+  gelezen. De controledatum (`verified_at`) gaat alleen mee als de website een kernveld (prijs, vertrekregel,
+  vertrektijd, seizoen, jaarrond) oplevert, niet bij een telefoonnummer of foto (review R20, README 104; live na
+  samenvoegen van PR #143). Een datum per kernveld komt met de brondatabase.
 
 ## Kernfuncties
 
 | Functie | Voordeel voor de gebruiker | Prioriteit |
 |---|---|---|
 | Vertrekregel per plek (vrij / per 24 uur / vast met tijd / onbekend); de letterlijke bronzin staat alleen in beheer (besluit eigenaar 23 oktober 2026, terug van 19 oktober); verder per pagina "Laatste update: datum" | Zekerheid of je kunt vertrekken wanneer je wilt | Must |
-| Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (11:00 tot 12:00 "ruim", vóór 11:00 "vroeg", of onbekend, met keuze daartussen), met tabbladen boven de resultaten en chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
+| Drie vertrekpagina's: `/zonder-vertrektijd` (vrij of per 24 uur), `/uitslapers` (vertrek 12:00 of later), `/overige-plekken` (11:00 tot 12:00 "ruim", vóór 11:00 "vroeg", of onbekend, met keuze daartussen). Op Zoeken brengt de chip **Zonder vertrektijd** je met dezelfde zoekopdracht naar die pagina en weer terug (redesign 30 oktober 2026, vervangt de tabbladen; README 109); Uitslapers en Overige via de filtersheet en de footer; chips in Dichtbij | Direct de plekken die bij de belofte passen, zonder plekken te verbergen | Must |
 | Groene vertrekregel uit een bron (website, zoekagent met letterlijk citaat, OpenStreetMap); beheer kan afwijzen of een voorwaarde markeren | Zekerheid op de belangrijkste pagina | Must |
-| Prijs met "vanaf", hoogste tarief en losse toeslagen | Geen verrassingen bij aankomst | Must |
+| Prijs met "vanaf", hoogste tarief en losse toeslagen. "Inclusief toeslagen" of "alles inbegrepen" alleen als elke bekende toeslag meetelt en stroom bekend is of er niet is; anders "incl. toeristenbelasting" of "+ toeslagen" (review R22, besloten 8 november 2026, README 105) | Geen verrassingen bij aankomst, en geen belofte die we niet waarmaken | Must |
 | Zoeken op plaats, streek of eiland, vergeeft typfouten | Snel vinden | Must |
 | Lijst en kaart, filters in de URL | Overzicht en deelbare zoekopdrachten | Must |
 | Dichtbij: plekken rond je locatie op echte rijtijd | De "vannacht"-vraag | Must |
@@ -187,8 +189,9 @@ Wat na versie 1 komt, staat als leidraad in [VrijStaan 2.0](README.md#vrijstaan-
 - Gegeven een forumbericht of review van hooguit 24 maanden oud waarin letterlijk "geen vertrektijd" staat, wanneer de
   zoekagent het vindt, dan krijgt de plek vertrekregel **vrij** (groen) en staan adres, datum en zin in de brondatabase.
 - Gegeven de pagina "Zonder vertrektijd", wanneer ik zoek, dan zie ik alleen plekken met vertrekregel vrij of per
-  24 uur; op "Uitslapers" alleen vaste vertrektijden van 12:00 of later; op "Overige" de rest. Via de tabbladen ga ik
-  met dezelfde zoekopdracht naar een andere pagina. Een vertrekregel uit een bron (website, zoekagent met letterlijk
+  24 uur; op "Uitslapers" alleen vaste vertrektijden van 12:00 of later; op "Overige" de rest. Met de chip Zonder vertrektijd
+  (aan of uit) ga ik met dezelfde zoekopdracht naar die pagina of terug naar Zoeken; Uitslapers en Overige staan in de
+  filtersheet. Een vertrekregel uit een bron (website, zoekagent met letterlijk
   citaat, OpenStreetMap) is genoeg: die staat er in groen, zonder label "nog niet bevestigd". Alleen een regel die
   beheer heeft afgewezen of met een voorwaarde heeft gemarkeerd staat bij "Overige" (besluit eigenaar, 18 oktober 2026).
 - Gegeven een plek zonder vertrekregel die de drempel haalt, wanneer ik de kaart bekijk, dan is de plek grijs en

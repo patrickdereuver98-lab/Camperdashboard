@@ -1,8 +1,7 @@
 "use client";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database as Generated, Json } from "./database.types";
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import type { MarketingFunctions, MarketingTables } from "./marketing/db-types";
 
 // De generator maakt functieargumenten nooit nullable, maar de formulieren sturen `null` voor lege velden en
@@ -26,15 +25,42 @@ export function toJson<T>(value: T): Json {
   return value as unknown as Json;
 }
 
-let client: SupabaseClient<Database> | null = null;
+let loading: Promise<SupabaseClient<Database>> | null = null;
+let loaded: SupabaseClient<Database> | null = null;
+const readyListeners = new Set<() => void>();
 
-/** Supabase in de browser: publieke formulieren en de beheeromgeving (beveiligd met RLS). */
-export function supabase(): SupabaseClient<Database> {
-  client ??= createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    // PKCE: OAuth en magic links komen terug met ?code= dat de client zelf (één keer) inwisselt
-    auth: { persistSession: true, storageKey: "vrijstaan-auth", autoRefreshToken: true, flowType: "pkce", detectSessionInUrl: true },
-  });
-  return client;
+/**
+ * Supabase in de browser: publieke formulieren, account en statistiek (beveiligd met RLS). supabase-js wordt pas
+ * geladen bij de eerste aanroep (R34), niet op elke pagina vooraf. Eén client voor de hele site.
+ */
+export function supabase(): Promise<SupabaseClient<Database>> {
+  loading ??= import("./supabase-client").then(
+    (m) => {
+      loaded = m.supabaseClient();
+      for (const fn of readyListeners) fn();
+      readyListeners.clear();
+      return loaded;
+    },
+    (err: unknown) => {
+      // Chunk niet binnengekomen (geen bereik): de volgende aanroep probeert het opnieuw
+      loading = null;
+      throw err;
+    },
+  );
+  return loading;
+}
+
+/** Of de client al geladen is (bijvoorbeeld door een formulier of de statistiek) */
+export const supabaseLoaded = () => loaded !== null;
+
+/** Eén keer seintje zodra de client geladen is; geeft een functie terug om af te melden */
+export function onSupabaseReady(fn: () => void): () => void {
+  if (loaded) {
+    fn();
+    return () => undefined;
+  }
+  readyListeners.add(fn);
+  return () => readyListeners.delete(fn);
 }
 
 /** Tekst uit een formulierveld; `null` als het veld ontbreekt (of een bestand is) */
@@ -43,10 +69,5 @@ export function formValue(form: FormData, name: string): string | null {
   return typeof v === "string" ? v : null;
 }
 
-/** Leesbare foutmelding uit een Supabase/Postgres-fout */
-export function errorMessage(err: unknown): string {
-  const msg = (err as { message?: string })?.message ?? String(err);
-  if (/fetch|network|Failed to fetch/i.test(msg)) return "Geen verbinding. Controleer je internet en probeer het opnieuw.";
-  if (/check constraint|violates/i.test(msg)) return "Niet alle velden zijn goed ingevuld.";
-  return msg.replace(/^.*?ERROR:\s*/i, "");
-}
+/** Leesbare foutmelding uit een Supabase/Postgres-fout (staat in form-errors, zodat de tests hem kunnen laden) */
+export { errorMessage } from "./form-errors";

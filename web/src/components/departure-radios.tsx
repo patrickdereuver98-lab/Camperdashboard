@@ -1,5 +1,7 @@
 "use client";
 
+import { RadioCards } from "./radio-cards";
+
 export type DepartureAnswer = "" | "vrij" | "per24" | "vast";
 
 const CHOICES: [Exclude<DepartureAnswer, "">, string][] = [
@@ -16,6 +18,7 @@ export function DepartureRadios({
   onChange,
   fieldClass,
   checkoutDefault = "11:00",
+  errorId,
 }: {
   id: string;
   label: string;
@@ -24,27 +27,13 @@ export function DepartureRadios({
   fieldClass: string;
   /** Beginwaarde van het tijdveld, bijvoorbeeld uit een bewaard concept */
   checkoutDefault?: string;
+  /** id van een foutmelding over deze vraag */
+  errorId?: string;
 }) {
   return (
-    <div role="radiogroup" aria-labelledby={id}>
-      <span id={id} className="mb-1.5 block font-semibold">
-        {label}
-      </span>
-      <div className="grid gap-2">
-        {CHOICES.map(([v, l]) => (
-          <button
-            key={v}
-            type="button"
-            role="radio"
-            aria-checked={value === v}
-            // Nog een keer tikken haalt de keuze weg
-            onClick={() => onChange(value === v ? "" : v)}
-            className="min-h-12 rounded-lg border border-line px-4 py-2 text-left font-semibold aria-checked:border-forest aria-checked:bg-forest-tint aria-checked:text-forest"
-          >
-            {l}
-          </button>
-        ))}
-      </div>
+    <div>
+      {/* Nog een keer tikken haalt de keuze weg */}
+      <RadioCards label={label} labelId={id} options={CHOICES} value={value} onChange={onChange} clearable errorId={errorId} />
       {value === "vast" && (
         <label className="mt-3 block">
           <span className="mb-1.5 block font-semibold">Uiterlijk weg om</span>

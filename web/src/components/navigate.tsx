@@ -6,8 +6,11 @@ import { track } from "@/lib/track";
 import { Icon } from "./icons";
 import { Sheet } from "./sheet";
 
-/** Knop "Route": kies zelf je navigatie-app, of kopieer de coördinaten voor het navigatiesysteem in de camper. */
-export function NavigateButton({ to, name, className, children }: { to: LatLng; name: string; className: string; children: ReactNode }) {
+/**
+ * Knop "Route": kies zelf je navigatie-app, of kopieer de coördinaten voor het navigatiesysteem in de camper.
+ * Een gekozen app telt als "route" (eigen teller, los van doorkliks naar website en telefoon).
+ */
+export function NavigateButton({ to, slug, className, children }: { to: LatLng; slug: string; className: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const coords = `${to.lat.toFixed(5)}, ${to.lng.toFixed(5)}`;
@@ -21,6 +24,7 @@ export function NavigateButton({ to, name, className, children }: { to: LatLng; 
     try {
       await navigator.clipboard.writeText(coords);
       setCopied(true);
+      track("route", { slug, app: "Coördinaten" });
     } catch {
       setCopied(false);
     }
@@ -39,7 +43,7 @@ export function NavigateButton({ to, name, className, children }: { to: LatLng; 
                 href={a.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => track("outbound", { soort: "route", app: a.label, naar: name })}
+                onClick={() => track("route", { slug, app: a.label })}
                 className="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest"
               >
                 {a.label}

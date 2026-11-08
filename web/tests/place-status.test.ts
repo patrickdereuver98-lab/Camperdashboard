@@ -2,15 +2,32 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { isIncomplete, isPossiblyOutdated, lastChecked } from "../src/lib/place-status.ts";
+import { departureKind } from "../src/lib/search.ts";
+import { departureLong, departureShort } from "../src/lib/format.ts";
 
 const NOW = new Date("2026-10-22T12:00:00Z");
 
-test("onvolledig: alleen zonder vertrekregel", () => {
+test("onvolledig: zelfde als vertrekgroep 'onbekend' (R23)", () => {
   assert.equal(isIncomplete({}), true);
   assert.equal(isIncomplete({ departure: undefined }), true);
   assert.equal(isIncomplete({ departure: "vrij" }), false);
   assert.equal(isIncomplete({ departure: "per24" }), false);
-  assert.equal(isIncomplete({ departure: "vast" }), false);
+  assert.equal(isIncomplete({ departure: "vast", checkoutUntil: "11:00" }), false);
+  // Vaste tijd die we niet kunnen lezen, afgewezen of met voorwaarde: onbekend, dus grijs en met oproep
+  assert.equal(isIncomplete({ departure: "vast" }), true);
+  assert.equal(isIncomplete({ departure: "vast", checkoutUntil: "middag" }), true);
+  assert.equal(isIncomplete({ departure: "vrij", departureCheck: "afgewezen" }), true);
+  assert.equal(isIncomplete({ departure: "vrij", departureCheck: "voorwaardelijk" }), true);
+  assert.equal(isIncomplete({ departure: "vast", checkoutUntil: "11:00", departureCheck: "afgewezen" }), true);
+});
+
+test("afgewezen is overal onbekend, ook bij een vaste tijd", () => {
+  const p = { departure: "vast" as const, checkoutUntil: "12:00", departureCheck: "afgewezen" as const };
+  assert.equal(departureKind(p), "onbekend");
+  assert.equal(departureShort(p), undefined);
+  assert.equal(departureLong(p), "Onbekend");
+  assert.equal(departureShort({ departure: "vrij", departureCheck: "afgewezen" }), undefined);
+  assert.equal(departureLong({ departure: "vrij", departureCheck: "afgewezen" }), "Onbekend");
 });
 
 test("laatste controle: de jongste van website en vertrekcontrole", () => {

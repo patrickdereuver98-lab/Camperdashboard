@@ -30,7 +30,7 @@
 | Pushmeldingen | Supabase Edge Function `push` (Deno, `web-push`), aangeroepen door de database via `pg_net` met dezelfde `x-pipeline-key`; maakt zelf de VAPID-sleutels aan |
 | Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `quote.ts` (citaatcontrole voor de zoekagenten; de AI-lezer is geschrapt op 19 oktober 2026), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
 | Taken | `pg_cron` + `pg_net` in de database (zie Architectuur) |
-| Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en `cacheLife("minutes")`, terugval op de snapshot |
+| Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en het eigen cacheprofiel `plekken` (5 minuten vers, `next.config.ts`), terugval op de snapshot. Na een wijziging in beheer ververst `/api/admin/revalidate` de tags `places`, `reviews`, `faq` en `settings` meteen (`revalidateTag`, alleen met een beheerderstoken) |
 
 ## Authenticatie en rollen
 
@@ -101,7 +101,7 @@ Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (
 | `scrape-refresh` | elk half uur (:07 en :37) | De 10 plekken die het langst en minstens 30 dagen niet gelezen zijn opnieuw inplannen |
 | `stealth-enqueue` | dagelijks 05:23 | 300 plekken in `private.stealth_queue` zetten voor de stealth-lezer (onleesbaar, weinig gegevens, zonder prijs of vertrektijd, herlezen na 30 dagen) |
 | `bron-opschonen` | dagelijks 04:43 | Opgehaalde tekst ouder dan 30 dagen terugbrengen tot de citaten; oude wachttijden en vergeten leases opruimen |
-| `retention` | dagelijks 03:17 | **Nog niet actief**: `web/supabase/retention.sql` moet eenmalig worden uitgevoerd in de SQL-editor (bevat ook tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log) |
+| `retention` | dagelijks 03:17 | `private.apply_retention()`: statistieken, cookiekeuzes, logs, afgewezen reviews, tickets, contactgegevens van inzendingen, `rate_counter` en de cron-log. Live (laatste run 8 november 2026 geslaagd; README 103). Na migratie `20261106200100` ook verwerkte `osm_staging`-rijen ouder dan 14 dagen; de lege cron `retention-cron-log` gaat dan weg |
 
 **Volgorde van gezag bij gegevens:** beheer (`sources.beheer`) > eigen website (`sources.website_fields`) > OSM.
 Een websitewaarde die bij een volgende lezing niet meer op de site staat, wordt gewist.
@@ -122,7 +122,7 @@ omgevingsvariabelen en waar elk geheim staat: `web/.env.example`.
   apparaat afgerond op ±1 km (`coarse()` in `web/src/lib/geo.ts`).
 - Beveiligingsheaders in `web/next.config.ts` (nosniff, referrer-policy, permissions-policy, frame-options).
 - Bewaartermijnen: statistieken 13 maanden, cookiekeuzes 24 maanden, systeemmeldingen 90 dagen, afgewezen reviews
-  3 maanden, tickets 12 maanden na sluiten (laatste nog niet geautomatiseerd).
+  3 maanden, tickets 12 maanden na sluiten. Allemaal automatisch via cron `retention` (live, README 103).
 - Websitefoto's standaard tonen (besluit eigenaar), altijd met bronvermelding ("website domein.nl"), niet zelf
   opgeslagen, verwijdering op verzoek via Meld inhoud; uit te zetten met `website_photos`.
 - Externe foto's lopen via wsrv.nl (gratis, open source, Cloudflare): verkleind naar 320/640/1280 px WebP. Lukt dat
@@ -134,7 +134,7 @@ omgevingsvariabelen en waar elk geheim staat: `web/.env.example`.
 |---|---|
 | Eerste weergave plekpagina op 4G | < 2,5 s (LCP), CLS < 0,1 |
 | Zoekresultaten na filteren | < 100 ms (filtering in de browser op samenvattingen) |
-| Versheid van data op de site | ≤ enkele minuten (`cacheLife("minutes")`) |
+| Versheid van data op de site | ≤ enkele minuten (cacheprofiel `plekken`, 5 minuten); wijzigingen in beheer direct (`revalidateTag`) |
 | Website-gegevens | Elke plek met website minstens één keer per volledige ronde gelezen (±4 uur per ronde) |
 | OSM | Elke provincie eens per 7 dagen |
 | Beschikbaarheid | Vercel en Supabase gratis niveau, geen SLA; terugval op de snapshot als Supabase onbereikbaar is |

@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
+import { eur } from "@/lib/format";
 import { KIND_LABEL, PROVINCES } from "@/lib/types";
 import { errorMessage, type Database } from "@/lib/supabase-browser";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, primary, secondary, textarea, useQuery, when } from "../ui";
+import { revalidatePlaces, SUSPICIOUS_PREFILTER, suspiciousRows, type PriceRow } from "./price-review";
 
 type Row = {
   id: string;
@@ -85,11 +87,24 @@ export default function PlacesAdmin() {
     };
   }, []);
 
+  // Verdachte nachtprijzen (R47): een camping onder € 8, of een vanaf-prijs ver onder het hoogste tarief. Vaak een
+  // toeslag of prijs per persoon. Beheer kijkt het na in de bron; verborgen plekken tellen niet mee.
+  const prices = useQuery(async () => {
+    const r = await db()
+      .from("places")
+      .select("id,name,town,kind,price_eur,price_note")
+      .neq("status", "hidden")
+      .gt("price_eur", 0)
+      .or(SUSPICIOUS_PREFILTER)
+      .limit(1000);
+    return { data: suspiciousRows((r.data ?? []) as PriceRow[]), error: r.error };
+  }, []);
+
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <PageTitle title="Plekken" />
       <div className="grid gap-3 sm:grid-cols-[1fr_14rem]">
-        <label className="flex h-12 items-center gap-2 rounded-lg border border-line bg-surface px-3 focus-within:border-forest focus-within:ring-2 focus-within:ring-forest">
+        <label className="flex h-12 items-center gap-2 rounded-lg border border-field bg-surface px-3 focus-within:border-forest focus-within:ring-2 focus-within:ring-forest">
           <Icon name="search" size={20} className="text-muted" />
           <span className="sr-only">Zoek op naam of plaats</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek op naam of plaats" className="h-full flex-1 bg-transparent focus:outline-none" />
@@ -110,7 +125,7 @@ export default function PlacesAdmin() {
           { value: "hidden", label: "Verborgen" },
         ]}
       />
-      <ErrorNote message={error ?? review.error} />
+      <ErrorNote message={error ?? review.error ?? prices.error} />
       {!!review.data?.length && (
         <section aria-labelledby="nakijken" className="rounded-lg border border-alert/40">
           <h2 id="nakijken" className="border-b border-line px-4 py-2 font-semibold">
@@ -131,6 +146,29 @@ export default function PlacesAdmin() {
             ))}
           </ul>
         </section>
+      )}
+      {!!prices.data?.length && (
+        <details className="rounded-lg border border-line" data-testid="suspicious-prices">
+          <summary className="flex min-h-11 cursor-pointer items-center px-4 py-2 font-semibold">
+            <span>
+              Verdachte prijzen ({prices.data.length})
+              <span className="block text-sm font-normal text-muted">Vaak een toeslag of prijs per persoon. Kijk de prijs na in de bron.</span>
+            </span>
+          </summary>
+          <ul className="max-h-80 divide-y divide-line overflow-y-auto border-t border-line">
+            {prices.data.map((r) => (
+              <li key={r.id}>
+                <button onClick={() => setEditing(r.id)} className="flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left hover:bg-sunken">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{r.name}</span>
+                    <span className="block truncate text-sm text-muted">{r.town ?? "plaats onbekend"}: {r.reason}</span>
+                  </span>
+                  <Badge tone="yellow">{eur(r.price_eur)}</Badge>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       <p className="text-sm text-muted">{loading ? "Laden…" : `${count.toLocaleString("nl-NL")} plekken`}</p>
       {!loading && rows.length === 0 ? (
@@ -162,7 +200,7 @@ export default function PlacesAdmin() {
         <span className="text-sm text-muted">Pagina {page + 1} van {Math.max(1, Math.ceil(count / PAGE))}</span>
         <button className={secondary} disabled={(page + 1) * PAGE >= count} onClick={() => setPage((p) => p + 1)}>Volgende</button>
       </div>
-      {editing && <Editor id={editing} onClose={() => setEditing(null)} onSaved={() => (reload(), review.reload())} />}
+      {editing && <Editor id={editing} onClose={() => setEditing(null)} onSaved={() => (reload(), review.reload(), prices.reload())} />}
     </div>
   );
 }
@@ -220,6 +258,11 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
     const { error } = await db().from("places").update(draft as Database["public"]["Tables"]["places"]["Update"]).eq("id", id);
     setBusy(false);
     if (error) return setErr(errorMessage(error));
+    // De site laat de nieuwe gegevens meteen zien; lukt dat niet, dan verloopt de cache vanzelf
+    void db()
+      .auth.getSession()
+      .then(({ data }) => revalidatePlaces(data.session?.access_token))
+      .catch(() => {});
     onSaved();
     onClose();
   }

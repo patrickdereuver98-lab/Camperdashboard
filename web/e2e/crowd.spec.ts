@@ -15,6 +15,21 @@ test("zonder meldingen: niets verzinnen, inloggen om te melden", async ({ page }
   );
 });
 
+test("laden mislukt: geen 'Nog niemand gemeld' maar een foutstaat met opnieuw proberen (R32)", async ({ page }) => {
+  let broken = true;
+  await page.route(`${SUPABASE}/rest/v1/rpc/crowd_status**`, (r) =>
+    broken ? r.fulfill({ status: 503, json: { message: "storing" } }) : r.fulfill({ json: empty }),
+  );
+  await page.goto(`/plek/${slug}`);
+  const card = page.getByTestId("crowd");
+  await expect(card.getByText("Drukte nu niet te laden")).toBeVisible();
+  await expect(card.getByText("Nog niemand gemeld")).toHaveCount(0);
+  broken = false;
+  await card.getByRole("button", { name: "Opnieuw proberen" }).click();
+  await expect(card.getByText("Nog niemand gemeld")).toBeVisible();
+  await expect(card.getByRole("button", { name: "Opnieuw proberen" })).toHaveCount(0);
+});
+
 test("met meldingen: niveau, aantal en tijdstip", async ({ page }) => {
   const last = new Date(Date.now() - 20 * 60000).toISOString();
   await page.route(`${SUPABASE}/rest/v1/rpc/crowd_status**`, (r) => r.fulfill({ json: { level: "druk", reports: 3, last_at: last, counts: { druk: 2, rustig: 1 } } }));

@@ -6,11 +6,12 @@ import { Card, Empty, ErrorNote, PageTitle, Segmented, db, secondary, useQuery }
 
 type Stats = {
   days: number;
-  totals: { page_views: number; sessions: number; searches: number; place_views: number; outbound: number; routes: number; saves: number };
+  // websites en phones komen uit migratie 20261107120000; tot die live staat ontbreken ze (dan "Onbekend")
+  totals: { page_views: number; sessions: number; searches: number; place_views: number; outbound: number; websites?: number; phones?: number; routes: number; saves: number };
   per_day: { day: string; page_views: number; sessions: number }[] | null;
   top_pages: { path: string; n: number }[] | null;
   top_searches: { q: string; n: number }[] | null;
-  top_places: { slug: string; name: string | null; views: number; routes: number; outbound: number }[] | null;
+  top_places: { slug: string; name: string | null; views: number; routes: number; outbound: number; websites?: number; phones?: number }[] | null;
   consent: { total: number; analytics: number } | null;
 };
 
@@ -28,12 +29,15 @@ const TILES: { key: keyof Stats["totals"]; label: string }[] = [
   { key: "sessions", label: "Bezoeken" },
   { key: "searches", label: "Zoekopdrachten" },
   { key: "place_views", label: "Plekken bekeken" },
+  { key: "websites", label: "Naar website" },
+  { key: "phones", label: "Gebeld" },
   { key: "routes", label: "Route geopend" },
-  { key: "outbound", label: "Naar website" },
   { key: "saves", label: "Bewaard" },
 ];
 
 const nf = (n: number) => (n ?? 0).toLocaleString("nl-NL");
+/** Een teller die de database (nog) niet geeft, is onbekend en geen 0 */
+const nfMaybe = (n: number | undefined) => (n === undefined ? "Onbekend" : nf(n));
 
 export default function Statistieken() {
   const [period, setPeriod] = useState<Period>("30");
@@ -68,11 +72,11 @@ export default function Statistieken() {
         <Empty>Nog geen statistieken. Die verschijnen zodra bezoekers statistieken toestaan.</Empty>
       ) : (
         <div className={`space-y-6 transition-opacity ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {TILES.map((tile) => (
               <div key={tile.key} className="rounded-xl bg-surface p-4 outline-1 outline-line outline">
                 <p className="text-sm font-semibold text-muted">{tile.label}</p>
-                <p className="mt-1 font-display text-2xl font-semibold tabular-nums sm:text-3xl">{nf(t![tile.key])}</p>
+                <p className="mt-1 font-display text-2xl font-semibold tabular-nums sm:text-3xl">{nfMaybe(t![tile.key])}</p>
               </div>
             ))}
           </div>
@@ -105,7 +109,8 @@ export default function Statistieken() {
                       <th className="py-1 pr-3 font-semibold">Plek</th>
                       <th className="px-2 text-right font-semibold">Bekeken</th>
                       <th className="px-2 text-right font-semibold">Routes</th>
-                      <th className="pl-2 text-right font-semibold">Website-kliks</th>
+                      <th className="px-2 text-right font-semibold">Website</th>
+                      <th className="pl-2 text-right font-semibold">Gebeld</th>
                     </tr>
                   </thead>
                   <tbody className="tabular-nums">
@@ -118,7 +123,8 @@ export default function Statistieken() {
                         </td>
                         <td className="px-2 text-right">{nf(p.views)}</td>
                         <td className="px-2 text-right">{nf(p.routes)}</td>
-                        <td className="pl-2 text-right">{nf(p.outbound)}</td>
+                        <td className="px-2 text-right">{nfMaybe(p.websites)}</td>
+                        <td className="pl-2 text-right">{nfMaybe(p.phones)}</td>
                       </tr>
                     ))}
                   </tbody>

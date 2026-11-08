@@ -16,22 +16,31 @@ export function Callback() {
   useEffect(() => {
     if (providerError) return;
     const next = safeNext(params.get("next"));
-    const sb = supabase();
     let done = false;
+    let alive = true;
+    let unsubscribe = () => undefined as void;
     const go = () => {
-      if (done) return;
+      if (done || !alive) return;
       done = true;
       router.replace(next);
     };
-    // getSession wacht tot de client de code uit de URL heeft ingewisseld
-    void sb.auth.getSession().then(({ data, error }) => {
-      if (data.session) go();
-      else if (error) setErr(authErrorMessage(error.message));
-    });
-    const { data: sub } = sb.auth.onAuthStateChange((event, session) => session && event === "SIGNED_IN" && go());
+    void supabase().then(
+      (sb) => {
+        if (!alive) return;
+        // getSession wacht tot de client de code uit de URL heeft ingewisseld
+        void sb.auth.getSession().then(({ data, error }) => {
+          if (data.session) go();
+          else if (error && alive) setErr(authErrorMessage(error.message));
+        });
+        const { data: sub } = sb.auth.onAuthStateChange((event, session) => session && event === "SIGNED_IN" && go());
+        unsubscribe = () => sub.subscription.unsubscribe();
+      },
+      () => undefined,
+    );
     const timeout = setTimeout(() => !done && setErr(authErrorMessage("expired")), 10_000);
     return () => {
-      sub.subscription.unsubscribe();
+      alive = false;
+      unsubscribe();
       clearTimeout(timeout);
     };
   }, [params, providerError, router]);
@@ -39,7 +48,7 @@ export function Callback() {
   if (err)
     return (
       <>
-        <h1 className="font-display text-3xl font-semibold">Inloggen lukte niet</h1>
+        <h1 className="font-display text-h1 font-semibold">Inloggen lukte niet</h1>
         <p role="alert" className="mt-3 text-lg text-ink-2">{err}</p>
         <Link href="/inloggen" className="mt-6 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
           Opnieuw proberen
@@ -48,7 +57,7 @@ export function Callback() {
     );
   return (
     <>
-      <h1 className="font-display text-3xl font-semibold">Je wordt ingelogd…</h1>
+      <h1 className="font-display text-h1 font-semibold">Je wordt ingelogd…</h1>
       <p className="mt-3 text-ink-2" role="status">Een ogenblik geduld.</p>
     </>
   );
