@@ -1,0 +1,1512 @@
+bucket	marketing	f 104857600 {video/mp4,image/png,image/jpeg,image/webp}
+bucket	place-photos	t 3145728 {image/webp,image/jpeg}
+bucket	vehicle-docs	f 5242880 {application/pdf,image/jpeg,image/png,image/webp}
+constraint	private.admin_invites.admin_invites_pkey	PRIMARY KEY (email)
+constraint	private.nacontrole_20261108.nacontrole_20261108_pkey	PRIMARY KEY (id)
+constraint	private.pdok_woonplaats_20261024.pdok_woonplaats_20261024_pkey	PRIMARY KEY (place_id)
+constraint	private.rate_counter.rate_counter_pkey	PRIMARY KEY (bucket, window_start)
+constraint	private.scrape_queue.scrape_queue_pkey	PRIMARY KEY (place_id)
+constraint	private.scrape_queue.scrape_queue_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	private.secrets.secrets_pkey	PRIMARY KEY (name)
+constraint	private.stealth_queue.stealth_queue_pkey	PRIMARY KEY (place_id)
+constraint	private.stealth_queue.stealth_queue_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	private.town_correcties_20261024.town_correcties_20261024_pkey	PRIMARY KEY (place_id)
+constraint	private.verwijderde_plekken.verwijderde_plekken_pkey	PRIMARY KEY (id)
+constraint	public.admin_logs.admin_logs_kind_check	CHECK ((kind = ANY (ARRAY['cron'::text, 'api'::text, 'scraper'::text, 'sync'::text, 'deploy'::text, 'security'::text])))
+constraint	public.admin_logs.admin_logs_message_check	CHECK ((char_length(message) <= 1000))
+constraint	public.admin_logs.admin_logs_pkey	PRIMARY KEY (id)
+constraint	public.admin_logs.admin_logs_source_check	CHECK (((char_length(source) >= 1) AND (char_length(source) <= 60)))
+constraint	public.admin_logs.admin_logs_status_check	CHECK ((status = ANY (ARRAY['ok'::text, 'failed'::text, 'warn'::text, 'pending'::text])))
+constraint	public.admins.admins_pkey	PRIMARY KEY (user_id)
+constraint	public.admins.admins_role_check	CHECK ((role = ANY (ARRAY['admin'::text, 'support'::text])))
+constraint	public.admins.admins_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.app_logs.app_logs_level_check	CHECK ((level = ANY (ARRAY['debug'::text, 'info'::text, 'warn'::text, 'error'::text])))
+constraint	public.app_logs.app_logs_pkey	PRIMARY KEY (id)
+constraint	public.audit_log.audit_log_pkey	PRIMARY KEY (id)
+constraint	public.campaigns.campaigns_bron_campagne_key	UNIQUE (bron, campagne)
+constraint	public.campaigns.campaigns_bron_check	CHECK ((bron ~ '^[a-z0-9-]{1,40}$'::text))
+constraint	public.campaigns.campaigns_budget_eur_check	CHECK ((budget_eur >= (0)::numeric))
+constraint	public.campaigns.campaigns_campagne_check	CHECK ((campagne ~ '^[a-z0-9-]{1,40}$'::text))
+constraint	public.campaigns.campaigns_channel_check	CHECK ((channel = ANY (ARRAY['instagram'::text, 'tiktok'::text, 'facebook'::text, 'google-ads'::text, 'flyer'::text, 'overig'::text])))
+constraint	public.campaigns.campaigns_name_check	CHECK (((char_length(name) >= 1) AND (char_length(name) <= 80)))
+constraint	public.campaigns.campaigns_notes_check	CHECK ((char_length(notes) <= 1000))
+constraint	public.campaigns.campaigns_pkey	PRIMARY KEY (id)
+constraint	public.campaigns.campaigns_spent_eur_check	CHECK ((spent_eur >= (0)::numeric))
+constraint	public.consent_log.consent_log_pkey	PRIMARY KEY (id)
+constraint	public.content_items.content_items_body_check	CHECK ((char_length(body) <= 3000))
+constraint	public.content_items.content_items_channel_check	CHECK ((channel = ANY (ARRAY['instagram'::text, 'tiktok'::text, 'facebook'::text, 'google-ads'::text])))
+constraint	public.content_items.content_items_link_check	CHECK ((char_length(link) <= 500))
+constraint	public.content_items.content_items_pillar_check	CHECK ((pillar = ANY (ARRAY['app'::text, 'cijfers'::text, 'hoe'::text, 'regio'::text, 'doe-mee'::text, 'nieuw'::text])))
+constraint	public.content_items.content_items_pkey	PRIMARY KEY (id)
+constraint	public.content_items.content_items_posted_url_check	CHECK ((char_length(posted_url) <= 500))
+constraint	public.content_items.content_items_status_check	CHECK ((status = ANY (ARRAY['idee'::text, 'in-de-maak'::text, 'klaar'::text, 'geplaatst'::text])))
+constraint	public.content_items.content_items_title_check	CHECK (((char_length(title) >= 1) AND (char_length(title) <= 120)))
+constraint	public.crowd_reports.crowd_reports_level_check	CHECK ((level = ANY (ARRAY['rustig'::text, 'druk'::text, 'vol'::text])))
+constraint	public.crowd_reports.crowd_reports_pkey	PRIMARY KEY (id)
+constraint	public.crowd_reports.crowd_reports_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.crowd_reports.crowd_reports_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.crowd_watches.crowd_watches_pkey	PRIMARY KEY (user_id, place_id)
+constraint	public.crowd_watches.crowd_watches_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.crowd_watches.crowd_watches_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.dependency_updates.dependency_updates_ai_advice_check	CHECK ((char_length(ai_advice) <= 600))
+constraint	public.dependency_updates.dependency_updates_ai_model_check	CHECK ((char_length(ai_model) <= 80))
+constraint	public.dependency_updates.dependency_updates_category_check	CHECK ((category = ANY (ARRAY['kritiek'::text, 'aanbevolen'::text, 'uitstellen'::text])))
+constraint	public.dependency_updates.dependency_updates_ecosystem_check	CHECK ((char_length(ecosystem) <= 40))
+constraint	public.dependency_updates.dependency_updates_package_name_check	CHECK (((char_length(package_name) >= 1) AND (char_length(package_name) <= 214)))
+constraint	public.dependency_updates.dependency_updates_pkey	PRIMARY KEY (id)
+constraint	public.dependency_updates.dependency_updates_pr_number_package_name_key	UNIQUE (pr_number, package_name)
+constraint	public.dependency_updates.dependency_updates_pr_url_check	CHECK ((pr_url ~ '^https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/pull/[0-9]+$'::text))
+constraint	public.dependency_updates.dependency_updates_status_check	CHECK ((status = ANY (ARRAY['auto-merged'::text, 'pending_review'::text, 'rejected'::text])))
+constraint	public.dependency_updates.dependency_updates_update_type_check	CHECK ((update_type = ANY (ARRAY['major'::text, 'minor'::text, 'patch'::text, 'onbekend'::text])))
+constraint	public.dependency_updates.dependency_updates_version_from_check	CHECK ((char_length(version_from) <= 64))
+constraint	public.dependency_updates.dependency_updates_version_to_check	CHECK ((char_length(version_to) <= 64))
+constraint	public.duplicate_dismissals.duplicate_dismissals_a_fkey	FOREIGN KEY (a) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.duplicate_dismissals.duplicate_dismissals_b_fkey	FOREIGN KEY (b) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.duplicate_dismissals.duplicate_dismissals_check	CHECK ((a < b))
+constraint	public.duplicate_dismissals.duplicate_dismissals_dismissed_by_fkey	FOREIGN KEY (dismissed_by) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.duplicate_dismissals.duplicate_dismissals_pkey	PRIMARY KEY (a, b)
+constraint	public.events.events_name_check	CHECK ((name = ANY (ARRAY['page_view'::text, 'search'::text, 'place_view'::text, 'outbound'::text, 'route'::text, 'save'::text, 'review'::text, 'ticket'::text])))
+constraint	public.events.events_pkey	PRIMARY KEY (id)
+constraint	public.faq.faq_pkey	PRIMARY KEY (id)
+constraint	public.geo_bronnen.geo_bronnen_bron_check	CHECK ((bron ~ '^[a-z0-9_]{2,40}$'::text))
+constraint	public.geo_bronnen.geo_bronnen_pkey	PRIMARY KEY (bron)
+constraint	public.geo_bronnen.geo_bronnen_soort_check	CHECK ((soort = ANY (ARRAY['camperplaats'::text, 'camping'::text, 'parkeerplaats'::text, 'boerderij'::text, 'jachthaven'::text])))
+constraint	public.geo_bronnen.geo_bronnen_status_check	CHECK ((status = ANY (ARRAY['toegestaan'::text, 'te_beoordelen'::text, 'geblokkeerd'::text])))
+constraint	public.geo_bronnen.geo_bronnen_tier_check	CHECK (((tier >= 1) AND (tier <= 5)))
+constraint	public.geo_master.geo_master_bron_ids_check	CHECK ((cardinality(bron_ids) > 0))
+constraint	public.geo_master.geo_master_conflicten_check	CHECK ((jsonb_typeof(conflicten) = 'object'::text))
+constraint	public.geo_master.geo_master_faciliteiten_check	CHECK ((jsonb_typeof(faciliteiten) = 'object'::text))
+constraint	public.geo_master.geo_master_geohash_check	CHECK (((length(geohash) >= 1) AND (length(geohash) <= 12)))
+constraint	public.geo_master.geo_master_lat_check	CHECK (((lat >= ('-90'::integer)::double precision) AND (lat <= (90)::double precision)))
+constraint	public.geo_master.geo_master_lon_check	CHECK (((lon >= ('-180'::integer)::double precision) AND (lon <= (180)::double precision)))
+constraint	public.geo_master.geo_master_match_score_check	CHECK (((match_score >= (0)::double precision) AND (match_score <= (1)::double precision)))
+constraint	public.geo_master.geo_master_pkey	PRIMARY KEY (master_id)
+constraint	public.geo_master.geo_master_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE SET NULL
+constraint	public.geo_master.geo_master_promotie_check	CHECK ((promotie = ANY (ARRAY['nieuw'::text, 'gekoppeld'::text, 'geweigerd'::text])))
+constraint	public.ingest_runs.ingest_runs_pkey	PRIMARY KEY (id)
+constraint	public.ingest_runs.ingest_runs_status_check	CHECK ((status = ANY (ARRAY['running'::text, 'ok'::text, 'error'::text])))
+constraint	public.internal_secrets.internal_secrets_pkey	PRIMARY KEY (name)
+constraint	public.manual_review.manual_review_pkey	PRIMARY KEY (place_id)
+constraint	public.manual_review.manual_review_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.marketing_assets.marketing_assets_content_item_id_fkey	FOREIGN KEY (content_item_id) REFERENCES public.content_items(id) ON DELETE SET NULL
+constraint	public.marketing_assets.marketing_assets_job_id_fkey	FOREIGN KEY (job_id) REFERENCES public.marketing_jobs(id) ON DELETE SET NULL
+constraint	public.marketing_assets.marketing_assets_kind_check	CHECK ((kind = ANY (ARRAY['video'::text, 'afbeelding'::text, 'schermopname'::text])))
+constraint	public.marketing_assets.marketing_assets_pkey	PRIMARY KEY (id)
+constraint	public.marketing_assets.marketing_assets_storage_path_check	CHECK ((char_length(storage_path) <= 300))
+constraint	public.marketing_assets.marketing_assets_template_check	CHECK ((char_length(template) <= 40))
+constraint	public.marketing_assets.marketing_assets_title_check	CHECK ((char_length(title) <= 120))
+constraint	public.marketing_jobs.marketing_jobs_error_check	CHECK ((char_length(error) <= 1000))
+constraint	public.marketing_jobs.marketing_jobs_format_check	CHECK ((format = ANY (ARRAY['vertical'::text, 'square'::text, 'portrait'::text, 'landscape'::text])))
+constraint	public.marketing_jobs.marketing_jobs_kind_check	CHECK ((kind = ANY (ARRAY['video'::text, 'schermopnames'::text])))
+constraint	public.marketing_jobs.marketing_jobs_pkey	PRIMARY KEY (id)
+constraint	public.marketing_jobs.marketing_jobs_status_check	CHECK ((status = ANY (ARRAY['wacht'::text, 'bezig'::text, 'klaar'::text, 'fout'::text])))
+constraint	public.marketing_jobs.marketing_jobs_template_check	CHECK ((char_length(template) <= 40))
+constraint	public.nl_towns.nl_towns_pkey	PRIMARY KEY (id)
+constraint	public.osm_queries.osm_queries_pkey	PRIMARY KEY (name)
+constraint	public.osm_regions.osm_regions_pkey	PRIMARY KEY (code)
+constraint	public.osm_staging.osm_staging_kind_check	CHECK ((kind = ANY (ARRAY['place'::text, 'point'::text])))
+constraint	public.osm_staging.osm_staging_pkey	PRIMARY KEY (id)
+constraint	public.owner_replies.owner_replies_ai_model_check	CHECK ((char_length(ai_model) <= 80))
+constraint	public.owner_replies.owner_replies_departure_time_check	CHECK ((departure_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text))
+constraint	public.owner_replies.owner_replies_email_id_check	CHECK (((char_length(email_id) >= 1) AND (char_length(email_id) <= 100)))
+constraint	public.owner_replies.owner_replies_email_id_key	UNIQUE (email_id)
+constraint	public.owner_replies.owner_replies_from_email_check	CHECK (((char_length(from_email) >= 3) AND (char_length(from_email) <= 254)))
+constraint	public.owner_replies.owner_replies_intent_check	CHECK ((intent = ANY (ARRAY['confirm'::text, 'update'::text, 'unknown'::text])))
+constraint	public.owner_replies.owner_replies_matched_by_check	CHECK ((matched_by = ANY (ARRAY['id'::text, 'email'::text])))
+constraint	public.owner_replies.owner_replies_outcome_check	CHECK ((outcome = ANY (ARRAY['queued'::text, 'verified'::text, 'logged'::text, 'no_place'::text, 'ambiguous'::text])))
+constraint	public.owner_replies.owner_replies_pkey	PRIMARY KEY (id)
+constraint	public.owner_replies.owner_replies_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE SET NULL
+constraint	public.owner_replies.owner_replies_price_eur_check	CHECK (((price_eur >= (0)::numeric) AND (price_eur <= (500)::numeric)))
+constraint	public.owner_replies.owner_replies_subject_check	CHECK ((char_length(subject) <= 300))
+constraint	public.owner_replies.owner_replies_summary_check	CHECK ((char_length(summary) <= 500))
+constraint	public.place_photos.place_photos_caption_check	CHECK ((char_length(caption) <= 140))
+constraint	public.place_photos.place_photos_credit_check	CHECK ((char_length(credit) <= 80))
+constraint	public.place_photos.place_photos_height_check	CHECK (((height >= 200) AND (height <= 4000)))
+constraint	public.place_photos.place_photos_pkey	PRIMARY KEY (id)
+constraint	public.place_photos.place_photos_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.place_photos.place_photos_reviewed_by_fkey	FOREIGN KEY (reviewed_by) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.place_photos.place_photos_status_check	CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))
+constraint	public.place_photos.place_photos_storage_path_check	CHECK ((storage_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.(webp|jpg)$'::text))
+constraint	public.place_photos.place_photos_storage_path_key	UNIQUE (storage_path)
+constraint	public.place_photos.place_photos_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.place_photos.place_photos_width_check	CHECK (((width >= 200) AND (width <= 4000)))
+constraint	public.places.places_capacity_check	CHECK (((capacity > 0) AND (capacity < 2000)))
+constraint	public.places.places_checkin_from_check	CHECK ((checkin_from ~ '^\d{2}:\d{2}$'::text))
+constraint	public.places.places_checkin_until_check	CHECK ((checkin_until ~ '^\d{2}:\d{2}$'::text))
+constraint	public.places.places_checkout_until_check	CHECK ((checkout_until ~ '^\d{2}:\d{2}$'::text))
+constraint	public.places.places_departure_check	CHECK ((departure = ANY (ARRAY['vrij'::text, 'per24'::text, 'vast'::text])))
+constraint	public.places.places_departure_check_check	CHECK ((departure_check = ANY (ARRAY['bevestigd'::text, 'voorwaardelijk'::text, 'afgewezen'::text])))
+constraint	public.places.places_departure_checked_by_check	CHECK ((departure_checked_by = ANY (ARRAY['beheer'::text, 'eigenaar'::text])))
+constraint	public.places.places_kind_check	CHECK ((kind = ANY (ARRAY['camperplaats'::text, 'camping'::text, 'parkeerplaats'::text, 'boerderij'::text, 'jachthaven'::text])))
+constraint	public.places.places_merged_into_fkey	FOREIGN KEY (merged_into) REFERENCES public.places(id) ON DELETE SET NULL
+constraint	public.places.places_osm_type_osm_id_key	UNIQUE (osm_type, osm_id)
+constraint	public.places.places_pkey	PRIMARY KEY (id)
+constraint	public.places.places_price_eur_check	CHECK ((price_eur >= (0)::numeric))
+constraint	public.places.places_reservation_rule_check	CHECK ((reservation_rule = ANY (ARRAY['verplicht'::text, 'mogelijk'::text, 'niet_nodig'::text])))
+constraint	public.places.places_slug_key	UNIQUE (slug)
+constraint	public.places.places_status_check	CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'hidden'::text])))
+constraint	public.places.places_surface_check	CHECK ((surface = ANY (ARRAY['verhard'::text, 'gras'::text, 'gemengd'::text, 'grind'::text])))
+constraint	public.profiles.profiles_avatar_url_check	CHECK ((avatar_url ~ '^https://'::text))
+constraint	public.profiles.profiles_display_name_check	CHECK ((char_length(display_name) <= 80))
+constraint	public.profiles.profiles_id_fkey	FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.profiles.profiles_pkey	PRIMARY KEY (id)
+constraint	public.profiles.profiles_role_check	CHECK ((role = ANY (ARRAY['user'::text, 'support'::text, 'admin'::text])))
+constraint	public.push_subscriptions.push_subscriptions_endpoint_check	CHECK ((endpoint ~ '^https://'::text))
+constraint	public.push_subscriptions.push_subscriptions_endpoint_key	UNIQUE (endpoint)
+constraint	public.push_subscriptions.push_subscriptions_pkey	PRIMARY KEY (id)
+constraint	public.push_subscriptions.push_subscriptions_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.reviews.reviews_author_email_check	CHECK (((author_email IS NULL) OR (author_email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'::text)))
+constraint	public.reviews.reviews_author_name_check	CHECK (((char_length(author_name) >= 2) AND (char_length(author_name) <= 60)))
+constraint	public.reviews.reviews_body_check	CHECK (((char_length(body) >= 20) AND (char_length(body) <= 3000)))
+constraint	public.reviews.reviews_pkey	PRIMARY KEY (id)
+constraint	public.reviews.reviews_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.reviews.reviews_rating_check	CHECK (((rating >= 1) AND (rating <= 10)))
+constraint	public.reviews.reviews_score_facilities_check	CHECK (((score_facilities >= 1) AND (score_facilities <= 10)))
+constraint	public.reviews.reviews_score_location_check	CHECK (((score_location >= 1) AND (score_location <= 10)))
+constraint	public.reviews.reviews_score_quiet_check	CHECK (((score_quiet >= 1) AND (score_quiet <= 10)))
+constraint	public.reviews.reviews_score_value_check	CHECK (((score_value >= 1) AND (score_value <= 10)))
+constraint	public.reviews.reviews_status_check	CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))
+constraint	public.reviews.reviews_title_check	CHECK ((char_length(title) <= 120))
+constraint	public.reviews.reviews_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.reviews.reviews_vehicle_check	CHECK ((vehicle = ANY (ARRAY['camper'::text, 'buscamper'::text, 'caravan'::text, 'overig'::text])))
+constraint	public.route_cache.route_cache_pkey	PRIMARY KEY (key)
+constraint	public.seo_daily.seo_daily_clicks_check	CHECK ((clicks >= 0))
+constraint	public.seo_daily.seo_daily_impressions_check	CHECK ((impressions >= 0))
+constraint	public.seo_daily.seo_daily_pkey	PRIMARY KEY (date, query, page)
+constraint	public.seo_pages.seo_pages_pkey	PRIMARY KEY (url)
+constraint	public.seo_pages.seo_pages_url_check	CHECK ((char_length(url) <= 500))
+constraint	public.seo_status.seo_status_key_check	CHECK ((char_length(key) <= 80))
+constraint	public.seo_status.seo_status_pkey	PRIMARY KEY (key)
+constraint	public.seo_totals.seo_totals_device_check	CHECK ((device = ANY (ARRAY['alle'::text, 'mobile'::text, 'desktop'::text, 'tablet'::text])))
+constraint	public.seo_totals.seo_totals_pkey	PRIMARY KEY (date, device)
+constraint	public.shared_trip_members.shared_trip_members_display_name_check	CHECK ((char_length(display_name) <= 80))
+constraint	public.shared_trip_members.shared_trip_members_pkey	PRIMARY KEY (trip_id, user_id)
+constraint	public.shared_trip_members.shared_trip_members_trip_id_fkey	FOREIGN KEY (trip_id) REFERENCES public.shared_trips(id) ON DELETE CASCADE
+constraint	public.shared_trip_members.shared_trip_members_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.shared_trips.shared_trips_invite_code_key	UNIQUE (invite_code)
+constraint	public.shared_trips.shared_trips_name_check	CHECK (((char_length(name) >= 1) AND (char_length(name) <= 60)))
+constraint	public.shared_trips.shared_trips_owner_id_fkey	FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.shared_trips.shared_trips_pkey	PRIMARY KEY (id)
+constraint	public.shared_trips.shared_trips_stops_check	CHECK (((jsonb_typeof(stops) = 'array'::text) AND (jsonb_array_length(stops) <= 200)))
+constraint	public.shared_trips.shared_trips_stops_size	CHECK ((pg_column_size(stops) < 200000))
+constraint	public.shared_trips.shared_trips_updated_by_fkey	FOREIGN KEY (updated_by) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.site_settings.site_settings_pkey	PRIMARY KEY (key)
+constraint	public.social_stats.social_stats_comments_check	CHECK ((comments >= 0))
+constraint	public.social_stats.social_stats_content_item_id_fkey	FOREIGN KEY (content_item_id) REFERENCES public.content_items(id) ON DELETE SET NULL
+constraint	public.social_stats.social_stats_likes_check	CHECK ((likes >= 0))
+constraint	public.social_stats.social_stats_pkey	PRIMARY KEY (id)
+constraint	public.social_stats.social_stats_platform_check	CHECK ((platform = ANY (ARRAY['instagram'::text, 'tiktok'::text, 'facebook'::text])))
+constraint	public.social_stats.social_stats_post_url_check	CHECK ((char_length(post_url) <= 500))
+constraint	public.social_stats.social_stats_post_url_measured_on_key	UNIQUE (post_url, measured_on)
+constraint	public.social_stats.social_stats_reach_check	CHECK ((reach >= 0))
+constraint	public.social_stats.social_stats_saves_check	CHECK ((saves >= 0))
+constraint	public.social_stats.social_stats_shares_check	CHECK ((shares >= 0))
+constraint	public.social_stats.social_stats_source_check	CHECK ((source = ANY (ARRAY['handmatig'::text, 'api'::text])))
+constraint	public.social_stats.social_stats_views_check	CHECK ((views >= 0))
+constraint	public.submissions.submissions_kind_check	CHECK ((kind = ANY (ARRAY['nieuw'::text, 'correctie'::text, 'eigenaar'::text])))
+constraint	public.submissions.submissions_pkey	PRIMARY KEY (id)
+constraint	public.submissions.submissions_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE SET NULL
+constraint	public.submissions.submissions_status_check	CHECK ((status = ANY (ARRAY['nieuw'::text, 'verwerkt'::text, 'afgewezen'::text])))
+constraint	public.submissions.submissions_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.ticket_messages.ticket_messages_admin_id_fkey	FOREIGN KEY (admin_id) REFERENCES public.admins(user_id) ON DELETE SET NULL
+constraint	public.ticket_messages.ticket_messages_author_check	CHECK ((author = ANY (ARRAY['klant'::text, 'support'::text])))
+constraint	public.ticket_messages.ticket_messages_body_check	CHECK (((char_length(body) >= 1) AND (char_length(body) <= 5000)))
+constraint	public.ticket_messages.ticket_messages_pkey	PRIMARY KEY (id)
+constraint	public.ticket_messages.ticket_messages_ticket_id_fkey	FOREIGN KEY (ticket_id) REFERENCES public.tickets(id) ON DELETE CASCADE
+constraint	public.tickets.tickets_access_token_key	UNIQUE (access_token)
+constraint	public.tickets.tickets_assignee_fkey	FOREIGN KEY (assignee) REFERENCES public.admins(user_id) ON DELETE SET NULL
+constraint	public.tickets.tickets_category_check	CHECK ((category = ANY (ARRAY['vraag'::text, 'fout-in-gegevens'::text, 'technisch'::text, 'privacy'::text, 'eigenaar'::text, 'samenwerking'::text, 'overig'::text])))
+constraint	public.tickets.tickets_email_check	CHECK ((email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'::text))
+constraint	public.tickets.tickets_name_check	CHECK (((char_length(name) >= 2) AND (char_length(name) <= 80)))
+constraint	public.tickets.tickets_number_key	UNIQUE (number)
+constraint	public.tickets.tickets_pkey	PRIMARY KEY (id)
+constraint	public.tickets.tickets_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE SET NULL
+constraint	public.tickets.tickets_priority_check	CHECK ((priority = ANY (ARRAY['laag'::text, 'normaal'::text, 'hoog'::text])))
+constraint	public.tickets.tickets_status_check	CHECK ((status = ANY (ARRAY['open'::text, 'in-behandeling'::text, 'wacht-op-klant'::text, 'opgelost'::text, 'gesloten'::text])))
+constraint	public.tickets.tickets_subject_check	CHECK (((char_length(subject) >= 3) AND (char_length(subject) <= 140)))
+constraint	public.updates_queue.updates_queue_ai_advice_check	CHECK ((char_length(ai_advice) <= 300))
+constraint	public.updates_queue.updates_queue_ai_score_check	CHECK (((ai_score >= 0) AND (ai_score <= 100)))
+constraint	public.updates_queue.updates_queue_decided_by_fkey	FOREIGN KEY (decided_by) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.updates_queue.updates_queue_field_changed_check	CHECK ((field_changed ~ '^[a-z_]{2,40}$'::text))
+constraint	public.updates_queue.updates_queue_owner_reply_id_fkey	FOREIGN KEY (owner_reply_id) REFERENCES public.owner_replies(id) ON DELETE SET NULL
+constraint	public.updates_queue.updates_queue_pkey	PRIMARY KEY (id)
+constraint	public.updates_queue.updates_queue_place_id_fkey	FOREIGN KEY (place_id) REFERENCES public.places(id) ON DELETE CASCADE
+constraint	public.updates_queue.updates_queue_source_check	CHECK ((source = ANY (ARRAY['doe-mee'::text, 'plekpuls'::text, 'beheer'::text, 'pipeline'::text, 'eigenaar'::text])))
+constraint	public.updates_queue.updates_queue_status_check	CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))
+constraint	public.updates_queue.updates_queue_submission_id_field_changed_key	UNIQUE (submission_id, field_changed)
+constraint	public.updates_queue.updates_queue_submission_id_fkey	FOREIGN KEY (submission_id) REFERENCES public.submissions(id) ON DELETE SET NULL
+constraint	public.updates_queue.updates_queue_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL
+constraint	public.user_expenses.user_expenses_entries_check	CHECK (((jsonb_typeof(entries) = 'array'::text) AND (jsonb_array_length(entries) <= 1000)))
+constraint	public.user_expenses.user_expenses_entries_size	CHECK ((pg_column_size(entries) < 500000))
+constraint	public.user_expenses.user_expenses_pkey	PRIMARY KEY (user_id)
+constraint	public.user_expenses.user_expenses_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.user_trips.user_trips_pkey	PRIMARY KEY (user_id)
+constraint	public.user_trips.user_trips_stops_check	CHECK (((jsonb_typeof(stops) = 'array'::text) AND (jsonb_array_length(stops) <= 200)))
+constraint	public.user_trips.user_trips_stops_size	CHECK ((pg_column_size(stops) < 200000))
+constraint	public.user_trips.user_trips_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+constraint	public.user_vehicles.user_vehicles_data_check	CHECK (((jsonb_typeof(data) = 'object'::text) AND (pg_column_size(data) < 2000)))
+constraint	public.user_vehicles.user_vehicles_pkey	PRIMARY KEY (user_id)
+constraint	public.user_vehicles.user_vehicles_user_id_fkey	FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+extensie	pg_cron	pg_catalog
+extensie	pg_net	extensions
+extensie	pg_trgm	extensions
+extensie	pgcrypto	extensions
+extensie	postgis	extensions
+extensie	unaccent	extensions
+extensie	uuid-ossp	extensions
+functie	private.apply_retention()	f2dd875cfe3b5d843f919656d53ba47f
+functie	private.audit()	f88c0682b77c25662032cb272a0e951a
+functie	private.auto_approve_photo()	5bbd935f51c0d7782f760ba4483e8c6e
+functie	private.call_discover(integer)	47367968d8c8ac8ef9971fc7dfbf418b
+functie	private.call_pipeline(jsonb)	fd5f3e1bf92744d7c5a332bfb1ca0dc4
+functie	private.close_submission(uuid,text)	0e506b733e42e736cb9c1e45507f8f35
+functie	private.collect_osm()	5a98371193e68027cc13ef5054a1f8aa
+functie	private.concept_reden(public.places)	4fe6db89ff578a1f7b5c68591da2907c
+functie	private.create_profile()	8c7718f9d871bc7df6bbb8c6e2947e42
+functie	private.crowd_notify()	bb50d2fbbb3e989e9a96e01e7af07aff
+functie	private.decode_entities(text)	cb5b33e69a2097d7436c4388063bebd5
+functie	private.enqueue_stale_scrape(integer,integer)	d8b66042a47b4169e7e440742c767009
+functie	private.enqueue_stealth(integer,integer)	cc18463d30f8825becea9b1643cb1b2c
+functie	private.forceer_kernfeit_scrape(integer)	c9ee7e611270ddeb56dd513a3f2a9e6b
+functie	private.geo_afstand_m(double precision,double precision,double precision,double precision)	959dcd8de9e1a4a03a946e269878e541
+functie	private.geo_bestaande_plek(public.geo_master)	9177841fc34acf223b32f890d5e05361
+functie	private.geo_bool(jsonb,text)	4777b1e9f7050f7f77c2527b81baa83b
+functie	private.geo_eerder_verwijderd(public.geo_master)	f079bdbdf431f8edec9a4d0b6c279c49
+functie	private.geo_naam_kern(text)	6029b2e566034df2772abc138e19cc44
+functie	private.geo_nummers_botsen(text,text)	9e1655dacb0e2ad603123e319fe48cb4
+functie	private.geo_promotie_bezwaar(public.geo_master)	3cb687b5087d552d89fdfe62cad77c07
+functie	private.log(text,text,text,jsonb)	e36bad0b72ef9013d1b35875d0cb0893
+functie	private.markeer_handmatig()	27602cab5dbe5f1f9904be93365cb420
+functie	private.marketing_claim_job()	8bf9330b72b19ec5449e72c6bf617ed8
+functie	private.marketing_cleanup()	93cf6dc791ad736b9e371798817c12da
+functie	private.marketing_finish_job(uuid,jsonb,text)	3b2188e471ab2827633ac762e42dea82
+functie	private.next_osm_region()	e841264d74916aec8051c251bc7ff37b
+functie	private.on_auth_user_created()	9cd9022ac478a1c996237391390f05ae
+functie	private.on_ingest_run_done()	8ea78b01241e5879c943882131a583ef
+functie	private.on_submission_queue()	d86503fbc62f91a337d33c4813997e5c
+functie	private.ops_probe()	45bef2940debafe754b96fcc96fa9a50
+functie	private.overpass_get(text,text)	6902b30fbb33d1414c469b45a04ad48c
+functie	private.overpass_get(text,text,integer)	90fdacf3fb4d696433cffef5add21bd6
+functie	private.photo_rate_limit()	262debb112308f81609508d4bd2eb561
+functie	private.places_before_write()	fc98efeac7f69fccec353215418b77eb
+functie	private.publish_threshold()	ffb7ddadb55e18ad91cd42b8edfa45ca
+functie	private.queue_fields()	4ad88c4594cac3f4910bbb459d4b89c2
+functie	private.queue_from_submission(public.submissions)	e1d741a4fc4bc40b32dd7c58a2fa352c
+functie	private.rate_take(text,integer,interval)	38e1e73a34be3bd25831f1af5337b054
+functie	private.refresh_place_rating()	83d6ad69ece88b01f00b66b5f3a0b836
+functie	private.safe_path(text)	f2f5495e53f9438bc70c20e7a7e2577b
+functie	private.shared_trip_touch()	c384f5aab583df9e6d944f5c68b71f8f
+functie	private.sync_place_photo()	f1d453d8d952b6d95d78841578c27271
+functie	private.sync_profile_role()	b7a61c353321771b9ae9d43c7a7eaf85
+functie	private.time_minutes(text)	48d11d17dc7076fcdd6dfca051c819f4
+functie	private.touch_ticket()	de79f6d7dd3d764bd2ba8b9b81552ef8
+functie	private.touch_updated_at()	587cccdfb0cc0805991745244d57ff0a
+functie	private.user_trust(uuid)	95e3174f9eb60d4663a8c206c1c048e6
+functie	private.verwijder_onbereikbare_plekken(boolean)	0e4ecd774edbbbbd5fdd82236da81d99
+functie	private.weiger_verwijderde_plek()	29d44bb8b5db67a9dc3dffb3b92d0d3f
+functie	public.admin_apply_update(uuid)	fee1575d19de12b7278f8085e662f935
+functie	public.admin_concept_redenen()	447e7179c87c5b081f57e00facc6e437
+functie	public.admin_duplicate_candidates(integer,integer)	36f9c8d20edb8ff61ba8ad2a2ba180a1
+functie	public.admin_manual_review()	9b5c08e16423cdd1345ce1c9e086a458
+functie	public.admin_mark_beheer(uuid,text[])	ff417bc60af15052968f584595e35ab7
+functie	public.admin_merge_places(uuid,uuid)	6201cae122fee5b1eb57ef292c680dc7
+functie	public.admin_overview()	4404e6205c58d46a87be05602d55ddfd
+functie	public.admin_pipeline(text)	13b2dfd8f6c8cbbce171c2f98feb212c
+functie	public.admin_reject_update(uuid,text)	66476879b12cbf0d42f2b02aed05ea78
+functie	public.admin_stats(integer)	1f93249bb9eefa5506e557d4051235de
+functie	public.apply_discovery(uuid,text)	9bb0e4f3ce1f1927b525f49d36b6bc07
+functie	public.apply_pdok(uuid,text,text,integer)	77e7d584f573c1d23135e9a3f212dedc
+functie	public.apply_scrape(uuid,jsonb,text)	471d4e4bf6156e57bd6e34a2ee793f2c
+functie	public.apply_stealth(uuid,jsonb,text,jsonb)	a5c1f4ac40751187be2b89f423890479
+functie	public.cache_route(text,integer,integer,jsonb,text)	2dfeb15441a456df141911f44cef6f67
+functie	public.check_departure(uuid,text,text)	533bd4c0ba15b95736586d47caaa0cda
+functie	public.create_shared_trip(jsonb,text)	d708a1996a0c455498d5bb9ec58d8691
+functie	public.create_ticket(text,text,text,text,text,uuid)	30a6575d54fe8b8ef9887a516ca76257
+functie	public.crowd_status(uuid)	fc2d7c4ccdc86480e00e9a9bf2cb139b
+functie	public.departure_visitors(uuid)	cf251b7afffb571d99a3c1a59c92a803
+functie	public.enqueue_scrape(boolean)	4fbf27aa68194288838ec736e19693d4
+functie	public.export_snapshot()	8fc10bee9a4a44e22252d53a59d55305
+functie	public.get_ticket(text)	4b5171547d1abcb734b4ef59140e3cf3
+functie	public.has_admin_role()	64316f2cd4d5e50347df0447af59ce9f
+functie	public.ingest_osm(jsonb)	5732f8808bc5c588db82b8b1e00aad5e
+functie	public.ingest_osm_points(jsonb)	78c034abbbf03c577fcde21469aa0299
+functie	public.is_admin()	3f09a2e51296bf92835ecdb0a0e363b5
+functie	public.is_trip_member(uuid)	a3958dcae96d5323888ba8614ba36267
+functie	public.join_shared_trip(text)	b70442924a51e0a00e7aeb6909739032
+functie	public.leave_shared_trip(uuid)	fe08dc0679b1bf32c53915ed310ad019
+functie	public.log_consent(text,boolean,boolean,text)	3b18881855dfd6dbdb7dcd3e375639d9
+functie	public.log_dependency(text,jsonb)	95136731a5f5127d9bddf5928a5e803e
+functie	public.log_owner_reply(text,jsonb)	e09750dcf6ab5d6f49cd91a80c2f2ac6
+functie	public.marketing_facts()	e6ef8188a9cf7d8047a8fd94213f3fdd
+functie	public.marketing_seo_rows(integer,text,integer)	78a0376e03d9ee056b56a1e0ea2c8d9f
+functie	public.marketing_traffic(integer)	8b518f125bf1e1b623ae3cd04011da6f
+functie	public.marketing_upload_allowed(text)	880f7fd26ef93295e1ec66e949b389a8
+functie	public.nearest_town(double precision,double precision)	263abe8a8913385f94c87bc2d7aee84b
+functie	public.next_discover_batch(integer)	d440c9f60866dac6c1122cdbca47d1af
+functie	public.next_pdok_batch(integer)	fbd9773cf0ac58b5165cf8997fce96b8
+functie	public.next_scrape_batch(integer)	0850c15aa4c4d3037d4d57a8e184fad9
+functie	public.next_stealth_batch(integer)	07ef1ad2514b5d60d0b638ec5514cca1
+functie	public.next_stealth_batch(integer,integer,integer)	20b2fa374e61006ca945f9e93c88ad5d
+functie	public.osm_response(bigint)	d007894112a8f78faefe3b8f52b65da8
+functie	public.place_completeness(public.places)	db1f15fc331fad1f17d87008b9a52aeb
+functie	public.place_meets_must_haves(public.places)	e43451c323083cea1bcc6a379cd50f5e
+functie	public.place_redirect(text)	a5490263a5e0f5f96c1306f5036be837
+functie	public.places_in_bbox(double precision,double precision,double precision,double precision)	6c6a8c41c37877e53cb540ab4d4eebe4
+functie	public.process_osm_staging(integer)	062578584ea1dc65c35707a8a80c8311
+functie	public.promote_geo_master(boolean,integer)	e5642a58a50bb2e4b46365dc274c9a5f
+functie	public.push_disable_subscriptions(uuid[])	02b4342456bb67c9e026bec7343741fb
+functie	public.push_public_key()	538ace41b8767a3ba580c02721d2feb8
+functie	public.push_set_vapid_keys(text,text)	059be61c02a6154cffc45f5fcf070b58
+functie	public.push_subscribe(text,text,text)	dbe756175c754230f78a127a42b59a1e
+functie	public.push_take_targets(uuid)	83d3966cdb1b5cfb9b70ea99fa302edc
+functie	public.push_vapid_keys()	7a4639f4f6efc63dd1f25163ad6ec264
+functie	public.reply_ticket(text,text)	9dbf100375989e48a2c40dfab3e082f7
+functie	public.report_client_error(text,jsonb)	5406b41313bb0350dd9cf86052e0e61f
+functie	public.report_crowd(uuid,text)	fac284e2c760920fd2d21244a586f5cd
+functie	public.slugify(text)	6b86f266f623035d4240fc043577cbc9
+functie	public.submit_place(text,uuid,jsonb,text,text)	ccfed362086d0439a769fff1ec05ef85
+functie	public.submit_review(uuid,text,integer,integer,integer,integer,integer,text,text,text,date)	a59793e3ee3b6ce78d53e72c6ff9a986
+functie	public.submit_review(uuid,text,text,integer,integer,integer,integer,integer,text,text,text,date)	4f920b9966557be708ad27f0d724a974
+functie	public.track(text,text,jsonb,text)	e012a9a22174fb9aa6953c48c72c1737
+functie	public.user_trust(uuid)	215637892f46fe227bf935a9754c99a4
+functie	public.user_trust_many(uuid[])	fa5e410d84f59ef13887c0a1ded1336c
+functie	public.watch_place(uuid,boolean)	a10085f07e834008244f68c93cfa1025
+functierecht	private.audit() PUBLIC	execute
+functierecht	private.auto_approve_photo() PUBLIC	execute
+functierecht	private.create_profile() PUBLIC	execute
+functierecht	private.crowd_notify() PUBLIC	execute
+functierecht	private.decode_entities(text) PUBLIC	execute
+functierecht	private.log(text,text,text,jsonb) PUBLIC	execute
+functierecht	private.on_auth_user_created() PUBLIC	execute
+functierecht	private.overpass_get(text,text,integer) PUBLIC	execute
+functierecht	private.photo_rate_limit() PUBLIC	execute
+functierecht	private.places_before_write() PUBLIC	execute
+functierecht	private.publish_threshold() PUBLIC	execute
+functierecht	private.queue_fields() PUBLIC	execute
+functierecht	private.refresh_place_rating() PUBLIC	execute
+functierecht	private.safe_path(text) PUBLIC	execute
+functierecht	private.shared_trip_touch() PUBLIC	execute
+functierecht	private.sync_place_photo() PUBLIC	execute
+functierecht	private.time_minutes(text) PUBLIC	execute
+functierecht	private.touch_ticket() PUBLIC	execute
+functierecht	private.touch_updated_at() PUBLIC	execute
+functierecht	private.user_trust(uuid) PUBLIC	execute
+functierecht	public.admin_apply_update(uuid) authenticated	execute
+functierecht	public.admin_apply_update(uuid) service_role	execute
+functierecht	public.admin_concept_redenen() authenticated	execute
+functierecht	public.admin_concept_redenen() service_role	execute
+functierecht	public.admin_duplicate_candidates(integer,integer) authenticated	execute
+functierecht	public.admin_duplicate_candidates(integer,integer) service_role	execute
+functierecht	public.admin_manual_review() authenticated	execute
+functierecht	public.admin_manual_review() service_role	execute
+functierecht	public.admin_mark_beheer(uuid,text[]) authenticated	execute
+functierecht	public.admin_mark_beheer(uuid,text[]) service_role	execute
+functierecht	public.admin_merge_places(uuid,uuid) authenticated	execute
+functierecht	public.admin_merge_places(uuid,uuid) service_role	execute
+functierecht	public.admin_overview() authenticated	execute
+functierecht	public.admin_overview() service_role	execute
+functierecht	public.admin_pipeline(text) authenticated	execute
+functierecht	public.admin_pipeline(text) service_role	execute
+functierecht	public.admin_reject_update(uuid,text) authenticated	execute
+functierecht	public.admin_reject_update(uuid,text) service_role	execute
+functierecht	public.admin_stats(integer) authenticated	execute
+functierecht	public.admin_stats(integer) service_role	execute
+functierecht	public.apply_discovery(uuid,text) service_role	execute
+functierecht	public.apply_pdok(uuid,text,text,integer) service_role	execute
+functierecht	public.apply_scrape(uuid,jsonb,text) service_role	execute
+functierecht	public.apply_stealth(uuid,jsonb,text,jsonb) service_role	execute
+functierecht	public.cache_route(text,integer,integer,jsonb,text) service_role	execute
+functierecht	public.check_departure(uuid,text,text) authenticated	execute
+functierecht	public.check_departure(uuid,text,text) service_role	execute
+functierecht	public.create_shared_trip(jsonb,text) authenticated	execute
+functierecht	public.create_shared_trip(jsonb,text) service_role	execute
+functierecht	public.create_ticket(text,text,text,text,text,uuid) anon	execute
+functierecht	public.create_ticket(text,text,text,text,text,uuid) authenticated	execute
+functierecht	public.create_ticket(text,text,text,text,text,uuid) service_role	execute
+functierecht	public.crowd_status(uuid) PUBLIC	execute
+functierecht	public.crowd_status(uuid) anon	execute
+functierecht	public.crowd_status(uuid) authenticated	execute
+functierecht	public.crowd_status(uuid) service_role	execute
+functierecht	public.departure_visitors(uuid) anon	execute
+functierecht	public.departure_visitors(uuid) authenticated	execute
+functierecht	public.departure_visitors(uuid) service_role	execute
+functierecht	public.enqueue_scrape(boolean) service_role	execute
+functierecht	public.export_snapshot() service_role	execute
+functierecht	public.get_ticket(text) anon	execute
+functierecht	public.get_ticket(text) authenticated	execute
+functierecht	public.get_ticket(text) service_role	execute
+functierecht	public.has_admin_role() authenticated	execute
+functierecht	public.has_admin_role() service_role	execute
+functierecht	public.ingest_osm(jsonb) service_role	execute
+functierecht	public.ingest_osm_points(jsonb) service_role	execute
+functierecht	public.is_admin() PUBLIC	execute
+functierecht	public.is_admin() anon	execute
+functierecht	public.is_admin() authenticated	execute
+functierecht	public.is_admin() service_role	execute
+functierecht	public.is_trip_member(uuid) authenticated	execute
+functierecht	public.is_trip_member(uuid) service_role	execute
+functierecht	public.join_shared_trip(text) authenticated	execute
+functierecht	public.join_shared_trip(text) service_role	execute
+functierecht	public.leave_shared_trip(uuid) authenticated	execute
+functierecht	public.leave_shared_trip(uuid) service_role	execute
+functierecht	public.log_consent(text,boolean,boolean,text) anon	execute
+functierecht	public.log_consent(text,boolean,boolean,text) authenticated	execute
+functierecht	public.log_consent(text,boolean,boolean,text) service_role	execute
+functierecht	public.log_dependency(text,jsonb) anon	execute
+functierecht	public.log_dependency(text,jsonb) authenticated	execute
+functierecht	public.log_dependency(text,jsonb) service_role	execute
+functierecht	public.log_owner_reply(text,jsonb) anon	execute
+functierecht	public.log_owner_reply(text,jsonb) authenticated	execute
+functierecht	public.log_owner_reply(text,jsonb) service_role	execute
+functierecht	public.marketing_facts() authenticated	execute
+functierecht	public.marketing_facts() service_role	execute
+functierecht	public.marketing_seo_rows(integer,text,integer) authenticated	execute
+functierecht	public.marketing_seo_rows(integer,text,integer) service_role	execute
+functierecht	public.marketing_traffic(integer) authenticated	execute
+functierecht	public.marketing_traffic(integer) service_role	execute
+functierecht	public.marketing_upload_allowed(text) anon	execute
+functierecht	public.marketing_upload_allowed(text) authenticated	execute
+functierecht	public.marketing_upload_allowed(text) service_role	execute
+functierecht	public.nearest_town(double precision,double precision) PUBLIC	execute
+functierecht	public.nearest_town(double precision,double precision) anon	execute
+functierecht	public.nearest_town(double precision,double precision) authenticated	execute
+functierecht	public.nearest_town(double precision,double precision) service_role	execute
+functierecht	public.next_discover_batch(integer) service_role	execute
+functierecht	public.next_pdok_batch(integer) service_role	execute
+functierecht	public.next_scrape_batch(integer) service_role	execute
+functierecht	public.next_stealth_batch(integer) service_role	execute
+functierecht	public.next_stealth_batch(integer,integer,integer) service_role	execute
+functierecht	public.osm_response(bigint) service_role	execute
+functierecht	public.place_completeness(public.places) PUBLIC	execute
+functierecht	public.place_completeness(public.places) anon	execute
+functierecht	public.place_completeness(public.places) authenticated	execute
+functierecht	public.place_completeness(public.places) service_role	execute
+functierecht	public.place_meets_must_haves(public.places) PUBLIC	execute
+functierecht	public.place_meets_must_haves(public.places) anon	execute
+functierecht	public.place_meets_must_haves(public.places) authenticated	execute
+functierecht	public.place_meets_must_haves(public.places) service_role	execute
+functierecht	public.place_redirect(text) PUBLIC	execute
+functierecht	public.place_redirect(text) anon	execute
+functierecht	public.place_redirect(text) authenticated	execute
+functierecht	public.place_redirect(text) service_role	execute
+functierecht	public.places_in_bbox(double precision,double precision,double precision,double precision) anon	execute
+functierecht	public.places_in_bbox(double precision,double precision,double precision,double precision) authenticated	execute
+functierecht	public.places_in_bbox(double precision,double precision,double precision,double precision) service_role	execute
+functierecht	public.process_osm_staging(integer) service_role	execute
+functierecht	public.promote_geo_master(boolean,integer) service_role	execute
+functierecht	public.push_disable_subscriptions(uuid[]) service_role	execute
+functierecht	public.push_public_key() PUBLIC	execute
+functierecht	public.push_public_key() anon	execute
+functierecht	public.push_public_key() authenticated	execute
+functierecht	public.push_public_key() service_role	execute
+functierecht	public.push_set_vapid_keys(text,text) service_role	execute
+functierecht	public.push_subscribe(text,text,text) authenticated	execute
+functierecht	public.push_subscribe(text,text,text) service_role	execute
+functierecht	public.push_take_targets(uuid) service_role	execute
+functierecht	public.push_vapid_keys() service_role	execute
+functierecht	public.reply_ticket(text,text) anon	execute
+functierecht	public.reply_ticket(text,text) authenticated	execute
+functierecht	public.reply_ticket(text,text) service_role	execute
+functierecht	public.report_client_error(text,jsonb) anon	execute
+functierecht	public.report_client_error(text,jsonb) authenticated	execute
+functierecht	public.report_client_error(text,jsonb) service_role	execute
+functierecht	public.report_crowd(uuid,text) authenticated	execute
+functierecht	public.report_crowd(uuid,text) service_role	execute
+functierecht	public.slugify(text) PUBLIC	execute
+functierecht	public.slugify(text) anon	execute
+functierecht	public.slugify(text) authenticated	execute
+functierecht	public.slugify(text) service_role	execute
+functierecht	public.submit_place(text,uuid,jsonb,text,text) anon	execute
+functierecht	public.submit_place(text,uuid,jsonb,text,text) authenticated	execute
+functierecht	public.submit_place(text,uuid,jsonb,text,text) service_role	execute
+functierecht	public.submit_review(uuid,text,integer,integer,integer,integer,integer,text,text,text,date) authenticated	execute
+functierecht	public.submit_review(uuid,text,integer,integer,integer,integer,integer,text,text,text,date) service_role	execute
+functierecht	public.submit_review(uuid,text,text,integer,integer,integer,integer,integer,text,text,text,date) service_role	execute
+functierecht	public.track(text,text,jsonb,text) anon	execute
+functierecht	public.track(text,text,jsonb,text) authenticated	execute
+functierecht	public.track(text,text,jsonb,text) service_role	execute
+functierecht	public.user_trust(uuid) authenticated	execute
+functierecht	public.user_trust(uuid) service_role	execute
+functierecht	public.user_trust_many(uuid[]) authenticated	execute
+functierecht	public.user_trust_many(uuid[]) service_role	execute
+functierecht	public.watch_place(uuid,boolean) authenticated	execute
+functierecht	public.watch_place(uuid,boolean) service_role	execute
+index	private.admin_invites_pkey	CREATE UNIQUE INDEX admin_invites_pkey ON private.admin_invites USING btree (email)
+index	private.nacontrole_20261108_pkey	CREATE UNIQUE INDEX nacontrole_20261108_pkey ON private.nacontrole_20261108 USING btree (id)
+index	private.pdok_woonplaats_20261024_pkey	CREATE UNIQUE INDEX pdok_woonplaats_20261024_pkey ON private.pdok_woonplaats_20261024 USING btree (place_id)
+index	private.rate_counter_pkey	CREATE UNIQUE INDEX rate_counter_pkey ON private.rate_counter USING btree (bucket, window_start)
+index	private.scrape_queue_pkey	CREATE UNIQUE INDEX scrape_queue_pkey ON private.scrape_queue USING btree (place_id)
+index	private.secrets_pkey	CREATE UNIQUE INDEX secrets_pkey ON private.secrets USING btree (name)
+index	private.stealth_queue_pkey	CREATE UNIQUE INDEX stealth_queue_pkey ON private.stealth_queue USING btree (place_id)
+index	private.town_correcties_20261024_pkey	CREATE UNIQUE INDEX town_correcties_20261024_pkey ON private.town_correcties_20261024 USING btree (place_id)
+index	private.verwijderde_plekken_osm	CREATE UNIQUE INDEX verwijderde_plekken_osm ON private.verwijderde_plekken USING btree (osm_type, osm_id) WHERE (osm_id IS NOT NULL)
+index	private.verwijderde_plekken_pkey	CREATE UNIQUE INDEX verwijderde_plekken_pkey ON private.verwijderde_plekken USING btree (id)
+index	public.admin_logs_kind_source	CREATE INDEX admin_logs_kind_source ON public.admin_logs USING btree (kind, source, ts DESC)
+index	public.admin_logs_pending	CREATE INDEX admin_logs_pending ON public.admin_logs USING btree (request_id) WHERE (status = 'pending'::text)
+index	public.admin_logs_pkey	CREATE UNIQUE INDEX admin_logs_pkey ON public.admin_logs USING btree (id)
+index	public.admin_logs_ts	CREATE INDEX admin_logs_ts ON public.admin_logs USING btree (ts DESC)
+index	public.admins_pkey	CREATE UNIQUE INDEX admins_pkey ON public.admins USING btree (user_id)
+index	public.app_logs_pkey	CREATE UNIQUE INDEX app_logs_pkey ON public.app_logs USING btree (id)
+index	public.app_logs_ts_idx	CREATE INDEX app_logs_ts_idx ON public.app_logs USING btree (ts DESC)
+index	public.audit_log_pkey	CREATE UNIQUE INDEX audit_log_pkey ON public.audit_log USING btree (id)
+index	public.campaigns_bron_campagne_key	CREATE UNIQUE INDEX campaigns_bron_campagne_key ON public.campaigns USING btree (bron, campagne)
+index	public.campaigns_pkey	CREATE UNIQUE INDEX campaigns_pkey ON public.campaigns USING btree (id)
+index	public.consent_log_pkey	CREATE UNIQUE INDEX consent_log_pkey ON public.consent_log USING btree (id)
+index	public.content_items_pkey	CREATE UNIQUE INDEX content_items_pkey ON public.content_items USING btree (id)
+index	public.content_items_planned_idx	CREATE INDEX content_items_planned_idx ON public.content_items USING btree (planned_on)
+index	public.crowd_reports_pkey	CREATE UNIQUE INDEX crowd_reports_pkey ON public.crowd_reports USING btree (id)
+index	public.crowd_reports_place_time_idx	CREATE INDEX crowd_reports_place_time_idx ON public.crowd_reports USING btree (place_id, created_at DESC)
+index	public.crowd_reports_user_time_idx	CREATE INDEX crowd_reports_user_time_idx ON public.crowd_reports USING btree (user_id, created_at DESC)
+index	public.crowd_watches_pkey	CREATE UNIQUE INDEX crowd_watches_pkey ON public.crowd_watches USING btree (user_id, place_id)
+index	public.crowd_watches_place_idx	CREATE INDEX crowd_watches_place_idx ON public.crowd_watches USING btree (place_id) WHERE (notified_at IS NULL)
+index	public.dependency_updates_pkey	CREATE UNIQUE INDEX dependency_updates_pkey ON public.dependency_updates USING btree (id)
+index	public.dependency_updates_pr_number_package_name_key	CREATE UNIQUE INDEX dependency_updates_pr_number_package_name_key ON public.dependency_updates USING btree (pr_number, package_name)
+index	public.dependency_updates_status	CREATE INDEX dependency_updates_status ON public.dependency_updates USING btree (status, updated_at DESC)
+index	public.duplicate_dismissals_pkey	CREATE UNIQUE INDEX duplicate_dismissals_pkey ON public.duplicate_dismissals USING btree (a, b)
+index	public.events_pkey	CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id)
+index	public.events_ts_idx	CREATE INDEX events_ts_idx ON public.events USING btree (ts DESC)
+index	public.faq_pkey	CREATE UNIQUE INDEX faq_pkey ON public.faq USING btree (id)
+index	public.geo_bronnen_pkey	CREATE UNIQUE INDEX geo_bronnen_pkey ON public.geo_bronnen USING btree (bron)
+index	public.geo_master_bron_ids	CREATE INDEX geo_master_bron_ids ON public.geo_master USING gin (bron_ids)
+index	public.geo_master_geohash	CREATE INDEX geo_master_geohash ON public.geo_master USING btree (geohash text_pattern_ops)
+index	public.geo_master_pkey	CREATE UNIQUE INDEX geo_master_pkey ON public.geo_master USING btree (master_id)
+index	public.geo_master_te_promoveren	CREATE INDEX geo_master_te_promoveren ON public.geo_master USING btree (bijgewerkt_op) WHERE (place_id IS NULL)
+index	public.ingest_runs_pkey	CREATE UNIQUE INDEX ingest_runs_pkey ON public.ingest_runs USING btree (id)
+index	public.internal_secrets_pkey	CREATE UNIQUE INDEX internal_secrets_pkey ON public.internal_secrets USING btree (name)
+index	public.manual_review_pkey	CREATE UNIQUE INDEX manual_review_pkey ON public.manual_review USING btree (place_id)
+index	public.marketing_assets_created_idx	CREATE INDEX marketing_assets_created_idx ON public.marketing_assets USING btree (created_at DESC)
+index	public.marketing_assets_pkey	CREATE UNIQUE INDEX marketing_assets_pkey ON public.marketing_assets USING btree (id)
+index	public.marketing_jobs_open_idx	CREATE INDEX marketing_jobs_open_idx ON public.marketing_jobs USING btree (created_at) WHERE (status = ANY (ARRAY['wacht'::text, 'bezig'::text]))
+index	public.marketing_jobs_pkey	CREATE UNIQUE INDEX marketing_jobs_pkey ON public.marketing_jobs USING btree (id)
+index	public.nl_towns_pkey	CREATE UNIQUE INDEX nl_towns_pkey ON public.nl_towns USING btree (id)
+index	public.osm_queries_pkey	CREATE UNIQUE INDEX osm_queries_pkey ON public.osm_queries USING btree (name)
+index	public.osm_regions_pkey	CREATE UNIQUE INDEX osm_regions_pkey ON public.osm_regions USING btree (code)
+index	public.osm_staging_pkey	CREATE UNIQUE INDEX osm_staging_pkey ON public.osm_staging USING btree (id)
+index	public.osm_staging_todo_idx	CREATE INDEX osm_staging_todo_idx ON public.osm_staging USING btree (kind, id) WHERE (processed_at IS NULL)
+index	public.owner_replies_email_id_key	CREATE UNIQUE INDEX owner_replies_email_id_key ON public.owner_replies USING btree (email_id)
+index	public.owner_replies_pkey	CREATE UNIQUE INDEX owner_replies_pkey ON public.owner_replies USING btree (id)
+index	public.owner_replies_place	CREATE INDEX owner_replies_place ON public.owner_replies USING btree (place_id, received_at DESC)
+index	public.owner_replies_received	CREATE INDEX owner_replies_received ON public.owner_replies USING btree (received_at DESC)
+index	public.place_photos_pkey	CREATE UNIQUE INDEX place_photos_pkey ON public.place_photos USING btree (id)
+index	public.place_photos_place_idx	CREATE INDEX place_photos_place_idx ON public.place_photos USING btree (place_id)
+index	public.place_photos_status_idx	CREATE INDEX place_photos_status_idx ON public.place_photos USING btree (status, created_at)
+index	public.place_photos_storage_path_key	CREATE UNIQUE INDEX place_photos_storage_path_key ON public.place_photos USING btree (storage_path)
+index	public.place_photos_user_idx	CREATE INDEX place_photos_user_idx ON public.place_photos USING btree (user_id)
+index	public.places_geom_all_gist	CREATE INDEX places_geom_all_gist ON public.places USING gist (geom)
+index	public.places_geom_gist	CREATE INDEX places_geom_gist ON public.places USING gist (geom) WHERE (status = 'published'::text)
+index	public.places_lat_lng	CREATE INDEX places_lat_lng ON public.places USING btree (lat, lng) WHERE (merged_into IS NULL)
+index	public.places_merged_into_idx	CREATE INDEX places_merged_into_idx ON public.places USING btree (merged_into) WHERE (merged_into IS NOT NULL)
+index	public.places_name_trgm_idx	CREATE INDEX places_name_trgm_idx ON public.places USING gin (name extensions.gin_trgm_ops)
+index	public.places_osm_type_osm_id_key	CREATE UNIQUE INDEX places_osm_type_osm_id_key ON public.places USING btree (osm_type, osm_id)
+index	public.places_pkey	CREATE UNIQUE INDEX places_pkey ON public.places USING btree (id)
+index	public.places_province_idx	CREATE INDEX places_province_idx ON public.places USING btree (province)
+index	public.places_slug_key	CREATE UNIQUE INDEX places_slug_key ON public.places USING btree (slug)
+index	public.places_status_idx	CREATE INDEX places_status_idx ON public.places USING btree (status)
+index	public.profiles_pkey	CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)
+index	public.push_subscriptions_endpoint_key	CREATE UNIQUE INDEX push_subscriptions_endpoint_key ON public.push_subscriptions USING btree (endpoint)
+index	public.push_subscriptions_pkey	CREATE UNIQUE INDEX push_subscriptions_pkey ON public.push_subscriptions USING btree (id)
+index	public.push_subscriptions_user_idx	CREATE INDEX push_subscriptions_user_idx ON public.push_subscriptions USING btree (user_id) WHERE (disabled_at IS NULL)
+index	public.reviews_pkey	CREATE UNIQUE INDEX reviews_pkey ON public.reviews USING btree (id)
+index	public.reviews_place_idx	CREATE INDEX reviews_place_idx ON public.reviews USING btree (place_id, status)
+index	public.reviews_user_idx	CREATE INDEX reviews_user_idx ON public.reviews USING btree (user_id, created_at) WHERE (user_id IS NOT NULL)
+index	public.route_cache_pkey	CREATE UNIQUE INDEX route_cache_pkey ON public.route_cache USING btree (key)
+index	public.seo_daily_page_idx	CREATE INDEX seo_daily_page_idx ON public.seo_daily USING btree (page, date)
+index	public.seo_daily_pkey	CREATE UNIQUE INDEX seo_daily_pkey ON public.seo_daily USING btree (date, query, page)
+index	public.seo_pages_pkey	CREATE UNIQUE INDEX seo_pages_pkey ON public.seo_pages USING btree (url)
+index	public.seo_status_pkey	CREATE UNIQUE INDEX seo_status_pkey ON public.seo_status USING btree (key)
+index	public.seo_totals_pkey	CREATE UNIQUE INDEX seo_totals_pkey ON public.seo_totals USING btree (date, device)
+index	public.shared_trip_members_pkey	CREATE UNIQUE INDEX shared_trip_members_pkey ON public.shared_trip_members USING btree (trip_id, user_id)
+index	public.shared_trip_members_user_idx	CREATE INDEX shared_trip_members_user_idx ON public.shared_trip_members USING btree (user_id) WHERE (left_at IS NULL)
+index	public.shared_trips_invite_code_key	CREATE UNIQUE INDEX shared_trips_invite_code_key ON public.shared_trips USING btree (invite_code)
+index	public.shared_trips_pkey	CREATE UNIQUE INDEX shared_trips_pkey ON public.shared_trips USING btree (id)
+index	public.site_settings_pkey	CREATE UNIQUE INDEX site_settings_pkey ON public.site_settings USING btree (key)
+index	public.social_stats_pkey	CREATE UNIQUE INDEX social_stats_pkey ON public.social_stats USING btree (id)
+index	public.social_stats_post_url_measured_on_key	CREATE UNIQUE INDEX social_stats_post_url_measured_on_key ON public.social_stats USING btree (post_url, measured_on)
+index	public.submissions_pkey	CREATE UNIQUE INDEX submissions_pkey ON public.submissions USING btree (id)
+index	public.submissions_place_user_idx	CREATE INDEX submissions_place_user_idx ON public.submissions USING btree (place_id, user_id) WHERE (user_id IS NOT NULL)
+index	public.ticket_messages_pkey	CREATE UNIQUE INDEX ticket_messages_pkey ON public.ticket_messages USING btree (id)
+index	public.ticket_messages_ticket_idx	CREATE INDEX ticket_messages_ticket_idx ON public.ticket_messages USING btree (ticket_id, created_at)
+index	public.tickets_access_token_key	CREATE UNIQUE INDEX tickets_access_token_key ON public.tickets USING btree (access_token)
+index	public.tickets_number_key	CREATE UNIQUE INDEX tickets_number_key ON public.tickets USING btree (number)
+index	public.tickets_pkey	CREATE UNIQUE INDEX tickets_pkey ON public.tickets USING btree (id)
+index	public.updates_queue_open	CREATE INDEX updates_queue_open ON public.updates_queue USING btree (created_at) WHERE (status = 'pending'::text)
+index	public.updates_queue_owner_reply	CREATE UNIQUE INDEX updates_queue_owner_reply ON public.updates_queue USING btree (owner_reply_id, field_changed) WHERE (owner_reply_id IS NOT NULL)
+index	public.updates_queue_pkey	CREATE UNIQUE INDEX updates_queue_pkey ON public.updates_queue USING btree (id)
+index	public.updates_queue_place	CREATE INDEX updates_queue_place ON public.updates_queue USING btree (place_id)
+index	public.updates_queue_submission_id_field_changed_key	CREATE UNIQUE INDEX updates_queue_submission_id_field_changed_key ON public.updates_queue USING btree (submission_id, field_changed)
+index	public.user_expenses_pkey	CREATE UNIQUE INDEX user_expenses_pkey ON public.user_expenses USING btree (user_id)
+index	public.user_trips_pkey	CREATE UNIQUE INDEX user_trips_pkey ON public.user_trips USING btree (user_id)
+index	public.user_vehicles_pkey	CREATE UNIQUE INDEX user_vehicles_pkey ON public.user_vehicles USING btree (user_id)
+kolom	private.admin_invites.email	text not null
+kolom	private.admin_invites.role	text not null default 'admin'::text
+kolom	private.nacontrole_20261108.actie	text not null
+kolom	private.nacontrole_20261108.bron	text
+kolom	private.nacontrole_20261108.id	bigint not null default nextval('private.nacontrole_20261108_id_seq'::regclass)
+kolom	private.nacontrole_20261108.naam	text
+kolom	private.nacontrole_20261108.nieuw	jsonb
+kolom	private.nacontrole_20261108.oordeel	text not null
+kolom	private.nacontrole_20261108.oud	jsonb
+kolom	private.nacontrole_20261108.place_id	uuid not null
+kolom	private.nacontrole_20261108.punt	text not null
+kolom	private.nacontrole_20261108.reden	text
+kolom	private.nacontrole_20261108.ts	timestamp with time zone default now()
+kolom	private.pdok_woonplaats_20261024.aangevraagd_op	timestamp with time zone default now()
+kolom	private.pdok_woonplaats_20261024.place_id	uuid not null
+kolom	private.pdok_woonplaats_20261024.req_id	bigint
+kolom	private.rate_counter.bucket	text not null
+kolom	private.rate_counter.hits	integer not null default 0
+kolom	private.rate_counter.window_start	timestamp with time zone not null
+kolom	private.scrape_baseline_20261023.access_24h	boolean
+kolom	private.scrape_baseline_20261023.access_hours	text
+kolom	private.scrape_baseline_20261023.checkin_from	text
+kolom	private.scrape_baseline_20261023.checkin_until	text
+kolom	private.scrape_baseline_20261023.checkout_until	text
+kolom	private.scrape_baseline_20261023.departure	text
+kolom	private.scrape_baseline_20261023.id	uuid
+kolom	private.scrape_baseline_20261023.n_extras	bigint
+kolom	private.scrape_baseline_20261023.price_eur	numeric(6,2)
+kolom	private.scrape_baseline_20261023.reservation_rule	text
+kolom	private.scrape_baseline_20261023.status	text
+kolom	private.scrape_baseline_20261024.checkout_until	text
+kolom	private.scrape_baseline_20261024.departure	text
+kolom	private.scrape_baseline_20261024.id	uuid
+kolom	private.scrape_baseline_20261024.price_eur	numeric(6,2)
+kolom	private.scrape_baseline_20261024.price_note	text
+kolom	private.scrape_baseline_20261024.status	text
+kolom	private.scrape_na_ronde1_20261023.checkin_from	text
+kolom	private.scrape_na_ronde1_20261023.checkin_until	text
+kolom	private.scrape_na_ronde1_20261023.checkout_until	text
+kolom	private.scrape_na_ronde1_20261023.departure	text
+kolom	private.scrape_na_ronde1_20261023.id	uuid
+kolom	private.scrape_na_ronde1_20261023.price_eur	numeric(6,2)
+kolom	private.scrape_na_ronde1_20261023.reservation_rule	text
+kolom	private.scrape_na_ronde1_20261023.status	text
+kolom	private.scrape_queue.attempts	integer not null default 0
+kolom	private.scrape_queue.done_at	timestamp with time zone
+kolom	private.scrape_queue.last_error	text
+kolom	private.scrape_queue.next_attempt_at	timestamp with time zone not null default now()
+kolom	private.scrape_queue.place_id	uuid not null
+kolom	private.secrets.name	text not null
+kolom	private.secrets.value	text not null
+kolom	private.snap_v34.capacity	integer
+kolom	private.snap_v34.checkout_until	text
+kolom	private.snap_v34.departure	text
+kolom	private.snap_v34.dogs	boolean
+kolom	private.snap_v34.dump_station	boolean
+kolom	private.snap_v34.id	uuid
+kolom	private.snap_v34.open_all_year	boolean
+kolom	private.snap_v34.power	boolean
+kolom	private.snap_v34.price_eur	numeric(6,2)
+kolom	private.snap_v34.reservation	boolean
+kolom	private.snap_v34.season	text
+kolom	private.snap_v34.shower	boolean
+kolom	private.snap_v34.status	text
+kolom	private.snap_v34.toilet	boolean
+kolom	private.snap_v34.water	boolean
+kolom	private.snap_v34.wifi	boolean
+kolom	private.snap_v35.capacity	integer
+kolom	private.snap_v35.checkin_from	text
+kolom	private.snap_v35.checkout_until	text
+kolom	private.snap_v35.departure	text
+kolom	private.snap_v35.dogs	boolean
+kolom	private.snap_v35.id	uuid
+kolom	private.snap_v35.n_photos	integer
+kolom	private.snap_v35.open_all_year	boolean
+kolom	private.snap_v35.price_eur	numeric(6,2)
+kolom	private.snap_v35.reservation	boolean
+kolom	private.snap_v35.season	text
+kolom	private.snap_v35.status	text
+kolom	private.snap_v35.verified_at	timestamp with time zone
+kolom	private.snap_v35.water	boolean
+kolom	private.snap_v36.capacity	integer
+kolom	private.snap_v36.checkin_from	text
+kolom	private.snap_v36.checkout_until	text
+kolom	private.snap_v36.departure	text
+kolom	private.snap_v36.dogs	boolean
+kolom	private.snap_v36.id	uuid
+kolom	private.snap_v36.n_photos	integer
+kolom	private.snap_v36.open_all_year	boolean
+kolom	private.snap_v36.price_eur	numeric(6,2)
+kolom	private.snap_v36.reservation	boolean
+kolom	private.snap_v36.season	text
+kolom	private.snap_v36.status	text
+kolom	private.snap_v36.times_note	text
+kolom	private.snap_v36.verified_at	timestamp with time zone
+kolom	private.snap_v36.water	boolean
+kolom	private.snap_v38.capacity	integer
+kolom	private.snap_v38.checkout_until	text
+kolom	private.snap_v38.departure	text
+kolom	private.snap_v38.dogs	boolean
+kolom	private.snap_v38.id	uuid
+kolom	private.snap_v38.n_extras	integer
+kolom	private.snap_v38.n_photos	integer
+kolom	private.snap_v38.open_all_year	boolean
+kolom	private.snap_v38.price_eur	numeric(6,2)
+kolom	private.snap_v38.price_note	text
+kolom	private.snap_v38.season	text
+kolom	private.snap_v38.status	text
+kolom	private.snap_v38.times_note	text
+kolom	private.snap_v38.water	boolean
+kolom	private.snap_velden.capacity	integer
+kolom	private.snap_velden.checkout_until	text
+kolom	private.snap_velden.departure	text
+kolom	private.snap_velden.dogs	boolean
+kolom	private.snap_velden.dump_station	boolean
+kolom	private.snap_velden.email	text
+kolom	private.snap_velden.id	uuid
+kolom	private.snap_velden.max_length_m	numeric(4,1)
+kolom	private.snap_velden.open_all_year	boolean
+kolom	private.snap_velden.phone	text
+kolom	private.snap_velden.power	boolean
+kolom	private.snap_velden.price_eur	numeric(6,2)
+kolom	private.snap_velden.reservation	boolean
+kolom	private.snap_velden.season	text
+kolom	private.snap_velden.shower	boolean
+kolom	private.snap_velden.status	text
+kolom	private.snap_velden.street	text
+kolom	private.snap_velden.toilet	boolean
+kolom	private.snap_velden.water	boolean
+kolom	private.snap_velden.wifi	boolean
+kolom	private.stealth_queue.attempts	integer not null default 0
+kolom	private.stealth_queue.created_at	timestamp with time zone not null default now()
+kolom	private.stealth_queue.done_at	timestamp with time zone
+kolom	private.stealth_queue.last_error	text
+kolom	private.stealth_queue.next_attempt_at	timestamp with time zone not null default now()
+kolom	private.stealth_queue.place_id	uuid not null
+kolom	private.stealth_queue.reason	text not null
+kolom	private.town_correcties_20261024.bron	text
+kolom	private.town_correcties_20261024.gedaan_op	timestamp with time zone default now()
+kolom	private.town_correcties_20261024.nieuw	text
+kolom	private.town_correcties_20261024.oud	text
+kolom	private.town_correcties_20261024.place_id	uuid not null
+kolom	private.town_correcties_20261024.slug	text
+kolom	private.verwijderde_plekken.gegevens	jsonb not null
+kolom	private.verwijderde_plekken.id	uuid not null
+kolom	private.verwijderde_plekken.name	text
+kolom	private.verwijderde_plekken.osm_id	bigint
+kolom	private.verwijderde_plekken.osm_type	text
+kolom	private.verwijderde_plekken.reden	text not null
+kolom	private.verwijderde_plekken.removed_at	timestamp with time zone not null default now()
+kolom	private.verwijderde_plekken.slug	text
+kolom	private.verwijderde_plekken.website	text
+kolom	public.admin_logs.details	jsonb not null default '{}'::jsonb
+kolom	public.admin_logs.duration_ms	integer
+kolom	public.admin_logs.http_status	integer
+kolom	public.admin_logs.id	bigint not null identity always
+kolom	public.admin_logs.kind	text not null
+kolom	public.admin_logs.message	text
+kolom	public.admin_logs.request_id	bigint
+kolom	public.admin_logs.source	text not null
+kolom	public.admin_logs.status	text not null
+kolom	public.admin_logs.ts	timestamp with time zone not null default now()
+kolom	public.admins.created_at	timestamp with time zone not null default now()
+kolom	public.admins.email	text not null
+kolom	public.admins.role	text not null default 'admin'::text
+kolom	public.admins.user_id	uuid not null
+kolom	public.app_logs.context	jsonb not null default '{}'::jsonb
+kolom	public.app_logs.id	bigint not null identity always
+kolom	public.app_logs.level	text not null
+kolom	public.app_logs.message	text not null
+kolom	public.app_logs.source	text not null
+kolom	public.app_logs.ts	timestamp with time zone not null default now()
+kolom	public.audit_log.action	text not null
+kolom	public.audit_log.actor	uuid
+kolom	public.audit_log.actor_email	text
+kolom	public.audit_log.details	jsonb not null default '{}'::jsonb
+kolom	public.audit_log.entity	text not null
+kolom	public.audit_log.entity_id	text
+kolom	public.audit_log.id	bigint not null identity always
+kolom	public.audit_log.ts	timestamp with time zone not null default now()
+kolom	public.campaigns.bron	text not null
+kolom	public.campaigns.budget_eur	numeric(8,2) not null default 0
+kolom	public.campaigns.campagne	text not null
+kolom	public.campaigns.channel	text not null
+kolom	public.campaigns.created_at	timestamp with time zone not null default now()
+kolom	public.campaigns.ends_on	date
+kolom	public.campaigns.id	uuid not null default gen_random_uuid()
+kolom	public.campaigns.name	text not null
+kolom	public.campaigns.notes	text
+kolom	public.campaigns.spent_eur	numeric(8,2) not null default 0
+kolom	public.campaigns.starts_on	date
+kolom	public.consent_log.analytics	boolean not null
+kolom	public.consent_log.consent_id	text not null
+kolom	public.consent_log.id	bigint not null identity always
+kolom	public.consent_log.marketing	boolean not null
+kolom	public.consent_log.ts	timestamp with time zone not null default now()
+kolom	public.consent_log.version	text not null
+kolom	public.content_items.body	text not null default ''::text
+kolom	public.content_items.channel	text not null
+kolom	public.content_items.created_at	timestamp with time zone not null default now()
+kolom	public.content_items.created_by	uuid default auth.uid()
+kolom	public.content_items.facts_snapshot	jsonb
+kolom	public.content_items.hashtags	text[] not null default '{}'::text[]
+kolom	public.content_items.id	uuid not null default gen_random_uuid()
+kolom	public.content_items.link	text
+kolom	public.content_items.pillar	text not null
+kolom	public.content_items.planned_on	date
+kolom	public.content_items.posted_at	timestamp with time zone
+kolom	public.content_items.posted_url	text
+kolom	public.content_items.status	text not null default 'idee'::text
+kolom	public.content_items.title	text not null
+kolom	public.content_items.updated_at	timestamp with time zone not null default now()
+kolom	public.crowd_reports.created_at	timestamp with time zone not null default now()
+kolom	public.crowd_reports.id	bigint not null identity always
+kolom	public.crowd_reports.level	text not null
+kolom	public.crowd_reports.place_id	uuid not null
+kolom	public.crowd_reports.user_id	uuid not null
+kolom	public.crowd_watches.created_at	timestamp with time zone not null default now()
+kolom	public.crowd_watches.expires_at	timestamp with time zone not null default (now() + '24:00:00'::interval)
+kolom	public.crowd_watches.notified_at	timestamp with time zone
+kolom	public.crowd_watches.place_id	uuid not null
+kolom	public.crowd_watches.user_id	uuid not null
+kolom	public.dependency_updates.ai_advice	text
+kolom	public.dependency_updates.ai_model	text
+kolom	public.dependency_updates.category	text not null
+kolom	public.dependency_updates.created_at	timestamp with time zone not null default now()
+kolom	public.dependency_updates.ecosystem	text
+kolom	public.dependency_updates.id	uuid not null default gen_random_uuid()
+kolom	public.dependency_updates.package_name	text not null
+kolom	public.dependency_updates.pr_number	integer
+kolom	public.dependency_updates.pr_url	text
+kolom	public.dependency_updates.status	text not null default 'pending_review'::text
+kolom	public.dependency_updates.update_type	text
+kolom	public.dependency_updates.updated_at	timestamp with time zone not null default now()
+kolom	public.dependency_updates.version_from	text
+kolom	public.dependency_updates.version_to	text
+kolom	public.duplicate_dismissals.a	uuid not null
+kolom	public.duplicate_dismissals.b	uuid not null
+kolom	public.duplicate_dismissals.created_at	timestamp with time zone not null default now()
+kolom	public.duplicate_dismissals.dismissed_by	uuid
+kolom	public.events.id	bigint not null identity always
+kolom	public.events.name	text not null
+kolom	public.events.path	text
+kolom	public.events.props	jsonb not null default '{}'::jsonb
+kolom	public.events.session_id	text
+kolom	public.events.ts	timestamp with time zone not null default now()
+kolom	public.faq.answer	text not null
+kolom	public.faq.category	text not null
+kolom	public.faq.id	uuid not null default gen_random_uuid()
+kolom	public.faq.position	integer not null default 0
+kolom	public.faq.published	boolean not null default true
+kolom	public.faq.question	text not null
+kolom	public.faq.updated_at	timestamp with time zone not null default now()
+kolom	public.geo_bronnen.aangemaakt_op	timestamp with time zone not null default now()
+kolom	public.geo_bronnen.beoordeeld_op	timestamp with time zone
+kolom	public.geo_bronnen.bron	text not null
+kolom	public.geo_bronnen.naam	text not null
+kolom	public.geo_bronnen.notitie	text
+kolom	public.geo_bronnen.soort	text
+kolom	public.geo_bronnen.status	text not null default 'te_beoordelen'::text
+kolom	public.geo_bronnen.tier	smallint not null
+kolom	public.geo_master.aangemaakt_op	timestamp with time zone not null default now()
+kolom	public.geo_master.bijgewerkt_op	timestamp with time zone not null default now()
+kolom	public.geo_master.bron_ids	text[] not null
+kolom	public.geo_master.conflicten	jsonb not null default '{}'::jsonb
+kolom	public.geo_master.faciliteiten	jsonb not null default '{}'::jsonb
+kolom	public.geo_master.geohash	text not null
+kolom	public.geo_master.gepromoveerd_op	timestamp with time zone
+kolom	public.geo_master.lat	double precision not null
+kolom	public.geo_master.lon	double precision not null
+kolom	public.geo_master.master_id	text not null
+kolom	public.geo_master.match_score	real not null
+kolom	public.geo_master.naam	text
+kolom	public.geo_master.namen	text[] not null default '{}'::text[]
+kolom	public.geo_master.place_id	uuid
+kolom	public.geo_master.promotie	text
+kolom	public.geo_master.promotie_reden	text
+kolom	public.ingest_runs.finished_at	timestamp with time zone
+kolom	public.ingest_runs.id	bigint not null identity always
+kolom	public.ingest_runs.kind	text not null
+kolom	public.ingest_runs.started_at	timestamp with time zone not null default now()
+kolom	public.ingest_runs.stats	jsonb not null default '{}'::jsonb
+kolom	public.ingest_runs.status	text not null default 'running'::text
+kolom	public.internal_secrets.name	text not null
+kolom	public.internal_secrets.value	text not null
+kolom	public.manual_review.place_id	uuid not null
+kolom	public.manual_review.reden	text not null
+kolom	public.manual_review.requires_manual_review	boolean not null default true
+kolom	public.manual_review.sinds	timestamp with time zone not null default now()
+kolom	public.marketing_assets.content_item_id	uuid
+kolom	public.marketing_assets.created_at	timestamp with time zone not null default now()
+kolom	public.marketing_assets.facts_snapshot	jsonb
+kolom	public.marketing_assets.format	text
+kolom	public.marketing_assets.id	uuid not null default gen_random_uuid()
+kolom	public.marketing_assets.job_id	uuid
+kolom	public.marketing_assets.kind	text not null
+kolom	public.marketing_assets.storage_path	text not null
+kolom	public.marketing_assets.template	text
+kolom	public.marketing_assets.title	text
+kolom	public.marketing_jobs.created_at	timestamp with time zone not null default now()
+kolom	public.marketing_jobs.created_by	uuid default auth.uid()
+kolom	public.marketing_jobs.error	text
+kolom	public.marketing_jobs.finished_at	timestamp with time zone
+kolom	public.marketing_jobs.format	text
+kolom	public.marketing_jobs.id	uuid not null default gen_random_uuid()
+kolom	public.marketing_jobs.kind	text not null
+kolom	public.marketing_jobs.props	jsonb not null default '{}'::jsonb
+kolom	public.marketing_jobs.started_at	timestamp with time zone
+kolom	public.marketing_jobs.status	text not null default 'wacht'::text
+kolom	public.marketing_jobs.template	text
+kolom	public.nl_towns.id	integer not null default nextval('public.nl_towns_id_seq'::regclass)
+kolom	public.nl_towns.lat	double precision not null
+kolom	public.nl_towns.lng	double precision not null
+kolom	public.nl_towns.name	text not null
+kolom	public.nl_towns.province	text not null
+kolom	public.osm_queries.name	text not null
+kolom	public.osm_queries.template	text not null
+kolom	public.osm_regions.attempt	integer not null default 0
+kolom	public.osm_regions.code	text not null
+kolom	public.osm_regions.last_run_at	timestamp with time zone
+kolom	public.osm_regions.name	text not null
+kolom	public.osm_regions.places_req	bigint
+kolom	public.osm_regions.points_req	bigint
+kolom	public.osm_staging.created_at	timestamp with time zone not null default now()
+kolom	public.osm_staging.id	bigint not null identity always
+kolom	public.osm_staging.kind	text not null
+kolom	public.osm_staging.processed_at	timestamp with time zone
+kolom	public.osm_staging.row	jsonb not null
+kolom	public.owner_replies.ai_model	text
+kolom	public.owner_replies.departure_time	text
+kolom	public.owner_replies.email_id	text not null
+kolom	public.owner_replies.from_email	text not null
+kolom	public.owner_replies.id	uuid not null default gen_random_uuid()
+kolom	public.owner_replies.intent	text not null
+kolom	public.owner_replies.matched_by	text
+kolom	public.owner_replies.outcome	text not null
+kolom	public.owner_replies.place_id	uuid
+kolom	public.owner_replies.price_eur	numeric
+kolom	public.owner_replies.queued	smallint not null default 0
+kolom	public.owner_replies.received_at	timestamp with time zone not null default now()
+kolom	public.owner_replies.sender_matches	boolean not null default false
+kolom	public.owner_replies.subject	text
+kolom	public.owner_replies.summary	text
+kolom	public.place_photos.caption	text
+kolom	public.place_photos.created_at	timestamp with time zone not null default now()
+kolom	public.place_photos.credit	text
+kolom	public.place_photos.height	integer
+kolom	public.place_photos.id	uuid not null default gen_random_uuid()
+kolom	public.place_photos.place_id	uuid not null
+kolom	public.place_photos.reviewed_at	timestamp with time zone
+kolom	public.place_photos.reviewed_by	uuid
+kolom	public.place_photos.status	text not null default 'pending'::text
+kolom	public.place_photos.storage_path	text not null
+kolom	public.place_photos.user_id	uuid
+kolom	public.place_photos.width	integer
+kolom	public.places.access_24h	boolean
+kolom	public.places.access_hours	text
+kolom	public.places.capacity	integer
+kolom	public.places.checkin_from	text
+kolom	public.places.checkin_until	text
+kolom	public.places.checkout_until	text
+kolom	public.places.completeness	numeric(4,3) not null default 0
+kolom	public.places.created_at	timestamp with time zone not null default now()
+kolom	public.places.departure	text
+kolom	public.places.departure_check	text
+kolom	public.places.departure_checked_at	timestamp with time zone
+kolom	public.places.departure_checked_by	text
+kolom	public.places.description	text
+kolom	public.places.description_source	text
+kolom	public.places.dogs	boolean
+kolom	public.places.dump_station	boolean
+kolom	public.places.email	text
+kolom	public.places.geom	extensions.geometry(Point,4326) generated extensions.st_setsrid(extensions.st_makepoint(lng, lat), 4326)
+kolom	public.places.id	uuid not null default gen_random_uuid()
+kolom	public.places.image_credit	text
+kolom	public.places.image_url	text
+kolom	public.places.kind	text
+kolom	public.places.last_scraped_at	timestamp with time zone
+kolom	public.places.lat	double precision not null
+kolom	public.places.lng	double precision not null
+kolom	public.places.max_length_m	numeric(4,1)
+kolom	public.places.max_stay_nights	integer
+kolom	public.places.merged_into	uuid
+kolom	public.places.name	text not null
+kolom	public.places.name_is_generic	boolean not null default false
+kolom	public.places.open_all_year	boolean
+kolom	public.places.operator	text
+kolom	public.places.osm_id	bigint
+kolom	public.places.osm_type	text
+kolom	public.places.phone	text
+kolom	public.places.photos	jsonb not null default '[]'::jsonb
+kolom	public.places.postcode	text
+kolom	public.places.power	boolean
+kolom	public.places.power_note	text
+kolom	public.places.price_eur	numeric(6,2)
+kolom	public.places.price_extras	jsonb
+kolom	public.places.price_note	text
+kolom	public.places.province	text
+kolom	public.places.rating_avg	numeric(3,1)
+kolom	public.places.rating_count	integer not null default 0
+kolom	public.places.reservation	boolean
+kolom	public.places.reservation_rule	text
+kolom	public.places.season	text
+kolom	public.places.shower	boolean
+kolom	public.places.slug	text not null
+kolom	public.places.sources	jsonb not null default '{}'::jsonb
+kolom	public.places.status	text not null default 'draft'::text
+kolom	public.places.status_locked	boolean not null default false
+kolom	public.places.street	text
+kolom	public.places.surface	text
+kolom	public.places.times_note	text
+kolom	public.places.toilet	boolean
+kolom	public.places.tourist_tax_included	boolean
+kolom	public.places.town	text
+kolom	public.places.updated_at	timestamp with time zone not null default now()
+kolom	public.places.verified_at	timestamp with time zone
+kolom	public.places.water	boolean
+kolom	public.places.website	text
+kolom	public.places.wifi	boolean
+kolom	public.profiles.avatar_url	text
+kolom	public.profiles.created_at	timestamp with time zone not null default now()
+kolom	public.profiles.display_name	text
+kolom	public.profiles.id	uuid not null
+kolom	public.profiles.role	text not null default 'user'::text
+kolom	public.profiles.updated_at	timestamp with time zone not null default now()
+kolom	public.push_subscriptions.auth	text not null
+kolom	public.push_subscriptions.created_at	timestamp with time zone not null default now()
+kolom	public.push_subscriptions.disabled_at	timestamp with time zone
+kolom	public.push_subscriptions.endpoint	text not null
+kolom	public.push_subscriptions.id	uuid not null default gen_random_uuid()
+kolom	public.push_subscriptions.p256dh	text not null
+kolom	public.push_subscriptions.user_id	uuid not null
+kolom	public.reviews.admin_note	text
+kolom	public.reviews.author_email	text
+kolom	public.reviews.author_name	text not null
+kolom	public.reviews.body	text not null
+kolom	public.reviews.created_at	timestamp with time zone not null default now()
+kolom	public.reviews.id	uuid not null default gen_random_uuid()
+kolom	public.reviews.place_id	uuid not null
+kolom	public.reviews.rating	smallint not null
+kolom	public.reviews.score_facilities	smallint
+kolom	public.reviews.score_location	smallint
+kolom	public.reviews.score_quiet	smallint
+kolom	public.reviews.score_value	smallint
+kolom	public.reviews.status	text not null default 'pending'::text
+kolom	public.reviews.title	text
+kolom	public.reviews.user_id	uuid
+kolom	public.reviews.vehicle	text
+kolom	public.reviews.visited_month	date
+kolom	public.route_cache.created_at	timestamp with time zone not null default now()
+kolom	public.route_cache.distance_m	integer not null
+kolom	public.route_cache.duration_s	integer not null
+kolom	public.route_cache.geometry	jsonb
+kolom	public.route_cache.key	text not null
+kolom	public.route_cache.provider	text not null
+kolom	public.seo_daily.clicks	integer not null default 0
+kolom	public.seo_daily.date	date not null
+kolom	public.seo_daily.impressions	integer not null default 0
+kolom	public.seo_daily.page	text not null
+kolom	public.seo_daily.position	numeric(6,2)
+kolom	public.seo_daily.query	text not null
+kolom	public.seo_pages.checked_at	timestamp with time zone not null default now()
+kolom	public.seo_pages.coverage	text
+kolom	public.seo_pages.indexed	boolean
+kolom	public.seo_pages.last_crawl	timestamp with time zone
+kolom	public.seo_pages.url	text not null
+kolom	public.seo_pages.verdict	text
+kolom	public.seo_status.checked_at	timestamp with time zone not null default now()
+kolom	public.seo_status.key	text not null
+kolom	public.seo_status.value	jsonb not null default '{}'::jsonb
+kolom	public.seo_totals.clicks	integer not null default 0
+kolom	public.seo_totals.date	date not null
+kolom	public.seo_totals.device	text not null default 'alle'::text
+kolom	public.seo_totals.impressions	integer not null default 0
+kolom	public.seo_totals.position	numeric(6,2)
+kolom	public.shared_trip_members.display_name	text
+kolom	public.shared_trip_members.joined_at	timestamp with time zone not null default now()
+kolom	public.shared_trip_members.left_at	timestamp with time zone
+kolom	public.shared_trip_members.trip_id	uuid not null
+kolom	public.shared_trip_members.user_id	uuid not null
+kolom	public.shared_trips.created_at	timestamp with time zone not null default now()
+kolom	public.shared_trips.id	uuid not null default gen_random_uuid()
+kolom	public.shared_trips.invite_code	text not null default encode(extensions.gen_random_bytes(9), 'hex'::text)
+kolom	public.shared_trips.name	text not null default 'Onze reis'::text
+kolom	public.shared_trips.owner_id	uuid not null
+kolom	public.shared_trips.stops	jsonb not null default '[]'::jsonb
+kolom	public.shared_trips.updated_at	timestamp with time zone not null default now()
+kolom	public.shared_trips.updated_by	uuid
+kolom	public.site_settings.key	text not null
+kolom	public.site_settings.value	jsonb not null
+kolom	public.social_stats.comments	integer
+kolom	public.social_stats.content_item_id	uuid
+kolom	public.social_stats.id	uuid not null default gen_random_uuid()
+kolom	public.social_stats.likes	integer
+kolom	public.social_stats.measured_on	date not null default CURRENT_DATE
+kolom	public.social_stats.platform	text not null
+kolom	public.social_stats.post_url	text not null
+kolom	public.social_stats.reach	integer
+kolom	public.social_stats.saves	integer
+kolom	public.social_stats.shares	integer
+kolom	public.social_stats.source	text not null default 'handmatig'::text
+kolom	public.social_stats.views	integer
+kolom	public.submissions.admin_note	text
+kolom	public.submissions.contact_email	text
+kolom	public.submissions.contact_name	text
+kolom	public.submissions.created_at	timestamp with time zone not null default now()
+kolom	public.submissions.id	uuid not null default gen_random_uuid()
+kolom	public.submissions.kind	text not null
+kolom	public.submissions.payload	jsonb not null
+kolom	public.submissions.place_id	uuid
+kolom	public.submissions.status	text not null default 'nieuw'::text
+kolom	public.submissions.user_id	uuid
+kolom	public.ticket_messages.admin_id	uuid
+kolom	public.ticket_messages.author	text not null
+kolom	public.ticket_messages.body	text not null
+kolom	public.ticket_messages.created_at	timestamp with time zone not null default now()
+kolom	public.ticket_messages.id	uuid not null default gen_random_uuid()
+kolom	public.ticket_messages.internal	boolean not null default false
+kolom	public.ticket_messages.ticket_id	uuid not null
+kolom	public.tickets.access_token	text not null default encode(extensions.gen_random_bytes(18), 'hex'::text)
+kolom	public.tickets.assignee	uuid
+kolom	public.tickets.category	text not null default 'vraag'::text
+kolom	public.tickets.created_at	timestamp with time zone not null default now()
+kolom	public.tickets.email	text not null
+kolom	public.tickets.id	uuid not null default gen_random_uuid()
+kolom	public.tickets.name	text not null
+kolom	public.tickets.number	bigint not null identity always
+kolom	public.tickets.place_id	uuid
+kolom	public.tickets.priority	text not null default 'normaal'::text
+kolom	public.tickets.status	text not null default 'open'::text
+kolom	public.tickets.subject	text not null
+kolom	public.tickets.updated_at	timestamp with time zone not null default now()
+kolom	public.updates_queue.ai_advice	text
+kolom	public.updates_queue.ai_checked_at	timestamp with time zone
+kolom	public.updates_queue.ai_model	text
+kolom	public.updates_queue.ai_score	smallint
+kolom	public.updates_queue.created_at	timestamp with time zone not null default now()
+kolom	public.updates_queue.decided_at	timestamp with time zone
+kolom	public.updates_queue.decided_by	uuid
+kolom	public.updates_queue.field_changed	text not null
+kolom	public.updates_queue.id	uuid not null default gen_random_uuid()
+kolom	public.updates_queue.new_value	jsonb not null
+kolom	public.updates_queue.old_value	jsonb
+kolom	public.updates_queue.owner_reply_id	uuid
+kolom	public.updates_queue.place_id	uuid not null
+kolom	public.updates_queue.source	text not null default 'doe-mee'::text
+kolom	public.updates_queue.status	text not null default 'pending'::text
+kolom	public.updates_queue.submission_id	uuid
+kolom	public.updates_queue.user_id	uuid
+kolom	public.user_expenses.entries	jsonb not null default '[]'::jsonb
+kolom	public.user_expenses.updated_at	timestamp with time zone not null default now()
+kolom	public.user_expenses.user_id	uuid not null
+kolom	public.user_trips.stops	jsonb not null default '[]'::jsonb
+kolom	public.user_trips.updated_at	timestamp with time zone not null default now()
+kolom	public.user_trips.user_id	uuid not null
+kolom	public.user_vehicles.data	jsonb not null default '{}'::jsonb
+kolom	public.user_vehicles.updated_at	timestamp with time zone not null default now()
+kolom	public.user_vehicles.user_id	uuid not null
+kolomrecht	public.profiles.avatar_url authenticated	update
+kolomrecht	public.profiles.display_name authenticated	update
+kolomrecht	public.profiles.updated_at authenticated	update
+kolomrecht	public.shared_trips.name authenticated	update
+kolomrecht	public.shared_trips.stops authenticated	update
+kolomrecht	public.shared_trips.updated_at authenticated	update
+kolomrecht	public.shared_trips.updated_by authenticated	update
+policy	public.admin_logs.alleen admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.admins.admins zien admins	permissive | r | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.app_logs.admins logs	permissive | r | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.audit_log.admins audit	permissive | r | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.campaigns.campaigns_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.consent_log.admins consent	permissive | r | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.content_items.content_items_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.crowd_reports.beheer leest drukte	permissive | r | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.crowd_watches.eigen volgers lezen	permissive | r | authenticated | (user_id = ( SELECT auth.uid() AS uid))
+policy	public.dependency_updates.alleen admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.duplicate_dismissals.beheer dubbelen	permissive | * | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.events.admins events	permissive | r | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.faq.admins faq delete	permissive | d | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.faq.admins faq insert	permissive | a | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.faq.admins faq update	permissive | w | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.faq.faq lezen	permissive | r | anon,authenticated | (published OR ( SELECT public.is_admin() AS is_admin))
+policy	public.ingest_runs.admins runs	permissive | r | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.marketing_assets.marketing_assets_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.marketing_jobs.marketing_jobs_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.nl_towns.woonplaatsen lezen	permissive | r | anon,authenticated | true
+policy	public.owner_replies.alleen admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.place_photos.beheer foto's	permissive | w | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.place_photos.eigen foto's en beheer lezen	permissive | r | authenticated | ((user_id = ( SELECT auth.uid() AS uid)) OR ( SELECT public.is_admin() AS is_admin))
+policy	public.place_photos.foto insturen	permissive | a | authenticated | ((user_id = ( SELECT auth.uid() AS uid)) AND (status = 'pending'::text) AND (reviewed_by IS NULL) AND (split_part(storage_path, '/'::text, 1) = (( SELECT auth.uid() AS uid))::text))
+policy	public.places.admins plekken delete	permissive | d | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.places.admins plekken insert	permissive | a | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.places.admins plekken update	permissive | w | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.places.plekken lezen	permissive | r | anon,authenticated | ((status = 'published'::text) OR ( SELECT public.is_admin() AS is_admin))
+policy	public.profiles.eigen profiel lezen	permissive | r | authenticated | (( SELECT auth.uid() AS uid) = id)
+policy	public.profiles.eigen profiel wijzigen	permissive | w | authenticated | (( SELECT auth.uid() AS uid) = id) | (( SELECT auth.uid() AS uid) = id)
+policy	public.push_subscriptions.eigen abonnementen lezen	permissive | r | authenticated | (user_id = ( SELECT auth.uid() AS uid))
+policy	public.reviews.admins reviews delete	permissive | d | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.reviews.admins reviews update	permissive | w | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.reviews.reviews lezen	permissive | r | anon,authenticated | ((status = 'approved'::text) OR ( SELECT public.is_admin() AS is_admin))
+policy	public.route_cache.routecache lezen	permissive | r | anon,authenticated | true
+policy	public.seo_daily.seo_daily_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.seo_pages.seo_pages_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.seo_status.seo_status_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.seo_totals.seo_totals_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.shared_trip_members.leden zien elkaar	permissive | r | authenticated | ( SELECT public.is_trip_member(shared_trip_members.trip_id) AS is_trip_member)
+policy	public.shared_trips.leden lezen de reis	permissive | r | authenticated | ( SELECT public.is_trip_member(shared_trips.id) AS is_trip_member)
+policy	public.shared_trips.leden wijzigen de reis	permissive | w | authenticated | ( SELECT public.is_trip_member(shared_trips.id) AS is_trip_member) | ( SELECT public.is_trip_member(shared_trips.id) AS is_trip_member)
+policy	public.site_settings.admins instellingen insert	permissive | a | authenticated | ( SELECT public.is_admin() AS is_admin)
+policy	public.site_settings.admins instellingen update	permissive | w | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.site_settings.instellingen lezen	permissive | r | anon,authenticated | true
+policy	public.social_stats.social_stats_admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.submissions.admins inzendingen	permissive | * | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.ticket_messages.admins berichten	permissive | * | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.tickets.admins tickets	permissive | * | authenticated | ( SELECT public.is_admin() AS is_admin) | ( SELECT public.is_admin() AS is_admin)
+policy	public.updates_queue.alleen admin	permissive | * | authenticated | ( SELECT public.has_admin_role() AS has_admin_role) | ( SELECT public.has_admin_role() AS has_admin_role)
+policy	public.user_expenses.eigen uitgaven	permissive | * | authenticated | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id)
+policy	public.user_trips.eigen reis	permissive | * | authenticated | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id)
+policy	public.user_vehicles.eigen camper	permissive | * | authenticated | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id)
+policy	storage.objects.eigen documenten lezen	permissive | r | authenticated | ((bucket_id = 'vehicle-docs'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))
+policy	storage.objects.eigen documenten uploaden	permissive | a | authenticated | ((bucket_id = 'vehicle-docs'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))
+policy	storage.objects.eigen documenten weghalen	permissive | d | authenticated | ((bucket_id = 'vehicle-docs'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))
+policy	storage.objects.foto uploaden in eigen map	permissive | a | authenticated | ((bucket_id = 'place-photos'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))
+policy	storage.objects.marketing_admin_all	permissive | * | authenticated | ((bucket_id = 'marketing'::text) AND ( SELECT public.has_admin_role() AS has_admin_role)) | ((bucket_id = 'marketing'::text) AND ( SELECT public.has_admin_role() AS has_admin_role))
+policy	storage.objects.marketing_job_upload	permissive | a | anon | ((bucket_id = 'marketing'::text) AND public.marketing_upload_allowed(name))
+publicatie	supabase_realtime public.shared_trips	
+recht	public.admin_logs authenticated	delete,insert,maintain,select,update
+recht	public.admin_logs service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.admins anon	maintain,references,select,trigger
+recht	public.admins authenticated	maintain,references,select,trigger
+recht	public.admins service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.app_logs anon	maintain,references,select,trigger
+recht	public.app_logs authenticated	maintain,references,select,trigger
+recht	public.app_logs service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.audit_log anon	maintain,references,select,trigger
+recht	public.audit_log authenticated	maintain,references,select,trigger
+recht	public.audit_log service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.campaigns authenticated	delete,insert,select,update
+recht	public.campaigns service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.consent_log anon	maintain,references,select,trigger
+recht	public.consent_log authenticated	maintain,references,select,trigger
+recht	public.consent_log service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.content_items authenticated	delete,insert,select,update
+recht	public.content_items service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.crowd_reports authenticated	select
+recht	public.crowd_reports service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.crowd_watches authenticated	select
+recht	public.crowd_watches service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.dependency_updates authenticated	delete,insert,maintain,select,update
+recht	public.dependency_updates service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.duplicate_dismissals authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.duplicate_dismissals service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.events anon	maintain,references,select,trigger
+recht	public.events authenticated	maintain,references,select,trigger
+recht	public.events service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.faq anon	maintain,references,select,trigger
+recht	public.faq authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.faq service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.geo_bronnen service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.geo_master service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.ingest_runs anon	maintain,references,select,trigger
+recht	public.ingest_runs authenticated	maintain,references,select,trigger
+recht	public.ingest_runs service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.internal_secrets anon	maintain,references,select,trigger
+recht	public.internal_secrets authenticated	maintain,references,select,trigger
+recht	public.internal_secrets service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.manual_review service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.marketing_assets authenticated	delete,insert,select,update
+recht	public.marketing_assets service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.marketing_jobs authenticated	delete,insert,select,update
+recht	public.marketing_jobs service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.nl_towns anon	maintain,references,select,trigger
+recht	public.nl_towns authenticated	maintain,references,select,trigger
+recht	public.nl_towns service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.osm_queries anon	maintain,references,select,trigger
+recht	public.osm_queries authenticated	maintain,references,select,trigger
+recht	public.osm_queries service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.osm_regions anon	maintain,references,select,trigger
+recht	public.osm_regions authenticated	maintain,references,select,trigger
+recht	public.osm_regions service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.osm_staging anon	maintain,references,select,trigger
+recht	public.osm_staging authenticated	maintain,references,select,trigger
+recht	public.osm_staging service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.owner_replies authenticated	delete,insert,maintain,select,update
+recht	public.owner_replies service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.place_photos authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.place_photos service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.places anon	maintain,references,select,trigger
+recht	public.places authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.places service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.profiles authenticated	maintain,references,select,trigger
+recht	public.profiles service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.push_subscriptions authenticated	select
+recht	public.push_subscriptions service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.reviews anon	maintain,references,select,trigger
+recht	public.reviews authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.reviews service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.route_cache anon	maintain,references,select,trigger
+recht	public.route_cache authenticated	maintain,references,select,trigger
+recht	public.route_cache service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.seo_daily authenticated	delete,insert,select,update
+recht	public.seo_daily service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.seo_pages authenticated	delete,insert,select,update
+recht	public.seo_pages service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.seo_status authenticated	delete,insert,select,update
+recht	public.seo_status service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.seo_totals authenticated	delete,insert,select,update
+recht	public.seo_totals service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.shared_trip_members authenticated	select
+recht	public.shared_trip_members service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.shared_trips authenticated	select
+recht	public.shared_trips service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.site_settings anon	maintain,references,select,trigger
+recht	public.site_settings authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.site_settings service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.social_stats authenticated	delete,insert,select,update
+recht	public.social_stats service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.submissions anon	maintain,references,select,trigger
+recht	public.submissions authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.submissions service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.ticket_messages anon	maintain,references,select,trigger
+recht	public.ticket_messages authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.ticket_messages service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.tickets anon	maintain,references,select,trigger
+recht	public.tickets authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.tickets service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.updates_queue authenticated	delete,insert,maintain,select,update
+recht	public.updates_queue service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.user_expenses authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.user_expenses service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.user_trips authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.user_trips service_role	delete,insert,maintain,references,select,trigger,truncate,update
+recht	public.user_vehicles authenticated	delete,insert,maintain,references,select,trigger,update
+recht	public.user_vehicles service_role	delete,insert,maintain,references,select,trigger,truncate,update
+reeks	private.nacontrole_20261108_id_seq	bigint
+reeks	public.admin_logs_id_seq	bigint
+reeks	public.app_logs_id_seq	bigint
+reeks	public.audit_log_id_seq	bigint
+reeks	public.consent_log_id_seq	bigint
+reeks	public.crowd_reports_id_seq	bigint
+reeks	public.events_id_seq	bigint
+reeks	public.ingest_runs_id_seq	bigint
+reeks	public.nl_towns_id_seq	integer
+reeks	public.osm_staging_id_seq	bigint
+reeks	public.tickets_number_seq	bigint
+reeksrecht	public.admin_logs_id_seq anon	select,update,usage
+reeksrecht	public.admin_logs_id_seq authenticated	select,update,usage
+reeksrecht	public.admin_logs_id_seq service_role	select,update,usage
+reeksrecht	public.app_logs_id_seq anon	select,update,usage
+reeksrecht	public.app_logs_id_seq authenticated	select,update,usage
+reeksrecht	public.app_logs_id_seq service_role	select,update,usage
+reeksrecht	public.audit_log_id_seq anon	select,update,usage
+reeksrecht	public.audit_log_id_seq authenticated	select,update,usage
+reeksrecht	public.audit_log_id_seq service_role	select,update,usage
+reeksrecht	public.consent_log_id_seq anon	select,update,usage
+reeksrecht	public.consent_log_id_seq authenticated	select,update,usage
+reeksrecht	public.consent_log_id_seq service_role	select,update,usage
+reeksrecht	public.crowd_reports_id_seq anon	select,update,usage
+reeksrecht	public.crowd_reports_id_seq authenticated	select,update,usage
+reeksrecht	public.crowd_reports_id_seq service_role	select,update,usage
+reeksrecht	public.events_id_seq anon	select,update,usage
+reeksrecht	public.events_id_seq authenticated	select,update,usage
+reeksrecht	public.events_id_seq service_role	select,update,usage
+reeksrecht	public.ingest_runs_id_seq anon	select,update,usage
+reeksrecht	public.ingest_runs_id_seq authenticated	select,update,usage
+reeksrecht	public.ingest_runs_id_seq service_role	select,update,usage
+reeksrecht	public.nl_towns_id_seq anon	select,update,usage
+reeksrecht	public.nl_towns_id_seq authenticated	select,update,usage
+reeksrecht	public.nl_towns_id_seq service_role	select,update,usage
+reeksrecht	public.osm_staging_id_seq anon	select,update,usage
+reeksrecht	public.osm_staging_id_seq authenticated	select,update,usage
+reeksrecht	public.osm_staging_id_seq service_role	select,update,usage
+reeksrecht	public.tickets_number_seq anon	select,update,usage
+reeksrecht	public.tickets_number_seq authenticated	select,update,usage
+reeksrecht	public.tickets_number_seq service_role	select,update,usage
+schema	private	
+schema	public	
+schemarecht	public PUBLIC	usage
+schemarecht	public anon	usage
+schemarecht	public authenticated	usage
+schemarecht	public service_role	usage
+standaardrecht	S public anon	select,update,usage
+standaardrecht	S public authenticated	select,update,usage
+standaardrecht	S public service_role	select,update,usage
+standaardrecht	f public anon	execute
+standaardrecht	f public authenticated	execute
+standaardrecht	f public service_role	execute
+standaardrecht	r public anon	maintain,references,select,trigger
+standaardrecht	r public authenticated	delete,insert,maintain,references,select,trigger,update
+standaardrecht	r public service_role	delete,insert,maintain,references,select,trigger,truncate,update
+tabel	private.admin_invites	geen rls
+tabel	private.nacontrole_20261108	geen rls
+tabel	private.pdok_woonplaats_20261024	geen rls
+tabel	private.rate_counter	geen rls
+tabel	private.scrape_baseline_20261023	geen rls
+tabel	private.scrape_baseline_20261024	geen rls
+tabel	private.scrape_na_ronde1_20261023	geen rls
+tabel	private.scrape_queue	geen rls
+tabel	private.secrets	geen rls
+tabel	private.snap_v34	geen rls
+tabel	private.snap_v35	geen rls
+tabel	private.snap_v36	geen rls
+tabel	private.snap_v38	geen rls
+tabel	private.snap_velden	geen rls
+tabel	private.stealth_queue	rls
+tabel	private.town_correcties_20261024	geen rls
+tabel	private.verwijderde_plekken	rls
+tabel	public.admin_logs	rls
+tabel	public.admins	rls
+tabel	public.app_logs	rls
+tabel	public.audit_log	rls
+tabel	public.campaigns	rls
+tabel	public.consent_log	rls
+tabel	public.content_items	rls
+tabel	public.crowd_reports	rls
+tabel	public.crowd_watches	rls
+tabel	public.dependency_updates	rls
+tabel	public.duplicate_dismissals	rls
+tabel	public.events	rls
+tabel	public.faq	rls
+tabel	public.geo_bronnen	rls
+tabel	public.geo_master	rls
+tabel	public.ingest_runs	rls
+tabel	public.internal_secrets	rls
+tabel	public.manual_review	rls
+tabel	public.marketing_assets	rls
+tabel	public.marketing_jobs	rls
+tabel	public.nl_towns	rls
+tabel	public.osm_queries	rls
+tabel	public.osm_regions	rls
+tabel	public.osm_staging	rls
+tabel	public.owner_replies	rls
+tabel	public.place_photos	rls
+tabel	public.places	rls
+tabel	public.profiles	rls
+tabel	public.push_subscriptions	rls
+tabel	public.reviews	rls
+tabel	public.route_cache	rls
+tabel	public.seo_daily	rls
+tabel	public.seo_pages	rls
+tabel	public.seo_status	rls
+tabel	public.seo_totals	rls
+tabel	public.shared_trip_members	rls
+tabel	public.shared_trips	rls
+tabel	public.site_settings	rls
+tabel	public.social_stats	rls
+tabel	public.submissions	rls
+tabel	public.ticket_messages	rls
+tabel	public.tickets	rls
+tabel	public.updates_queue	rls
+tabel	public.user_expenses	rls
+tabel	public.user_trips	rls
+tabel	public.user_vehicles	rls
+trigger	auth.users.on_auth_user_confirmed	CREATE TRIGGER on_auth_user_confirmed AFTER UPDATE OF email_confirmed_at ON auth.users FOR EACH ROW WHEN (((old.email_confirmed_at IS NULL) AND (new.email_confirmed_at IS NOT NULL))) EXECUTE FUNCTION private.on_auth_user_created()
+trigger	auth.users.on_auth_user_created	CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION private.on_auth_user_created()
+trigger	auth.users.on_auth_user_profile	CREATE TRIGGER on_auth_user_profile AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION private.create_profile()
+trigger	public.admins.admins_sync_profile_role	CREATE TRIGGER admins_sync_profile_role AFTER INSERT OR DELETE OR UPDATE OF role ON public.admins FOR EACH ROW EXECUTE FUNCTION private.sync_profile_role()
+trigger	public.content_items.content_items_touch	CREATE TRIGGER content_items_touch BEFORE UPDATE ON public.content_items FOR EACH ROW EXECUTE FUNCTION private.touch_updated_at()
+trigger	public.crowd_reports.crowd_reports_notify	CREATE TRIGGER crowd_reports_notify AFTER INSERT OR UPDATE OF level ON public.crowd_reports FOR EACH ROW EXECUTE FUNCTION private.crowd_notify()
+trigger	public.faq.faq_audit	CREATE TRIGGER faq_audit AFTER INSERT OR DELETE OR UPDATE ON public.faq FOR EACH ROW EXECUTE FUNCTION private.audit()
+trigger	public.ingest_runs.ingest_runs_to_admin_logs	CREATE TRIGGER ingest_runs_to_admin_logs AFTER INSERT OR UPDATE OF finished_at ON public.ingest_runs FOR EACH ROW EXECUTE FUNCTION private.on_ingest_run_done()
+trigger	public.place_photos.place_photos_auto_approve	CREATE TRIGGER place_photos_auto_approve AFTER INSERT ON public.place_photos FOR EACH ROW EXECUTE FUNCTION private.auto_approve_photo()
+trigger	public.place_photos.place_photos_rate_limit	CREATE TRIGGER place_photos_rate_limit BEFORE INSERT ON public.place_photos FOR EACH ROW EXECUTE FUNCTION private.photo_rate_limit()
+trigger	public.place_photos.place_photos_sync	CREATE TRIGGER place_photos_sync BEFORE UPDATE OF status ON public.place_photos FOR EACH ROW EXECUTE FUNCTION private.sync_place_photo()
+trigger	public.places.places_audit	CREATE TRIGGER places_audit AFTER DELETE OR UPDATE ON public.places FOR EACH ROW EXECUTE FUNCTION private.audit()
+trigger	public.places.places_before_write	CREATE TRIGGER places_before_write BEFORE INSERT OR UPDATE ON public.places FOR EACH ROW EXECUTE FUNCTION private.places_before_write()
+trigger	public.places.weiger_verwijderde_plek	CREATE TRIGGER weiger_verwijderde_plek BEFORE INSERT ON public.places FOR EACH ROW EXECUTE FUNCTION private.weiger_verwijderde_plek()
+trigger	public.reviews.reviews_audit	CREATE TRIGGER reviews_audit AFTER DELETE OR UPDATE ON public.reviews FOR EACH ROW EXECUTE FUNCTION private.audit()
+trigger	public.reviews.reviews_refresh_rating	CREATE TRIGGER reviews_refresh_rating AFTER INSERT OR DELETE OR UPDATE ON public.reviews FOR EACH ROW EXECUTE FUNCTION private.refresh_place_rating()
+trigger	public.shared_trips.shared_trips_touch	CREATE TRIGGER shared_trips_touch BEFORE UPDATE ON public.shared_trips FOR EACH ROW EXECUTE FUNCTION private.shared_trip_touch()
+trigger	public.submissions.submissions_audit	CREATE TRIGGER submissions_audit AFTER DELETE OR UPDATE ON public.submissions FOR EACH ROW EXECUTE FUNCTION private.audit()
+trigger	public.submissions.submissions_to_queue	CREATE TRIGGER submissions_to_queue AFTER INSERT ON public.submissions FOR EACH ROW EXECUTE FUNCTION private.on_submission_queue()
+trigger	public.ticket_messages.ticket_messages_touch	CREATE TRIGGER ticket_messages_touch AFTER INSERT ON public.ticket_messages FOR EACH ROW EXECUTE FUNCTION private.touch_ticket()
+trigger	public.tickets.tickets_audit	CREATE TRIGGER tickets_audit AFTER DELETE OR UPDATE ON public.tickets FOR EACH ROW EXECUTE FUNCTION private.audit()

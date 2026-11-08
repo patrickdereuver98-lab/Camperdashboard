@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Baseline van de live database (review november 2026, R5/DB-02): schema zonder data, zodat een leeg project of een
-# herbouwtest het volledige schema heeft. 38 live migraties staan niet als bestand in de repo; deze dump vangt dat op.
+# Controledump van de live database met pg_dump (review november 2026, R5/DB-02): schema zonder data.
+# De nulmigratie zelf komt uit web/scripts/baseline/maak-baseline.py (introspectie, werkt ook zonder databasewachtwoord
+# via de Management API) en wordt in CI herbouwd en vergeleken (web/supabase/tests/herbouw.sh). Deze pg_dump-variant
+# is een tweede blik: naast de nulmigratie leggen om verschillen te zien, niet als migratie gebruiken.
 #
 # Gebruik (vanuit web/):
 #   SUPABASE_DB_URL=postgres://… scripts/dump-schema.sh
-# Schrijft in supabase/baseline/: schema.sql (structuur met rechten, geen rijen, geen eigenaren, geen geheimen),
+# Schrijft in supabase/baseline/pg_dump/ (niet vastleggen): schema.sql (structuur met rechten, geen rijen, geen eigenaren, geen geheimen),
 # migraties.txt (de live migratieversies op het moment van de dump) en cron.sql (de cron-taken).
 # Nodig: pg_dump en psql van dezelfde hoofdversie als de server (17) of nieuwer.
 set -euo pipefail
 : "${SUPABASE_DB_URL:?Zet SUPABASE_DB_URL (Supabase → Connect → Session pooler, met wachtwoord)}"
 here="$(cd "$(dirname "$0")/.." && pwd)"
-out="$here/supabase/baseline"
+out="$here/supabase/baseline/pg_dump"
 mkdir -p "$out"
 
 # Schema's van de app; auth, storage, cron en net horen bij Supabase en komen met een nieuw project mee.
