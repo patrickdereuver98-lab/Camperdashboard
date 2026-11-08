@@ -60,7 +60,7 @@ function PopupCard({ p, departures }: { p: PopupProps; departures: boolean }) {
           <a href={`/plek/${p.slug}`} className="-my-1 inline-flex h-11 items-center text-sm font-semibold text-forest underline underline-offset-2">
             Bekijk plek
           </a>
-          {departures && <SaveButton slug={p.slug} variant="plain" />}
+          {departures && <SaveButton slug={p.slug} name={p.name} variant="plain" />}
         </div>
       </div>
     </div>

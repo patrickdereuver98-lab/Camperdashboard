@@ -58,12 +58,31 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
 
   // Pas na het laden (in de browser) uitrekenen: "x minuten geleden" hangt af van de klok
   const summary = !loaded ? null : loadFailed ? CROWD_ERROR : crowdSummary(status);
+  // Nog geen melding: één regel in plaats van een blok, zodat Voorzieningen niet ±180 px naar beneden schuift (R55)
+  const empty = !!summary && !summary.level && !loadFailed;
+
+  // Ook tijdens het laden, want meestal heeft nog niemand iets gemeld: dan verspringt er niets
+  if ((empty || !summary) && !session)
+    return (
+      <section aria-labelledby="drukte" className="mt-3 flex flex-wrap items-center gap-x-3 rounded-lg border border-line bg-surface px-4 py-1.5" data-testid="crowd">
+        <h2 id="drukte" className="font-semibold">Hoe druk is het nu?</h2>
+        <p className={summary ? "text-ink-2" : "text-sm text-muted"} aria-live="polite">{summary ? `${summary.title}.` : "Laden…"}</p>
+        <Link
+          href={`/inloggen?next=${encodeURIComponent(`/plek/${slug}#drukte`)}`}
+          className="inline-flex min-h-11 items-center font-semibold text-forest underline underline-offset-2"
+        >
+          Log in om de drukte door te geven
+        </Link>
+      </section>
+    );
 
   return (
     <section aria-labelledby="drukte" className="mt-3 rounded-lg border border-line bg-surface p-4" data-testid="crowd">
       <h2 id="drukte" className="font-semibold">Hoe druk is het nu?</h2>
-      <div className="mt-2 flex min-h-12 items-center gap-3" aria-live="polite">
-        {summary ? (
+      <div className={`mt-2 flex items-center gap-3 ${empty ? "" : "min-h-12"}`} aria-live="polite">
+        {empty ? (
+          <p className="text-ink-2">{summary.title}.</p>
+        ) : summary ? (
           <>
             <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${summary.level ? DOT[summary.level] : "bg-line"}`} aria-hidden="true" />
             <div>

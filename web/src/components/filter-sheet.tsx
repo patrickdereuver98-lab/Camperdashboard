@@ -143,7 +143,7 @@ export function FilterSheet({
           ))}
         </div>
         <p className="mt-2 text-sm text-muted">
-          Zonder vertrektijd: de website zegt letterlijk dat je kunt vertrekken wanneer je wilt. Uitslapers: vertrek om 12:00 of later.
+          Zonder vertrektijd: je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf aankomst. Plekken waar dat alleen soms geldt, staan er niet bij. Uitslapers: vertrek om 12:00 of later.
         </p>
       </Section>
 

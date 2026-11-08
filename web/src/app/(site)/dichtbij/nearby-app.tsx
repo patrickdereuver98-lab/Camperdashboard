@@ -8,9 +8,11 @@ import { confirmedFirst, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/se
 import {
   activeFilterLabels,
   clearedChoices,
+  closerSuggestions,
   NEARBY_DEFAULTS,
   nearbySuggestions,
   nearestPlaces,
+  nearestIsFar,
   withinDrive,
   type Drive,
   type NearbyChoices,
@@ -152,6 +154,10 @@ export function NearbyApp() {
   const list = withinDrive(all, drives, within30);
   const active = activeFilterLabels(choices, vehicle);
   const suggestions = places && list.length === 0 ? nearbySuggestions(places, pos, choices, vehicle, { farther: all.length }) : [];
+  // Wel plekken, maar de dichtste is ver weg: welke ene aanpassing geeft een plek dichterbij? Pas als de rijtijden er
+  // zijn (of zeker niet komen), anders springt het voorstel weg zodra ze binnenkomen.
+  const far = places && (drives || driveError) ? nearestIsFar(list, drives) : false;
+  const closer = far && places ? closerSuggestions(places, pos, choices, vehicle, Math.min(...list.map((r) => r.km))) : [];
   const pickedPlace = picked ? list.find((r) => r.place.slug === picked)?.place : undefined;
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
@@ -256,6 +262,27 @@ export function NearbyApp() {
               Wis filters
             </button>
           </p>
+        )}
+        {closer.length > 0 && (
+          <div className="mt-3 rounded-lg border border-line bg-surface p-4" data-testid="nearby-closer">
+            <p className="text-ink-2">
+              {far === "rijtijd"
+                ? "De dichtste plek is meer dan 30 minuten rijden. Met één aanpassing vind je er een die hemelsbreed dichterbij ligt:"
+                : "De dichtste plek ligt hemelsbreed meer dan 25 km weg. Met één aanpassing vind je er een dichterbij:"}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {closer.map((o) => (
+                <button
+                  key={o.label}
+                  type="button"
+                  onClick={() => setChoices(o.next)}
+                  className="min-h-11 rounded-lg border border-line px-4 text-left font-semibold hover:border-forest hover:text-forest"
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {places && list.length === 0 && (
           <div className="mt-3 rounded-lg border border-line bg-surface p-4" data-testid="nearby-empty">

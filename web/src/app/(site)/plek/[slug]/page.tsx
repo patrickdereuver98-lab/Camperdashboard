@@ -196,7 +196,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             </div>
           </div>
           <div className="hidden shrink-0 gap-2 md:flex">
-            <SaveButton slug={place.slug} variant="full" />
+            <SaveButton slug={place.slug} name={place.name} variant="full" />
             <ShareButton title={place.name} />
           </div>
         </header>
@@ -299,7 +299,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               price?.perNight && <p className="mt-0.5 text-sm leading-tight whitespace-nowrap text-muted">per nacht</p>
             )}
           </div>
-          <SaveButton slug={place.slug} variant="bar" />
+          <SaveButton slug={place.slug} name={place.name} variant="bar" />
           {tel && (
             <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
               <Icon name="phone" size={19} />

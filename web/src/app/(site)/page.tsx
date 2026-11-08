@@ -174,7 +174,7 @@ export default async function Home() {
       {/* Uitgelicht */}
       {featured.length > 0 && (
         <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
-          <div className="mb-3 flex items-end justify-between gap-4">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4">
             <h2 className="font-display text-h2 font-semibold">
               {stats.freeDeparture > 0 ? "Vertrekken wanneer je wilt" : "Meest complete informatie"}
             </h2>

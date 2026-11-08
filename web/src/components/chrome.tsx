@@ -78,7 +78,8 @@ function HeaderView({ pathname }: { pathname: string }) {
       <a href="#inhoud" className="sr-only-focusable absolute left-2 top-2 z-50 flex min-h-11 items-center rounded-lg bg-forest px-4 font-semibold text-on-forest">
         Naar de inhoud
       </a>
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-1 px-3 min-[400px]:gap-2 min-[400px]:px-4 sm:h-16 sm:gap-4 sm:px-6">
+      {/* flex-wrap: met grote tekst (200%) op 320 px gaan de knoppen naar een tweede regel in plaats van buiten beeld (R31) */}
+      <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-1 px-3 min-[400px]:gap-x-2 min-[400px]:px-4 sm:min-h-16 sm:gap-x-4 sm:px-6">
         {onPlace && <BackButton />}
         <Link href="/" className="flex h-11 items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
           <Logo size={30} />

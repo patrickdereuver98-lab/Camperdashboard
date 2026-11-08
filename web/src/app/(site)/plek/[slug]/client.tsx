@@ -6,6 +6,8 @@ import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format
 import { coarse, formatKm, type LatLng } from "@/lib/geo";
 import { NavigateButton } from "@/components/navigate";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
+import { fieldAria, fieldError, formError, REVIEW_RULES } from "@/lib/form-errors";
+import { FieldError, FormAlert, useFormError } from "@/components/form-error";
 import { track } from "@/lib/track";
 import { CHECK_TERM, isPossiblyOutdated } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
@@ -170,13 +172,13 @@ export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
             type="button"
             onClick={calculate}
             disabled={state.s === "locating"}
-            className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest disabled:opacity-60"
+            className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 py-2 text-left font-semibold hover:border-forest disabled:opacity-60"
           >
             <Icon name="locate" size={18} />
             {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}
           </button>
         )}
-        <NavigateButton to={to} slug={slug} className="flex h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest">
+        <NavigateButton to={to} slug={slug} className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 py-2 text-left font-semibold hover:border-forest">
           <Icon name="route" size={18} /> Open in navigatie
         </NavigateButton>
       </div>
@@ -295,15 +297,15 @@ function ScorePicker({
   );
 }
 
+const R = "review";
 const input = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 export function WriteReview({ placeId, placeName, slug }: { placeId: string; placeName: string; slug: string }) {
   const { session } = useSession();
-  const formRef = useRef<HTMLFormElement>(null);
+  const { formRef, error: err, setError: setErr } = useFormError();
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [departure, setDeparture] = useState<DepartureAnswer>("");
   // Concept uit de browser: de beginwaarden van de velden. `formKey` laat het formulier ze opnieuw inlezen.
@@ -402,7 +404,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
     const form = new FormData(e.currentTarget);
     if (formValue(form, "website")) return; // honeypot
     if (!scores.rating) {
-      setErr("Geef een totaalcijfer.");
+      setErr(fieldError(null, "Geef een totaalcijfer."));
       return;
     }
     persist();
@@ -415,7 +417,9 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
         await signInWithEmail(address, back);
         setSentTo(address);
       } catch (e) {
-        setErr(authErrorMessage((e as Error).message));
+        // Een ongeldig adres hoort bij het veld, de rest (te vaak, geen verbinding) bij het formulier
+        const fe = formError(e, REVIEW_RULES);
+        setErr(fe.field === "email" ? fe : fieldError(null, authErrorMessage((e as Error).message)));
       }
       setBusy(false);
       return;
@@ -425,7 +429,8 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
       try {
         await verifyEmailCode(sentTo, code);
       } catch (e) {
-        setErr(codeErrorMessage((e as Error).message));
+        const msg = codeErrorMessage((e as Error).message);
+        setErr(fieldError(msg.startsWith("Deze code") ? "code" : null, msg));
         setBusy(false);
         return;
       }
@@ -433,7 +438,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
     try {
       await sendReview(form);
     } catch (e) {
-      setErr(errorMessage(e));
+      setErr(formError(e, REVIEW_RULES));
     }
     setBusy(false);
   }
@@ -446,7 +451,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
       await signInWithEmail(sentTo, back);
       setCode("");
     } catch (e) {
-      setErr(authErrorMessage((e as Error).message));
+      setErr(fieldError(null, authErrorMessage((e as Error).message)));
     }
     setBusy(false);
   }
@@ -459,7 +464,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
   useEffect(() => {
     const field = formRef.current?.elements.namedItem("name");
     if (open && accountName && field instanceof HTMLInputElement && !field.value) field.value = accountName;
-  }, [open, accountName, formKey]);
+  }, [open, accountName, formKey, formRef]);
   const label = session ? "Review versturen" : sentTo ? "Bevestigen en versturen" : "Stuur mij een code";
 
   return (
@@ -484,7 +489,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
               required
               value={scores.rating}
               onChange={(n) => setScores((s) => ({ ...s, rating: n }))}
-              errorId={err && !scores.rating ? "review-fout" : undefined}
+              errorId={err && !err.field && !scores.rating ? "review-fout" : undefined}
             />
             <details className="rounded-lg bg-sunken p-4">
               <summary className="-my-2.5 cursor-pointer py-2.5 font-semibold">Cijfers per onderdeel (optioneel)</summary>
@@ -495,25 +500,32 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                 <ScorePicker label="Prijs/kwaliteit" value={scores.value} onChange={(n) => setScores((s) => ({ ...s, value: n }))} />
               </div>
             </details>
-            <label className="block">
-              <span className="mb-1.5 block font-semibold">Titel (optioneel)</span>
-              <input name="title" maxLength={120} defaultValue={draft?.title} className={input} />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block font-semibold">
-                Je ervaring <span className="text-alert">*</span>
-              </span>
-              <textarea
-                name="body"
-                required
-                minLength={20}
-                maxLength={3000}
-                rows={5}
-                defaultValue={draft?.body}
-                className={`${input} h-auto py-2`}
-                placeholder="Wat moeten andere camperaars weten?"
-              />
-            </label>
+            <div>
+              <label className="block">
+                <span className="mb-1.5 block font-semibold">Titel (optioneel)</span>
+                <input name="title" maxLength={120} defaultValue={draft?.title} className={input} {...fieldAria(err, R, "title")} />
+              </label>
+              <FieldError error={err} form={R} field="title" />
+            </div>
+            <div>
+              <label className="block">
+                <span className="mb-1.5 block font-semibold">
+                  Je ervaring <span className="text-alert">*</span>
+                </span>
+                <textarea
+                  name="body"
+                  required
+                  minLength={20}
+                  maxLength={3000}
+                  rows={5}
+                  defaultValue={draft?.body}
+                  className={`${input} h-auto py-2`}
+                  placeholder="Wat moeten andere camperaars weten?"
+                  {...fieldAria(err, R, "body")}
+                />
+              </label>
+              <FieldError error={err} form={R} field="body" />
+            </div>
             <DepartureRadios
               id="review-vertrek"
               label="Hoe laat moest je weg? (optioneel)"
@@ -538,13 +550,25 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                 </select>
               </label>
             </div>
-            <label className="block">
-              <span className="mb-1.5 block font-semibold">
-                Je naam <span className="text-alert">*</span>
-              </span>
-              <input name="name" required minLength={2} maxLength={60} defaultValue={defaultName} autoComplete="given-name" className={input} />
-              <span className="mt-1 block text-sm text-muted">Wordt bij je review getoond.</span>
-            </label>
+            <div>
+              <label className="block">
+                <span className="mb-1.5 block font-semibold">
+                  Je naam <span className="text-alert">*</span>
+                </span>
+                <input
+                  name="name"
+                  required
+                  minLength={2}
+                  maxLength={60}
+                  defaultValue={defaultName}
+                  autoComplete="given-name"
+                  className={input}
+                  {...fieldAria(err, R, "name")}
+                />
+                <span className="mt-1 block text-sm text-muted">Wordt bij je review getoond.</span>
+              </label>
+              <FieldError error={err} form={R} field="name" />
+            </div>
 
             {session ? (
               <p className="text-sm text-muted" data-testid="review-account">
@@ -557,21 +581,25 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                   We hebben een code gestuurd naar <strong>{sentTo}</strong>. Vul hem hieronder in, dan versturen we je review. Geen
                   mail? Kijk ook in je spammap.
                 </p>
-                <label className="mt-3 block">
-                  <span className="mb-1.5 block font-semibold">Code uit de mail</span>
-                  <input
-                    name="code"
-                    value={code}
-                    onChange={(e) => setCode(cleanCode(e.target.value))}
-                    required
-                    autoFocus
-                    autoComplete="one-time-code"
-                    inputMode="numeric"
-                    pattern="[0-9]{6,10}"
-                    maxLength={10}
-                    className={`${input} text-center font-mono text-xl tracking-[0.3em]`}
-                  />
-                </label>
+                <div>
+                  <label className="mt-3 block">
+                    <span className="mb-1.5 block font-semibold">Code uit de mail</span>
+                    <input
+                      name="code"
+                      value={code}
+                      onChange={(e) => setCode(cleanCode(e.target.value))}
+                      required
+                      autoFocus
+                      autoComplete="one-time-code"
+                      inputMode="numeric"
+                      pattern="[0-9]{6,10}"
+                      maxLength={10}
+                      className={`${input} text-center font-mono text-xl tracking-[0.3em]`}
+                      {...fieldAria(err, R, "code")}
+                    />
+                  </label>
+                  <FieldError error={err} form={R} field="code" />
+                </div>
                 <div className="mt-2 flex flex-wrap gap-x-6">
                   <button type="button" onClick={resend} disabled={busy} className="min-h-11 font-semibold text-forest underline disabled:opacity-60">
                     Nieuwe code sturen
@@ -591,12 +619,15 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
               </div>
             ) : (
               <div className="rounded-lg bg-sunken p-4" data-testid="review-confirm">
-                <label className="block">
-                  <span className="mb-1.5 block font-semibold">
-                    Je e-mailadres <span className="text-alert">*</span>
-                  </span>
-                  <input name="email" type="email" required autoComplete="email" inputMode="email" className={input} />
-                </label>
+                <div>
+                  <label className="block">
+                    <span className="mb-1.5 block font-semibold">
+                      Je e-mailadres <span className="text-alert">*</span>
+                    </span>
+                    <input name="email" type="email" required autoComplete="email" inputMode="email" className={input} {...fieldAria(err, R, "email")} />
+                  </label>
+                  <FieldError error={err} form={R} field="email" />
+                </div>
                 <p className="mt-2 text-sm text-ink-2">
                   We mailen je een code. Daarmee bevestig je je e-mailadres en ben je ook ingelogd. Je adres is nooit zichtbaar.
                 </p>
@@ -610,7 +641,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
             )}
 
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-            {err && <p id="review-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
+            <FormAlert error={err} id="review-fout" />
             <button
               type="submit"
               disabled={busy || (!session && !!sentTo && code.length < 6)}
