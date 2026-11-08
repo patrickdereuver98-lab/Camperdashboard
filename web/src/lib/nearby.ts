@@ -1,6 +1,7 @@
 // Dichtbij: welke plekken om je heen passen bij je keuzes, en wat je kunt aanpassen als er niets past (review R51).
 import { distanceKm, type LatLng } from "./geo";
 import { applyFilters, arrivalClosed, confirmedFirst, DEFAULT_FILTERS, FACILITIES, nowInNL, relaxations, type FacilityKey, type Filters } from "./search";
+import { pluralize } from "./format";
 import type { PlaceSummary } from "./types";
 import { applyVehicle, type Vehicle } from "./vehicle";
 
@@ -66,13 +67,7 @@ export function nearbySuggestions(
   const out: (Suggestion & { count: number })[] = relaxations(around, nearbyFilters(c, vehicle)).map((r) => ({
     label: r.label,
     count: r.count,
-    next: {
-      ...c,
-      facilities: r.next.facilities,
-      openNow: r.next.openNow,
-      departure: r.next.departure === "vrij" || r.next.departure === "uitslapers" ? r.next.departure : undefined,
-      lengthOff: c.lengthOff || !!r.next.lengthOff,
-    },
+    next: fromFilters(c, r.next),
   }));
   if (c.arriveNow) {
     const next = { ...c, arriveNow: false };
@@ -83,6 +78,62 @@ export function nearbySuggestions(
   const list: Suggestion[] = out.map((s) => (c.within30 ? { label: s.label, next: s.next } : s));
   if (c.within30 && farther > 0) list.unshift({ label: "Ook verder dan 30 minuten", next: { ...c, within30: false }, count: farther });
   return list.slice(0, limit);
+}
+
+/** Een versoepeld filter van Zoeken terug naar de keuzes van Dichtbij */
+function fromFilters(c: NearbyChoices, f: Filters): NearbyChoices {
+  return {
+    ...c,
+    facilities: f.facilities,
+    openNow: f.openNow,
+    departure: f.departure === "vrij" || f.departure === "uitslapers" ? f.departure : undefined,
+    lengthOff: c.lengthOff || !!f.lengthOff,
+  };
+}
+
+/** Zonder rijtijden geldt een plek verder dan dit (hemelsbreed) als ver weg */
+export const CLOSE_KM = 25;
+
+/**
+ * Ligt de dichtstbijzijnde plek ver weg? Met rijtijden: geen enkele plek in de lijst binnen 30 minuten ("rijtijd").
+ * Zonder rijtijden (of zonder rijtijd voor een plek): de dichtste plek verder dan 25 km hemelsbreed ("hemelsbreed").
+ * Anders, en bij een lege lijst, `false`.
+ */
+export function nearestIsFar(list: Near[], drives: Record<string, Drive> | null): "rijtijd" | "hemelsbreed" | false {
+  if (!list.length) return false;
+  const known = drives ? list.map((r) => drives[r.place.slug]?.seconds).filter((t): t is number => t != null) : [];
+  if (known.length) return Math.min(...known) > WITHIN_SECONDS ? "rijtijd" : false;
+  return Math.min(...list.map((r) => r.km)) > CLOSE_KM ? "hemelsbreed" : false;
+}
+
+/**
+ * Er zijn plekken, maar de dichtste ligt ver weg: welke ene aanpassing levert een plek dichterbij op? Telt alleen
+ * plekken die hemelsbreed dichterbij liggen dan de dichtste nu én binnen 25 km. Rijtijden van die plekken kennen we
+ * nog niet, dus het voorstel zegt "dichterbij" (hemelsbreed) en noemt geen minuten.
+ */
+export function closerSuggestions(
+  places: PlaceSummary[],
+  pos: LatLng,
+  c: NearbyChoices,
+  vehicle: Vehicle,
+  nearestKm: number,
+  { now = nowInNL(), limit = 2 }: { now?: Date; limit?: number } = {},
+): Suggestion[] {
+  const maxKm = Math.min(CLOSE_KM, nearestKm);
+  const close = places.filter((p) => distanceKm(pos, p) < maxKm);
+  const out: { label: string; next: NearbyChoices; count: number }[] = relaxations(
+    close.filter((p) => !c.arriveNow || !arrivalClosed(p, now)),
+    nearbyFilters(c, vehicle),
+  ).map((r) => ({ label: r.label, count: r.count, next: fromFilters(c, r.next) }));
+  if (c.arriveNow) {
+    const next = { ...c, arriveNow: false };
+    const count = nearestPlaces(close, pos, next, vehicle, now, Infinity).length;
+    if (count > 0) out.push({ label: "Ook waar je nu niet meer binnenkomt", next, count });
+  }
+  return out
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map((s) => ({ label: `${s.label}: ${pluralize(s.count, "plek", "plekken")} dichterbij`, next: s.next, count: s.count }));
 }
 
 /** De keuzes die nu iets wegfilteren, in de volgorde van de chips */

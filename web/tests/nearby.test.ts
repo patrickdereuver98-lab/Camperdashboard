@@ -1,7 +1,7 @@
 // Dichtbij: lijst, "Binnen 30 min", voorstellen als er niets past en de regel met actieve filters (review R51).
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { activeFilterLabels, clearedChoices, NEARBY_DEFAULTS, nearbySuggestions, nearestPlaces, withinDrive } from "../src/lib/nearby";
+import { activeFilterLabels, clearedChoices, closerSuggestions, NEARBY_DEFAULTS, nearbySuggestions, nearestIsFar, nearestPlaces, withinDrive } from "../src/lib/nearby";
 import type { PlaceSummary } from "../src/lib/types";
 
 const utrecht = { lat: 52.09, lng: 5.12 };
@@ -73,4 +73,37 @@ test("regel met actieve filters en Wis filters", () => {
   const cleared = clearedChoices({ lengthM: 7 });
   assert.deepEqual(activeFilterLabels(cleared, { lengthM: 7 }), []);
   assert.equal(clearedChoices({}).lengthOff, false);
+});
+
+test("dichtste plek ver weg: met rijtijd verder dan 30 min, zonder rijtijd verder dan 25 km hemelsbreed", () => {
+  const c = { ...NEARBY_DEFAULTS, departure: "vrij" as const };
+  const list = nearestPlaces(places, utrecht, c, {}, now);
+  assert.deepEqual(list.map((r) => r.place.slug), ["vrij-ver"]);
+  assert.equal(nearestIsFar(list, { "vrij-ver": { km: 70, seconds: 60 * 60 } }), "rijtijd");
+  assert.equal(nearestIsFar(list, { "vrij-ver": { km: 20, seconds: 25 * 60 } }), false);
+  // Geen rijtijd voor deze plek: hemelsbreed (±55 km)
+  assert.equal(nearestIsFar(list, {}), "hemelsbreed");
+  assert.equal(nearestIsFar(list, null), "hemelsbreed");
+  assert.equal(nearestIsFar([], null), false);
+  const dichtbij = nearestPlaces(places, utrecht, NEARBY_DEFAULTS, {}, now);
+  assert.equal(nearestIsFar(dichtbij, null), false); // uitslaper op ±22 km
+});
+
+test("voorstel dichterbij: alleen plekken die hemelsbreed dichterbij liggen, zonder minuten te schatten", () => {
+  const c = { ...NEARBY_DEFAULTS, departure: "vrij" as const };
+  const s = closerSuggestions(places, utrecht, c, {}, 55, { now });
+  // De uitslaper op ±22 km komt binnen met "Bekijk uitslapers" en met "Alle vertrektijden"
+  assert.deepEqual(
+    s.map((x) => x.label),
+    ["Bekijk uitslapers: 1 plek dichterbij", "Alle vertrektijden: 1 plek dichterbij"],
+  );
+  assert.equal(s[0].next.departure, "uitslapers");
+  assert.ok(s.every((x) => !/min/.test(x.label)));
+  // Alleen wat dichter ligt dan de dichtste plek nu telt mee: die ligt al op 20 km, dus de uitslaper (22 km) niet
+  assert.deepEqual(closerSuggestions(places, utrecht, c, {}, 20, { now }), []);
+  // De vroege plek (±11 km) komt pas binnen als ook "Nu nog aankomen" uit mag
+  const late = closerSuggestions([vrij, vroeg], utrecht, c, {}, 55, { now });
+  assert.deepEqual(late, []);
+  const onlyArrive = closerSuggestions([vrij, place("laat", 0.1, { departure: "vrij", checkinUntil: "18:00" })], utrecht, c, {}, 55, { now });
+  assert.deepEqual(onlyArrive.map((x) => x.label), ["Ook waar je nu niet meer binnenkomt: 1 plek dichterbij"]);
 });

@@ -35,3 +35,26 @@ test("lege staat met voorstellen, Binnen 30 min en Wis filters", async ({ page }
   await expect(active).toBeHidden();
   await expect(page.getByRole("button", { name: "Nu open" })).toHaveAttribute("aria-pressed", "false");
 });
+
+test("wel plekken, maar de dichtste is meer dan 30 minuten: voorstel voor een plek dichterbij", async ({ page }) => {
+  await page.route("**/api/distances**", async (route) => {
+    const n = new URL(route.request().url()).searchParams.get("p")!.split(";").length - 1;
+    const durationsS = Array.from({ length: n }, () => 45 * 60);
+    await route.fulfill({ json: { distancesM: durationsS.map((s) => s * 15), durationsS } });
+  });
+  await page.goto("/dichtbij");
+  await expect(page.getByText(/plekken, dichtstbij eerst \(rijtijd\)/)).toBeVisible();
+  // Alle filters uit: er valt niets te versoepelen, dus geen voorstel
+  await page.getByRole("button", { name: "Wis filters" }).click();
+  await expect(page.getByTestId("nearby-closer")).toBeHidden();
+  // Met een voorziening als eis wel: Dichtbij stelt voor die weer los te laten
+  await page.getByRole("button", { name: "Stroom", exact: true }).click();
+  const closer = page.getByTestId("nearby-closer");
+  await expect(closer).toContainText("De dichtste plek is meer dan 30 minuten rijden.");
+  const option = closer.getByRole("button", { name: /^Zonder "Stroom": \d+ plek(ken)? dichterbij$/ });
+  await expect(option).toBeVisible();
+  // Geen minuten geschat voor plekken waarvan we de rijtijd niet kennen
+  await expect(option).not.toContainText("min");
+  await option.click();
+  await expect(page.getByRole("button", { name: "Stroom", exact: true })).toHaveAttribute("aria-pressed", "false");
+});
