@@ -37,6 +37,23 @@ Ze zijn Engelstalig en algemeen. **CLAUDE.md, `docs/specs/` en de stijlgids gaan
 commits, nooit data verzinnen, controle met `npm run check`). Bijwerken: kopieer de map opnieuw uit een nieuwere
 commit en pas het commitnummer hier aan.
 
+## ECC-commando's (orch-familie)
+
+Op 16 november 2026 toegevoegd (verzoek eigenaar, voor `plan-orchestrate`): uit github.com/affaan-m/everything-claude-code
+(commit d2ef268, MIT).
+
+- Commando's in `.claude/commands/`: `orch-add-feature`, `orch-fix-defect`, `orch-change-feature`,
+  `orch-refine-code`, `plan`, `build-fix`, `test-coverage`, `update-docs`.
+- Skills in deze map: `orch-pipeline` (de gedeelde motor) en `orch-add-feature`, `orch-fix-defect`,
+  `orch-change-feature`, `orch-refine-code`.
+- Bewust **niet** overgenomen: `code-review` (botst met de ingebouwde `/code-review`), `security-scan` (installeert een
+  npm-pakket wereldwijd, zie hierboven), `loop-start` (botst met de ingebouwde `/loop`), `orch-build-mvp` (leunt op
+  gan-agents die we niet hebben).
+- Het zijn alleen instructies, zonder scripts of hooks. De orch-commando's stoppen twee keer voor goedkeuring: na het
+  plan en vóór de commit. Ze noemen Engelse "conventional commits" en `rules/common/*`, die hier niet bestaan:
+  **CLAUDE.md gaat voor** (Nederlandse commits, PR naar `acceptatie`, `npm run check` en een offline build vóór een push,
+  migraties pas live na samenvoegen).
+
 ## /brag (launch-video's)
 
 Op 2 november 2026 toegevoegd (verzoek eigenaar, marketingplan `docs/marketing/plan.md` §3.4):
