@@ -1,0 +1,329 @@
+// Review 9 nov 2026, agent data-extractor: voorbeeldzinnen tegen de echte extractor (alleen lezen).
+import { writeFileSync } from "node:fs";
+import { extract, sentenceDeparture } from "/home/user/Camperdashboard/web/supabase/functions/pipeline/extract.ts";
+import { checkQuote, verify } from "/home/user/Camperdashboard/web/supabase/functions/pipeline/quote.ts";
+
+const base = new URL("https://camping-voorbeeld.nl/");
+const U = undefined;
+type Exp = Record<string, unknown>;
+type Case = { id: string; html: string | string[]; exp: Exp };
+const any = (...v: unknown[]) => ({ oneOf: v });
+const C: Case[] = [];
+const add = (id: string, html: string | string[], exp: Exp) => C.push({ id, html, exp });
+const p = (s: string) => `<p>${s}</p>`;
+
+// ── VERTREK ── dep: "-" = leeg, "vrij", "per24", "vast HH:MM"
+add("V01 seizoensgasten vrij", p("Voor seizoensgasten gelden geen vaste vertrektijden."), { dep: "-" });
+add("V02 jaarplaats komen en gaan", p("Op onze jaarplaatsen voor campers kunt u komen en gaan wanneer u wilt."), { dep: "-" });
+add("V03 seizoenplek vrij", p("Houders van een seizoenplek hebben vrije aankomst- en vertrektijden."), { dep: "-" });
+add("V04 chalets", p("Chalets: uitchecken vóór 10:00 uur."), { dep: "-" });
+add("V05 safaritenten", p("De safaritenten dienen om 10.00 uur verlaten te zijn."), { dep: "-" });
+add("V06 trekkershut", p("De trekkershut moet u uiterlijk 10.30 uur verlaten."), { dep: "-" });
+add("V07 huisjes", p("In onze huisjes is het vertrek op vrijdag voor 10 uur."), { dep: "-" });
+add("V08 groepen", p("Groepen vertrekken uiterlijk 11:00 uur."), { dep: "-" });
+add("V09 dagrecreatie", p("Dagrecreatie: uitchecken vóór 13:00 uur."), { dep: "-" });
+add("V10 receptietijd", p("De receptie is geopend van 9.00 tot 12.00 uur. Uw vertrek kunt u hier melden."), { dep: "-" });
+add("V11 slagboom nacht", p("De slagboom is gesloten tussen 23.00 en 7.00 uur; vertrekken kan dan niet."), { dep: "-" });
+add("V12 slagboom open", p("De slagboom is geopend van 07:30 tot 23:00 uur."), { dep: "-", access_hours: "07:30–23:00" });
+add("V13 sanitair schoonmaak", p("Op de dag van vertrek wordt het sanitair om 11.00 uur schoongemaakt."), { dep: "-" });
+add("V14 24 uur bereikbaar", p("Onze camperplaats is 24 uur per dag bereikbaar."), { dep: "-", access_24h: true });
+add("V15 24 uur parkeren", p("Campers mogen hier maximaal 24 uur parkeren."), { dep: "-" });
+add("V16 uitchecken in overleg", p("Uitchecken in overleg."), { dep: "-" });
+add("V17 late check-out betaald", p("Late check-out tegen betaling € 10."), { dep: "-" });
+add("V18 vast + late check-out", p("Uitchecken vóór 11:00 uur. Late check-out tot 17:00 uur tegen betaling van € 10."), { dep: "vast 11:00" });
+add("V19 hoogseizoen andere tijd", p("Vertrek voor 12.00 uur, in het hoogseizoen 10.30 uur."), { dep: any("vast 12:00", "-") });
+add("V20 aankomst en vertrek één zin", p("Aankomst vanaf 13:00 en vertrek tot 11:00."), { dep: "vast 11:00", checkin_from: "13:00" });
+add("V21 tabel kolommen", "<table><tr><th>Aankomst</th><th>Vertrek</th></tr><tr><td>13:00</td><td>11:00</td></tr></table>", { dep: "vast 11:00", checkin_from: "13:00" });
+add("V22 tabel rijen", "<table><tr><td>Aankomst</td><td>vanaf 13:00 uur</td></tr><tr><td>Vertrek</td><td>voor 11:00 uur</td></tr></table>", { dep: "vast 11:00", checkin_from: "13:00" });
+add("V23 tabs en regels (platte tekst)", "Aankomst\t13:00\nVertrek\t11:00\n", { dep: "vast 11:00", checkin_from: "13:00" });
+add("V24 11u", p("Vertrek voor 11u."), { dep: "vast 11:00" });
+add("V25 11 uur", p("Vertrek uiterlijk 11 uur."), { dep: "vast 11:00" });
+add("V26 11.00u", p("Vertrektijd: 11.00u"), { dep: "vast 11:00" });
+add("V27 half twaalf", p("Vertrekken graag voor half twaalf."), { dep: "vast 11:30" });
+add("V28 12:00 's middags", p("Uitchecken vóór 12:00 's middags."), { dep: "vast 12:00" });
+add("V29 tussen 10 en 12", p("Vertrek tussen 10 en 12 uur."), { dep: "vast 12:00" });
+add("V30 Abreise bis 11 Uhr", p("Abreise bis 11 Uhr."), { dep: "vast 11:00" });
+add("V31 Anreise/Abreise", p("Anreise ab 14 Uhr, Abreise bis 11 Uhr."), { dep: "vast 11:00", checkin_from: "14:00" });
+add("V32 check-out before 11 am", p("Check-out before 11 am."), { dep: "vast 11:00" });
+add("V33 departure by noon", p("Departure by noon."), { dep: "vast 12:00" });
+add("V34 AM/PM", p("Check-out: 11:00 AM. Check-in: 2:00 PM."), { dep: "vast 11:00", checkin_from: "14:00" });
+add("V35 geen vaste tijd, wel voor 12", p("Wij kennen geen vaste vertrektijd, wel graag voor 12 uur weg."), { dep: any("-", "vast 12:00") });
+add("V36 camping 12, camperplaats 10", p("Camping: vertrek voor 12:00 uur.") + p("Camperplaats: vertrek voor 10:00 uur."), { dep: "vast 10:00" });
+add("V37 camperplaats vrij, camping 11", p("Op de camperplaats gelden geen vaste vertrektijden.") + p("Op de camping vertrekt u voor 11.00 uur."), { dep: "vrij" });
+add("V38 camperplaats 11, camping vrij", p("Camperplaatsen: vertrek uiterlijk 11:00 uur.") + p("Voor het kampeerveld hanteren wij geen vaste vertrektijden."), { dep: "vast 11:00" });
+add("V39 kampeerplaats 12, chalet 10", p("Kampeerplaatsen: vertrek vóór 12.00 uur. Chalets: vertrek vóór 10.00 uur."), { dep: "vast 12:00" });
+add("V40 chalet 10, kampeerplaats 12", p("Chalets: vertrek vóór 10.00 uur. Kampeerplaatsen: vertrek vóór 12.00 uur."), { dep: "vast 12:00" });
+add("V41 vertrekken wanneer u wilt zonder camper", p("U kunt vertrekken wanneer u wilt."), { dep: "-" });
+add("V42 camperplaats vertrekken wanneer u wilt", p("Op onze camperplaats kunt u vertrekken wanneer u wilt."), { dep: "vrij" });
+add("V43 aankomsttijd is vertrektijd", p("De aankomsttijd is ook de vertrektijd."), { dep: "per24" });
+add("V44 € per 24 uur campers", p("Tarief voor campers: € 14 per 24 uur."), { dep: "per24" });
+add("V45 opgeleverd", p("Op de vertrekdag dient de plaats om 12.00 uur schoon te zijn opgeleverd."), { dep: "vast 12:00" });
+add("V46 later vertrekken tot 18", p("Wilt u later vertrekken? Dat kan tot 18.00 uur voor € 7,50."), { dep: "-" });
+add("V47 extra nacht na 11", p("Vertrek vóór 11.00 uur; bij vertrek na 11.00 uur rekenen wij een extra nacht."), { dep: "vast 11:00" });
+add("V48 aankomst na, vertrek voor", p("Aankomst na 14.00 uur, vertrek voor 12.00 uur."), { dep: "vast 12:00", checkin_from: "14:00" });
+add("V49 check-out venster", p("Check-out 10:00 - 12:00"), { dep: "vast 12:00" });
+add("V50 zondag later", p("Vertrektijd: 12:00 uur (op zondag 16:00 uur)."), { dep: "vast 12:00" });
+add("V51 niet vóór 7 uur", p("Vertrekken vóór 7.00 uur is niet toegestaan in verband met de nachtrust."), { dep: "-" });
+add("V52 vroeg vertrek afrekenen", p("Bij vertrek vóór 9.00 uur graag de avond ervoor afrekenen."), { dep: "-" });
+add("V53 stilte", p("Tussen 23.00 en 7.00 uur is het stil op de camping; aankomen of vertrekken is dan niet mogelijk."), { dep: "-" });
+add("V54 jederzeit", p("An- und Abreise jederzeit möglich."), { dep: "vrij" });
+add("V55 no fixed check-out", p("No fixed check-out time."), { dep: "vrij" });
+add("V56 motorhomes leave any time", p("Motorhomes can leave at any time."), { dep: "vrij" });
+add("V57 check-out time is 12:00", p("Check-out time is 12:00."), { dep: "vast 12:00" });
+add("V58 haakjes camperplaatsen", p("Vertrek uiterlijk 10.30 uur (camperplaatsen 12.00 uur)."), { dep: "vast 12:00" });
+add("V59 twee vensters", p("Aankomst tussen 14:00 en 20:00 uur. Vertrek tussen 8:00 en 11:00 uur."), { dep: "vast 11:00", checkin_from: "14:00" });
+add("V60 sleutel chalet", p("Op de dag van vertrek dient u vóór 11:00 uur de sleutel van het chalet in te leveren."), { dep: "-" });
+add("V61 kopje + alinea", "<h3>Vertrek</h3><p>Voor 11.00 uur</p>", { dep: "vast 11:00" });
+add("V62 seizoenplaats einddatum", p("Seizoenplaats: vertrek uiterlijk 31 oktober vóór 12.00 uur."), { dep: "-" });
+add("V63 bus vertrekt", p("De bus naar het strand vertrekt om 10.15 uur."), { dep: "-" });
+add("V64 veerboot", p("De veerboot vertrekt elke dag om 9.30 uur vanaf de haven."), { dep: "-" });
+add("V65 wandeling vertrek", p("Wandeling met de boswachter: vertrek 10.00 uur vanaf de parkeerplaats."), { dep: "-" });
+add("V66 camperplaats verlaten", p("Wij verzoeken u de camperplaats voor 11.00 uur te verlaten."), { dep: "vast 11:00" });
+add("V67 of in overleg", p("Vertrek vóór 11:00 uur of in overleg later."), { dep: "vast 11:00" });
+add("V68 dagtarief na 12", p("Vertrek is mogelijk tot 12:00 uur, daarna geldt het dagtarief van € 5."), { dep: "vast 12:00" });
+add("V69 Ferienhäuser (DE verhuur)", p("Ferienhäuser: Abreise bis 10 Uhr."), { dep: "-" });
+add("V70 Mietunterkünfte + Stellplatz", p("Mietunterkünfte: Abreise bis 10 Uhr. Stellplätze: Abreise bis 12 Uhr."), { dep: "vast 12:00" });
+add("V71 cabins (EN verhuur)", p("Cabins and mobile homes: check-out by 10:00."), { dep: "-" });
+add("V72 Rezeption", p("Die Rezeption ist von 9 bis 12 Uhr geöffnet, auch am Abreisetag."), { dep: "-" });
+add("V73 Abreise spätestens 12 Uhr", p("Wir bitten Sie, den Platz am Abreisetag bis spätestens 12 Uhr zu verlassen."), { dep: "vast 12:00" });
+add("V74 Frühstück/Abfahrt bus", p("Abfahrt des Busses nach Amsterdam um 9.30 Uhr. Abreise der Gäste nach Absprache."), { dep: "-" });
+add("V75 stacaravan, toerplaats", p("Stacaravans verlaat u voor 10.00 uur, toeristische plaatsen voor 12.00 uur."), { dep: "vast 12:00" });
+add("V76 twee pagina's tegenstrijdig vast", [p("Vertrek voor 11.00 uur."), p("Vertrek uiterlijk 12.00 uur.")], { dep: any("-") });
+add("V77 twee pagina's vrij en vast", [p("Bij ons gelden geen vaste vertrektijden."), p("Huisregels: vertrek voor 11.00 uur.")], { dep: "-" });
+add("V78 12.00u punt-zinseinde", p("U dient de plaats vóór 12.00 uur te verlaten, tenzij anders overeengekomen."), { dep: "vast 12:00" });
+add("V79 uitchecktijd in FAQ-vraag", "<h4>Hoe laat moet ik uitchecken?</h4><p>Uiterlijk om 11.00 uur.</p>", { dep: "vast 11:00" });
+add("V80 kinderclub", p("Kinderclub: verzamelen en vertrek om 10.30 uur bij het speelveld."), { dep: "-" });
+add("V81 middag 12 uur 's", p("De plek dient vóór 12 uur 's middags leeg te zijn."), { dep: "vast 12:00" });
+add("V82 kwart over", p("Vertrek uiterlijk kwart voor twaalf."), { dep: "vast 11:45" });
+add("V83 annuleren voor vertrek", p("Annuleren kan tot 14 dagen voor aankomst. Vertrek eerder dan gepland geeft geen recht op restitutie."), { dep: "-" });
+add("V84 winterstalling ophalen", p("Winterstalling: caravans ophalen op zaterdag, vertrek tussen 9.00 en 12.00 uur."), { dep: "-" });
+add("V85 parkeerplaats auto", p("Auto's van bezoekers moeten de parkeerplaats voor 12.00 uur verlaten."), { dep: "-" });
+add("V86 per24 betalen", p("Op de camperplaats betaalt u per 24 uur vanaf aankomst."), { dep: "per24" });
+add("V87 jaarplaats tijd", p("Jaarplaatsen: vertrek uiterlijk 12.00 uur op de laatste dag van het seizoen."), { dep: "-" });
+add("V88 vertrek 10-11 marktdag", p("Op marktdagen (dinsdag) moet de camperplaats om 7.00 uur leeg zijn."), { dep: "-" });
+
+// ── PRIJS ──
+add("P01 vanaf € 15", p("Camperplaats vanaf € 15 per nacht."), { price_eur: 15 });
+add("P02 zomer/winter", p("Camperplaats: zomer € 20 per nacht, winter € 15 per nacht."), { price_eur: 15, price_note: /20/ });
+add("P03 laag/hoogseizoen", p("Camper incl. 2 personen: laagseizoen € 18,50 per nacht, hoogseizoen € 24,50 per nacht."), { price_eur: 18.5 });
+add("P04 alleen per persoon", p("Tarief: € 7,50 per persoon per nacht."), { price_eur: U, "extra:Per persoon": [7.5, "per persoon per nacht"] });
+add("P05 pppn + camper", p("Volwassenen € 6,00 p.p.p.n. Camper € 8,00 per nacht."), { price_eur: 8, "extra:Per persoon": [6, "per persoon per nacht"] });
+add("P06 2 personen incl.", p("Kampeerplaats 2 personen incl. stroom € 27,50 per nacht."), { price_eur: 27.5 });
+add("P07 tent vóór camper", p("Tent € 12 per nacht. Camper € 22 per nacht."), { price_eur: 22 });
+add("P08 caravan + toeslagen", "<table><tr><td>Caravan</td><td>€ 20,00 per nacht</td></tr><tr><td>Hond</td><td>€ 2,50 per nacht</td></tr><tr><td>Kind t/m 12 jaar</td><td>€ 3,00</td></tr><tr><td>Douche</td><td>€ 0,50</td></tr><tr><td>Toeristenbelasting</td><td>€ 1,45 p.p.p.n.</td></tr></table>",
+  { price_eur: 20, "extra:Hond": [2.5, "per nacht"], "extra:Kind": [3, U], "extra:Douche": [0.5, U], "extra:Toeristenbelasting": [1.45, "per persoon per nacht"] });
+add("P09 kWh", p("Stroom: € 0,50 per kWh."), { price_eur: U, "extra:Stroom": [0.5, "per kWh"] });
+add("P10 stroom per nacht", p("Camperplaats € 14 per nacht. Stroom € 3 per nacht."), { price_eur: 14, "extra:Stroom": [3, "per nacht"] });
+add("P11 gratis mits diner", p("Gratis overnachten voor campers, mits u dineert in ons restaurant."), { price_eur: U });
+add("P12 gratis camperplaats", p("Gratis camperplaats aan de haven."), { price_eur: 0 });
+add("P13 gratis met camper", p("U kunt hier gratis overnachten met uw camper."), { price_eur: 0 });
+add("P14 borg + camper", p("Borg sleutel slagboom € 20. Camper € 16 per nacht."), { price_eur: 16 });
+add("P15 alleen borg", p("Sleutel sanitair: borg € 10."), { price_eur: U });
+add("P16 €15,-", p("Camperplaats €15,- per nacht."), { price_eur: 15 });
+add("P17 15 euro", p("Een overnachting kost 15 euro."), { price_eur: 15 });
+add("P18 EUR 15", p("Camperplaats: EUR 15 per nacht."), { price_eur: 15 });
+add("P19 15,00 p.n.", p("Camper 15,00 p.n."), { price_eur: 15 });
+add("P20 duizendtal + nacht", p("Seizoenplaats € 1.250,00. Camperplaats € 17,50 per nacht."), { price_eur: 17.5 });
+add("P21 alleen seizoenplaats", p("Seizoenplaats camper € 1.250,-"), { price_eur: U });
+add("P22 jaarplaats", p("Jaarplaats camper: € 2.450 per jaar."), { price_eur: U });
+add("P23 tarieven 2025 én 2026", p("Tarieven 2025: camper € 16 per nacht.") + p("Tarieven 2026: camper € 18 per nacht."), { price_eur: 18 });
+add("P24 arrangement", p("Arrangement: 3 nachten camperplaats incl. diner € 65."), { price_eur: U });
+add("P25 dagtarief parkeren + nacht", p("Parkeren dagtarief € 6 per dag.") + p("Camper overnachten € 12 per nacht."), { price_eur: 12 });
+add("P26 alleen dagparkeren", p("Dagtarief campers: € 7,50 per dag, overnachten is niet toegestaan."), { price_eur: U });
+add("P27 ACSI", p("Met de ACSI CampingCard betaalt u € 21 per nacht. Normaal tarief camperplaats € 32 per nacht."), { price_eur: 32 });
+add("P28 week/maand", p("Camperplaats € 90 per week, € 300 per maand."), { price_eur: U });
+add("P29 incl. toeristenbelasting", p("Camperplaats: € 17,50 per nacht inclusief stroom, water en toeristenbelasting."), { price_eur: 17.5, tourist_tax_included: true });
+add("P30 excl. toeristenbelasting", p("Camper € 15 per nacht exclusief toeristenbelasting van € 1,60 p.p.p.n."), { price_eur: 15, tourist_tax_included: false, "extra:Toeristenbelasting": [1.6, "per persoon per nacht"] });
+add("P31 per camper per nacht", p("€ 12,50 per camper per nacht."), { price_eur: 12.5 });
+add("P32 12 euro per nacht", p("Overnachten: 12 euro per nacht, incl. 2 personen."), { price_eur: 12 });
+add("P33 extra persoon, hond gratis", p("Camperplaats € 18 per nacht. Extra persoon € 4 per nacht. Hond gratis."), { price_eur: 18, "extra:Per persoon": [4, "per nacht"], dogs: true });
+add("P34 bouwstenen", "<ul><li>Volwassene € 6,50 per nacht</li><li>Kind € 3,50 per nacht</li><li>Camper € 7,00 per nacht</li><li>Auto € 2,50 per nacht</li></ul>", { price_eur: 7, "extra:Per persoon": [6.5, "per nacht"], "extra:Kind": [3.5, "per nacht"] });
+add("P35 Duits", p("Stellplatz: 15 € pro Nacht inkl. Strom."), { price_eur: 15 });
+add("P36 Engels", p("Motorhome pitch: €18 per night."), { price_eur: 18 });
+add("P37 lengte", p("Camper tot 7 meter € 15 per nacht, langer dan 7 meter € 20 per nacht."), { price_eur: 15 });
+add("P38 wasmachine", p("Wasmachine € 5 per keer. Camper € 19,00 per nacht."), { price_eur: 19 });
+add("P39 fietsverhuur", p("Verhuur fietsen € 12,50 per dag."), { price_eur: U });
+add("P40 hond alleen", p("Hond: € 2 per nacht."), { price_eur: U, "extra:Hond": [2, "per nacht"], dogs: true });
+add("P41 per 24 uur", p("Camperplaats: € 10 per 24 uur."), { price_eur: 10, dep: "per24" });
+add("P42 prijs per nacht haakjes", p("Prijs per nacht: € 22,- (2 pers., camper, stroom)."), { price_eur: 22 });
+add("P43 trekkershut + camper", p("Trekkershut € 45 per nacht. Camper € 20 per nacht."), { price_eur: 20 });
+add("P44 chalet", p("Chalet vanaf € 65 per nacht."), { price_eur: U });
+add("P45 douchemunt", p("Douchemunt € 1. Camperplaats € 13."), { price_eur: 13 });
+add("P46 tabel met pipes", "<table><tr><td>Kampeerplaats</td><td>€ 25,00</td></tr><tr><td>Extra persoon</td><td>€ 5,00</td></tr><tr><td>Hond</td><td>€ 3,00</td></tr><tr><td>Toeristenbelasting</td><td>€ 1,20 p.p.p.n.</td></tr></table>", { price_eur: 25, "extra:Per persoon": [5, U], "extra:Hond": [3, U], "extra:Toeristenbelasting": [1.2, "per persoon per nacht"] });
+add("P47 kamer met ontbijt", p("Kamer met ontbijt € 60 per nacht."), { price_eur: U });
+add("P48 lozen en water", p("Lozen van grijs water en chemisch toilet: € 3 per keer. Water tanken € 1 per 100 liter."), { price_eur: U, "extra:Lozen": [3, "per keer"], "extra:Water": [1, "per 100 liter"] });
+add("P49 kost € incl stroom", p("Overnachten kost € 12,50, inclusief stroom."), { price_eur: 12.5 });
+add("P50 per nacht betaalt u", p("Per nacht betaalt u € 16 voor een camper met 2 personen."), { price_eur: 16 });
+add("P51 17,50 euro per nacht", p("Camperplaats: 17,50 euro per nacht."), { price_eur: 17.5 });
+add("P52 p.n.", p("Tarief camper: € 20,- p.n."), { price_eur: 20 });
+add("P53 hoog/laag met data", p("Staanplaats camper hoogseizoen (1 juli - 31 augustus): € 27,50; laagseizoen: € 19,50."), { price_eur: 19.5 });
+add("P54 reserveringskosten", p("Reserveringskosten € 15 per boeking. Camper € 21 per nacht."), { price_eur: 21 });
+add("P55 kinderen gratis", p("Camperplaats € 15 per nacht, kinderen tot 4 jaar gratis."), { price_eur: 15 });
+add("P56 korting lang verblijf", p("Camperplaats per nacht: € 10. Vanaf de vierde nacht betaalt u € 8 per nacht."), { price_eur: 10 });
+add("P57 alleen tarieven vorig jaar", p("Tarieven 2025: camperplaats € 16 per nacht."), { price_eur: any(16, U) });
+add("P58 stroom € 3 vóór camper", p("Stroom € 3 per nacht. Camperplaats € 14 per nacht."), { price_eur: 14 });
+add("P59 toeristenbelasting pppn alleen", p("Toeristenbelasting: € 1,75 per persoon per nacht."), { price_eur: U, "extra:Toeristenbelasting": [1.75, "per persoon per nacht"] });
+add("P60 honden € 2 en tent", p("Kleine tent € 9,50 per nacht, hond € 2,00 per nacht."), { price_eur: U });
+add("P61 gratis voor kinderen", p("Kinderen tot 3 jaar kunnen gratis overnachten."), { price_eur: U });
+add("P62 gratis parkeren ≠ overnachten", p("Gratis parkeren voor campers overdag; overnachten € 10 per nacht."), { price_eur: 10 });
+add("P63 2e camper", p("Camperplaats € 22 per nacht. Douche € 0,50 per 5 minuten."), { price_eur: 22, "extra:Douche": [0.5, U] });
+add("P64 3 cijfers week zonder woord", p("Camperplaats laagseizoen 7 nachten € 70."), { price_eur: U });
+add("P65 toeristenbelasting bedrag >", p("Camper € 19,50 per nacht + toeristenbelasting € 2,10 p.p.p.n."), { price_eur: 19.5, tourist_tax_included: false, "extra:Toeristenbelasting": [2.1, "per persoon per nacht"] });
+add("P66 caravan zonder camper tarief", p("Caravan of camper met 2 personen: € 24,00 per nacht. Bijzettentje € 4,00 per nacht."), { price_eur: 24 });
+add("P67 12,5 komma enkel", p("Camperplaats € 12,5 per nacht."), { price_eur: 12.5 });
+add("P68 prijs boven 75", p("Camperplaats met privé sanitair € 79 per nacht in het hoogseizoen."), { price_eur: any(79, U) });
+add("P69 stacaravan huur per nacht", p("Onze stacaravan huurt u al voor € 55 per nacht."), { price_eur: U });
+add("P70 sauna", p("Sauna € 12,50 per persoon. Camperplaats € 17 per nacht."), { price_eur: 17 });
+add("P71 dagrecreatie entree", p("Entree dagrecreatie: € 6 per dag."), { price_eur: U });
+add("P72 visvergunning per dag", p("Visvergunning € 7,50 per dag."), { price_eur: U });
+add("P73 zwembad per dag", p("Toegang zwembad voor niet-kampeerders € 5,00 per dag."), { price_eur: U });
+add("P74 strandhuisje dag", p("Strandbed € 8 per dag."), { price_eur: U });
+
+// ── SEIZOEN ──
+add("S01 1 april t/m 31 oktober", p("De camping is geopend van 1 april t/m 31 oktober."), { season: "1 april – 31 oktober", open_all_year: false });
+add("S02 hele jaar geopend", p("Wij zijn het hele jaar geopend."), { open_all_year: true });
+add("S03 winter gesloten", p("In de winter zijn wij gesloten."), { open_all_year: any(false, U), season: U });
+add("S04 receptie zondag dicht", p("De receptie is gesloten op zondag."), { open_all_year: U, season: U });
+add("S05 receptie april-oktober", p("Receptie geopend van april tot oktober."), { open_all_year: U, season: U });
+add("S06 seizoen streepje", p("Seizoen: 15 maart - 1 november."), { season: "15 maart – 1 november", open_all_year: false });
+add("S07 numeriek", p("Open van 01-04 t/m 31-10."), { season: "1 april – 31 oktober" });
+add("S08 tot en met met jaar", p("Geopend: 1 april tot en met 30 september 2026."), { season: "1 april – 30 september" });
+add("S09 restaurant heel jaar, camping seizoen", p("Het restaurant is het hele jaar geopend. De camping is open van 1 april tot 1 oktober."), { season: "1 april – 1 oktober", open_all_year: false });
+add("S10 gesloten van-tot", p("De camping is gesloten van 1 november tot 15 maart."), { open_all_year: any(false, U), season: U });
+add("S11 openingstijden receptie", p("Openingstijden receptie: maandag t/m vrijdag 9.00 - 17.00 uur."), { open_all_year: U, season: U });
+add("S12 maandag tot zaterdag", p("Geopend van maandag tot zaterdag."), { open_all_year: U, season: U });
+add("S13 zwembad", p("Het zwembad is open van 1 mei tot 1 september."), { open_all_year: U, season: U });
+add("S14 maanden zonder dag", p("Geopend van april t/m oktober."), { season: "april – oktober" });
+add("S15 Duits jaarrond", p("Ganzjährig geöffnet."), { open_all_year: true });
+add("S16 Duits met punten", p("Geöffnet vom 1. April bis 31. Oktober."), { season: "1 april – 31 oktober" });
+add("S17 Engels", p("Open from April 1st to October 31st."), { season: "1 april – 31 oktober" });
+add("S18 niet het hele jaar", p("Wij zijn niet het hele jaar open; van november tot maart zijn wij dicht."), { open_all_year: any(false, U) });
+add("S19 sanitair heel jaar", p("Het sanitairgebouw is het hele jaar geopend en verwarmd."), { open_all_year: U });
+add("S20 hele jaar terecht", p("U kunt het hele jaar door bij ons terecht met uw camper."), { open_all_year: true });
+add("S21 winkel in menu en camping", p("Camperplaats geopend van 15 maart tot en met 31 oktober."), { season: "15 maart – 31 oktober" });
+add("S22 jaarplaatsen heel jaar", p("De jaarplaatsen zijn het hele jaar open; toeristische plaatsen van 1 april tot 1 oktober."), { open_all_year: any(false, U) });
+add("S23 afkortingen", p("Geopend: 1 apr. t/m 30 sept."), { season: "1 april – 30 september" });
+add("S24 hele jaar m.u.v.", p("De camperplaats is het hele jaar open, behalve tijdens de kermis in augustus."), { open_all_year: any(true, U) });
+add("S25 seizoenplaats periode", p("Seizoenplaats: van 1 april tot 1 oktober, € 1.450."), { season: any(U, "1 april – 1 oktober") });
+add("S26 winkel", p("De campingwinkel is open van 1 juli tot 31 augustus."), { season: U, open_all_year: U });
+add("S27 voorseizoen", p("Voorseizoen: 1 april tot 1 juli. Hoogseizoen: 1 juli tot 1 september."), { season: U });
+
+// ── VOORZIENINGEN ──
+add("F01 geen stroom", p("Er is geen stroom op de camperplaats."), { power: false });
+add("F02 stroom op aanvraag", p("Stroom op aanvraag."), { power: true });
+add("F03 honden niet toegestaan", p("Honden zijn niet toegestaan."), { dogs: false });
+add("F04 honden welkom mits aangelijnd", p("Honden welkom, mits aangelijnd."), { dogs: true });
+add("F05 lozen grijs water niet mogelijk", p("Lozen van grijs water is niet mogelijk."), { dump_station: any(false, U) });
+add("F06 ampère en waterkraan", p("Elke plaats heeft 10 ampère stroom en een eigen waterkraan."), { power: true, water: true });
+add("F07 geen wifi", p("Geen wifi op het terrein."), { wifi: false });
+add("F08 gratis wifi", p("Gratis wifi op de hele camping."), { wifi: true });
+add("F09 wifi niet beschikbaar", p("Wifi is helaas niet beschikbaar."), { wifi: any(false, U) });
+add("F10 huisdieren helaas niet", p("Huisdieren zijn helaas niet welkom."), { dogs: false });
+add("F11 geen honden in sanitair", p("Honden zijn van harte welkom. Geen honden in het sanitairgebouw."), { dogs: true });
+add("F12 geen servicestation", p("Er is geen servicestation voor het lozen van afvalwater."), { dump_station: any(false, U) });
+add("F13 zonder/met stroom tarief", p("Camperplaats zonder stroom € 12 per nacht, met stroom € 15 per nacht."), { power: true });
+add("F14 stroom niet aanwezig", p("Stroom is niet aanwezig."), { power: any(false, U) });
+add("F15 water tappen", p("Water tappen kan bij het sanitairgebouw."), { water: true });
+add("F16 geen drinkwater", p("Geen drinkwater aanwezig."), { water: false });
+add("F17 Hunde willkommen", p("Hunde sind willkommen."), { dogs: true });
+add("F18 Hunde nicht erlaubt", p("Hunde sind nicht erlaubt."), { dogs: false });
+add("F19 kein Strom", p("Kein Strom am Platz."), { power: false });
+add("F20 huisdieren toegestaan: nee", "<table><tr><td>Huisdieren toegestaan</td><td>nee</td></tr><tr><td>Stroom</td><td>ja</td></tr></table>", { dogs: false, power: true });
+add("F21 niet toegestaan te lozen", p("Het is niet toegestaan afvalwater op het terrein te lozen."), { dump_station: any(false, U) });
+add("F22 honden nee", p("Honden: nee"), { dogs: false });
+add("F23 deels geen elektriciteit", p("Geen elektriciteit op de plaatsen aan het water; alle andere plaatsen hebben 6A stroom."), { power: any(true, U) });
+add("F24 stroom tabel nee", "<table><tr><td>Stroom</td><td>nee</td></tr><tr><td>Wifi</td><td>nee</td></tr><tr><td>Lozen</td><td>nee</td></tr><tr><td>Water</td><td>nee</td></tr></table>", { power: any(false, U), wifi: any(false, U), dump_station: any(false, U), water: any(false, U) });
+add("F25 honden hoogseizoen niet", p("Honden zijn in juli en augustus niet toegestaan."), { dogs: any(U) });
+add("F26 stroomstoring / waterpret", p("Veel waterpret voor kinderen in ons zwembad. Bij stroomuitval is de slagboom handmatig te openen."), { power: U, water: U });
+add("F27 dogs not allowed", p("Dogs are not allowed."), { dogs: false });
+add("F28 max 2 honden", p("Maximaal 2 honden per plaats."), { dogs: true });
+add("F29 chemisch toilet legen", p("U kunt uw chemisch toilet legen bij het servicepunt."), { dump_station: true, toilet: U });
+add("F30 lozen grijs kan, cassette niet", p("Vuilwater lozen kan, het legen van de cassette is niet mogelijk."), { dump_station: any(true, U) });
+add("F31 wifi tegen betaling", p("Wifi tegen betaling: € 2 per dag."), { wifi: true });
+add("F32 honden verboden op strand", p("Op het strand zijn honden niet toegestaan van 1 mei tot 1 oktober. Op de camping zijn honden welkom."), { dogs: true, season: U });
+add("F33 geen stroom in winter", p("In de winter is er geen stroom beschikbaar."), { power: any(U, true) });
+add("F34 hondenvrij veld", p("Wij hebben een hondenvrij veld en een veld waar honden welkom zijn."), { dogs: true });
+add("F35 stroom incl", p("Alle camperplaatsen zijn voorzien van elektra (16A), water en afvoer."), { power: true });
+
+// ── Draaien ──
+const depOf = (r: Record<string, unknown>) => (r.departure ? (r.departure === "vast" ? `vast ${r.checkout_until}` : String(r.departure)) : "-");
+const FIELD = (k: string) =>
+  k === "dep" ? "vertrek" : k === "checkin_from" ? "aankomst" : k.startsWith("price_") ? "prijs" : k.startsWith("extra:") || k === "tourist_tax_included" ? "toeslagen" :
+  k === "season" || k === "open_all_year" ? "seizoen" : k.startsWith("access") ? "toegang" : "voorzieningen";
+const show = (v: unknown): string => (v === undefined ? "leeg" : v instanceof RegExp ? String(v) : typeof v === "object" && v && "oneOf" in v ? (v as { oneOf: unknown[] }).oneOf.map(show).join(" of ") : JSON.stringify(v));
+const eq = (got: unknown, exp: unknown): boolean => {
+  if (exp instanceof RegExp) return typeof got === "string" && exp.test(got);
+  if (exp && typeof exp === "object" && "oneOf" in exp) return (exp as { oneOf: unknown[] }).oneOf.some((x) => eq(got, x));
+  return JSON.stringify(got) === JSON.stringify(exp);
+};
+const rows: { id: string; input: string; field: string; key: string; exp: string; got: string; ok: boolean; note?: string }[] = [];
+for (const c of C) {
+  const pages = Array.isArray(c.html) ? c.html : [c.html];
+  const r = extract(pages, base) as Record<string, unknown>;
+  const extras = (r.price_extras as { label: string; amount: number; unit?: string }[] | undefined) ?? [];
+  for (const [k, exp] of Object.entries(c.exp)) {
+    let got: unknown;
+    let e: unknown = exp;
+    if (k === "dep") got = depOf(r);
+    else if (k.startsWith("extra:")) {
+      const x = extras.find((y) => y.label === k.slice(6));
+      got = x ? [x.amount, x.unit] : undefined;
+      e = Array.isArray(exp) ? [exp[0], exp[1]] : exp;
+      // JSON.stringify maakt van undefined null: gelijk trekken
+      if (Array.isArray(got)) got = [got[0], got[1] ?? null];
+      if (Array.isArray(e)) e = [e[0], e[1] ?? null];
+    } else got = r[k];
+    rows.push({
+      id: c.id, input: pages.join(" ⏎ ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(), field: FIELD(k), key: k,
+      exp: show(e), got: show(got), ok: eq(got, e), note: k === "dep" || k.startsWith("price") ? String(r.times_note ?? r.price_note ?? "") : "",
+    });
+  }
+}
+
+const stats: Record<string, [number, number]> = {};
+for (const r of rows) {
+  stats[r.field] ??= [0, 0];
+  stats[r.field][1]++;
+  if (r.ok) stats[r.field][0]++;
+}
+let md = `# Extractor tegen ${C.length} voorbeeldfragmenten (${rows.length} controles)\n\n## Slagingspercentage per veld\n\n| veld | goed | totaal | % |\n|---|---|---|---|\n`;
+for (const [f, [a, b]] of Object.entries(stats)) md += `| ${f} | ${a} | ${b} | ${Math.round((a / b) * 100)}% |\n`;
+const tot = rows.filter((r) => r.ok).length;
+md += `| **totaal** | ${tot} | ${rows.length} | ${Math.round((tot / rows.length) * 100)}% |\n\n## Alle controles\n\n| id | invoer | veld | verwacht | code gaf | uitkomst |\n|---|---|---|---|---|---|\n`;
+const esc = (s: string) => s.replace(/\|/g, "\\|");
+for (const r of rows) md += `| ${r.id} | ${esc(r.input)} | ${r.key} | ${esc(r.exp)} | ${esc(r.got)} | ${r.ok ? "goed" : "**FOUT**"} |\n`;
+
+// ── verify() ──
+type Q = { id: string; page: string; a: { departure: "vrij" | "per24" | "vast" | "onbekend"; checkout: string | null; quote: string }; want: "afwijzen" | "overnemen" };
+const Qs: Q[] = [
+  { id: "Q01 chalets (R18)", page: "Onze chalets: uitchecken voor 10 uur.", a: { departure: "vast", checkout: "10:00", quote: "Onze chalets: uitchecken voor 10 uur." }, want: "afwijzen" },
+  { id: "Q02 noodlijn 24 uur (R18)", page: "Wij zijn bereikbaar 24 uur per dag via de noodlijn.", a: { departure: "vrij", checkout: null, quote: "bereikbaar 24 uur per dag via de noodlijn" }, want: "afwijzen" },
+  { id: "Q03 afgekapt citaat chalets", page: "In onze chalets en lodges is het vertrek vóór 10.00 uur.", a: { departure: "vast", checkout: "10:00", quote: "het vertrek vóór 10.00 uur" }, want: "afwijzen" },
+  { id: "Q04 afgekapt citaat seizoensgasten", page: "Voor seizoensgasten gelden geen vaste vertrektijden.", a: { departure: "vrij", checkout: null, quote: "gelden geen vaste vertrektijden" }, want: "afwijzen" },
+  { id: "Q05 afgekapt citaat hoogseizoen", page: "Vertrek voor 12.00 uur, in het hoogseizoen voor 10.30 uur.", a: { departure: "vast", checkout: "12:00", quote: "Vertrek voor 12.00 uur" }, want: "afwijzen" },
+  { id: "Q06 bus vertrekt", page: "De bus naar het strand vertrekt om 10.15 uur.", a: { departure: "vast", checkout: "10:15", quote: "De bus naar het strand vertrekt om 10.15 uur." }, want: "afwijzen" },
+  { id: "Q07 niet vóór 7 uur", page: "Vertrekken vóór 7.00 uur is niet toegestaan in verband met de nachtrust.", a: { departure: "vast", checkout: "07:00", quote: "Vertrekken vóór 7.00 uur is niet toegestaan in verband met de nachtrust." }, want: "afwijzen" },
+  { id: "Q08 Ferienhäuser", page: "Ferienhäuser: Abreise bis 10 Uhr.", a: { departure: "vast", checkout: "10:00", quote: "Ferienhäuser: Abreise bis 10 Uhr." }, want: "afwijzen" },
+  { id: "Q09 afgekapt: late check-out", page: "Late check-out tot 14.00 uur kost € 10; uitchecken tot 14.00 uur is dan toegestaan.", a: { departure: "vast", checkout: "14:00", quote: "uitchecken tot 14.00 uur" }, want: "afwijzen" },
+  { id: "Q10 echte zin", page: "Wij verzoeken u de camperplaats voor 11.00 uur te verlaten.", a: { departure: "vast", checkout: "11:00", quote: "Wij verzoeken u de camperplaats voor 11.00 uur te verlaten." }, want: "overnemen" },
+  { id: "Q11 verkeerde tijd", page: "Vertrek vóór 11.30 uur.", a: { departure: "vast", checkout: "11:00", quote: "Vertrek vóór 11.30 uur." }, want: "afwijzen" },
+  { id: "Q12 per24 uit max 24 uur parkeren", page: "Campers mogen hier maximaal 24 uur parkeren.", a: { departure: "per24", checkout: null, quote: "Campers mogen hier maximaal 24 uur parkeren." }, want: "afwijzen" },
+  { id: "Q13 vrij: afgekapt 'vertrekken wanneer u wilt' (jaarplaats)", page: "Op uw jaarplaats met camper kunt u komen en vertrekken wanneer u wilt.", a: { departure: "vrij", checkout: null, quote: "met camper kunt u komen en vertrekken wanneer u wilt" }, want: "afwijzen" },
+  { id: "Q14 citaat over twee zinnen geplakt", page: "Kampeerplaatsen: aankomst vanaf 13.00 uur. Chalets: vertrek vóór 10.00 uur. Honden welkom.", a: { departure: "vast", checkout: "10:00", quote: "vertrek vóór 10.00 uur. Honden welkom" }, want: "afwijzen" },
+  { id: "Q15 sanitair schoonmaak", page: "Op de dag van vertrek wordt het sanitair om 11.00 uur schoongemaakt.", a: { departure: "vast", checkout: "11:00", quote: "Op de dag van vertrek wordt het sanitair om 11.00 uur schoongemaakt." }, want: "afwijzen" },
+];
+md += `\n## verify() na R18\n\n| id | pagina | citaat | claim | gewenst | verify() | checkQuote().confirmed | uitkomst |\n|---|---|---|---|---|---|---|---|\n`;
+let qok = 0;
+for (const q of Qs) {
+  const v = verify(q.a, q.page);
+  const c = checkQuote(q.a, q.page);
+  const got = v ? "overnemen" : "afwijzen";
+  if (got === q.want) qok++;
+  md += `| ${q.id} | ${esc(q.page)} | ${esc(q.a.quote)} | ${q.a.departure} ${q.a.checkout ?? ""} | ${q.want} | ${got}${v ? " " + JSON.stringify({ d: v.departure, t: v.checkout_until }) : ""} | ${c ? c.confirmed : "null (geen inzending)"} | ${got === q.want ? "goed" : "**FOUT**"} |\n`;
+}
+md += `\nverify(): ${qok} van ${Qs.length} goed.\n`;
+writeFileSync(new URL("./uitvoer.md", import.meta.url), md);
+writeFileSync(new URL("./uitvoer.json", import.meta.url), JSON.stringify(rows, null, 1));
+console.log(md.split("## Alle controles")[0]);
+for (const r of rows.filter((x) => !x.ok)) console.log(`FOUT ${r.id} [${r.key}] verwacht ${r.exp}, kreeg ${r.got} :: ${r.input.slice(0, 110)}${r.note ? " :: note=" + r.note.slice(0, 80) : ""}`);
+console.log(md.split("## verify() na R18")[1]);

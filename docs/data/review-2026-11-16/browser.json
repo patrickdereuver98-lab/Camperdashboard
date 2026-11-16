@@ -1,0 +1,138 @@
+{
+ "perf": {
+  "start": {
+   "lcp": 812,
+   "tbt": 675,
+   "cls": 0,
+   "load_s": "9.4",
+   "kb_js": 840,
+   "kb_total": 1688,
+   "grootste": "/_next/static/chunks/3zw4dspt0oqn-.js 230KB"
+  },
+  "zoeken": {
+   "lcp": 1292,
+   "tbt": 311,
+   "cls": 0,
+   "load_s": "11.4",
+   "kb_js": 840,
+   "kb_total": 1904,
+   "grootste": "/_next/static/chunks/3zw4dspt0oqn-.js 230KB"
+  },
+  "zonder": {
+   "lcp": 828,
+   "tbt": 289,
+   "cls": 0,
+   "load_s": "17.0",
+   "kb_js": 840,
+   "kb_total": 3841,
+   "grootste": "/api/places 1310KB"
+  },
+  "plek_vrij": {
+   "lcp": 1428,
+   "tbt": 219,
+   "cls": 0,
+   "load_s": "9.2",
+   "kb_js": 898,
+   "kb_total": 1844,
+   "grootste": "/_next/static/chunks/40z_9d75v_lej.js 238KB"
+  },
+  "plek_leeg": {
+   "lcp": 1368,
+   "tbt": 253,
+   "cls": 0.007,
+   "load_s": "8.4",
+   "kb_js": 898,
+   "kb_total": 1365,
+   "grootste": "/_next/static/chunks/40z_9d75v_lej.js 238KB"
+  },
+  "dichtbij": {
+   "lcp": 720,
+   "tbt": 140,
+   "cls": 0,
+   "load_s": "7.9",
+   "kb_js": 840,
+   "kb_total": 1154,
+   "grootste": "/_next/static/chunks/3zw4dspt0oqn-.js 230KB"
+  },
+  "reis": {
+   "lcp": 2924,
+   "tbt": 1268,
+   "cls": 0,
+   "load_s": "8.1",
+   "kb_js": 2024,
+   "kb_total": 5578,
+   "grootste": "/api/places 1310KB"
+  },
+  "provincie": {
+   "lcp": 656,
+   "tbt": 286,
+   "cls": 0,
+   "load_s": "7.8",
+   "kb_js": 840,
+   "kb_total": 1513,
+   "grootste": "/camperplaatsen/gelderland 262KB"
+  }
+ },
+ "axe": {
+  "start-light": [],
+  "zoeken-light": [],
+  "zonder-light": [],
+  "plek_vrij-light": [],
+  "plek_leeg-light": [],
+  "dichtbij-light": [],
+  "reis-light": [],
+  "provincie-light": [],
+  "start-dark": [],
+  "zoeken-dark": [],
+  "zonder-dark": [],
+  "plek_vrij-dark": [],
+  "plek_leeg-dark": [],
+  "dichtbij-dark": [],
+  "reis-dark": [],
+  "provincie-dark": []
+ },
+ "reflow": {
+  "start@360": 360,
+  "zoeken@360": 360,
+  "zonder@360": 360,
+  "plek_vrij@360": 360,
+  "plek_leeg@360": 360,
+  "dichtbij@360": 360,
+  "reis@360": 360,
+  "provincie@360": 360,
+  "start@320": 320,
+  "zoeken@320": 320,
+  "zonder@320": 320,
+  "plek_vrij@320": 320,
+  "plek_leeg@320": 320,
+  "dichtbij@320": 320,
+  "reis@320": 323,
+  "provincie@320": 320,
+  "start@360-donker": 360,
+  "zoeken@360-donker": 360,
+  "zonder@360-donker": 360,
+  "plek_vrij@360-donker": 360,
+  "plek_leeg@360-donker": 360,
+  "dichtbij@360-donker": 360,
+  "reis@360-donker": 360,
+  "provincie@360-donker": 360
+ },
+ "notes": [],
+ "tab_start": [
+  "A:Naar de inhoud|outline=true|y=8",
+  "A:VrijStaan, naar de startpagina|outline=true|y=6",
+  "A:Plek aanmelden|outline=true|y=6",
+  "A:Hulp|outline=true|y=6",
+  "BUTTON:Donkere modus|outline=true|y=6",
+  "A:Inloggen|outline=true|y=6",
+  "A:Plekken bij mij in de buurt|outline=true|y=176",
+  "INPUT:|outline=false|y=244",
+  "BUTTON:Zoeken|outline=true|y=244",
+  "A:Zonder vertrektijdBlijf tot je|outline=true|y=353"
+ ],
+ "offline": {
+  "sw": true,
+  "reis": "Je reis laden…",
+  "plek": "Naar de inhoud Foto: camperplaatsandebeke.jouwweb.nl Foto: camperplaatsandebeke.jouwweb.nl Foto: camperplaatsandebeke.jouwweb.nl Foto: camperplaatsandebeke.jouwweb.nl Foto: camperplaatsandebeke.jouwwe"
+ }
+}

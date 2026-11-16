@@ -1,0 +1,1042 @@
+[
+ {
+  "slug": "de-vlisterhoeve-schoonhoven",
+  "naam": "De Vlisterhoeve",
+  "soort": "boerderij",
+  "provincie": "Zuid-Holland",
+  "website": "https://www.vlisterhoeve.nl/de-camperplaats",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd; 'Bij drukte graag voor 13:00 vertrekken'",
+    "site": "in principe geen tijden, bij drukte voor 13:00",
+    "citaat": "In principe hanteren wij geen aankomst- en vertrektijden. Bij drukte graag voor 13:00 vertrekken.",
+    "url": "https://www.vlisterhoeve.nl/de-camperplaats"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": "niets over aankomst",
+    "site": "geen aankomst op zondag",
+    "citaat": "Op ZONDAG GEEN aankomst, u kunt wel vertrekken.",
+    "url": "https://www.vlisterhoeve.nl/de-camperplaats/tarieven"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€13 + toeristenbelasting €2 p.p.p.n. + stroom €2,50 p.n.",
+    "site": "zelfde",
+    "citaat": "€ 13,- per nacht ... Toeristenbelasting: € 2,00 per persoon per nacht ... Stroom: € 2,50 per nacht",
+    "url": "https://www.vlisterhoeve.nl/de-camperplaats/tarieven"
+   },
+   "seizoen": {
+    "oordeel": "ontbreekt",
+    "wij": "open_all_year leeg",
+    "site": "hele jaar open",
+    "citaat": "Wij zijn het gehele jaar geopend!",
+    "url": "https://www.vlisterhoeve.nl/de-camperplaats/tarieven"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja, €2,50 p.n.",
+    "site": "stroom €2,50 per nacht",
+    "citaat": "Stroom (€2,50 per nacht)",
+    "url": "https://www.vlisterhoeve.nl/de-camperplaats/faciliteiten"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "lozen cassette en afvalwater",
+    "citaat": "lozen cassettetoilet, lozen afvalwater",
+    "url": "https://www.vlisterhoeve.nl/de-camperplaats/tarieven"
+   }
+  }
+ },
+ {
+  "slug": "park-kruserbrink-hardenberg-hardenberg",
+  "naam": "Park Kruserbrink - Hardenberg",
+  "soort": "camperplaats",
+  "provincie": "Overijssel",
+  "website": "https://www.hardenberg.nl/parkeren/andere-voertuigen",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "per 24 uur, max 3 nachten",
+    "site": "€10 per 24 uur, max 3 dagen",
+    "citaat": "U kunt de camperplaats gebruiken voor € 10 per 24 uur. ... U kunt maximaal 3 dagen parkeren.",
+    "url": "https://www.hardenberg.nl/parkeren/andere-voertuigen"
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": "",
+    "site": "",
+    "citaat": "",
+    "url": "https://www.hardenberg.nl/parkeren/andere-voertuigen"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€10 per 24 uur",
+    "site": "€10 per 24 uur; stroom tegen betaling (bedrag niet genoemd)",
+    "citaat": "U kunt de camperplaats gebruiken voor € 10 per 24 uur.",
+    "url": "https://www.hardenberg.nl/parkeren/andere-voertuigen"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "leeg",
+    "site": "",
+    "citaat": "",
+    "url": "https://www.hardenberg.nl/parkeren/andere-voertuigen"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "stroom tegen betaling",
+    "citaat": "Tegen betaling kunt u gebruik maken van vuilwaterstort, stroom en water.",
+    "url": "https://www.hardenberg.nl/parkeren/andere-voertuigen"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "vuilwaterstort",
+    "citaat": "Tegen betaling kunt u gebruik maken van vuilwaterstort, stroom en water.",
+    "url": "https://www.hardenberg.nl/parkeren/andere-voertuigen"
+   }
+  }
+ },
+ {
+  "slug": "camperpark-urk-urk",
+  "naam": "Camperpark Urk",
+  "soort": "camperplaats",
+  "provincie": "Flevoland",
+  "website": "https://www.camperpark-urk.nl/faciliteiten",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste tijd, je betaalt per 24 uur",
+    "site": "per 24 uur vanaf incheck",
+    "citaat": "Uw verblijf is per 24 uur. Checkt u bijvoorbeeld om 15.00 uur in, dan kunt u tot 15.00 uur de volgende dag blijven.",
+    "url": "https://www.camperpark-urk.nl/vragen"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "24/7 toegankelijk",
+    "site": "24 uur per dag aankomen",
+    "citaat": "U kunt 24 uur per dag aankomen en eenvoudig inchecken via de incheckzuil of de AanUit-app.",
+    "url": "https://www.camperpark-urk.nl/vragen"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€22,50; toeristenbelasting niet genoemd",
+    "site": "hoogseizoen 2027 €23,50 per 24 uur voor camper + 2 personen, excl. toeristenbelasting",
+    "citaat": "prijs per: - 1 camper - 2 personen €23,50* per 24 uur *exclusief toeristenbelasting",
+    "url": "https://www.camperpark-urk.nl/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "hele jaar",
+    "site": "365 dagen",
+    "citaat": "Ja, Camperpark Urk is 365 dagen per jaar geopend.",
+    "url": "https://www.camperpark-urk.nl/vragen"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "€0,80 per kWh",
+    "site": "€0,80 per kWh, 16A",
+    "citaat": "Voor het gebruik van elektra betaalt u € 0,80 per kWh.",
+    "url": "https://www.camperpark-urk.nl/tarieven"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "serviceplaats",
+    "citaat": "Afvalwater lozen uit uw vuilwatertank",
+    "url": "https://www.camperpark-urk.nl/faciliteiten"
+   }
+  }
+ },
+ {
+  "slug": "basecamp-noordpolderzijl-usquert",
+  "naam": "Basecamp Noordpolderzijl",
+  "soort": "camping",
+  "provincie": "Groningen",
+  "website": "https://grounded-expedities.nl/kamperen-aan-het-wad/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste tijd, je betaalt per 24 uur; max 5 nachten",
+    "site": "per 24 uur een nieuwe nacht",
+    "citaat": "Let op: iedere 24 uur wordt er een nieuwe nacht in rekening gebracht.",
+    "url": "https://grounded-expedities.nl/kamperen-aan-het-wad/"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": "niets (access_24h leeg)",
+    "site": "op elk moment toegang via app",
+    "citaat": "heb je op elk moment van de dag toegang tot het terrein en het sanitair.",
+    "url": "https://grounded-expedities.nl/kamperen-aan-het-wad/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€16 + toeristenbelasting €1",
+    "site": "€14 excl. stroom + toeristenbelasting €1",
+    "citaat": "Nachttarief excl. stroomverbruik €14,- Toeristenbelasting p.p.p.n. €1,-",
+    "url": "https://grounded-expedities.nl/kamperen-aan-het-wad/"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "leeg",
+    "site": "",
+    "citaat": "",
+    "url": "https://grounded-expedities.nl/kamperen-aan-het-wad/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja (geen toeslagbedrag)",
+    "site": "4A, betalen via app (bedrag niet genoemd)",
+    "citaat": "Stroom (4A, betaling via Ease2Pay/Aanuit app)",
+    "url": "https://grounded-expedities.nl/kamperen-aan-het-wad/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "geen lozen",
+    "site": "lozen niet mogelijk",
+    "citaat": "Vuil water lozen is niet mogelijk",
+    "url": "https://grounded-expedities.nl/kamperen-aan-het-wad/"
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-t-noorden-aalten-aalten",
+  "naam": "Camperplaats 't Noorden Aalten",
+  "soort": "camperplaats",
+  "provincie": "Gelderland",
+  "website": "https://achterhoek.nl/camperplaats-t-noorden",
+  "leesbaar": false,
+  "velden": {
+   "vertrek": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "Opgeslagen website geeft 404 (regionale VVV-site, geen eigen site). De algemene pagina achterhoek.nl/camperplaatsen gaat over alle 27 zuilen, niet over deze plek. Wij tonen o.a. seizoen '20 oktober – 25 oktober', reservering verplicht, extra's Kind €3 en Per persoon €3: niet te herleiden.",
+    "url": ""
+   },
+   "aankomst": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "Opgeslagen website geeft 404 (regionale VVV-site, geen eigen site). De algemene pagina achterhoek.nl/camperplaatsen gaat over alle 27 zuilen, niet over deze plek. Wij tonen o.a. seizoen '20 oktober – 25 oktober', reservering verplicht, extra's Kind €3 en Per persoon €3: niet te herleiden.",
+    "url": ""
+   },
+   "prijs": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "Opgeslagen website geeft 404 (regionale VVV-site, geen eigen site). De algemene pagina achterhoek.nl/camperplaatsen gaat over alle 27 zuilen, niet over deze plek. Wij tonen o.a. seizoen '20 oktober – 25 oktober', reservering verplicht, extra's Kind €3 en Per persoon €3: niet te herleiden.",
+    "url": ""
+   },
+   "seizoen": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "Opgeslagen website geeft 404 (regionale VVV-site, geen eigen site). De algemene pagina achterhoek.nl/camperplaatsen gaat over alle 27 zuilen, niet over deze plek. Wij tonen o.a. seizoen '20 oktober – 25 oktober', reservering verplicht, extra's Kind €3 en Per persoon €3: niet te herleiden.",
+    "url": ""
+   },
+   "stroom": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "Opgeslagen website geeft 404 (regionale VVV-site, geen eigen site). De algemene pagina achterhoek.nl/camperplaatsen gaat over alle 27 zuilen, niet over deze plek. Wij tonen o.a. seizoen '20 oktober – 25 oktober', reservering verplicht, extra's Kind €3 en Per persoon €3: niet te herleiden.",
+    "url": ""
+   },
+   "lozen": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "Opgeslagen website geeft 404 (regionale VVV-site, geen eigen site). De algemene pagina achterhoek.nl/camperplaatsen gaat over alle 27 zuilen, niet over deze plek. Wij tonen o.a. seizoen '20 oktober – 25 oktober', reservering verplicht, extra's Kind €3 en Per persoon €3: niet te herleiden.",
+    "url": ""
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-seurenheide-wellerlooi",
+  "naam": "Camperplaats Seurenheide",
+  "soort": "camperplaats",
+  "provincie": "Limburg",
+  "website": "https://dagstrandseurenheide.nl/camperplaats/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste tijd, je betaalt per 24 uur",
+    "site": "tarief per 24 uur",
+    "citaat": "Het tarief per 24 uur camper (incl. 2 personen) bedraagt € 11,-",
+    "url": "https://dagstrandseurenheide.nl/camperplaats/"
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": "",
+    "site": "",
+    "citaat": "",
+    "url": "https://dagstrandseurenheide.nl/camperplaats/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€11 + stroom €4 + 'Per persoon €4' + 'Kind €2'",
+    "site": "€11 incl. 2 personen, stroom €4 per 24 uur; geen bedragen per persoon of kind genoemd",
+    "citaat": "Het tarief per 24 uur camper (incl. 2 personen) bedraagt € 11,-",
+    "url": "https://dagstrandseurenheide.nl/camperplaats/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "hele jaar",
+    "site": "365 dagen",
+    "citaat": "Onze camperplaats is 365 dagen per jaar geopend!",
+    "url": "https://dagstrandseurenheide.nl/camperplaats/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "€4 per nacht",
+    "site": "5A, €4 per 24 uur",
+    "citaat": "Ook is er een 5A stroomvoorziening tegen een tarief van €4,- per 24 uur.",
+    "url": "https://dagstrandseurenheide.nl/camperplaats/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "grijs water en chemisch toilet",
+    "citaat": "Tevens is er de mogelijkheid uw grijs water en chemisch toilet te ledigen.",
+    "url": "https://dagstrandseurenheide.nl/camperplaats/"
+   }
+  }
+ },
+ {
+  "slug": "boerderijcamping-de-hank-brummen",
+  "naam": "Boerderijcamping de Hank",
+  "soort": "boerderij",
+  "provincie": "Gelderland",
+  "website": "https://www.campingdehank.nl/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "geen vaste tijden",
+    "citaat": "Wij hanteren geen vaste aankomst- of vertrektijden, u kunt komen wanneer u dat uitkomt.",
+    "url": "https://www.campingdehank.nl/voorzieningen"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "geen vaste aankomst (times_note)",
+    "site": "geen vaste aankomsttijd",
+    "citaat": "Wij hanteren geen vaste aankomst- of vertrektijden",
+    "url": "https://www.campingdehank.nl/voorzieningen"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€12 per nacht + stroom €0,50 + hond €1",
+    "site": "€12 per persoon per nacht, dus €24 voor 2 personen + stroom €0,50",
+    "citaat": "Prijs per nacht (pp) ... Camper/caravan | €12.00 | 14 dagen",
+    "url": "https://www.campingdehank.nl/boeken"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "1 mei – 1 oktober",
+    "site": "1 mei – 1 oktober (tekst noemt 2024)",
+    "citaat": "Wij zijn in 2024 geopend van 1 mei tot 1 oktober.",
+    "url": "https://www.campingdehank.nl/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom €0,50",
+    "site": "€0,50 per nacht",
+    "citaat": "Tegen een vergoeding van 0,50 per nacht kunt u gebruik maken van de stroompunten.",
+    "url": "https://www.campingdehank.nl/voorzieningen"
+   },
+   "lozen": {
+    "oordeel": "ontbreekt",
+    "wij": "dump_station leeg",
+    "site": "afvoer chemisch toilet aanwezig",
+    "citaat": "Chemisch toilet kan geleegd worden in het afvoerpunt voor chemische toiletten naast de wasbak buiten.",
+    "url": "https://www.campingdehank.nl/voorzieningen"
+   }
+  }
+ },
+ {
+  "slug": "camperresort-bodelaeke-giethoorn",
+  "naam": "Camperresort Bodelaeke",
+  "soort": "camperplaats",
+  "provincie": "Overijssel",
+  "website": "https://camperresortbodelaeke.nl/",
+  "leesbaar": false,
+  "velden": {
+   "vertrek": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "HTTP 403 op robots.txt en op de startpagina (botbeveiliging). Wij hebben deze plek uit de stealth-lezer (sources.stealth, 25-10-2026). Let op: onze vertrekbron is 'Elke hond € 1,- per 24 uur', een zin over hondentoeslag, niet over vertrek.",
+    "url": ""
+   },
+   "aankomst": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "HTTP 403 op robots.txt en op de startpagina (botbeveiliging). Wij hebben deze plek uit de stealth-lezer (sources.stealth, 25-10-2026). Let op: onze vertrekbron is 'Elke hond € 1,- per 24 uur', een zin over hondentoeslag, niet over vertrek.",
+    "url": ""
+   },
+   "prijs": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "HTTP 403 op robots.txt en op de startpagina (botbeveiliging). Wij hebben deze plek uit de stealth-lezer (sources.stealth, 25-10-2026). Let op: onze vertrekbron is 'Elke hond € 1,- per 24 uur', een zin over hondentoeslag, niet over vertrek.",
+    "url": ""
+   },
+   "seizoen": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "HTTP 403 op robots.txt en op de startpagina (botbeveiliging). Wij hebben deze plek uit de stealth-lezer (sources.stealth, 25-10-2026). Let op: onze vertrekbron is 'Elke hond € 1,- per 24 uur', een zin over hondentoeslag, niet over vertrek.",
+    "url": ""
+   },
+   "stroom": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "HTTP 403 op robots.txt en op de startpagina (botbeveiliging). Wij hebben deze plek uit de stealth-lezer (sources.stealth, 25-10-2026). Let op: onze vertrekbron is 'Elke hond € 1,- per 24 uur', een zin over hondentoeslag, niet over vertrek.",
+    "url": ""
+   },
+   "lozen": {
+    "oordeel": "niet_leesbaar",
+    "wij": "",
+    "site": "",
+    "citaat": "HTTP 403 op robots.txt en op de startpagina (botbeveiliging). Wij hebben deze plek uit de stealth-lezer (sources.stealth, 25-10-2026). Let op: onze vertrekbron is 'Elke hond € 1,- per 24 uur', een zin over hondentoeslag, niet over vertrek.",
+    "url": ""
+   }
+  }
+ },
+ {
+  "slug": "d-n-mastendol-dongen",
+  "naam": "D'n Mastendol",
+  "soort": "camping",
+  "provincie": "Noord-Brabant",
+  "website": "https://www.mastendol.nl",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "fout",
+    "wij": "Geen vaste tijd, je betaalt per 24 uur",
+    "site": "per 24 uur of deel daarvan tot 12.00 uur: de dag loopt tot 12:00",
+    "citaat": "Kampeerprijzen per 24 uur of gedeelte daarvan tot 12.00 uur.",
+    "url": "https://www.mastendol.nl/verblijven/tarieven-2025"
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": "",
+    "site": "alleen receptie 9:00-18:00 bereikbaar (telefoon)",
+    "citaat": "receptie is bereikbaar tussen 9:00 en 18:00.",
+    "url": "https://www.mastendol.nl/"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "vanaf €27, hoogste €46; extra's o.a. toeristenbelasting €1,75",
+    "site": "2025: standaard €27 en privésanitair €46 tot 2 pers.; 2026-pagina noemt alleen boomhutten (toeristenbelasting €2,30). Prijzen zijn van 2025.",
+    "citaat": "Toeristenplaats standaard (tot 2 pers) | € 27,00 ... Toeristenplaats met privésanitair ( tot 2 pers) | €46,00",
+    "url": "https://www.mastendol.nl/verblijven/tarieven-2025"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "leeg",
+    "site": "",
+    "citaat": "",
+    "url": "https://www.mastendol.nl"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "€0,65 per kWh",
+    "site": "€0,65/kWh",
+    "citaat": "elektra ( onder voorbehoud) €0,65/kWh",
+    "url": "https://www.mastendol.nl/verblijven/tarieven-2025"
+   },
+   "lozen": {
+    "oordeel": "ontbreekt",
+    "wij": "dump_station leeg",
+    "site": "stortplaats chemisch toilet",
+    "citaat": "een stortplaats voor uw chemisch toilet",
+    "url": "https://www.mastendol.nl/faciliteiten-camping-brabant"
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-leudal-aspergeboerderij-oppe-haes-roggel",
+  "naam": "Camperplaats Leudal / Aspergeboerderij Oppe Haes",
+  "soort": "boerderij",
+  "provincie": "Limburg",
+  "website": "https://camperplaatsleudal.nl/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "geen aankomst- en vertrektijden",
+    "citaat": "daar wij geen aankomst en vertrektijden hanteren",
+    "url": "https://camperplaatsleudal.nl/tarieven/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "geen tijden (times_note)",
+    "site": "geen aankomsttijden",
+    "citaat": "daar wij geen aankomst en vertrektijden hanteren",
+    "url": "https://camperplaatsleudal.nl/tarieven/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "vanaf €45, hoogste €69, + toeristenbelasting €1,50 p.p.p.n.",
+    "site": "camper €17 per nacht voor 2 personen incl. toeristenbelasting; €45-69 is de huurtent van Tent-OK",
+    "citaat": "€ 17,00 / per nacht (2 personen) incl. toeristenbelasting",
+    "url": "https://camperplaatsleudal.nl/tarieven/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "1 maart – 1 november",
+    "site": "1 maart tot eind oktober",
+    "citaat": "We heten u welkom tussen 1 maart en eind oktober",
+    "url": "https://camperplaatsleudal.nl/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom €3",
+    "site": "€3 p.n. tot 5 kWh",
+    "citaat": "Stroomgebruik (16A) € 3,00 p.n. tot 5 kWh",
+    "url": "https://camperplaatsleudal.nl/tarieven/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "gratis bij overnachting",
+    "citaat": "Gratis bij overnachting: Vuilwater/storten",
+    "url": "https://camperplaatsleudal.nl/tarieven/"
+   }
+  }
+ },
+ {
+  "slug": "fietsers-en-camper-camping-heiderust-baarlo",
+  "naam": "Fietsers en Camper Camping Heiderust",
+  "soort": "camping",
+  "provincie": "Limburg",
+  "website": "https://www.heiderust.nl",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "fout",
+    "wij": "Geen vaste vertrektijd",
+    "site": "verblijf duurt tot 12:00; langer tot 17:00 tegen €7,50; slagboom dicht 21:30-8:00",
+    "citaat": "Als regel geldt dat uw verblijf tot max. 12.00 uur in de middag duurt. 1/2 dag extra (in overleg) +€7,50",
+    "url": "https://heiderust.nl/tarieven/"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": "niets",
+    "site": "slagboom dicht van ca. 21:30 tot 8:00",
+    "citaat": "Omstreeks 21:30 uur gaat de slagboom dicht. U kunt dan niet meer met camper het terrein op of af.",
+    "url": "https://heiderust.nl/tarieven/"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€17,40 + toeristenbelasting €1,30 + stroom €0,55/kWh",
+    "site": "zelfde",
+    "citaat": "€ 17,40 per nacht excl. toeristenbelasting Toeristenbelasting € 1,30 p.p.p.n.",
+    "url": "https://heiderust.nl/tarieven/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "hele jaar",
+    "site": "hele jaar, winter beperkt",
+    "citaat": "Fietsers en Camper Camping Heiderust is het gehele jaar geopend.",
+    "url": "https://heiderust.nl/tarieven/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "€0,55 per kWh",
+    "site": "€0,55 per kWh",
+    "citaat": "Stroom (10 Amp.) € 0.55 per kWh",
+    "url": "https://heiderust.nl/tarieven/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "gratis",
+    "citaat": "Storten chemisch toilet Gratis Lozen grijs water Gratis",
+    "url": "https://heiderust.nl/tarieven/"
+   }
+  }
+ },
+ {
+  "slug": "de-zandweg-zierikzee",
+  "naam": "De Zandweg",
+  "soort": "camperplaats",
+  "provincie": "Zeeland",
+  "website": "https://camperplaatszierikzee.nl/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "geen vaste tijden, max. 72 uur",
+    "citaat": "Er zijn geen vaste aankomst of vertrektijden.",
+    "url": "https://camperplaatszierikzee.nl/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "geen vaste aankomst (times_note)",
+    "site": "geen vaste aankomsttijd",
+    "citaat": "Er zijn geen vaste aankomst of vertrektijden.",
+    "url": "https://camperplaatszierikzee.nl/"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€14,25 + toeristenbelasting €2,04 p.p.",
+    "site": "€14,25 incl. stroom; toeristenbelasting €2,04 (hoog) / €1,83 (laag)",
+    "citaat": "De prijs per overnachting is € 14.25, inclusief stroom, water, lozen afvalwater en toilet",
+    "url": "https://camperplaatszierikzee.nl/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "hele jaar",
+    "site": "365 dagen",
+    "citaat": "De camperplaats is 365 dagen per jaar open.",
+    "url": "https://camperplaatszierikzee.nl/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "10A, inbegrepen",
+    "citaat": "Stroomvoorziening 10 Amp",
+    "url": "https://camperplaatszierikzee.nl/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "inbegrepen",
+    "citaat": "vuilwater en chemisch toilet lozen",
+    "url": "https://camperplaatszierikzee.nl/"
+   }
+  }
+ },
+ {
+  "slug": "camping-gideonse-serooskerke",
+  "naam": "Camping Gideonse",
+  "soort": "camping",
+  "provincie": "Zeeland",
+  "website": "https://minicamping-gideonse.nl",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "fout",
+    "wij": "Geen vaste vertrektijd",
+    "site": "reguliere vertrektijd 11:00, late check-out tot 19:00 op aanvraag",
+    "citaat": "De reguliere vertrektijd is 11:00 uur.",
+    "url": "https://minicamping-gideonse.nl/tarieven/extra-opties/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "Aankomst vanaf 13:30",
+    "site": "vanaf 13:30",
+    "citaat": "De reguliere aankomsttijd is vanaf 13:30 uur.",
+    "url": "https://minicamping-gideonse.nl/tarieven/extra-opties/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "geen nachtprijs; extra's 'Kind €8,18', 'Per persoon €3,50', toeristenbelasting €1,68",
+    "site": "nachtprijs alleen via boekingssysteem; €8,18 is het tarief voor een logé t/m 17 jaar en €3,50 het bezoekerstarief",
+    "citaat": "Logé t/m 17 jaar — € 8,18 (€ 6,50 + toeristenbelasting € 1,68) ... Bezoek — € 3,50 per persoon",
+    "url": "https://minicamping-gideonse.nl/tarieven/extra-opties/"
+   },
+   "seizoen": {
+    "oordeel": "ontbreekt",
+    "wij": "leeg",
+    "site": "1 april tot half oktober",
+    "citaat": "Onze minicamping is geopend van 1 april (of de zaterdag ervoor) tot half oktober.",
+    "url": "https://minicamping-gideonse.nl/tarieven/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "10A, 6 kWh per nacht inbegrepen, daarna €0,60/kWh",
+    "citaat": "Stroomverbruik tot 6 kWh per nacht inbegrepen",
+    "url": "https://minicamping-gideonse.nl/tarieven/"
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "lozen ja",
+    "site": "",
+    "citaat": "",
+    "url": "https://minicamping-gideonse.nl/tarieven/"
+   }
+  }
+ },
+ {
+  "slug": "de-victorie-lopik",
+  "naam": "De Victorie",
+  "soort": "camping",
+  "provincie": "Utrecht",
+  "website": "https://www.campingdevictorie.nl",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "geen tijden",
+    "citaat": "Wij hebben namelijk geen aankomst- en vertrektijden op onze camping.",
+    "url": "https://www.campingdevictorie.nl/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "geen tijden (times_note)",
+    "site": "geen aankomsttijden",
+    "citaat": "GEEN AANKOMST- EN VERTREKTIJDEN!",
+    "url": "https://www.campingdevictorie.nl/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€25 + extra's 'Per persoon €25 per nacht' en 'Stroom €0,60/kWh'",
+    "site": "€25 voor 2 personen incl. stroom en toeristenbelasting; extra persoon €5",
+    "citaat": "Basistarief voor 2 personen: €25,00 per nacht. Inbegrepen: ... een camper, stroom, toeristenbelasting ... Elke persoon meer of minder €5,- per nacht",
+    "url": "https://www.campingdevictorie.nl/tarieven-27/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "15 maart – 31 oktober",
+    "site": "15 maart t/m 31 oktober",
+    "citaat": "Het kampeerseizoen loopt bij ons van 15 maart tot en met 31 oktober.",
+    "url": "https://www.campingdevictorie.nl/tarieven-27/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "inbegrepen in basistarief",
+    "citaat": "Inbegrepen: caravan, tent of vouwwagen met auto of een camper, stroom",
+    "url": "https://www.campingdevictorie.nl/tarieven-27/"
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "leeg",
+    "site": "",
+    "citaat": "",
+    "url": "https://www.campingdevictorie.nl/tarieven-27/"
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-bloemenveld-leek",
+  "naam": "Camperplaats Bloemenveld",
+  "soort": "camperplaats",
+  "provincie": "Groningen",
+  "website": "https://www.camperplaats-bloemenveld.nl/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "fout",
+    "wij": "Geen vaste vertrektijd (vrij)",
+    "site": "24-uursprincipe: aankomsttijd = vertrektijd (hoort per24)",
+    "citaat": "We hanteren geen aankomst- en vertrektijden. (24 uurs principe, aankomsttijd = vertrektijd).",
+    "url": "https://www.camperplaats-bloemenveld.nl/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "geen tijden (times_note)",
+    "site": "geen aankomsttijden",
+    "citaat": "Bij aankomst hoeft u zich niet te melden.",
+    "url": "https://www.camperplaats-bloemenveld.nl/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "vanaf €16,50, hoogste €50",
+    "site": "€16,50 voor camper met 2 personen, extra volwassene €2,50; geen €50 te vinden",
+    "citaat": "Camper met twee personen: € 16,50. Extra volwassene € 2,50.",
+    "url": "https://www.camperplaats-bloemenveld.nl/"
+   },
+   "seizoen": {
+    "oordeel": "fout",
+    "wij": "1 april – 30 september",
+    "site": "hele jaar welkom",
+    "citaat": "U bent het hele jaar van harte welkom!",
+    "url": "https://www.camperplaats-bloemenveld.nl/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "10A inbegrepen",
+    "citaat": "Stroom (10A), wifi en alle voorzieningen zijn inbegrepen",
+    "url": "https://www.camperplaats-bloemenveld.nl/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "spoelplaats en chemisch toilet",
+    "citaat": "U kunt water lozen op de spoelplaats.",
+    "url": "https://www.camperplaats-bloemenveld.nl/"
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-landgraaf-landgraaf",
+  "naam": "Camperplaats Landgraaf",
+  "soort": "camperplaats",
+  "provincie": "Limburg",
+  "website": "https://www.camperplaatslandgraaf.nl/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "fout",
+    "wij": "Geen vaste vertrektijd",
+    "site": "site noemt geen vertrekregel; alleen dat in- en uitchecken 24/7 via een zuil kan",
+    "citaat": "Selfservice checkin/checkout (24/7)",
+    "url": "https://www.camperplaatslandgraaf.nl/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "24/7",
+    "site": "24/7 inchecken",
+    "citaat": "24/7 inchecken",
+    "url": "https://www.camperplaatslandgraaf.nl/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€15, geen toeslagen",
+    "site": "€15 (jan-apr, okt-dec) en €16 (mei-sep) voor 2 personen incl. belasting; stroom €0,70/kWh, water €0,50 per 50 l",
+    "citaat": "€ 15,00 • 1 jan t/m 30 apr & 1 okt t/m 31 dec · € 16,00 • 1 mei t/m 30 sep (2 pers. incl. belasting) · € 0,70 per kWh",
+    "url": "https://www.camperplaatslandgraaf.nl/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "hele jaar",
+    "site": "hele jaar",
+    "citaat": "Hele jaar open",
+    "url": "https://www.camperplaatslandgraaf.nl/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "16A, €0,70/kWh",
+    "citaat": "Stroom (16 ampère)",
+    "url": "https://www.camperplaatslandgraaf.nl/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "cassette en afvalwater",
+    "citaat": "Lozen cassettetoilet · Lozen afvalwater",
+    "url": "https://www.camperplaatslandgraaf.nl/"
+   }
+  }
+ },
+ {
+  "slug": "camping-zandman-beerze",
+  "naam": "Camping Zandman",
+  "soort": "camping",
+  "provincie": "Overijssel",
+  "website": "https://www.zandmanbeerze.nl/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "vrije tijden",
+    "citaat": "Vrije vertrek- en aankomsttijden",
+    "url": "https://www.zandmanbeerze.nl/camping/camperplaats/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "vrij (times_note)",
+    "site": "elk moment, 7 dagen",
+    "citaat": "U kunt op elk gewenst moment van de van de dag (7 dagen per week) aankomen",
+    "url": "https://www.zandmanbeerze.nl/camping/camperplaats/"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€22,50 incl. toeristenbelasting; extra's o.a. toeristenbelasting €1,10 p.p.",
+    "site": "€22,50 (SVR) of €24,50 (geen SVR) voor 2 personen incl. stroom en toeristenbelasting",
+    "citaat": "€ 22,50/per dag inclusief toeristenbelasting ( SVR- DONATEUR ) ... € 24,50/per dag ... ( NIET DONATEUR SVR )",
+    "url": "https://www.zandmanbeerze.nl/camping/tarieven/"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "leeg",
+    "site": "",
+    "citaat": "",
+    "url": "https://www.zandmanbeerze.nl/camping/tarieven/"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "stroom inbegrepen",
+    "citaat": "inclusief milieukosten en gebruik van stroom",
+    "url": "https://www.zandmanbeerze.nl/camping/tarieven/"
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "leeg",
+    "site": "",
+    "citaat": "",
+    "url": "https://www.zandmanbeerze.nl/camping/voorzieningen/"
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-leenderstrijp-cranendonck",
+  "naam": "Camperplaats Leenderstrijp",
+  "soort": "camperplaats",
+  "provincie": "Noord-Brabant",
+  "website": "https://www.streejp.nl/c",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "geen vaste tijden",
+    "citaat": "geen vaste aankomst- of vertrektijden!",
+    "url": "https://www.streejp.nl/camperplaats"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "geen tijden (times_note)",
+    "site": "geen vaste aankomsttijd",
+    "citaat": "geen vaste aankomst- of vertrektijden!",
+    "url": "https://www.streejp.nl/camperplaats"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "vanaf €20, hoogste €22,50; extra persoon €3,75",
+    "site": "€22,50 voor 2 personen, €20 voor 1, incl. toeristenbelasting en stroom (opgeslagen URL /c geeft 404)",
+    "citaat": "Staanplaats 2 personen € 22,50 Staanplaats 1 persoon € 20,00 Extra persoon vanaf 4 jaar € 3,75",
+    "url": "https://www.streejp.nl/camperplaats"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "hele jaar",
+    "site": "hele jaar",
+    "citaat": "Wij zijn het hele jaar geopend!",
+    "url": "https://www.streejp.nl/camperplaats"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "stroom ja",
+    "site": "tot 8A inbegrepen",
+    "citaat": "ruime staanplaatsen 65 m2 met elektriciteit tot 8 ampère",
+    "url": "https://www.streejp.nl/camperplaats"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "servicestation",
+    "citaat": "servicestation (legen vuilwatertank en reinigen toiletcassette)",
+    "url": "https://www.streejp.nl/camperplaats"
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-uden-maashorst-uden",
+  "naam": "camperplaats Uden Maashorst",
+  "soort": "camperplaats",
+  "provincie": "Noord-Brabant",
+  "website": "https://devleu.nl",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "geen vaste tijden, betalen per overnachting",
+    "citaat": "Wij hanteren géén vaste aankomst- of vertrektijden.",
+    "url": "https://devleu.nl/"
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "24/7",
+    "site": "incheck 24/7",
+    "citaat": "Onze digitale incheckzuil is 24/7 actief.",
+    "url": "https://devleu.nl/"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "vanaf €5, hoogste €19,50; extra 'Per persoon €19,50'",
+    "site": "€19,50 voor 2 personen, €18 voor 1, incl. toeristenbelasting; extra persoon €5; stroom €0,60/kWh",
+    "citaat": "2 personen € 19,50 en 1 persoon € 18,00 (vooraf) per extra persoon + € 5,00",
+    "url": "https://devleu.nl/"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "hele jaar",
+    "site": "hele jaar",
+    "citaat": "Het hele jaar geopend.",
+    "url": "https://devleu.nl/"
+   },
+   "stroom": {
+    "oordeel": "fout",
+    "wij": "Geen stroom (power=false)",
+    "site": "24 van 40 plaatsen met 16A stroom, €0,60/kWh",
+    "citaat": "Excl. 16A stroom, € 0,60 per KWh.",
+    "url": "https://devleu.nl/"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "grijs water en cassette",
+    "citaat": "Twee service stations voor het vullen van drinkwater en het lozen van grijs water.",
+    "url": "https://devleu.nl/"
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-westerwijtwerd-bedum",
+  "naam": "Camperplaats Westerwijtwerd",
+  "soort": "camperplaats",
+  "provincie": "Groningen",
+  "website": "https://www.camperplaatswesterwijtwerd.nl/",
+  "leesbaar": true,
+  "velden": {
+   "vertrek": {
+    "oordeel": "juist",
+    "wij": "Geen vaste vertrektijd",
+    "site": "geen vertrektijden",
+    "citaat": "wij hanteren geen vertrektijden en u hoeft zich niet af te melden.",
+    "url": "https://www.camperplaatswesterwijtwerd.nl/in-en-uitchecken"
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": "",
+    "site": "alleen: zelf plekje uitzoeken",
+    "citaat": "U hoeft zich niet te melden en kunt zelf een plekje uitzoeken!!",
+    "url": "https://www.camperplaatswesterwijtwerd.nl/in-en-uitchecken"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€17 + stroom €3 + 'Per persoon €3,50' + douche €1",
+    "site": "€19 incl. 2 personen en toeristenbelasting; extra persoon €3; stroom €3",
+    "citaat": "Tarief € 19.-/nacht incl. 2 personen en incl. € 3.50 toeristenbelasting ... Extra persoon € 3,-/nacht",
+    "url": "https://www.camperplaatswesterwijtwerd.nl/tarieven"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "1 april – 1 oktober",
+    "site": "1 april tot 1 oktober",
+    "citaat": "Geopend van 1 april tot 1 oktober.",
+    "url": "https://www.camperplaatswesterwijtwerd.nl/in-en-uitchecken"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": "€3 per nacht",
+    "site": "€3 per nacht, 6A",
+    "citaat": "Elektra € 3,-/nacht",
+    "url": "https://www.camperplaatswesterwijtwerd.nl/tarieven"
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": "lozen ja",
+    "site": "vuilwater en cassette",
+    "citaat": "Ledigen van vuilwater en cassettetoilet",
+    "url": "https://www.camperplaatswesterwijtwerd.nl/voorzieningen"
+   }
+  }
+ }
+]
