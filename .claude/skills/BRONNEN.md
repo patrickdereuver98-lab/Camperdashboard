@@ -54,6 +54,19 @@ Op 16 november 2026 toegevoegd (verzoek eigenaar, voor `plan-orchestrate`): uit 
   **CLAUDE.md gaat voor** (Nederlandse commits, PR naar `acceptatie`, `npm run check` en een offline build vóór een push,
   migraties pas live na samenvoegen).
 
+## Orchestrator (Fable stuurt, Sonnet voert uit)
+
+Op 16 november 2026 toegevoegd (verzoek eigenaar): profiel `Claude-FableMedium-SonnetMax` uit
+github.com/rajatmshukla/claude-opus-sonnet-orchestrator (commit d5894f8, Apache 2.0, licentie in
+`opus-orchestrator/LICENSE`). Niet met de installer, maar met de hand:
+
+- Agents in `.claude/agents/`: `explorer`, `worker`, `tester`, `researcher` (Sonnet, denkstand max) en `reviewer`
+  (Fable, alleen lezen). Skill `opus-orchestrator` in deze map.
+- `.claude/settings.json` is **samengevoegd**, niet vervangen: de vaste rechten blijven. Erbij: `model: fable`,
+  `effortLevel: medium`, subagents op Sonnet, en **2** agents tegelijk in plaats van 4 (gebruikslimiet; de review van
+  november liep twee keer vast). Hun `sandbox`-instelling en `defaultMode` zijn niet overgenomen.
+- Hun projectregels staan als één punt in `CLAUDE.md`; CLAUDE.md en `docs/specs/` gaan voor.
+
 ## /brag (launch-video's)
 
 Op 2 november 2026 toegevoegd (verzoek eigenaar, marketingplan `docs/marketing/plan.md` §3.4):

@@ -20,5 +20,11 @@
       "Bash(sed:*)",
       "Bash(jq:*)"
     ]
+  },
+  "model": "fable",
+  "effortLevel": "medium",
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "2"
   }
 }
