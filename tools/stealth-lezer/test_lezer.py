@@ -227,3 +227,13 @@ def test_lege_wachtrij_zegt_klaar(tmp_path, monkeypatch):
     assert lezer.main() == 0
     assert out.read_text() == "meer=false\n"
     assert len(readers) == 1 and readers[0].gesloten
+
+
+def test_run_waarin_alles_faalt_is_rood():
+    """R72: alles mislukt of fouten niet vast te leggen geeft exitcode 1; een paar fouten tussen goede plekken niet."""
+    from lezer import exit_code
+
+    assert exit_code(done=5, errors=5, record_failed=0) == 1
+    assert exit_code(done=5, errors=2, record_failed=1) == 1
+    assert exit_code(done=5, errors=2, record_failed=0) == 0
+    assert exit_code(done=0, errors=0, record_failed=0) == 0
