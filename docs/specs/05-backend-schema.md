@@ -293,7 +293,12 @@ Paden onder `/support/` gaan via `private.safe_path()` als `/support/[token]` de
 bezoeker, in het werkgeheugen van de server.
 
 Beheer markeert handmatig gewijzigde velden met `admin_mark_beheer(plek, velden[])`, dat ze server-side toevoegt aan
-`sources.beheer` zonder de rest van `sources` te overschrijven.
+`sources.beheer` zonder de rest van `sources` te overschrijven. Sinds migratie `20261118100000_beheerslot` (review 16 november 2026, R61) zetten
+ook `check_departure` (bevestigd of voorwaardelijk, niet bij afwijzen) en `mark_departure_checked` (vertrektijd uit de
+inbox) een slot op `departure`, `checkout_until` en `times_note`, en hebben de 40 prijzen uit de nacontrole van 8 november
+een slot op `price_eur`. Zegt een nieuwe lezing iets anders bij een vastgezet kernfeit (prijs, vertrekregel, tijd,
+seizoen, jaarrond, bronzin), dan zet `apply_scrape` dat als voorstel met bron `pipeline` in `updates_queue` (één open
+voorstel per plek, veld en waarde). Het slot zelf zetten gebeurt via `private.lock_fields` (alleen voor functies).
 
 Exporteren: `export_snapshot()` geeft alle gepubliceerde plekken, woonplaatsen, FAQ en reviews als JSON.
 
