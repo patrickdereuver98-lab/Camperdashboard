@@ -20,6 +20,7 @@
 | `consent_log` | Bewijs van cookiekeuze |
 | `audit_log` | Wie heeft wat veranderd in beheer |
 | `app_logs` | Systeem- en pipelinemeldingen, clientfouten |
+| `private.field_log` | Elke wijziging van een kernfeit door `apply_scrape`: plek, veld, oude en nieuwe waarde, parser, tijd. 180 dagen bewaard (cron `veldlog-opschonen`). Migratie `20261118200000_wislog_en_kanalen` (review 16 november 2026, R62) |
 | `ingest_runs` | Verloop van data-imports |
 | `nl_towns` | Woonplaatsen met coördinaten (zoeken en dichtstbijzijnde plaats) |
 | `route_cache` | Gecachete routes en rijtijden |
