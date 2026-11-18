@@ -21,7 +21,7 @@ import {
 import { usePlaces, useVehicle } from "@/lib/store";
 import { applyVehicle } from "@/lib/vehicle";
 import { requestMyLocation, useMyLocation } from "@/lib/my-location";
-import { useMediaQuery } from "@/lib/use-media";
+import { useHydrated, useMediaQuery } from "@/lib/use-media";
 import { pluralize } from "@/lib/format";
 import { DestinationSearch } from "@/components/destination-search";
 import { FilterSheet } from "@/components/filter-sheet";
@@ -271,7 +271,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
             </div>
           )}
           {results && places && results.length === 0 && <Empty filters={filters} places={places} onChange={update} />}
-          {results && results.length > 0 && <Results key={resultsKey} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} />}
+          {results && results.length > 0 && <Results key={resultsKey} queryKey={resultsKey} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} />}
         </section>
       </div>
 
@@ -344,13 +344,30 @@ function DepartureIntro({ page, filters }: { page?: DeparturePage; filters: Filt
   );
 }
 
+/**
+ * Hoeveel plekken er open staan per zoekopdracht, voor deze sessie. Tik je een plek aan en ga je terug, dan staan er
+ * weer evenveel plekken en kan de browser je terugzetten waar je was (UX-audit november, K1).
+ */
+const SHOWN_KEY = "vrijstaan:getoond";
+
+function readShown(queryKey: string): number {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SHOWN_KEY) ?? "null") as { q?: string; n?: number } | null;
+    return saved?.q === queryKey && typeof saved.n === "number" && saved.n > PAGE ? saved.n : PAGE;
+  } catch {
+    return PAGE;
+  }
+}
+
 function Results({
+  queryKey,
   results,
   total,
   fromServer,
   hovered,
   onHover,
 }: {
+  queryKey: string;
   results: Result[];
   /** Kan groter zijn dan results, zolang alleen de eerste plekken van de server er zijn */
   total: number;
@@ -359,7 +376,24 @@ function Results({
   hovered: string | null;
   onHover: (s: string | null) => void;
 }) {
-  const [limit, setLimit] = useState(PAGE);
+  // Terug van een plek (navigatie in de browser): meteen evenveel plekken als toen, zodat de browser je scrollpositie
+  // kan terugzetten. Bij de eerste keer laden (HTML van de server) eerst 20, daarna het aantal van deze sessie.
+  const hydrated = useHydrated();
+  const [limit, setLimit] = useState(() => (hydrated ? readShown(queryKey) : PAGE));
+  useEffect(() => {
+    const n = readShown(queryKey);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage bestaat pas in de browser
+    if (n > PAGE) setLimit((l) => Math.max(l, n));
+  }, [queryKey]);
+  const showMore = () => {
+    const n = limit + PAGE;
+    setLimit(n);
+    try {
+      sessionStorage.setItem(SHOWN_KEY, JSON.stringify({ q: queryKey, n }));
+    } catch {
+      // Opslag uit (privévenster): dan begint de lijst bij terugkomen weer bij 20
+    }
+  };
   const [animate] = useState(!fromServer);
   return (
     <>
@@ -374,7 +408,7 @@ function Results({
         <div className="mt-6 text-center">
           <button
             type="button"
-            onClick={() => setLimit((l) => l + PAGE)}
+            onClick={showMore}
             className="h-12 rounded-lg border border-line bg-surface px-6 font-semibold hover:border-forest"
           >
             Toon meer plekken

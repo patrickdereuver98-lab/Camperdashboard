@@ -1,4 +1,5 @@
 "use client";
+import { afterSheetClose } from "@/lib/sheet-history";
 import { pluralize } from "@/lib/format";
 
 import { useMemo, useState } from "react";
@@ -109,8 +110,10 @@ export function FilterSheet({
           <button
             type="button"
             onClick={() => {
-              onApply(draft);
+              // Eerst sluiten; het nieuwe adres pas als de sheet zijn stap uit de geschiedenis heeft gehaald (G1)
+              const next = draft;
               onClose();
+              afterSheetClose(() => onApply(next));
             }}
             disabled={count === 0}
             className="h-12 flex-1 rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60"

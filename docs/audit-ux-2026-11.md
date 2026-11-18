@@ -8,6 +8,9 @@
 > 2027. Een handvol punten is klein, raakt geen data en lost iets op wat nu stuk voelt; die staan in §1 als "kan vóór de
 > livegang" en vragen een besluit van Patrick.
 
+**Stand 18 november 2026:** G1, G2 en K1 zijn gebouwd (op verzoek van Patrick, vóór de livegang), met e2e-tests in
+`web/e2e/gestures.spec.ts`. De rest staat open.
+
 Tekens bij elk punt: **S** = een paar uur, **M** = een dag, **L** = meerdere dagen. Plaatsen in de code zijn relatief
 aan `web/src/`.
 
