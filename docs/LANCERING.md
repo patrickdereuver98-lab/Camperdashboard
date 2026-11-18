@@ -33,7 +33,7 @@ prijsbelofte (R22), bevriezen (R41), sturing (R42), README 109, 113, 114 en 115.
 | Voorwaarde | Stand 16 november | Wat ontbreekt |
 |---|---|---|
 | 1. Juridisch en beheer | ⬜ Niet gehaald | Bedrijfsgegevens leeg in `lib/company.ts` (Patrick), domein en contactadres, site achter Vercel-login (16 november nog 302). B1 dicht. Bewaartermijnen draaien. Nieuw: geen enkele back-up (R59), privacyverklaring noemt niet alle bronnen (R90) |
-| 2. Kernbelofte | ⬜ Achteruit | 1.456 van 2.176 met vertrekregel (67%), prijs 1.174 (54%). Steekproef 16 november: vertrekregel 75% juist, prijs 39%; op Zonder vertrektijd 5 van 18 fout en 0 door een mens bevestigd (R56). Stealth-lezer staat stil sinds 9 november (R58). Besluit over de eis bij Patrick |
+| 2. Kernbelofte | 🔄 Deels | 18 november: Zonder vertrektijd 25 plekken, waarvan 20 door beheer bevestigd na lezing van de eigen site (was 0 van 32). 1.438 van 2.164 met vertrekregel (66%), prijs 1.115 (52%) na het legen van foute waarden. Stealth-lezer gerepareerd in #150, nog niet live. Besluit over de 90%-eis bij Patrick |
 | 3. Kwaliteit | 🔄 Niet aangetoond | Lab 16 november (trage 4G, CPU x4, 390 px): LCP onder 1,5 s behalve Mijn reis (2,9 s), TBT start 675 ms, Mijn reis 1.268 ms (R65); axe 0 meldingen op 8 pagina's in licht en donker. Eerder, lab na golf 2: plekpagina TBT 229 ms en LCP 1,1 s, start TBT 179 ms, zoeken TBT 594 ms en LCP 3,0 s (te hoog). WCAG AA-punten uit de review gebouwd. Productie niet meetbaar zolang de site achter een login staat |
 
 ## Live gezet na het samenvoegen van PR #143 en #144 (8 november 2026)
@@ -104,8 +104,8 @@ Gaat vóór de rest van fase 1 en 2. Volgorde: eerst beheer beschermen en meten,
 | A.1 Back-up maken en openen (R59) | ⬜ | Patrick | Geheimen zetten, workflow starten |
 | A.2 Stealth-lezer repareren, zelfstart begrenzen (R58, R72) | 🔄 | Agent | PR #150; naar `main` pas na #151 en #155. Patrick: workflow tot dan uitschakelen |
 | A.3 Beheerslot voor bevestigingen en nacontrole (R61) | 🔄 | Agent | PR #151 (migratie `20261118100000`) |
-| A.4 Zonder vertrektijd: 32 plekken met de hand (R56) | ⬜ | Agent + Patrick | |
-| A.5 Risicogroepen foute vertrektijden en prijzen nalopen of legen (R57, R60) | ⬜ | Agent | Wacht op A.1 (back-up) |
+| A.4 Zonder vertrektijd: 32 plekken met de hand (R56) | ✅ | Agent | Live 18 november: 20 bevestigd en 3 voorwaardelijk na lezing van de eigen site; 3 naar hun echte vaste tijd (Gideonse 11:00, Heiderust 12:00, Mastendol 12:00), 4 naar onbekend; 2 niet te bevestigen (Duynparc, Landgoed Jonker). Op slot; back-up `private.a4_vertrek_20261118` |
+| A.5 Risicogroepen foute vertrektijden en prijzen nalopen of legen (R57, R60) | ✅ | Agent | Live 18 november: 14 vertrektijden uit aankomst-, huur- of toeslagzinnen geleegd, Willemshoeve naar 11:00; 59 prijzen geleegd (gelijk aan een toeslag, camping onder € 8 zonder akkoord, € 75), 5 gecorrigeerd; alles op slot. 12 plekken onder de drempel (nu concept). Back-up `private.a5_kernfeiten_20261118`. Nog open: 32 bronzinnen met twee tijden (B.3) |
 | A.6 Beloftes op start en FAQ, standaard 11:00 weg (R66, R83) | 🔄 | Agent | PR #153; FAQ live bijgewerkt op 18 november |
 | B.1 Wislog, momentopname, `health()` per kanaal (R62, R64) | 🔄 | Agent | PR #155 (op #151, migratie `20261118200000`) |
 | B.2 Gouden set en lezer in CI (R69) | ⬜ | Agent | |
