@@ -3,7 +3,7 @@
 > Het enige statusbord tot de livegang (besluit R42, 8 november 2026). Wat hier staat, gaat voor statussen elders;
 > het [implementatieplan](specs/06-implementatieplan.md) en de [open punten](specs/README.md) blijven het archief.
 > Bron van de werkpakketten: [review november](review-2026-11.md) §4 en [review 16 november](review-2026-11-16.md) §6.
-> Bijgewerkt: 16 november 2026, live database gecontroleerd op die dag.
+> Bijgewerkt: 18 november 2026 (PR's #150 tot en met #156), live database gecontroleerd op 16 november.
 
 Tekens: ✅ klaar in code (zie kolom Live), 🔄 bezig of deels, ⬜ nog niet begonnen.
 Eigenaar: **Agent** bouwt, **Patrick** beslist of zet instellingen.
@@ -102,16 +102,17 @@ Gaat vóór de rest van fase 1 en 2. Volgorde: eerst beheer beschermen en meten,
 | Werkpakket | Status | Eigenaar | Rest |
 |---|---|---|---|
 | A.1 Back-up maken en openen (R59) | ⬜ | Patrick | Geheimen zetten, workflow starten |
-| A.2 Stealth-lezer repareren, zelfstart begrenzen (R58) | ⬜ | Agent | Nog niet laten lezen tot A.3 klaar is |
-| A.3 Beheerslot voor bevestigingen en nacontrole (R61) | ⬜ | Agent | |
+| A.2 Stealth-lezer repareren, zelfstart begrenzen (R58, R72) | 🔄 | Agent | PR #150; naar `main` pas na #151 en #155. Patrick: workflow tot dan uitschakelen |
+| A.3 Beheerslot voor bevestigingen en nacontrole (R61) | 🔄 | Agent | PR #151 (migratie `20261118100000`) |
 | A.4 Zonder vertrektijd: 32 plekken met de hand (R56) | ⬜ | Agent + Patrick | |
-| A.5 Risicogroepen foute vertrektijden en prijzen nalopen of legen (R57, R60) | ⬜ | Agent | |
-| A.6 Beloftes op start en FAQ, standaard 11:00 weg (R66, R83) | ⬜ | Agent | |
-| B.1 Wislog, momentopname, `health()` per kanaal (R62, R64) | ⬜ | Agent | |
+| A.5 Risicogroepen foute vertrektijden en prijzen nalopen of legen (R57, R60) | ⬜ | Agent | Wacht op A.1 (back-up) |
+| A.6 Beloftes op start en FAQ, standaard 11:00 weg (R66, R83) | 🔄 | Agent | PR #153; FAQ live bijgewerkt op 18 november |
+| B.1 Wislog, momentopname, `health()` per kanaal (R62, R64) | 🔄 | Agent | PR #155 (op #151, migratie `20261118200000`) |
 | B.2 Gouden set en lezer in CI (R69) | ⬜ | Agent | |
 | B.3 Extractor met context en prijsetiketten (R63, R60) | ⬜ | Agent | |
 | B.4 Herlezing in porties (R58, R62) | ⬜ | Agent | Na B.1 tot en met B.3 |
-| B.5 Niets stil weggooien (R68, R71, R72, R73) | ⬜ | Agent | |
+| B.5 Niets stil weggooien (R68, R71, R72, R73) | 🔄 | Agent | PR #156 (migratie `20261118300000`, daarna `discover` uitrollen); R72 in #150 |
+| Next.js 16.4.6 tegen twee middelzware cachelekken | 🔄 | Agent | PR #154 |
 | C.1 Mijn reis snel en offline (R65) | ⬜ | Agent | Fase 2 |
 | C.2 Back-up compleet, crons als migratie, constraints (R67, R79) | ⬜ | Agent | Fase 2 |
 | C.3 Draaiboek, uptime-check, Dependabot (R89, R91) | ⬜ | Agent + Patrick | Fase 2 |
