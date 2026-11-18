@@ -128,7 +128,7 @@ export function OwnerUpdate({
               value={departure}
               onChange={setDeparture}
               fieldClass={input}
-              checkoutDefault={initial.vertrek_uiterlijk || "11:00"}
+              checkoutDefault={initial.vertrek_uiterlijk || ""}
             />
             <label className="block">
               <span className="mb-1.5 block font-semibold">Aankomst vanaf</span>
