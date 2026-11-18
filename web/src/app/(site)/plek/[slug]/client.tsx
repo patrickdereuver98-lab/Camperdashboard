@@ -14,6 +14,7 @@ import { useHydrated } from "@/lib/use-media";
 import type { Photo, Place as PlaceFacilities, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { PlacePhoto } from "@/components/place-ui";
+import { ACTION_TILE } from "@/lib/action-tile";
 import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
 import { RadioCards } from "@/components/radio-cards";
@@ -817,7 +818,7 @@ export function TrackView({ slug }: { slug: string }) {
   return null;
 }
 
-export function ShareButton({ title, className = "" }: { title: string; className?: string }) {
+export function ShareButton({ title, className = "", variant = "full" }: { title: string; className?: string; variant?: "full" | "tile" }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -836,10 +837,14 @@ export function ShareButton({ title, className = "" }: { title: string; classNam
           setTimeout(() => setCopied(false), 2000);
         }
       }}
-      className={`flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest ${className}`}
+      className={
+        variant === "tile"
+          ? `${ACTION_TILE} ${className}`
+          : `flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest ${className}`
+      }
     >
-      <Icon name={copied ? "check" : "share"} size={19} />
-      {copied ? "Link gekopieerd" : "Delen"}
+      <Icon name={copied ? "check" : "share"} size={variant === "tile" ? 21 : 19} />
+      {copied ? (variant === "tile" ? "Gekopieerd" : "Link gekopieerd") : "Delen"}
     </button>
   );
 }
