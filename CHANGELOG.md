@@ -20,7 +20,7 @@ Eerste genummerde versie. Alles wat op 19 november af was, uit twaalf losse bran
 - Geschiedenis per plek: oud, nieuw en bron per veld, met terugzetten door beheer (PR #159).
 - De keten gooit geen plekken of gegevens meer stil weg (R68, R71, R73; PR #156).
 - Stealth-lezer start weer en stopt na drie mislukte runs (R58, R72; PR #150).
-- OSM per deel en na elkaar ophalen (PR #158).
+- OSM per deel en na elkaar ophalen (PR #158; pipeline 66 live, docs in PR #161).
 
 **Techniek**
 - Next.js 16.4.6 tegen twee cachelekken (PR #154) en negen kleine pakketupdates (PR #148).
