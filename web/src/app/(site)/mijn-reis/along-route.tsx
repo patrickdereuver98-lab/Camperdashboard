@@ -89,10 +89,11 @@ export function AlongRoute({
         </label>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <p className="mt-3 mb-1 text-sm font-semibold">Hoe ver van de route</p>
+      <div className="flex flex-wrap gap-2">
         {WIDTHS.map((w) => (
           <Chip key={w} pressed={width === w} onClick={() => setWidth(w)}>
-            {w} km van de route
+            {w} km
           </Chip>
         ))}
         <Chip pressed={freeOnly} onClick={() => setFreeOnly(!freeOnly)}>
