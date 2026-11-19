@@ -17,6 +17,7 @@ import { Icon } from "@/components/icons";
 import { fullPhotoSources, PlacePhoto } from "@/components/place-ui";
 import { createPortal } from "react-dom";
 import { useBackToClose } from "@/lib/sheet-history";
+import { ACTION_TILE } from "@/lib/action-tile";
 import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
 import { RadioCards } from "@/components/radio-cards";
@@ -966,12 +967,11 @@ export function TrackView({ slug, name, town }: { slug: string; name: string; to
   return null;
 }
 
-export function ShareButton({ title, text, compact = false, className = "" }: { title: string; text?: string; compact?: boolean; className?: string }) {
+export function ShareButton({ title, text, className = "", variant = "full" }: { title: string; text?: string; className?: string; variant?: "full" | "tile" }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
-      aria-label={compact ? (copied ? "Link gekopieerd" : `Deel ${title}`) : undefined}
       onClick={async () => {
         const url = location.href;
         if (navigator.share) {
@@ -988,13 +988,13 @@ export function ShareButton({ title, text, compact = false, className = "" }: { 
         }
       }}
       className={
-        compact
-          ? `grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-2 hover:bg-sunken ${className}`
+        variant === "tile"
+          ? `${ACTION_TILE} ${className}`
           : `flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest ${className}`
       }
     >
-      <Icon name={copied ? "check" : "share"} size={compact ? 21 : 19} />
-      {!compact && (copied ? "Link gekopieerd" : "Delen")}
+      <Icon name={copied ? "check" : "share"} size={variant === "tile" ? 21 : 19} />
+      {copied ? (variant === "tile" ? "Gekopieerd" : "Link gekopieerd") : "Delen"}
     </button>
   );
 }

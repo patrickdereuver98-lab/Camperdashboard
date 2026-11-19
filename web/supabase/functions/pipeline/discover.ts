@@ -72,3 +72,16 @@ export function matches(c: Candidate, html: string): boolean {
     (!!phone && phone.length === 8 && digits.includes(phone))
   );
 }
+
+/** Fout van een site die bestaat maar nu niet antwoordt (time-out of 5xx). Dan weten we niet of de site past. */
+export class SiteUnsure extends Error {}
+
+/**
+ * Is deze fout onzeker? Een time-out of serverfout zegt niets over de site; een domein dat niet bestaat (DNS) of een
+ * pagina die niet past wel. Onzeker leidt tot een nieuwe poging later in plaats van "geen website" (review R71).
+ */
+export function isUnsure(e: unknown): boolean {
+  if (e instanceof SiteUnsure) return true;
+  const name = (e as { name?: string } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError";
+}

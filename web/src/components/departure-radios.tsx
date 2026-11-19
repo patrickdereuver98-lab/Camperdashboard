@@ -17,7 +17,8 @@ export function DepartureRadios({
   value,
   onChange,
   fieldClass,
-  checkoutDefault = "11:00",
+  // Geen standaardtijd: een vooraf ingevulde 11:00 werd ongemerkt meegestuurd (review 16 november 2026, R83)
+  checkoutDefault = "",
   errorId,
 }: {
   id: string;

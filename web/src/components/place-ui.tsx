@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState, ViewTransition } from "react";
+import { useRouter } from "next/navigation";
 import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/lib/search";
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
@@ -13,6 +14,7 @@ import { isIncomplete } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
+import { ACTION_TILE } from "@/lib/action-tile";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
 import { QuickMenu, useLongPress } from "./quick-menu";
@@ -186,7 +188,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
  * (review november R55, anders hoort een schermlezer in een lijst tien keer "Bewaren in mijn reis"). De brede knop op
  * de plekpagina houdt zijn zichtbare tekst als naam (WCAG 2.5.3); daar staat de plek al in de kop.
  */
-export function SaveButton({ slug, name, variant = "icon" }: { slug: string; name: string; variant?: "icon" | "full" | "plain" | "bar" }) {
+export function SaveButton({ slug, name, variant = "icon" }: { slug: string; name: string; variant?: "icon" | "full" | "plain" | "bar" | "tile" }) {
   const trip = useTrip();
   const saved = trip.has(slug);
   const toggle = (e: React.MouseEvent) => {
@@ -198,6 +200,13 @@ export function SaveButton({ slug, name, variant = "icon" }: { slug: string; nam
       window.dispatchEvent(new CustomEvent("vrijstaan:bewaard"));
     }
   };
+  if (variant === "tile")
+    return (
+      <button type="button" onClick={toggle} aria-pressed={saved} className={`${ACTION_TILE} aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest`}>
+        <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop" : ""} />
+        {saved ? "Bewaard" : "Bewaar"}
+      </button>
+    );
   if (variant === "full")
     return (
       <button
@@ -547,6 +556,13 @@ function CardPrice({ place }: { place: PlaceSummary }) {
  * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route en Bekijk plek. Vervangt op de
  * telefoon de kleine popup van de kaart.
  */
+/** Hoe ver je het paneel moet vegen (px): omhoog opent de plek, omlaag sluit het */
+const PICK_OPEN = 56;
+const PICK_CLOSE = 72;
+
+/** Opzij vegen naar de vorige of volgende plek (UX-audit G3) */
+const PICK_SIDE = 60;
+
 export function MapPick({
   place,
   onClose,
@@ -556,51 +572,89 @@ export function MapPick({
 }: {
   place: PlaceSummary;
   onClose: () => void;
-  /** Vorige en volgende plek in de volgorde van de lijst (G3); ook met vegen */
+  /** Vorige en volgende plek in de volgorde van de lijst (G3); ook met opzij vegen */
   onPrev?: () => void;
   onNext?: () => void;
   /** "3 van 12" */
   position?: string;
 }) {
   const arrival = arrivalShort(place);
-  // Vegen (UX-audit G3): omlaag sluit, opzij naar de vorige of volgende plek. Met gewone pointer-events, zodat motion
-  // niet mee hoeft op elke pagina met plekkaarten. Knoppen blijven voor wie niet veegt (WCAG 2.5.1).
-  const card = useRef<HTMLElement>(null);
-  const start = useRef<{ x: number; y: number; id: number } | null>(null);
-  const reset = () => {
-    if (card.current) card.current.style.transform = "";
-    start.current = null;
+  const router = useRouter();
+  const href = `/plek/${place.slug}`;
+  // Vegen zoals in een kaart-app (redesign 18 november 2026): omhoog naar de plekpagina, omlaag dicht. De knoppen
+  // Route en Bekijk plek blijven de gewone weg; vegen is een snelkoppeling. Opzij vegen: vorige of volgende plek (G3).
+  const drag = useRef<{ id: number; y: number; x: number; moved: boolean; axis?: "x" | "y" } | null>(null);
+  const [dy, setDy] = useState(0);
+  const [dx, setDx] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    router.prefetch(href);
+  }, [router, href]);
+  const release = () => {
+    const d = drag.current;
+    drag.current = null;
+    setDragging(false);
+    if (!d?.moved) return setDy(0);
+    if (d.axis === "x") {
+      setDx(0);
+      if (dx <= -PICK_SIDE) onNext?.();
+      else if (dx >= PICK_SIDE) onPrev?.();
+      return;
+    }
+    if (dy <= -PICK_OPEN) {
+      setLeaving(true);
+      startTransition(() => router.push(href));
+    } else if (dy >= PICK_CLOSE) onClose();
+    else setDy(0);
   };
   return (
     <section
-      ref={card}
       aria-label={`Gekozen plek: ${place.name}`}
-      className="animate-rise absolute inset-x-2 bottom-2 z-20 touch-none rounded-2xl bg-surface p-3 shadow-float transition-transform duration-150 motion-reduce:transition-none"
       onPointerDown={(e) => {
-        if (e.pointerType === "mouse") return;
-        start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        drag.current = { id: e.pointerId, y: e.clientY, x: e.clientX, moved: false };
       }}
       onPointerMove={(e) => {
-        const s0 = start.current;
-        if (!s0 || s0.id !== e.pointerId || !card.current) return;
-        const dx = e.clientX - s0.x;
-        const dy = Math.max(0, e.clientY - s0.y);
-        if ((Math.abs(dx) > 10 || dy > 10) && !card.current.hasPointerCapture(e.pointerId)) card.current.setPointerCapture(e.pointerId);
-        if (Math.abs(dx) > 10 || dy > 10) card.current.style.transform = Math.abs(dx) > dy ? `translateX(${dx * 0.6}px)` : `translateY(${dy}px)`;
+        const d = drag.current;
+        if (!d || d.id !== e.pointerId) return;
+        const raw = e.clientY - d.y;
+        const side = e.clientX - d.x;
+        if (!d.moved) {
+          if (Math.abs(raw) < 8 && Math.abs(side) < 8) return;
+          d.moved = true;
+          // Richting ligt vast na de eerste beweging; opzij alleen als er een vorige of volgende is
+          d.axis = Math.abs(side) > Math.abs(raw) && (onPrev || onNext) ? "x" : "y";
+          setDragging(true);
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }
+        if (d.axis === "x") return setDx(side * 0.6);
+        // Omhoog met weerstand (het paneel rekt een beetje mee), omlaag volgt het je vinger
+        setDy(raw < 0 ? Math.max(raw * 0.5, -PICK_OPEN * 1.6) : raw);
       }}
-      onPointerUp={(e) => {
-        const s0 = start.current;
-        reset();
-        if (!s0 || s0.id !== e.pointerId) return;
-        const dx = e.clientX - s0.x;
-        const dy = e.clientY - s0.y;
-        if (dy > 70 && dy > Math.abs(dx)) onClose();
-        else if (dx < -60 && Math.abs(dx) > Math.abs(dy)) onNext?.();
-        else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) onPrev?.();
+      onPointerUp={release}
+      onPointerCancel={() => {
+        drag.current = null;
+        setDragging(false);
+        setDy(0);
+        setDx(0);
       }}
-      onPointerCancel={reset}
+      // Na vegen geen klik op de knop waar je vinger losliet
+      onClickCapture={(e) => {
+        if (dy !== 0 || dx !== 0 || leaving) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      style={{
+        transform: leaving ? `translateY(${-PICK_OPEN * 1.6}px)` : dx ? `translateX(${dx}px)` : dy ? `translateY(${dy}px)` : undefined,
+        opacity: leaving ? 0 : dy > 0 ? Math.max(0.4, 1 - dy / 240) : undefined,
+        transition: dragging ? "none" : "transform 220ms var(--ease-out), opacity 220ms var(--ease-out)",
+      }}
+      className="animate-rise absolute inset-x-2 bottom-2 z-20 touch-none rounded-2xl bg-surface p-3 pt-2 shadow-float select-none"
     >
-      <span aria-hidden="true" className="mx-auto -mt-1 mb-2 block h-1 w-10 rounded-full bg-line" />
+      {/* Greepje: zegt "je kunt dit omhoog vegen"; de knop Bekijk plek doet hetzelfde */}
+      <span aria-hidden="true" className="mx-auto mb-2 block h-1 w-10 rounded-full bg-line" />
       <div className="flex gap-3">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-sunken">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
@@ -617,7 +671,7 @@ export function MapPick({
           type="button"
           onClick={onClose}
           aria-label="Sluiten"
-          className="absolute top-1.5 right-1.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-sunken"
+          className="absolute top-2.5 right-1.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-sunken"
         >
           <Icon name="x" size={18} />
         </button>

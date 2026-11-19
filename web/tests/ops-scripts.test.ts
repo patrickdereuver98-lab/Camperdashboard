@@ -71,3 +71,20 @@ test("health: fouten in app_logs geven een waarschuwing, geen storing", () => {
 test("health: PostgREST kan grote getallen als tekst geven", () => {
   assert.deepEqual(evaluate(null, { ...healthy, db_bytes: "111149056", published: "2186" }, {}, NOW).errors, []);
 });
+
+// R64: per kanaal. De stealth-lezer lag van 9 tot 16 november stil terwijl last_scrape (max over alle kanalen) jong bleef
+test("health: stille stealth-lezer met open werk faalt, ook als de gewone lezer net las", () => {
+  const cur = { ...healthy, stealth_open: 1380, stealth_last: "2026-11-05T08:00:00Z", web_last: "2026-11-06T11:00:00Z" };
+  assert.match(evaluate(null, cur, {}, NOW).errors.join(), /Stealth-lezer las 28 uur niets/);
+  // Zonder open werk is stilstand geen storing
+  assert.deepEqual(evaluate(null, { ...cur, stealth_open: 0 }, {}, NOW).errors, []);
+  // Velden die er nog niet zijn (oude health()) geven geen fout
+  assert.deepEqual(evaluate(null, healthy, {}, NOW).errors, []);
+});
+
+test("health: veel gewiste kernvelden in 24 uur faalt (R62), wijzigingen alleen in het overzicht", () => {
+  assert.match(evaluate(null, { ...healthy, core_wiped_24h: 60, core_changed_24h: 300 }, {}, NOW).errors.join(), /60 kernvelden gewist/);
+  const r = evaluate(null, { ...healthy, core_wiped_24h: 5, core_changed_24h: 300 }, {}, NOW);
+  assert.deepEqual(r.errors, []);
+  assert.ok(r.lines.some((l) => /kernvelden gewijzigd \(24 uur\): 300, gewist: 5/.test(l)), r.lines.join("\n"));
+});

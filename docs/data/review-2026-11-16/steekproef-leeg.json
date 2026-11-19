@@ -1,0 +1,1282 @@
+[
+ {
+  "slug": "boerencamping-remmelink-drempt",
+  "naam": "Boerencamping Remmelink",
+  "soort": "boerderij",
+  "provincie": "Gelderland",
+  "website": "https://www.boerencampingremmelink.nl",
+  "leesbaar": "ja (start, prijslijst, contact)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets op 3 pagina's",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "juist",
+    "wij": "13:00",
+    "site": "Aankomst vanaf 13:00",
+    "citaat": "Aankomst vanaf 13:00",
+    "url": "https://www.boerencampingremmelink.nl/",
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "ontbreekt",
+    "wij": "geen nachtprijs; toeslagen Stroom 3,50, Kind 3, Per persoon 1,75, Hond 2",
+    "site": "€ 21,00 voor 2 volwassenen excl. stroom en excl. toeristenbelasting; toeristenbelasting+milieuheffing € 1,75 pppn; extra persoon € 6",
+    "citaat": "Totaalprijs 2 volwassenen, kampeermiddel, excl. stroom,excl. toeristenbelasting | € 21,00",
+    "url": "https://www.boerencampingremmelink.nl/prijslijst/",
+    "waar": "tarievenpagina, HTML-tabel (prijslijst seizoen 2025)",
+    "waarom_gemist": "nachtprijs uit tabel niet gelezen; 1,75 staat bij ons als 'Per persoon' maar is toeristenbelasting+milieuheffing"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "27 maart – 1 oktober",
+    "site": "Geopend vanaf 27 maart tot 1 oktober",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Elektriciteit, 10 Ampère p.n. € 3,50",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets gevonden",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "cornelis-pieter-hoeve-den-burg",
+  "naam": "Cornelis-Pieter Hoeve",
+  "soort": "boerderij",
+  "provincie": "Noord-Holland",
+  "website": "https://www.cphoevetexel.nl/",
+  "leesbaar": "ja (start, boerencamping, boeken, contact); boekpagina zonder leesbare tarieven",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets op 4 pagina's",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "geen tarieven in HTML; boekpagina bevat waarschijnlijk een boekingsmodule (niet gerenderd)",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "1 april – 1 oktober",
+    "site": "jaarlijks geopend van 1 april tot 1 oktober",
+    "citaat": "Boerencamping Cornelis-Pieter Hoeve is jaarlijks geopend van 1 april tot 1 oktober.",
+    "url": "https://cphoevetexel.nl/boerencamping",
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "site_zegt_niets",
+    "wij": true,
+    "site": "alleen 'wasbakken met elektrapunten' en laadpunten voor fietsen; niets over stroom op de plaats",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "stortplaats chemisch toilet",
+    "citaat": "Aan de buitenzijde van deze ruimte bevindt zich een stortplaats voor het chemisch toilet.",
+    "url": "https://cphoevetexel.nl/boerencamping",
+    "waar": "HTML-tekst",
+    "waarom_gemist": "woordkeus 'stortplaats' niet herkend (niet getest)"
+   }
+  }
+ },
+ {
+  "slug": "boerderijcamping-terweierhof-koningsbosch",
+  "naam": "Boerderijcamping Terweierhof",
+  "soort": "boerderij",
+  "provincie": "Limburg",
+  "website": "https://www.boerderijcampingterweierhof.nl",
+  "leesbaar": "ja (start, informatie & tarieven, faciliteiten, reserveren)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets op 4 pagina's",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€ 21,00; Kind 3, Per persoon 6; toeristenbelasting inbegrepen onbekend",
+    "site": "€ 21 per nacht voor 2 personen, incl. stroom en toeristenbelasting; extra persoon € 6",
+    "citaat": "Caravan, camper, vouwwagen of grote tent € 21 per nacht voor 2 personen. ... Alle prijzen zijn incl stroom en toeristenbelasting.",
+    "url": "https://www.boerderijcampingterweierhof.nl/3468/0/informatie-en-tarieven",
+    "waar": "tarievenpagina, HTML",
+    "waarom_gemist": "bedrag juist; 'incl. toeristenbelasting' niet vastgelegd (tourist_tax_included leeg)"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets over openingsperiode",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "De kampeerplekken hebben elk een stroompunt van 6 Ampere.",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "De camping heeft een chemisch toilet en een grijswaterput",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "odahoeve-reuver",
+  "naam": "Odahoeve",
+  "soort": "boerderij",
+  "provincie": "Limburg",
+  "website": "https://www.odahoeve.nl",
+  "leesbaar": "ja (start, tarieven, camper-camping, camperplaats-kessel)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "vertrek vóór 12 uur (later tegen € 13, indien mogelijk)",
+    "citaat": "Vertrek na 12 uur (indien mogelijk) | €13,-",
+    "url": "https://www.odahoeve.nl/tarieven/",
+    "waar": "tarievenpagina, HTML-tabel 'Overige tarieven' (indirect: alleen als toeslagregel)",
+    "waarom_gemist": "filter te streng/indirect: de extractor leest een toeslag voor later vertrek bewust niet als vertrektijd (getest: extract() en sentenceDeparture() geven niets)"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "aankomst vanaf 12:00 (eerder tegen € 10)",
+    "citaat": "Aankomst voor 12:00 uur | €10,-",
+    "url": "https://www.odahoeve.nl/tarieven/",
+    "waar": "tarievenpagina, HTML-tabel",
+    "waarom_gemist": "zelfde: toeslagregel, indirect"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€ 10,00; Toeristenbelasting 1,30 pppn, Stroom 0,60/kWh, Per persoon 5, Hond 1,75",
+    "site": "SVR laagseizoen € 22 (hoogseizoen € 23) excl. toeristenbelasting € 1,30 pppn en milieuheffing+afval € 2,90 p.n., incl. 4 kWh; niet-lid + € 2; extra persoon € 6",
+    "citaat": "| €22,- excl. toeristenbelasting en milieuheffing + afvalbijdrage Incl. 4 KWh elektra*",
+    "url": "https://www.odahoeve.nl/tarieven/",
+    "waar": "tarievenpagina, HTML-tabel",
+    "waarom_gemist": "€ 10 bestaat alleen als 'Leegstaand tarief ... €10,- korting per nacht' of aankomsttoeslag; verkeerde regel gekozen. Milieuheffing € 2,90 ontbreekt"
+   },
+   "seizoen": {
+    "oordeel": "fout",
+    "wij": "20 maart – 18 oktober",
+    "site": "site noemt nu alleen 19 maart 2027 – 17 oktober 2027",
+    "citaat": "Wij zijn geopend van 19 maart 2027 tot 17 oktober 2027!",
+    "url": "https://www.odahoeve.nl/",
+    "waar": "startpagina",
+    "waarom_gemist": "onze datums staan niet meer op de site (vorig seizoen)"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Elektriciteit van 6 tot 10 ampère",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "voorzieningen zoals elektriciteit, vuilwaterafvoer, water aanvoer bij of tegenover de plek",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "de-schaopswei-sint-anthonis",
+  "naam": "De Schaopswei",
+  "soort": "camperplaats",
+  "provincie": "Noord-Brabant",
+  "website": "https://deschoapswei.nl/",
+  "leesbaar": "ja (start, reserveren, contact; robots.txt onbereikbaar/000)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets op 3 pagina's",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€ 17,50; Per persoon 2",
+    "site": "€ 17,50 per dag per twee personen; extra gast € 2; stroom en lozen gratis; toeristenbelasting niet genoemd",
+    "citaat": "€ 17,50 per dag per twee personen",
+    "url": "https://deschoapswei.nl/",
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "jaarrond",
+    "site": "De moderne camperplaats is het gehele jaar geopend",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Gratis stroom 10 Ampère",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Gratis lozen afvalwater / Gratis lozen cassettetoilet",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "de-pekelder-campertuin-nieuwe-pekela",
+  "naam": "De Pekelder Campertuin",
+  "soort": "camperplaats",
+  "provincie": "Groningen",
+  "website": "https://www.pekeldercampertuin.nl/",
+  "leesbaar": "ja (start, huisregels, tarieven, hoe werkt het, voorwaarden)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "vertrek vóór de middag (12:00); bij drukte anders een extra dag",
+    "citaat": "Als u vertrekt doet u dat voor de middag, als het druk is zijn wij genoodzaakt een extra dag in rekening te brengen.",
+    "url": "https://www.pekeldercampertuin.nl/huisregels/",
+    "waar": "huisregelpagina campers, HTML-tekst",
+    "waarom_gemist": "woordkeus: 'voor de middag' is geen kloktijd; plus 'als het druk is' valt onder CONDITIONAL. Getest: extract() en sentenceDeparture() geven niets"
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "geen tijd; 'U hoeft zich niet (direct) te melden.'",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "vanaf € 15,00, hoogste € 20,00, incl. toeristenbelasting",
+    "site": "€ 15–20 per nacht (1–2 personen, met/zonder 8 A), alle prijzen incl. toeristenbelasting",
+    "citaat": "Het standaard tarief is € 20,- per nacht op basis van 2 personen inclusief 8 Ampère stroom.",
+    "url": "https://www.pekeldercampertuin.nl/tarieven/",
+    "waar": "tarievenpagina",
+    "waarom_gemist": "standaardtarief € 20 (2 pers + stroom) is beter dan 'vanaf € 15' (1 persoon zonder stroom)"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "jaarrond",
+    "site": "Wij zijn het gehele jaar geopend!",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "De houten paal is voorzien van een stroompunt",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Het lossen van grijs water en het legen van de toiletcassette op 1 handige plek.",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "beverplaats-t-mun-appeltern",
+  "naam": "Beverplaats 't Mun",
+  "soort": "camperplaats",
+  "provincie": "Gelderland",
+  "website": "https://munappeltern.nl",
+  "leesbaar": "ja, maar domein toont een SEO-tekst over visvijvers zonder links of camperinformatie (lijkt overgenomen)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "geen camperinformatie",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "site_zegt_niets",
+    "wij": "€ 15,60",
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "jaarrond (bron: website)",
+    "site": "niets; onze 'jaarrond' staat er niet",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "site_zegt_niets",
+    "wij": true,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": true,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "de-grote-glind-barneveld",
+  "naam": "De Grote Glind",
+  "soort": "camperplaats",
+  "provincie": "Gelderland",
+  "website": "https://www.degroteglind.nl/",
+  "leesbaar": "ja (start, camperplaats, tarieven)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets; openingstijden gelden voor het hondenpension",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€ 16,50; toeristenbelasting inbegrepen onbekend",
+    "site": "€ 16,50 per nacht voor 2 personen incl. toeristenbelasting, stroom, wifi en servicepunt",
+    "citaat": "De kosten voor overnachten zijn €16,50 euro per nacht voor 2 personen.",
+    "url": "https://www.degroteglind.nl/camperplaats/",
+    "waar": "camperpagina",
+    "waarom_gemist": "'inclusief toeristenbelasting' niet vastgelegd"
+   },
+   "seizoen": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "jaarrond",
+    "citaat": "Onze camperplaatsen zijn het gehele jaar in gebruik.",
+    "url": "https://www.degroteglind.nl/camperplaats/",
+    "waar": "camperpagina, HTML",
+    "waarom_gemist": "woordkeus 'het gehele jaar in gebruik' (niet getest)"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Toeristenbelasting, stroom en WiFi [inbegrepen]",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "servicepunt voor het legen van toiletten, lozen van grijs water",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "camp-surf-markermeer-lelystad",
+  "naam": "Camp & Surf Markermeer",
+  "soort": "camperplaats",
+  "provincie": "Flevoland",
+  "website": "https://www.campensurfmarkermeer.nl/camperplaatsen",
+  "leesbaar": "ja (camperplaatsen)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "check-out 11:00",
+    "citaat": "Check out 11:00 uur",
+    "url": "https://www.campensurfmarkermeer.nl/camperplaatsen",
+    "waar": "camperpagina (de URL die wij zelf als website hebben), HTML-tekst",
+    "waarom_gemist": "woordkeus: KEY kent 'check-out'/'checkout' maar niet 'check out' met spatie. Getest: extract() geeft niets"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "check-in 13:30–20:30",
+    "citaat": "Check in 13:30-20:30 uur (andere check in mogelijk in overleg via e-mail)",
+    "url": "https://www.campensurfmarkermeer.nl/camperplaatsen",
+    "waar": "camperpagina, HTML",
+    "waarom_gemist": "zelfde: 'check in' met spatie"
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€ 22,00; Toeristenbelasting 1,25, Kind 3, Per persoon 5, Hond 2",
+    "site": "camperplek vanaf € 20 (1 camper, 2 volwassenen) + toeristenbelasting € 1,25 pppn = vanaf € 22,50; 1 nacht incl. toeristenbelasting vanaf € 23",
+    "citaat": "Camperplek | vanaf € 20,00 | Prijs per nacht voor 1 camper tot 2 volwassenen",
+    "url": "https://www.campensurfmarkermeer.nl/camperplaatsen",
+    "waar": "tarieftabel",
+    "waarom_gemist": "€ 22 staat nergens; kleine afwijking"
+   },
+   "seizoen": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "20 oktober – 31 maart alleen op afspraak",
+    "citaat": "Let op, geopend tussen 20 oktober en 31 maart op afspraak, bij voorkeur per e-mail.",
+    "url": "https://www.campensurfmarkermeer.nl/camperplaatsen",
+    "waar": "HTML",
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": false,
+    "site": "Er is geen elektra-aansluiting mogelijk",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Het afvoeren van campertoiletten kan alleen met biologische schoonmaakmiddelen.",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "camperplaats-westerdijk-warten",
+  "naam": "Camperplaats Westerdijk",
+  "soort": "camperplaats",
+  "provincie": "Friesland",
+  "website": "https://westerdijk.com/camperplaatsen",
+  "leesbaar": "ja (camperplaatsen, voorwaarden, contact)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "geen tarief genoemd",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "fout",
+    "wij": "1 april – 1 november",
+    "site": "26 maart t/m 1 november",
+    "citaat": "U bent welkom om spontaan langs te komen van 26 maart tot en met 1 november.",
+    "url": "https://westerdijk.com/camperplaatsen",
+    "waar": "camperpagina",
+    "waarom_gemist": "begindatum wijkt af (oud of verkeerd gelezen)"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Stroomaansluiting van 10A",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Lozingsplaats voor uw chemisch toilet",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "driewegsluis-oldemarkt",
+  "naam": "Driewegsluis",
+  "soort": "camperplaats",
+  "provincie": "Friesland",
+  "website": "https://www.weststellingwerf.nl/driewegsluis",
+  "leesbaar": "nee: HTTP 404 (gemeentepagina bestaat niet meer)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "niet_leesbaar",
+    "wij": null,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "niet_leesbaar",
+    "wij": null,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "niet_leesbaar",
+    "wij": "€ 10,00; Per persoon 4,70, Douche 0,20",
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "niet_leesbaar",
+    "wij": null,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "niet_leesbaar",
+    "wij": true,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "niet_leesbaar",
+    "wij": true,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "de-hanenburcht-jubbega",
+  "naam": "De Hanenburcht",
+  "soort": "camping",
+  "provincie": "Friesland",
+  "website": "https://www.minicampingdehanenburcht.nl/",
+  "leesbaar": "ja (start, tarieven camping, wat bieden we, reserveren, contact)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets op 5 pagina's",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "€ 50,00 + Per persoon € 22",
+    "site": "standplaats camper 2 personen € 22 per dag excl. elektriciteit (aan de meter); toeristenbelasting € 1,10 pppn; extra persoon € 4,50",
+    "citaat": "standplaats camper, 2 personen p.d. | €22,- per dag, exclusief elektriciteit",
+    "url": "https://www.minicampingdehanenburcht.nl/?page_id=38",
+    "waar": "tarievenpagina, HTML-tabel",
+    "waarom_gemist": "€ 50 staat nergens; € 22 is de plaatsprijs voor 2 personen maar staat bij ons als 'per persoon'. Zware fout: we tonen ruim het dubbele"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "1 april – 1 oktober",
+    "site": "alleen 'Seizoensplaats (1 april tot 1 oktober)'; geen openingsperiode",
+    "citaat": "Seizoensplaats (1 april tot 1 oktober)",
+    "url": "https://www.minicampingdehanenburcht.nl/?page_id=38",
+    "waar": null,
+    "waarom_gemist": "onze periode komt van de seizoensplaats, niet van de openingstijd"
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Elektriciteit aan de meter",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "buitentoilet voor het legen van chemisch toilet",
+    "citaat": "Een buitentoilet voor het legen van je chemisch toilet",
+    "url": "https://www.minicampingdehanenburcht.nl/?page_id=30",
+    "waar": "voorzieningenpagina, HTML",
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "de-kruitmolen-arnemuiden",
+  "naam": "De Kruitmolen",
+  "soort": "camping",
+  "provincie": "Zeeland",
+  "website": "https://www.kampeerboerderijdekruitmolen.nl",
+  "leesbaar": "ja (start, minicamping, contact)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "geen tarieven",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "april – oktober",
+    "site": "Wij zijn geopend van april tot oktober.",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "site_zegt_niets",
+    "wij": true,
+    "site": "niets gevonden",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "het-reterink-lettele",
+  "naam": "Het Reterink",
+  "soort": "camping",
+  "provincie": "Overijssel",
+  "website": "https://hetreterink.nl",
+  "leesbaar": "ja (start, camping, reserveren)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "vertrek 12 uur; later tot 14 uur als de plek vrij is, langer kost € 6 pp",
+    "citaat": "Aankomst en vertrek: 12 uur. Eerder komen of later vertrekken is toegestaan tot 2 uur als de plek beschikbaar is, bij langer blijven of vroeger komen rekenen we € 6 dagbezoek per persoon extra.",
+    "url": "https://hetreterink.nl/camping/",
+    "waar": "campingpagina, HTML-tekst",
+    "waarom_gemist": "filter te streng: 'aankomst en vertrek' wordt als kopje overgeslagen (regel 'Kopje aankomst en vertrek'), daarna 'later vertrekken' als uitzondering. Getest: extract() en sentenceDeparture() geven niets"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "aankomst 12 uur",
+    "citaat": "Aankomst en vertrek: 12 uur.",
+    "url": "https://hetreterink.nl/camping/",
+    "waar": "HTML",
+    "waarom_gemist": "zelfde zin"
+   },
+   "prijs": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "plaats € 29,50 incl. 2 personen; stroom € 4 p.d.; toeristenbelasting € 0,50 pp; extra persoon € 7,50",
+    "citaat": "Plaats € 29,50 , maximaal twee personen inbegrepen",
+    "url": "https://hetreterink.nl/camping/",
+    "waar": "HTML-tekst",
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "18 mei – 30 augustus",
+    "site": "Het kampeerseizoen 2026 start op maandag 18 mei en eindigt op zondag 30 augustus",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Stroom 6A op elke plaats, €4 per dag",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "camping-t-boerenland-wapse",
+  "naam": "Camping 't Boerenland",
+  "soort": "camping",
+  "provincie": "Drenthe",
+  "website": "https://www.tboerenland.nl/",
+  "leesbaar": "ja (start, campers, tarieven)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets op 3 pagina's",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "fout",
+    "wij": "vanaf € 13,00, hoogste € 17,50; Kind 3, Per persoon 1,25, Hond 0,50",
+    "site": "2 personen incl. camper, douche, milieukosten en toeristenbelasting € 17,50 + stroom € 0,75/kWh; € 13 is de trekkerstent; niet-SVR + € 1 pppn",
+    "citaat": "Twee personen inclusief caravan, camper, bungalowtent, auto, douche, milieukosten en toeristenbelasting: €17,50 per nacht*.",
+    "url": "https://www.tboerenland.nl/onze-tarieven/",
+    "waar": "tarievenpagina",
+    "waarom_gemist": "'vanaf € 13' is de trekkerstent; 'Per persoon 1,25' is 'Bezoek de hele dag p.p.'; stroom per kWh ontbreekt; incl. toeristenbelasting niet vastgelegd"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "15 maart – 31 oktober",
+    "site": "Geopend van 15 maart t/m 31 oktober",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Per plaats is een 10 ampère stroomvoorziening",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "Hier kunt u uw vuilwater lozen ... toilet in de chemische stort ledigen",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "de-zandkant-biezenmortel",
+  "naam": "De Zandkant",
+  "soort": "camping",
+  "provincie": "Noord-Brabant",
+  "website": "https://www.zandkant.nl",
+  "leesbaar": "ja (start, boerderijcamping, FAQ, voorwaarden, reserveren); prijzen alleen in boekingsmodule (Recranet)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "camping: uitchecken vóór 12:00",
+    "citaat": "Op de camping kun je vanaf 13.00 uur tot 20.00 uur inchecken, op de dag van vertrek moet je voor 12.00 uur uitchecken.",
+    "url": "https://www.zandkant.nl/contact/veelgestelde-vragen",
+    "waar": "FAQ-pagina, HTML-tekst",
+    "waarom_gemist": "pagina niet bezocht (laatste lezing 25-10, parser 43, vóór de FAQ-focus B1). Getest: extract() op deze FAQ geeft departure 'vast', checkout 12:00; een herlezing vult hem"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "inchecken 13:00–20:00",
+    "citaat": "Op de camping kun je vanaf 13.00 uur tot 20.00 uur inchecken",
+    "url": "https://www.zandkant.nl/contact/veelgestelde-vragen",
+    "waar": "FAQ",
+    "waarom_gemist": "pagina niet bezocht; let op: extract() vult checkin_from hier ook niet"
+   },
+   "prijs": {
+    "oordeel": "site_zegt_niets",
+    "wij": "vanaf € 70,00, hoogste € 75,00; Kind 6, Per persoon 17,50, Hond 1,50",
+    "site": "geen bedragen op de 5 gelezen pagina's; voorwaarden: toeristenbelasting komt erbij",
+    "citaat": "5.2 Toeristenbelasting wordt door de gemeente vastgesteld en per persoon per nacht in rekening gebracht.",
+    "url": "https://www.zandkant.nl/algemene-voorwaarden",
+    "waar": null,
+    "waarom_gemist": "onze € 70–75 kan ik niet terugvinden; vermoedelijk vakantiewoning/bungalow. Verdacht"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": "15 maart – 31 oktober",
+    "site": "niets gevonden",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "8 Ampère aansluiting, 5 kWh per dag inbegrepen (reserveerpagina zegt 6 ampère)",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "uitstortplaats chemisch toilet",
+    "citaat": "Er is ook een uitstort plaats voor het chemisch toilet.",
+    "url": "https://www.zandkant.nl/boerderijcamping",
+    "waar": "HTML",
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "camping-de-stouwe-giethoorn",
+  "naam": "Camping de Stouwe",
+  "soort": "camping",
+  "provincie": "Overijssel",
+  "website": "https://www.campingdestouwe.nl",
+  "leesbaar": "ja (start, tarieven, achtergrond)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets op 3 pagina's",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "fout",
+    "wij": "vanaf 18:00",
+    "site": "ma–di 18.00–20.30, wo–zo 13.00–20.30, zomer (1 juli–16 aug) alle dagen 13.00–20.30",
+    "citaat": "Aankomst / Arrival | ma-di | 18.00 - 20.30 uur | wo-zo | 13.00 - 20.30 uur",
+    "url": "https://campingdestouwe.nl/",
+    "waar": "startpagina, tabel",
+    "waarom_gemist": "alleen de eerste regel van de tabel gelezen"
+   },
+   "prijs": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "€ 20,50 / € 18,50 (hoog/laag) incl. camper, 4 A, milieuheffing en toeristenbelasting",
+    "citaat": "Incl caravan/camper/tent elektra (4Amp) milieuheffing en inclusief toeristenbelasting | €20.50 | €18.50",
+    "url": "https://campingdestouwe.nl/tarieven/",
+    "waar": "tarievenpagina, HTML-tabel",
+    "waarom_gemist": "nachtprijs niet uit tabel gelezen; toeslagen wel"
+   },
+   "seizoen": {
+    "oordeel": "juist",
+    "wij": "1 april – 1 oktober",
+    "site": "Geopend van 1 april tot 1 oktober",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "elektra (4Amp)",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "jachthaven-beerta-camperplekken-winschoten",
+  "naam": "Jachthaven Beerta Camperplekken",
+  "soort": "jachthaven",
+  "provincie": "Groningen",
+  "website": "https://www.jachthaven.nl/groningen/jachthaven-beerta",
+  "leesbaar": "nee: website-veld wijst naar directory jachthaven.nl, geen eigen site",
+  "velden": {
+   "vertrek": {
+    "oordeel": "niet_leesbaar",
+    "wij": null,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "niet_leesbaar",
+    "wij": null,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "niet_leesbaar",
+    "wij": "€ 17,00",
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "niet_leesbaar",
+    "wij": null,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "niet_leesbaar",
+    "wij": true,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "niet_leesbaar",
+    "wij": true,
+    "site": null,
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "jachthaven-jonkman-camperplaats-sassenheim",
+  "naam": "Jachthaven Jonkman Camperplaats",
+  "soort": "jachthaven",
+  "provincie": "Zuid-Holland",
+  "website": "https://www.jachthavenjonkman.nl/campers",
+  "leesbaar": "ja (campers, tarieven, contact)",
+  "velden": {
+   "vertrek": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "alleen openingstijden havenkantoor",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "aankomst": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€ 25,00; Douche 0,50",
+    "site": "Prijs per nacht: €25,00; douche € 0,50",
+    "citaat": "Prijs per nacht: €25,00",
+    "url": "https://www.jachthavenjonkman.nl/campers",
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "seizoen": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "jaarrond",
+    "citaat": "Onze camperplaatsen zijn het hele jaar door beschikbaar, van 1 januari tot en met 31 december.",
+    "url": "https://www.jachthavenjonkman.nl/campers",
+    "waar": "camperpagina, HTML",
+    "waarom_gemist": "woordkeus 'hele jaar door beschikbaar' (niet getest)"
+   },
+   "stroom": {
+    "oordeel": "site_zegt_niets",
+    "wij": true,
+    "site": "niets gevonden",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ },
+ {
+  "slug": "maastricht-marina-heer",
+  "naam": "Maastricht marina",
+  "soort": "jachthaven",
+  "provincie": "Limburg",
+  "website": "https://www.maastrichtmarina.nl/campers/camperplaatsen.html",
+  "leesbaar": "opgeslagen URL geeft 404; startpagina leesbaar",
+  "velden": {
+   "vertrek": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "check-out tot 13:00 (campers; houseboats 10:30)",
+    "citaat": "Check-out tot 13:00",
+    "url": "https://www.maastrichtmarina.nl/",
+    "waar": "startpagina, HTML-blok camperplaatsen",
+    "waarom_gemist": "pagina niet bezocht: onze website-URL is 404 en de lezer volgt niet naar de startpagina ('Startpagina niet te lezen'). Getest: extract() op de startpagina geeft vast 13:00"
+   },
+   "aankomst": {
+    "oordeel": "ontbreekt",
+    "wij": null,
+    "site": "check-in vanaf 13:00",
+    "citaat": "Check-in vanaf 13:00",
+    "url": "https://www.maastrichtmarina.nl/",
+    "waar": "startpagina",
+    "waarom_gemist": "zelfde"
+   },
+   "prijs": {
+    "oordeel": "juist",
+    "wij": "€ 30,00",
+    "site": "€ 30 per nacht; toeslag campers > 8 m € 4,50",
+    "citaat": "€30 per nacht ... Toeslag voor campers langer dan 8 meter: €4,50 per nacht.",
+    "url": "https://www.maastrichtmarina.nl/",
+    "waar": "startpagina",
+    "waarom_gemist": "lengtetoeslag ontbreekt bij ons"
+   },
+   "seizoen": {
+    "oordeel": "site_zegt_niets",
+    "wij": null,
+    "site": "niets voor campers",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "stroom": {
+    "oordeel": "juist",
+    "wij": true,
+    "site": "elektriciteit (max. 10 A)",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   },
+   "lozen": {
+    "oordeel": "site_zegt_niets",
+    "wij": true,
+    "site": "niets gevonden",
+    "citaat": null,
+    "url": null,
+    "waar": null,
+    "waarom_gemist": null
+   }
+  }
+ }
+]
