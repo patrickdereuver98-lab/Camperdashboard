@@ -228,7 +228,7 @@ export default async function Home() {
             {
               sign: "clock",
               title: "Kijk wanneer je weg moet",
-              text: "Bij elke plek zie je de vertrektijd, wat een nacht kost met de toeslagen die we kennen, en wat er aan voorzieningen is.",
+              text: "Bij elke plek zie je of we de vertrektijd kennen en welke, wat een nacht kost met de toeslagen die we kennen, en wat er aan voorzieningen is.",
             },
             {
               sign: "camper",
