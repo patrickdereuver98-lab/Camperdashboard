@@ -376,8 +376,12 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         </p>
         <div className="mt-4 grid gap-2">
           {place.website && (
-            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
-              <Icon name="globe" size={19} /> {reserveLabel}
+            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex min-h-12 flex-col items-center justify-center rounded-lg bg-forest px-3 py-2 font-semibold text-on-forest hover:bg-forest-deep">
+              <span className="flex items-center gap-2">
+                <Icon name="globe" size={19} /> {reserveLabel}
+              </span>
+              {/* Waar je heen gaat, in de knop zelf: één blok om op te tikken in plaats van losse grijze tekst */}
+              <span className="text-sm font-normal opacity-85">{websiteLabel(place.website)}</span>
             </ContactLink>
           )}
           {tel && (
@@ -391,7 +395,6 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
             </a>
           )}
         </div>
-        {place.website && <p className="mt-3 text-center text-sm text-muted">{websiteLabel(place.website)}</p>}
       </div>
 
       <section id="ligging" aria-labelledby="ligging-kop" className={`space-y-3 ${SECTION_OFFSET}`}>
