@@ -81,7 +81,6 @@ function priceNoteText(note: string) {
 }
 
 /** "a, b en c" */
-const listNl = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} en ${xs[xs.length - 1]}`);
 
 export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const { slug } = await params;
@@ -367,12 +366,18 @@ function ActionRow({ place, tel, reserveLabel, shareText }: { place: Place; tel?
 function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: string; nearby: PlaceSummary[]; reserveLabel: string }) {
   const facts = knownFacts(place);
   const missing = facts.filter((f) => !f.known).map((f) => f.label);
+  const price = cardPrice(place);
   return (
     <>
       <div className="hidden rounded-lg border border-line bg-surface p-5 md:block">
         <p className="font-display text-3xl font-semibold">
-          {cardPrice(place)?.value ?? "Prijs onbekend"}
-          {cardPrice(place)?.perNight ? <span className="ml-1 text-base font-semibold text-muted">per nacht</span> : null}
+          {price?.value ?? "Prijs onbekend"}
+          {/* Zelfde label als de actiebalk op mobiel: "+ toeslagen" zodra er iets bij komt */}
+          {price && (price.extras || place.touristTaxIncluded === false) ? (
+            <span className="ml-1 text-base font-semibold text-muted">+ toeslagen</span>
+          ) : price?.perNight ? (
+            <span className="ml-1 text-base font-semibold text-muted">per nacht</span>
+          ) : null}
         </p>
         <div className="mt-4 grid gap-2">
           {place.website && (
@@ -560,15 +565,15 @@ function NightTotalLine({ place }: { place: Place }) {
   );
 }
 
-/** Praktisch en contact: alleen wat we weten, de rest samen in één regel.
+/** Praktisch en contact: alleen wat we weten.
  *  Telefoon, website en e-mail staan vanaf md al in de prijskaart van de zijkolom; hier tonen we ze alleen op mobiel. */
 function Practical({ place, address, tel, reserveLabel }: { place: Place; address: string; tel?: string; reserveLabel: string }) {
   const rows: { label: string; value: React.ReactNode; contact?: boolean }[] = [];
-  const unknown: string[] = [];
-  const add = (label: string, value: React.ReactNode | undefined, missing: string) => (value === undefined ? unknown.push(missing) : rows.push({ label, value }));
-  add("Aantal plekken", place.capacity ? String(place.capacity) : undefined, "aantal plekken");
-  add("Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : undefined, "ondergrond");
-  add("Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : undefined, "maximaal verblijf");
+  // Onbekend laten we weg; welke gegevens ontbreken staat één keer, in de kaart "x van 12 gegevens bekend"
+  const add = (label: string, value: React.ReactNode | undefined) => (value === undefined ? undefined : rows.push({ label, value }));
+  add("Aantal plekken", place.capacity ? String(place.capacity) : undefined);
+  add("Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : undefined);
+  add("Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : undefined);
   const fullAddress = address ? `${address}, ${place.province}` : `${place.town}, ${place.province}`;
   rows.push({
     label: "Adres",
@@ -630,7 +635,6 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
           </div>
         ))}
       </dl>
-      {unknown.length > 0 && <p className="mt-2 text-sm text-muted">Nog onbekend: {listNl(unknown)}.</p>}
     </section>
   );
 }
