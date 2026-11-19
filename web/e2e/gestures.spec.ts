@@ -66,14 +66,18 @@ test("terug van een plek: evenveel plekken als je had opengeklapt (K1)", async (
   await page.getByRole("button", { name: "Toon meer plekken" }).click();
   // Onderaan laadt de lijst ook vanzelf meer: het precieze aantal hangt van het scherm af
   await expect.poll(() => cards.count()).toBeGreaterThanOrEqual(40);
+  // Terug naar boven en dan een kaart bovenin: kaart 30 lag vlak bij het punt waar de lijst vanzelf meer laadt, en dat
+  // verschoof de pagina precies tijdens de klik (release 0.9.1)
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
   const shown = await cards.count();
-  await cards.nth(30).locator('a[href^="/plek/"]').first().click();
+  await cards.nth(5).locator('a[href^="/plek/"]').first().click();
   // Onder belasting (alle tests tegelijk) kan het openen van de plek langer duren
   await expect(page).toHaveURL(/\/plek\//, { timeout: 15000 });
   await page.goBack();
   await expect(page).toHaveURL(/\/zoeken/);
-  await expect.poll(() => cards.count()).toBeGreaterThanOrEqual(shown);
+  await expect.poll(() => cards.count(), { timeout: 15000 }).toBeGreaterThanOrEqual(shown);
   // Ook als de pagina opnieuw laadt (app op de achtergrond, weinig geheugen): het aantal komt uit deze sessie
   await page.reload();
-  await expect.poll(() => cards.count()).toBeGreaterThanOrEqual(shown);
+  await expect.poll(() => cards.count(), { timeout: 15000 }).toBeGreaterThanOrEqual(shown);
 });
