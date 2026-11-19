@@ -29,6 +29,15 @@ Eerste genummerde versie. Alles wat op 19 november af was, uit twaalf losse bran
 - Delen vanuit Google Maps naar VrijStaan (Android), een eenmalige tip voor het beginscherm op de iPhone, duidelijkere
   offlinebalk.
 
+**Routeplanner in Mijn reis** (PR #162; geen migraties, opslag van Mijn reis versie 3)
+- Per etappe vertrek en aankomst: vertrek volgens de vertrektijd van de plek of je eigen tijd, pauzes, en een
+  waarschuwing bij te laat, te vroeg, te lang rijden op één dag of per 24 uur later weg dan je kwam.
+- Begin- en eindpunt (je locatie of een adres, ook terug naar het begin), tussenstop zonder overnachting, notitie per
+  stop, omdraaien en ongedaan maken.
+- Camper telt mee (hoogte, gewicht, lengte, breedte) en tol, veerponten of snelwegen mijden, via OpenRouteService.
+- Slimste volgorde op echte rijtijden; plekken langs de route met toevoegen op de juiste plaats; GPX-bestand.
+- Google Maps opent de reis in delen van 10 punten (eerder vielen stops weg); routes werken in heel Europa.
+
 **Data en dataketen**
 - Correcties van beheer overleven de volgende lezing (R61; PR #151).
 - Veldlog voor kernfeiten en bewaking per kanaal in `health()` (R62, R64; PR #155).
