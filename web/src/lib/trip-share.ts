@@ -9,16 +9,25 @@ import type { PlaceSummary } from "./types";
 type Stop = {
   nights: number;
   place: Pick<PlaceSummary, "slug" | "name" | "town" | "checkinFrom" | "checkinUntil" | "departure" | "checkoutUntil" | "departureCheck">;
+  /** Eigen punt: alleen de naam gaat mee (geen ligging, geen plaatsnaam) */
+  own?: boolean;
+  notes?: { text: string; shared?: boolean }[];
 };
 type Dated = { arrive: Date; leave: Date };
 
 const DAY = new Intl.DateTimeFormat("nl-NL", { weekday: "short", day: "numeric", month: "short" });
 
-/** "1. Camperplaats De Duinen, Texel (2 nachten, do 6 nov. tot za 8 nov.)" per regel; voor WhatsApp-groepen */
+/**
+ * "1. Camperplaats De Duinen, Texel (2 nachten, do 6 nov. tot za 8 nov.)" per regel; voor WhatsApp-groepen. Een eigen
+ * punt staat er met alleen zijn naam. Alleen notities met "Delen met reisgenoten" aan gaan mee; privénotities niet.
+ */
 export function tripText(stops: Stop[], dated: Dated[] | null): string {
-  const lines = stops.map((s, i) => {
+  const lines = stops.flatMap((s, i) => {
     const when = dated?.[i] ? `, ${DAY.format(dated[i].arrive)} tot ${DAY.format(dated[i].leave)}` : "";
-    return `${i + 1}. ${s.place.name}, ${s.place.town} (${s.nights === 0 ? "tussenstop" : pluralize(s.nights, "nacht", "nachten")}${when})`;
+    const stay = s.nights === 0 ? "tussenstop" : pluralize(s.nights, "nacht", "nachten");
+    const head = s.own ? `${i + 1}. ${s.place.name} (eigen punt, ${stay}${when})` : `${i + 1}. ${s.place.name}, ${s.place.town} (${stay}${when})`;
+    const notes = (s.notes ?? []).filter((n) => n.shared).map((n) => `   Notitie: ${n.text.trim().replace(/\s*\n\s*/g, " ")}`);
+    return [head, ...notes];
   });
   return ["Mijn camperreis", ...lines].join("\n");
 }
