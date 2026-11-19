@@ -8,7 +8,7 @@
 > 2027. Een handvol punten is klein, raakt geen data en lost iets op wat nu stuk voelt; die staan in §1 als "kan vóór de
 > livegang" en vragen een besluit van Patrick.
 
-**Stand 19 november 2026 (versie 0.9.2):** alles uit dit rapport is gebouwd, op verzoek van Patrick, met tests in
+**Stand 19 november 2026 (versie 0.9.1):** alles uit dit rapport is gebouwd, op verzoek van Patrick, met tests in
 `web/e2e/gestures.spec.ts`, `web/e2e/ux-audit.spec.ts` en unit-tests voor de pure regels (zoekvraag, aankomen vandaag,
 agenda en tekst van de reis, gedeelde locatie). Twee punten zijn anders dan voorgesteld:
 

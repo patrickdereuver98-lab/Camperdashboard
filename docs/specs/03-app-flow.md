@@ -131,7 +131,7 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
   `open`, `score`, `sort`, `kaart=1`.
 - Paginaovergangen met `<ViewTransition>`: de foto of tekening schuift mee van de lijst naar de plekpagina.
 
-- **UX-audit november (versie 0.9.2)**, alles op het toestel, niets naar de server:
+- **UX-audit november (versie 0.9.1)**, alles op het toestel, niets naar de server:
   - Zoekvak: leeg toont **Eerder gezocht** (5, met **Wis geschiedenis**) en **Laatst bekeken** (3), anders vier
     provincies. Typ je filters in gewone taal ("gratis texel met stroom", "zonder vertrektijd zeeland", "onder 15 euro"),
     dan staat er "Met filters: …" en gaan die filters mee. Alleen een filter typen ("honden") geeft **Filter: honden

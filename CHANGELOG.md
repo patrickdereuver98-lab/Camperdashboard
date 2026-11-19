@@ -2,23 +2,6 @@
 
 Elke versie is een stand van `main` met een tag (`v0.9.1`). Wat live in Supabase staat, staat erbij.
 
-## 0.9.2 (19 november 2026)
-
-Rest van de UX-audit van november ([rapport](docs/audit-ux-2026-11.md)). Geen migraties, geen edge functions.
-
-**Voor bezoekers**
-- Zoekvak onthoudt wat je zocht en bekeek (alleen op je toestel), begrijpt filters in gewone taal ("gratis texel met
-  stroom") en is overzichtelijker: kopjes, vet, tikfouten bij plekken, `/` op een computer.
-- Tabblad Zoeken brengt je terug naar je laatste zoekopdracht met filters; Dichtbij onthoudt zijn keuzes.
-- Zoeken: wegschuivende zoekbalk, vanzelf meer laden, zoeken in de lijst, "Ververs" bij gegevens uit de cache.
-- Kaart: naar mijn locatie, zoek in dit gebied, opzij vegen naar de vorige of volgende plek.
-- Plek: foto's schermvullend, vorige en volgende uit je zoekresultaten, "nog x uur om vandaag aan te komen", delen met
-  vertrekregel en prijs, adres kopiëren; snelmenu met lang indrukken op een plek in de lijst.
-- Mijn reis: ongedaan maken na weghalen, slepen, als tekst delen, in je agenda zetten, reisdag bovenaan, aantal stops
-  op het app-icoon.
-- Delen vanuit Google Maps naar VrijStaan (Android), een eenmalige tip voor het beginscherm op de iPhone, duidelijkere
-  offlinebalk.
-
 ## 0.9.1 (19 november 2026)
 
 Eerste genummerde versie. Alles wat op 19 november af was, uit twaalf losse branches samengevoegd via `acceptatie`.
@@ -30,6 +13,19 @@ Eerste genummerde versie. Alles wat op 19 november af was, uit twaalf losse bran
   meer" wordt onthouden, slimmere zoekbalk (PR #152).
 - Eerlijke beloftes op start en FAQ, en geen standaardvertrektijd meer in formulieren (R66, R83; PR #153).
 - Dieper bosgroen voor knoppen en links (PR #146).
+
+**Rest van de UX-audit** ([rapport](docs/audit-ux-2026-11.md), PR #152; geen migraties)
+- Zoekvak onthoudt wat je zocht en bekeek (alleen op je toestel), begrijpt filters in gewone taal ("gratis texel met
+  stroom") en is overzichtelijker: kopjes, vet, tikfouten bij plekken, `/` op een computer.
+- Tabblad Zoeken brengt je terug naar je laatste zoekopdracht met filters; Dichtbij onthoudt zijn keuzes.
+- Zoeken: wegschuivende zoekbalk, vanzelf meer laden, zoeken in de lijst, "Ververs" bij gegevens uit de cache.
+- Kaart: naar mijn locatie, zoek in dit gebied, opzij vegen naar de vorige of volgende plek.
+- Plek: foto's schermvullend, vorige en volgende uit je zoekresultaten, "nog x uur om vandaag aan te komen", delen met
+  vertrekregel en prijs, adres kopiëren; snelmenu met lang indrukken op een plek in de lijst.
+- Mijn reis: ongedaan maken na weghalen, slepen, als tekst delen, in je agenda zetten, reisdag bovenaan, aantal stops
+  op het app-icoon.
+- Delen vanuit Google Maps naar VrijStaan (Android), een eenmalige tip voor het beginscherm op de iPhone, duidelijkere
+  offlinebalk.
 
 **Data en dataketen**
 - Correcties van beheer overleven de volgende lezing (R61; PR #151).
@@ -52,4 +48,3 @@ Eerste genummerde versie. Alles wat op 19 november af was, uit twaalf losse bran
 **Niet in deze versie**
 - PR #141 (mail naar eigenaren): wacht op het besluit over mailen en een juridische toets (LANCERING besluit 4) en
   botst inmiddels met `owner-inbox.ts`.
-- Het nieuwe beginscherm van Mijn reis (routeplanner): nog in aanbouw.
