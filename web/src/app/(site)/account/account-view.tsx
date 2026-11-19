@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signOut, useSession } from "@/lib/auth";
-import { useTrip } from "@/lib/store";
+import { useAccountTrip } from "@/lib/store";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 
@@ -12,7 +12,8 @@ const PROVIDER_LABEL: Record<string, string> = { google: "Google", apple: "Apple
 
 export function AccountView() {
   const { session, loading } = useSession();
-  const { stops } = useTrip();
+  // Met je account gaat de eerste reis mee (andere reizen staan alleen op dit toestel)
+  const stops = useAccountTrip();
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [typed, setTyped] = useState("");

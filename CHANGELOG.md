@@ -1,6 +1,22 @@
 # Versies
 
-Elke versie is een stand van `main` met een tag (`v0.9.1`). Wat live in Supabase staat, staat erbij.
+Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat live in Supabase staat, staat erbij.
+
+## 0.9.2 (19 november 2026)
+
+Wat na 0.9.1 af kwam, dezelfde dag.
+
+**Voor bezoekers**
+- Websiteknop op de plekpagina: het domein staat klein in de knop "Reserveren via de website", geen losse grijze
+  regel meer, en alleen het domein (PR #164). Drie kapotte websiteadressen live hersteld.
+- Routeplanner (PR #166): overnachtingen voorstellen bij een te lange dag (hoogstens 3, zonder vaste vertrektijd eerst,
+  alleen voorstellen), eigen punten (adres of kaart) en meerdere reizen op het toestel (opslag versie 4), notities
+  standaard privé met "Delen met reisgenoten".
+
+**Achter de schermen**
+- Mail naar eigenaren (PR #165, vervangt #141): code en migratie `20261119200000_outreach.sql`. Verzenden staat UIT;
+  aanzetten is een besluit van Patrick (LANCERING besluit 4, README 136). Review vóór livegang verwerkt: afmelden lukt
+  altijd, een klacht blijft meetellen voor de noodrem.
 
 ## 0.9.1 (19 november 2026)
 

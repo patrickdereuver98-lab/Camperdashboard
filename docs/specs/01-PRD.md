@@ -114,7 +114,7 @@ Besluit 18 oktober 2026: alle bruikbare informatie wordt gebruikt, ook reviews e
 | Beheer: plekken, support, inzendingen, reviews, FAQ, logs, statistieken, instellingen, brondatabase | Site beheren zonder code | Must |
 | Zoekagenten en scrapers voor vertrektijden en prijzen (eigen sites, reviews, fora) | Alle plekken zonder vertrektijd vinden | Must |
 | SEO-pagina's per provincie en plaats, structured data, sitemap | Gevonden worden zonder advertentiebudget | Must |
-| Mijn reis: bewaren, volgorde, nachten, kosten, delen, offline | Vooruit plannen | Should |
+| Mijn reis: bewaren, volgorde, nachten, kosten, delen, offline; meerdere reizen op het toestel, eigen punten (adres of kaart), notities per stop (standaard privé, per notitie delen met reisgenoten), overnachtingen voorstellen als een dag te lang wordt (hoogstens 3, zonder vaste vertrektijd eerst, nooit vanzelf toegevoegd; README 137) | Vooruit plannen | Should |
 | Optioneel account (Google, Apple, Facebook of code per mail) voor synchronisatie | Reis op meer apparaten | Should |
 | Doe mee: vertrektijden invullen per provincie | Hulp van de Facebookgroep | Should |
 | Camperprofiel met automatisch lengtefilter | Niet voor niets rijden | Should |

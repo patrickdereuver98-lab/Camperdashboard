@@ -58,7 +58,9 @@ test("tussenstop, notitie, omdraaien en ongedaan maken", async ({ page, request 
   await stops.first().getByRole("button", { name: "Notitie toevoegen" }).click();
   await stops.first().getByRole("textbox").fill("Water bijvullen");
   await stops.first().getByRole("button", { name: "Bewaren" }).click();
-  await expect(stops.first().getByTestId("stop-note")).toHaveText("Water bijvullen");
+  await expect(stops.first().getByTestId("stop-note-text")).toHaveText("Water bijvullen");
+  // Standaard privé
+  await expect(stops.first().getByTestId("stop-note-scope")).toHaveText("Privé");
 
   // Omdraaien en terug
   await page.getByRole("button", { name: "Omdraaien" }).click();
@@ -73,9 +75,13 @@ test("tussenstop, notitie, omdraaien en ongedaan maken", async ({ page, request 
   await expect(stops).toHaveCount(3);
 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis")!));
-  expect(saved.v).toBe(3);
-  expect(saved.stops[0]).toEqual({ slug: picked[0].slug, nights: 1, note: "Water bijvullen" });
-  expect(saved.stops[1].nights).toBe(0);
+  expect(saved.v).toBe(4);
+  const first = saved.trips[0].stops[0];
+  expect(first).toMatchObject({ slug: picked[0].slug, nights: 1 });
+  expect(first.notes).toHaveLength(1);
+  expect(first.notes[0].text).toBe("Water bijvullen");
+  expect(first.notes[0].shared).toBeUndefined();
+  expect(saved.trips[0].stops[1].nights).toBe(0);
 });
 
 test("slepen verandert de volgorde", async ({ page, request }, info) => {
@@ -98,7 +104,7 @@ test("slepen verandert de volgorde", async ({ page, request }, info) => {
   await page.mouse.move(x, target.y + target.height + 20, { steps: 25 });
   await page.mouse.up();
   await expect(stops.last()).toContainText(picked[0].name);
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis")!).stops.at(-1).slug)).toBe(picked[0].slug);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis")!).trips[0].stops.at(-1).slug)).toBe(picked[0].slug);
 });
 
 test("Google Maps in delen bij meer dan 10 stops, en een GPX-bestand", async ({ page, request }) => {
@@ -156,4 +162,113 @@ test("plekken langs de route toevoegen als tussenstop", async ({ page, request }
   const stops = page.getByTestId("trip-stop");
   await expect(stops).toHaveCount(3);
   await expect(stops.nth(1)).toContainText(candidate.name);
+});
+
+test("te lange dag: overnachtingen voorstellen, toevoegen doe je zelf", async ({ page, request }) => {
+  // Twee stops in een streek zonder andere plekken (Duitsland); elke etappe duurt 90 minuten, je wilt er 60 rijden
+  const { all, picked } = await setup(page, request, 2, (_, i) => ({ lat: 50.0, lng: 8.0 + i * 0.3 }));
+  const others = all.filter((p) => !picked.some((x) => x.slug === p.slug));
+  // Twee plekken rond het punt waar de dag vol is (2/3 van de etappe): een met vaste vertrektijd, een zonder
+  const at = (f: number) => ({ lat: 50.0, lng: 8.0 + 0.3 * f });
+  const fixed = { ...others[0], ...at(0.62), departure: "vast", checkoutUntil: "10:00", departureCheck: undefined };
+  const free = { ...others[1], ...at(0.7), departure: "vrij", departureCheck: undefined };
+  const moved = new Map([fixed, free].map((p) => [p.slug, p]));
+  await page.route("**/api/places", (r) => r.fulfill({ json: all.map((p) => picked.find((x) => x.slug === p.slug) ?? moved.get(p.slug) ?? p) }));
+  await store(page, "vrijstaan:reis", { v: 3, stops: picked.map((p) => ({ slug: p.slug, nights: 1 })) });
+  await store(page, "vrijstaan:routevoorkeuren", { departTime: "10:00", maxDriveMin: 60, pauseMin: 0 });
+  await page.goto("/mijn-reis");
+  const box = page.getByTestId("overnight");
+  await expect(box).toBeVisible();
+  const items = box.getByTestId("overnight-place");
+  await expect(items).toHaveCount(2);
+  // Zonder vaste vertrektijd eerst
+  await expect(items.first()).toContainText(free.name);
+  await expect(items.nth(1)).toContainText(fixed.name);
+  // Er is niets vanzelf toegevoegd
+  const stops = page.getByTestId("trip-stop");
+  await expect(stops).toHaveCount(2);
+  await items.first().getByRole("button", { name: `${free.name} toevoegen als overnachting` }).click();
+  await expect(stops).toHaveCount(3);
+  await expect(stops.nth(1)).toContainText(free.name);
+  await expect(stops.nth(1)).toContainText("1 nacht");
+  // Een plek die al in de reis staat stellen we niet nog eens voor; terugdraaien kan
+  await expect(page.getByTestId("overnight-place").filter({ hasText: free.name })).toHaveCount(0);
+  await page.getByTestId("undo-toast").getByRole("button", { name: "Ongedaan maken" }).click();
+  await expect(stops).toHaveCount(2);
+});
+
+test("meerdere reizen en een eigen punt: aanmaken, punt toevoegen, hernoemen, wisselen, verwijderen en terugzetten", async ({ page, request }) => {
+  const { picked } = await setup(page, request, 2);
+  await page.route("**/api/locatie?q=**", (r) => r.fulfill({ json: { bron: "pdok", resultaten: [{ id: "adr-1", type: "adres", label: "Dorpsstraat 1, Ergens" }] } }));
+  await page.route("**/api/locatie?id=**", (r) => r.fulfill({ json: { id: "adr-1", type: "adres", label: "Dorpsstraat 1, Ergens", lat: 52.1234, lng: 5.1234 } }));
+  // Oude opslag (versie 3): wordt de eerste reis
+  await store(page, "vrijstaan:reis", { v: 3, stops: picked.map((p) => ({ slug: p.slug, nights: 1 })) });
+  await page.goto("/mijn-reis");
+  await expect(page.getByTestId("trip-name")).toHaveText("Mijn reis");
+  await expect(page.getByTestId("trip-stop")).toHaveCount(2);
+
+  // Nieuwe reis
+  await page.getByRole("button", { name: "Reizen" }).click();
+  await page.getByRole("button", { name: "Nieuwe reis" }).click();
+  await page.getByLabel("Naam van de nieuwe reis").fill("Ardennen");
+  await page.getByRole("button", { name: "Reis maken" }).click();
+  await expect(page.getByTestId("trip-name")).toHaveText("Ardennen");
+  await expect(page.getByRole("heading", { name: "Je reis is nog leeg" })).toBeVisible();
+
+  // Eigen punt via een adres, met eigen naam
+  await page.getByRole("button", { name: "Eigen punt toevoegen" }).click();
+  const add = page.getByTestId("add-point");
+  await add.getByRole("button", { name: "Adres zoeken" }).click();
+  await add.getByLabel("Adres, postcode of plaats").fill("Dorps");
+  await add.getByRole("button", { name: "Dorpsstraat 1, Ergens" }).click();
+  await expect(add.getByLabel("Naam")).toHaveValue("Ergens");
+  await add.getByLabel("Naam").fill("Oma");
+  await add.getByRole("button", { name: "Toevoegen aan je reis" }).click();
+  const stops = page.getByTestId("trip-stop");
+  await expect(stops).toHaveCount(1);
+  await expect(stops.first()).toContainText("Oma");
+  // Duidelijk anders: geen link naar een plekpagina, wel "Eigen punt" en geen plekgegevens
+  await expect(stops.first().getByTestId("own-point")).toContainText("Eigen punt");
+  await expect(stops.first().getByRole("link", { name: "Oma" })).toHaveCount(0);
+
+  // Hernoemen
+  await page.getByRole("button", { name: /Reizen/ }).click();
+  await page.getByRole("button", { name: "Naam wijzigen" }).click();
+  await page.getByLabel("Naam van deze reis").fill("Ardennen 2027");
+  await page.getByRole("button", { name: "Bewaren" }).click();
+  await expect(page.getByTestId("trip-name")).toHaveText("Ardennen 2027");
+
+  // Wisselen naar de eerste reis
+  await page.getByTestId("trip-list").getByRole("button", { name: /^Mijn reis/ }).click();
+  await expect(page.getByTestId("trip-name")).toHaveText("Mijn reis");
+  await expect(stops).toHaveCount(2);
+
+  // Verwijderen met ongedaan maken
+  await page.getByRole("button", { name: "Reis verwijderen" }).click();
+  await expect(page.getByTestId("trip-name")).toHaveText("Ardennen 2027");
+  await expect(page.getByTestId("undo-toast")).toContainText("Mijn reis is verwijderd.");
+  await page.getByTestId("undo-toast").getByRole("button", { name: "Ongedaan maken" }).click();
+  await expect(page.getByTestId("trip-name")).toHaveText("Mijn reis");
+  await expect(stops).toHaveCount(2);
+
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis")!));
+  expect(saved.v).toBe(4);
+  expect(saved.trips.map((t: { name: string }) => t.name)).toEqual(["Mijn reis", "Ardennen 2027"]);
+  expect(saved.trips[1].stops[0]).toMatchObject({ nights: 0, point: { name: "Oma", lat: 52.1234, lng: 5.1234, kind: "adres" } });
+});
+
+test("eigen punt gaat alleen afgerond naar de routeplanner", async ({ page, request }) => {
+  const { picked } = await setup(page, request, 1);
+  await store(page, "vrijstaan:reis", {
+    v: 4,
+    active: "reis-1",
+    trips: [{ id: "reis-1", name: "Mijn reis", stops: [{ slug: picked[0].slug, nights: 1 }, { slug: "eigen-oma", nights: 1, point: { name: "Oma", lat: 52.12345, lng: 5.12345, kind: "kaart" } }] }],
+  });
+  const routeCalls: string[] = [];
+  page.on("request", (r) => r.url().includes("/api/route?") && routeCalls.push(r.url()));
+  await page.goto("/mijn-reis");
+  await expect(page.getByTestId("leg-times")).toHaveCount(1);
+  expect(routeCalls.at(-1)).toMatch(/;52\.12,5\.12$/);
+  // Overnachten bij een eigen punt telt niet mee in de kosten, en dat staat erbij
+  await expect(page.getByTestId("own-nights")).toHaveText("1 eigen punt telt niet mee");
 });

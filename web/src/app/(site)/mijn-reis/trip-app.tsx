@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MotionConfig } from "motion/react";
+import { useSession } from "@/lib/auth";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { departureShort, eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
 import {
@@ -12,16 +13,23 @@ import {
   usePlaces,
   useRouteEnds,
   useRoutePrefs,
+  useSharedLink,
   useTrip,
   useTripDate,
+  useTrips,
   useTripSettings,
   useVehicle,
+  linkedTripId,
+  writeTripStops,
+  type TripPoint,
   type TripStop,
 } from "@/lib/store";
 import { closedText, dayValue, parseDay, shortDay, tripDates } from "@/lib/trip-dates";
 import { tripCosts } from "@/lib/trip-extras";
 import { clampNights } from "@/lib/trip-merge";
-import { planTrip, minutesText, type Leg } from "@/lib/trip-plan";
+import { planTrip, minutesText, type Leg, type LegPlan } from "@/lib/trip-plan";
+import { fullDayLegs, overnightSuggestions } from "@/lib/trip-overnight";
+import { legStartKm } from "@/lib/route-corridor";
 import { optimizeOrder, routeCost, crowTable } from "@/lib/trip-optimize";
 import { buildGpx, buildIcs, download, googleMapsParts, type ExportStop } from "@/lib/trip-export";
 import { endPoint } from "@/lib/route-prefs";
@@ -33,13 +41,15 @@ import { NavigateButton } from "@/components/navigate";
 import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
 import { Sign } from "@/components/sign";
+import { AddPoint } from "./add-point";
 import { AlongRoute } from "./along-route";
 import { EndCard, StartCard } from "./endpoint-card";
 import { ExportPanel } from "./export-panel";
 import { ExpensesPanel } from "./expenses-panel";
 import { RoutePrefsPanel, vehicleText } from "./route-prefs-panel";
 import { SharedCard } from "./shared-card";
-import { LegRow, Reorder, StopItem } from "./stop-list";
+import { LegRow, OvernightList, Reorder, StopItem } from "./stop-list";
+import { TripSwitcher } from "./trip-switcher";
 import { assumedText, dataDateText, fromPriceNote, surchargeNote } from "./trip-notes";
 
 type RouteData = {
@@ -54,6 +64,12 @@ type RouteData = {
 type RouteFailure = "dienst" | "buiten" | "aantal" | "formaat";
 type Stop = TripStop & { place: PlaceSummary };
 
+/**
+ * Een eigen punt als "plek" voor de lijst, de route en de planning: alleen sleutel, naam en ligging. Verder niets
+ * invullen (geen prijs, vertrektijd of seizoen): onbekend blijft onbekend.
+ */
+const pointPlace = (slug: string, p: TripPoint) => ({ slug, name: p.name, lat: p.lat, lng: p.lng, town: "" }) as unknown as PlaceSummary;
+
 /** Maximaal aantal punten dat de routeplanner in één keer rekent (beginpunt, 25 stops, eindpunt) */
 const MAX_ROUTE_POINTS = 27;
 
@@ -63,6 +79,10 @@ const exact = (p: LatLng) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`;
 
 export function TripApp() {
   const trip = useTrip();
+  const trips = useTrips();
+  const [sharedLink] = useSharedLink();
+  const linkedId = linkedTripId(sharedLink);
+  const { session } = useSession();
   const router = useRouter();
   const params = useSearchParams();
   const { data: livePlaces, error: placesError, cachedAt } = usePlaces();
@@ -71,7 +91,8 @@ export function TripApp() {
   const places = livePlaces ?? offlineCopy?.places ?? null;
   // Kwamen de gegevens uit de cache van de app of uit de kopie op dit toestel: van wanneer ze zijn
   const dataDate = dataDateText(livePlaces ? cachedAt : offlineCopy?.savedAt);
-  const slugsKey = trip.stops.map((s) => s.slug).join(",");
+  // Plekken van al je reizen (geen eigen punten): die bewaren we voor onderweg zonder bereik
+  const slugsKey = [...new Set(trips.list.flatMap((t) => t.stops.filter((s) => !s.point).map((s) => s.slug)))].join(",");
   useEffect(() => {
     if (livePlaces) rememberTripPlaces(livePlaces, slugsKey.split(","), cachedAt ?? new Date().toISOString());
   }, [livePlaces, slugsKey, cachedAt]);
@@ -100,7 +121,10 @@ export function TripApp() {
   // Laatste volgorde ook in een ref: onDragEnd kan nog de waarde van het begin van het slepen zien
   const dragRef = useRef<string[] | null>(null);
   // Ongedaan maken van de laatste grote wijziging
-  const [undo, setUndo] = useState<{ text: string; stops: TripStop[]; at: number } | null>(null);
+  // `revert` ontbreekt als er niets terug te zetten is (bijvoorbeeld "al de kortste volgorde")
+  // `trip`: in welke reis de wijziging was; open je intussen een andere reis, dan verdwijnt "Ongedaan maken"
+  const [undo, setUndo] = useState<{ text: string; revert?: () => void; trip?: string } | null>(null);
+  const [addingPoint, setAddingPoint] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [alongLeg, setAlongLeg] = useState<number | null>(null);
   const [alongOpen, setAlongOpen] = useState(false);
@@ -128,7 +152,7 @@ export function TripApp() {
   const stops = useMemo<Stop[] | null>(() => {
     if (!places) return null;
     const bySlug = new Map(places.map((p) => [p.slug, p]));
-    return trip.stops.map((s) => ({ ...s, place: bySlug.get(s.slug)! })).filter((s) => s.place);
+    return trip.stops.map((s) => ({ ...s, place: s.point ? pointPlace(s.slug, s.point) : bySlug.get(s.slug)! })).filter((s) => s.place);
   }, [places, trip.stops]);
 
   const routeOptions = useMemo<RouteOptions>(
@@ -147,8 +171,8 @@ export function TripApp() {
 
   const routeKey = useMemo(() => {
     if (!stops || waypoints.length < 2) return null;
-    // Begin- en eindpunt kunnen je eigen locatie of huisadres zijn: alleen afgerond versturen
-    const pts = [...(start ? [coarse(start)] : []), ...stops.map((s) => exact(s.place)), ...(endPt ? [coarse(endPt)] : [])];
+    // Begin- en eindpunt en eigen punten kunnen je eigen locatie of huisadres zijn: alleen afgerond versturen
+    const pts = [...(start ? [coarse(start)] : []), ...stops.map((s) => (s.point ? coarse(s.place) : exact(s.place))), ...(endPt ? [coarse(endPt)] : [])];
     return `${pts.join(";")}${routeOptionsQuery(routeOptions)}`;
   }, [stops, start, endPt, waypoints.length, routeOptions]);
 
@@ -177,6 +201,35 @@ export function TripApp() {
   const route = routeKey ? routeResult.data : null;
   const routeState = !routeKey ? "idle" : routeResult.key !== routeKey ? "loading" : routeResult.failed ? "error" : "idle";
   const routeFailure = routeState === "error" ? routeResult.failed : null;
+
+  // Dagplanning: alleen met een berekende route (anders weten we de rijtijden niet)
+  const plan = useMemo(() => {
+    if (!stops || !route) return null;
+    const legs = route.legs;
+    const legOf = (i: number): Leg | undefined => (start ? legs[i] : i === 0 ? undefined : legs[i - 1]);
+    return planTrip({ stops, legs: stops.map((_, i) => legOf(i)), endLeg: endPt ? legs[legs.length - 1] : undefined, prefs });
+  }, [stops, route, start, endPt, prefs]);
+
+  // Overnachten voorstellen waar een dag te lang wordt: per te lange etappe (positie in de route) hoogstens 3 plekken
+  const overnight = useMemo(() => {
+    // Alleen op de actuele route: tijdens herberekenen hoort de oude lijn bij andere stops
+    if (!plan || !route || routeResult.key !== routeKey || !places || !stops || prefs.maxDriveMin <= 0) return null;
+    const all = [
+      ...plan.legs.map((l, i) => (l ? { routeLeg: start ? i : i - 1, plan: l } : null)),
+      plan.endLeg ? { routeLeg: route.legs.length - 1, plan: plan.endLeg } : null,
+    ].filter((x): x is { routeLeg: number; plan: LegPlan } => !!x);
+    const targets = fullDayLegs(all.map((x) => x.plan)).map((i) => all[i]);
+    if (!targets.length) return null;
+    const inTrip = new Set(stops.map((s) => s.slug));
+    return overnightSuggestions({
+      geometry: route.geometry,
+      waypoints,
+      legStarts: legStartKm(route.geometry, waypoints),
+      places: places.filter((p) => !inTrip.has(p.slug)),
+      legs: targets,
+      maxDriveMin: prefs.maxDriveMin,
+    });
+  }, [plan, route, routeResult.key, routeKey, places, stops, start, waypoints, prefs.maxDriveMin]);
 
   if (incomingStops && incomingStops.length) {
     // Eerst laten zien wat er gedeeld is; pas daarna toevoegen of vervangen
@@ -238,6 +291,19 @@ export function TripApp() {
               Bewaar deze reis
             </button>
           )}
+          {trip.stops.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                trips.create("Gedeelde reis", incomingStops);
+                if (incomingDate && !tripDate) setTripDate(incomingDate);
+                router.replace("/mijn-reis");
+              }}
+              className="h-12 rounded-lg border border-line px-6 font-semibold"
+            >
+              Als nieuwe reis bewaren
+            </button>
+          )}
           <button type="button" onClick={() => router.replace("/mijn-reis")} className="h-12 rounded-lg px-6 font-semibold text-forest underline">
             Niet bewaren
           </button>
@@ -247,7 +313,7 @@ export function TripApp() {
   }
 
   // "Ongedaan maken" na weghalen, omdraaien, slimste volgorde of toevoegen; ook als de reis daarna leeg is
-  const undoToast = undo && (
+  const undoToast = undo && (!undo.trip || undo.trip === trips.active.id) && (
         <div
           role="status"
           // Zelfde vorm als de melding "Bewaard in Mijn reis" (chrome.tsx), maar boven de cookiebalk: anders is
@@ -256,11 +322,11 @@ export function TripApp() {
           data-testid="undo-toast"
         >
           <p className="min-w-0 flex-1 text-sm">{undo.text}</p>
-          {undo.stops !== trip.stops && (
+          {undo.revert && (
             <button
               type="button"
               onClick={() => {
-                trip.replace(undo.stops);
+                undo.revert?.();
                 setUndo(null);
               }}
               className="flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2 font-semibold underline"
@@ -274,10 +340,38 @@ export function TripApp() {
         </div>
   );
 
+  const onTripRemoved = (r: { trip: { name: string }; index: number; wasActive: boolean } & Parameters<typeof trips.restore>[0]) =>
+    setUndo({ text: `${r.trip.name} is verwijderd.`, revert: () => trips.restore(r) });
+  const addPoint = (p: TripPoint) => {
+    const id = trips.active.id;
+    const before = trip.stops;
+    trip.addPoint(p);
+    setAddingPoint(false);
+    setUndo({ text: `${p.name} is toegevoegd als stop ${before.length + 1}.`, revert: () => writeTripStops(id, before), trip: id });
+  };
+  const lastPoint = stops && stops.length ? stops[stops.length - 1].place : (start ?? undefined);
+  // Naam van de reis met de lijst met reizen; in de lege toestand is "Je reis is nog leeg" de kop
+  const header = (asHeading: boolean) => (
+    <div className="text-left">
+      {asHeading ? (
+        <h1 className="font-display text-h1 font-semibold" data-testid="trip-name">
+          {trips.active.name}
+        </h1>
+      ) : (
+        <p className="font-display text-h2 font-semibold" data-testid="trip-name">
+          {trips.active.name}
+        </p>
+      )}
+      <TripSwitcher trips={trips} linkedId={linkedId} signedIn={!!session} onRemoved={onTripRemoved} />
+    </div>
+  );
+
   if (trip.stops.length === 0) {
     return (
-      <div className="mx-auto max-w-xl px-4 pt-10 text-center sm:pt-14">
+      <div className="mx-auto max-w-xl px-4 pt-6 sm:pt-10">
         {undoToast}
+        {(trips.list.length > 1 || trips.active.name !== "Mijn reis") && <div className="mb-6">{header(false)}</div>}
+        <div className="text-center">
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
@@ -288,6 +382,14 @@ export function TripApp() {
         <Link href="/zoeken" className="mt-8 inline-flex h-14 items-center gap-2 rounded-lg bg-forest px-7 font-display text-lg font-semibold text-on-forest hover:bg-forest-deep">
           <Icon name="search" size={21} /> Plekken zoeken
         </Link>
+        {!addingPoint && (
+          <button type="button" onClick={() => setAddingPoint(true)} className="mx-auto mt-3 flex h-11 items-center gap-1.5 font-semibold text-forest underline">
+            <Icon name="pin" size={18} /> Eigen punt toevoegen
+          </button>
+        )}
+        </div>
+        {addingPoint && <AddPoint near={start ?? undefined} onAdd={addPoint} onClose={() => setAddingPoint(false)} />}
+        {trips.list.length === 1 && trips.active.name === "Mijn reis" && <div className="mt-8">{header(false)}</div>}
       </div>
     );
   }
@@ -298,7 +400,6 @@ export function TripApp() {
   const routeLegs = route?.legs ?? [];
   // Etappe naar stop i; zonder beginpunt heeft de eerste stop geen etappe
   const legFor = (i: number): Leg | undefined => (start ? routeLegs[i] : i === 0 ? undefined : routeLegs[i - 1]);
-  const endLeg = endPt && route ? routeLegs[routeLegs.length - 1] : undefined;
   const totalKm = route ? route.distanceM / 1000 : null;
   const nights = stops.reduce((a, s) => a + s.nights, 0);
   // Met een vertrekdatum: per stop aankomst en vertrek, en de nachten waarop de plek volgens het seizoen dicht is
@@ -306,11 +407,11 @@ export function TripApp() {
   const dated = startDay ? tripDates(startDay, stops) : null;
   // Reisdag: vandaag weg of vannacht ergens (alleen met een vertrekdatum; UX-audit)
   const today = dated ? tripToday(dated, new Date()) : undefined;
-  // Dagplanning: alleen met een berekende route (anders weten we de rijtijden niet)
-  const plan = route ? planTrip({ stops, legs: stops.map((_, i) => legFor(i)), endLeg, prefs }) : null;
   // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag).
   // Verplichte kosten per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart.
-  const costs = tripCosts(stops, settings.persons, settings.touristTax);
+  const costs = tripCosts(stops.map((s) => ({ ...s, own: !!s.point })), settings.persons, settings.touristTax);
+  // Eigen punten waar je overnacht: daarvan weten we de kosten niet, dat zeggen we erbij
+  const ownNights = stops.filter((s) => s.point && s.nights > 0).length;
   const { stay, tax, unknownPriceStops } = costs;
   // Een vanaf-prijs is het laagste tarief: dan is ook het totaal een vanaf-bedrag
   const fromPrice = (costs.fromPriceStops ?? 0) > 0;
@@ -321,10 +422,11 @@ export function TripApp() {
   const vehicleDims = vehicleText(vehicle);
   const wantsVehicle = prefs.useVehicle && !!(vehicle.heightM || vehicle.weightKg || vehicle.lengthM || vehicle.widthM);
 
-  // De vertrekdatum gaat mee, zodat de ontvanger dezelfde datums ziet. Begin- en eindpunt en notities niet (privé).
+  // De vertrekdatum gaat mee, zodat de ontvanger dezelfde datums ziet. Begin- en eindpunt, eigen punten en notities
+  // niet (privé; een eigen punt kan je huisadres zijn).
   const shareUrl =
     typeof window !== "undefined"
-      ? `${location.origin}/mijn-reis?r=${trip.stops.map((s) => `${s.slug}.${s.nights}`).join(",")}${startDay && tripDate ? `&d=${tripDate}` : ""}`
+      ? `${location.origin}/mijn-reis?r=${trip.stops.filter((s) => !s.point).map((s) => `${s.slug}.${s.nights}`).join(",")}${startDay && tripDate ? `&d=${tripDate}` : ""}`
       : "";
   const gmapsParts = googleMapsParts(
     stops.map((s) => s.place),
@@ -335,14 +437,21 @@ export function TripApp() {
   /** Wijziging met "Ongedaan maken" */
   const withUndo = (text: string, change: () => void) => {
     const before = trip.stops;
+    const id = trips.active.id;
     change();
-    setUndo({ text, stops: before, at: Date.now() });
+    setUndo({ text, revert: () => writeTripStops(id, before), trip: id });
   };
 
   const names = [...(start ? [start.label] : []), ...stops.map((s) => s.place.name), ...(endPt ? [ends.end === "start" ? "beginpunt" : endPt.label] : [])];
   const alongLegs = names.slice(1).map((to, i) => ({ from: names[i], to, durationS: routeLegs[i]?.durationS, distanceM: routeLegs[i]?.distanceM }));
   // Etappe in de route naar de plaats in de lijst stops waar een nieuwe plek tussen moet
-  const insertIndexForLeg = (leg: number) => Math.min(stops.length, leg + (start ? 0 : 1));
+  // De route telt alleen stops met bekende plekgegevens (`stops`); invoegen gebeurt in de hele lijst (`trip.stops`)
+  const insertIndexForLeg = (leg: number) => {
+    const i = Math.min(stops.length, leg + (start ? 0 : 1));
+    if (i === 0) return 0;
+    const at = trip.stops.findIndex((s) => s.slug === stops[i - 1].slug);
+    return at < 0 ? i : at + 1;
+  };
   const routeLegIndexOfStop = (i: number) => (start ? i : i - 1);
   const openAlong = (leg: number | null) => {
     setAlongLeg(leg);
@@ -361,7 +470,9 @@ export function TripApp() {
     const endIdx = ends.end === "start" && start ? 0 : endPt ? pts.length - 1 : null;
     let cost: (number | null)[][] | null = null;
     if (pts.length >= 3 && pts.length <= MAX_ROUTE_POINTS) {
-      const key = pts.map((p, i) => ((i === 0 && start) || (endPt && ends.end !== "start" && i === pts.length - 1) ? coarse(p) : exact(p))).join(";");
+      // Begin- en eindpunt en eigen punten alleen afgerond (zie routeKey)
+      const own = (i: number) => i >= first && i < first + stops.length && !!stops[i - first].point;
+      const key = pts.map((p, i) => ((i === 0 && start) || (endPt && ends.end !== "start" && i === pts.length - 1) || own(i) ? coarse(p) : exact(p))).join(";");
       try {
         const r = await fetch(`/api/matrix?p=${key}${routeOptionsQuery(routeOptions)}`);
         if (r.ok) cost = ((await r.json()) as { durationsS: (number | null)[][] }).durationsS;
@@ -380,7 +491,7 @@ export function TripApp() {
     setOptimizing(false);
     const next = full.map((idx) => trip.stops.find((s) => s.slug === stops[idx - first].slug)!).filter(Boolean);
     if (after >= before - (byCrow ? 0.5 : 60)) {
-      setUndo({ text: "Je volgorde is al de kortste die we kunnen vinden.", stops: trip.stops, at: Date.now() });
+      setUndo({ text: "Je volgorde is al de kortste die we kunnen vinden." });
       return;
     }
     const saved = byCrow ? `${formatKm(before - after)} korter (hemelsbreed)` : `${minutesText((before - after) / 60)} minder rijden`;
@@ -395,8 +506,11 @@ export function TripApp() {
         name: `${i + 1}. ${s.place.name}`,
         lat: s.place.lat,
         lng: s.place.lng,
-        desc: [s.place.town, s.nights === 0 ? "tussenstop" : pluralize(s.nights, "nacht", "nachten"), departureShort(s.place), s.note].filter(Boolean).join(". "),
-        url: `${location.origin}/plek/${s.slug}`,
+        // Je eigen bestand: ook je privénotities gaan mee
+        desc: [s.point ? "eigen punt" : s.place.town, s.nights === 0 ? "tussenstop" : pluralize(s.nights, "nacht", "nachten"), departureShort(s.place), ...(s.notes ?? []).map((n) => n.text)]
+          .filter(Boolean)
+          .join(". "),
+        ...(s.point ? {} : { url: `${location.origin}/plek/${s.slug}` }),
       })),
       ...(endPt ? [{ name: "Eindpunt", lat: endPt.lat, lng: endPt.lng }] : []),
     ];
@@ -411,9 +525,9 @@ export function TripApp() {
       arrive: dated[i].arrive,
       leave: dated[i].leave,
       nights: s.nights,
-      location: s.place.town,
-      description: [departureShort(s.place), s.note].filter(Boolean).join("\n"),
-      url: `${location.origin}/plek/${s.slug}`,
+      location: s.point ? undefined : s.place.town,
+      description: [departureShort(s.place), ...(s.notes ?? []).map((n) => n.text)].filter(Boolean).join("\n"),
+      url: s.point ? undefined : `${location.origin}/plek/${s.slug}`,
       lat: s.place.lat,
       lng: s.place.lng,
     }));
@@ -424,6 +538,22 @@ export function TripApp() {
       : [];
     download("mijn-camperreis.ics", buildIcs(stays, drives), "text/calendar");
   }
+
+  /** Overnachtingsvoorstellen bij een te lange etappe (positie in de route); toevoegen zet de plek vóór het etappe-eind */
+  const suggestionsFor = (routeLeg: number) => {
+    const o = overnight?.get(routeLeg);
+    if (!o) return undefined;
+    return (
+      <OvernightList
+        hits={o.hits}
+        onAdd={(slug) => {
+          const name = places?.find((p) => p.slug === slug)?.name ?? "De plek";
+          const at = insertIndexForLeg(routeLeg);
+          withUndo(`${name} is toegevoegd als stop ${at + 1}, voor 1 nacht.`, () => trip.insertAt(slug, at, 1));
+        }}
+      />
+    );
+  };
 
   const display = dragOrder ? dragOrder.map((slug) => stops.find((s) => s.slug === slug)).filter((s): s is Stop => !!s) : stops;
   const legDate = (day: number | undefined) => (startDay && day !== undefined ? addDays(startDay, day) : undefined);
@@ -440,7 +570,7 @@ export function TripApp() {
     <div className="mx-auto max-w-6xl px-3 pt-3 pb-10 sm:px-6 sm:pt-5">
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
-          <h1 className="font-display text-h1 font-semibold">Mijn reis</h1>
+          {header(true)}
           <p className="text-sm text-ink-2 sm:text-base">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
@@ -492,7 +622,8 @@ export function TripApp() {
             type="button"
             onClick={async () => {
               // Platte lijst voor groepen waar niemand een link opent (UX-audit)
-              const text = tripText(stops, dated);
+              // Eigen punten met alleen hun naam, en alleen gedeelde notities
+              const text = tripText(stops.map((s) => ({ ...s, own: !!s.point })), dated);
               if (navigator.share) await navigator.share({ title: "Mijn camperreis", text }).catch(() => undefined);
               else {
                 await navigator.clipboard.writeText(text).catch(() => undefined);
@@ -594,7 +725,8 @@ export function TripApp() {
                     }}
                     actions={{
                       setNights: trip.setNights,
-                      setNote: trip.setNote,
+                      saveNote: trip.saveNote,
+                      removeNote: trip.removeNote,
                       move: trip.move,
                       remove: (slug) => withUndo(`${s.place.name} is uit je reis gehaald.`, () => trip.remove(slug)),
                     }}
@@ -609,6 +741,7 @@ export function TripApp() {
                           loading={routeState === "loading"}
                           maxDriveMin={prefs.maxDriveMin}
                           onFindStop={route ? () => openAlong(routeLegIndexOfStop(i)) : undefined}
+                          suggestions={suggestionsFor(routeLegIndexOfStop(i))}
                         />
                       ) : hasLegRow ? (
                         <div className="h-4" />
@@ -622,7 +755,7 @@ export function TripApp() {
 
           {endPt && !dragOrder && (
             <LegRow
-              leg={endLeg}
+              leg={endPt && route ? routeLegs[routeLegs.length - 1] : undefined}
               plan={plan?.endLeg}
               date={legDate(plan?.endLeg?.day)}
               from={stops[stops.length - 1].place}
@@ -630,6 +763,7 @@ export function TripApp() {
               loading={routeState === "loading"}
               maxDriveMin={prefs.maxDriveMin}
               onFindStop={route ? () => openAlong(routeLegs.length - 1) : undefined}
+              suggestions={suggestionsFor(routeLegs.length - 1)}
             />
           )}
           <EndCard end={ends.end} hasStart={!!start} onChange={(e) => setEnds({ ...ends, end: e })} />
@@ -640,14 +774,23 @@ export function TripApp() {
             </Link>
             <button
               type="button"
+              onClick={() => setAddingPoint(!addingPoint)}
+              aria-expanded={addingPoint}
+              className="flex h-12 items-center justify-center gap-2 rounded-lg border border-dashed border-line font-semibold text-forest hover:border-forest"
+            >
+              <Icon name="pin" size={19} /> Eigen punt
+            </button>
+            <button
+              type="button"
               onClick={() => (alongOpen ? setAlongOpen(false) : openAlong(null))}
               disabled={!route || !places}
               aria-expanded={alongOpen}
-              className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest disabled:opacity-50"
+              className="col-span-2 flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest disabled:opacity-50"
             >
               <Icon name="map" size={19} /> Langs de route
             </button>
           </div>
+          {addingPoint && <AddPoint near={lastPoint} onAdd={addPoint} onClose={() => setAddingPoint(false)} />}
           {alongOpen && route && places && (
             <AlongRoute
               geometry={route.geometry}
@@ -694,6 +837,11 @@ export function TripApp() {
                   {unknownPriceStops > 0 && (
                     <span className="block text-sm font-normal text-muted">
                       + {unknownPriceStops} {unknownPriceStops === 1 ? "plek" : "plekken"} zonder bekende prijs
+                    </span>
+                  )}
+                  {ownNights > 0 && (
+                    <span className="block text-sm font-normal text-muted" data-testid="own-nights">
+                      {ownNights === 1 ? "1 eigen punt telt niet mee" : `${ownNights} eigen punten tellen niet mee`}
                     </span>
                   )}
                 </dd>
@@ -804,7 +952,8 @@ export function TripApp() {
           <ExpensesPanel stops={stops.map((s) => ({ slug: s.slug, name: s.place.name }))} budget={{ stay, fuel, tax }} />
 
           <PlaceMap
-            places={stops.map((s) => s.place)}
+            places={stops.filter((s) => !s.point).map((s) => s.place)}
+            pins={stops.flatMap((s, i) => (s.point ? [{ lat: s.point.lat, lng: s.point.lng, label: s.point.name, number: i + 1 }] : []))}
             route={route?.geometry ?? null}
             user={start}
             cluster={false}

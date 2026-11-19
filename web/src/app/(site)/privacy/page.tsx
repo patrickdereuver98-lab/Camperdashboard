@@ -18,7 +18,7 @@ const ROWS: string[][] = [
   ],
   [
     "Samen plannen",
-    "De gedeelde reis (plekken en nachten), wie hem het laatst wijzigde, en je naam zoals de andere deelnemers die zien. Alleen deelnemers kunnen de reis zien",
+    "De gedeelde reis (plekken, eigen punten, nachten en de notities die je deelt), wie hem het laatst wijzigde, en je naam zoals de andere deelnemers die zien. Alleen deelnemers kunnen de reis zien",
     "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je doet zelf mee",
     "Zolang de gedeelde reis bestaat; je deelname eindigt als je stopt of je account verwijdert",
   ],
@@ -271,7 +271,9 @@ export default function PrivacyPage() {
         <p>
           In Mijn reis kun je een begin- en eindpunt kiezen, bijvoorbeeld je huisadres. Dat punt staat alleen op je eigen
           apparaat. Het gaat niet mee naar je account of in een gedeelde link, en naar de routeplanner gaat het afgerond op
-          ongeveer 1 kilometer. Heb je bij Mijn camper de hoogte, het gewicht, de lengte of de breedte ingevuld, dan stuurt
+          ongeveer 1 kilometer. Een eigen punt in je reis (een adres of een punt op de kaart) gaat ook afgerond naar de
+          routeplanner. Het gaat wel mee naar je account (alleen in de bovenste reis in je lijst) en, als je samen plant, naar je reisgenoten. Je notities zijn
+          privé: alleen notities waarbij je &quot;Delen met reisgenoten&quot; aanzet, zien je reisgenoten. Heb je bij Mijn camper de hoogte, het gewicht, de lengte of de breedte ingevuld, dan stuurt
           onze server die maten mee naar OpenRouteService, zodat de route lage bruggen en te zware wegen mijdt. Die maten
           zijn niet aan jou te koppelen. Een GPX-bestand of agendabestand maakt je browser zelf; dat gaat niet langs onze
           server.

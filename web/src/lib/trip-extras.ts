@@ -1,5 +1,6 @@
 export type Extra = { label: string; amount: number; unit?: string };
-type ExtrasStop = { nights: number; place: { priceEur?: number; priceExtras?: Extra[]; touristTaxIncluded?: boolean; priceFrom?: boolean } };
+/** `own`: een eigen punt. Daarvan weten we geen prijs; het telt niet mee in de kosten en niet als "prijs onbekend" */
+type ExtrasStop = { nights: number; own?: boolean; place: { priceEur?: number; priceExtras?: Extra[]; touristTaxIncluded?: boolean; priceFrom?: boolean } };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const perPersonPerNight = (x: Extra) => x.unit === "per persoon per nacht" || (x.label === "Per persoon" && x.unit === "per nacht");
@@ -120,8 +121,8 @@ export function tripCosts(stops: ExtrasStop[], persons: number, touristTaxEstima
   const listed: TripCosts["listed"] = [];
   const assumed: NonNullable<TripCosts["assumed"]> = [];
   stops.forEach((s, index) => {
-    // Tussenstop: je overnacht er niet, dus geen nachtprijs en geen toeslagen per nacht
-    if (s.nights === 0) return;
+    // Tussenstop: je overnacht er niet, dus geen nachtprijs en geen toeslagen per nacht. Eigen punt: geen plekgegevens
+    if (s.nights === 0 || s.own) return;
     const sur = stopSurcharges(s, persons);
     if (s.place.priceEur !== undefined) stay += s.place.priceEur * s.nights;
     else if (sur.stayFromPerPerson !== undefined) stay += sur.stayFromPerPerson;
