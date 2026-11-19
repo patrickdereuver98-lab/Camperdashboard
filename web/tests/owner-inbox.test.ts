@@ -7,6 +7,8 @@ import {
   cleanBody,
   emailAddress,
   htmlToText,
+  isAutomatedSender,
+  looksLikeOptOut,
   ownerReplyText,
   parseInbound,
   parseOwnerReply,
@@ -95,7 +97,7 @@ test("ownerReplyText bevat de mail, geen afzenderadres; prompt is de opdracht", 
   assert.match(t, /Onderwerp: Re: vraag/);
   assert.match(t, /Prijs is 18 euro/);
   assert.doesNotMatch(t, /@/);
-  assert.match(OWNER_PROMPT, /intent: 'confirm' \| 'update' \| 'unknown'/);
+  assert.match(OWNER_PROMPT, /intent: 'confirm' \| 'update' \| 'unsubscribe' \| 'unknown'/);
 });
 
 test("parseOwnerReply: waarden controleren, twijfel wordt leeg", () => {
@@ -103,6 +105,13 @@ test("parseOwnerReply: waarden controleren, twijfel wordt leeg", () => {
     intent: "update",
     price: 18,
     departure_time: "11:00",
+    checkin_from: null,
+    departure_rule: "vast",
+    power: null,
+    water: null,
+    dump_station: null,
+    open_all_year: null,
+    season: null,
     summary: "Nieuwe prijs.",
   });
   // Komma, 9:30 en 10.30 worden genormaliseerd
@@ -111,7 +120,7 @@ test("parseOwnerReply: waarden controleren, twijfel wordt leeg", () => {
   assert.equal(parseOwnerReply('{"intent":"update","price":null,"departure_time":"10.30","summary":""}')?.departure_time, "10:30");
   // Onzin wordt null; een update zonder waarde is 'unknown'
   const bad = parseOwnerReply('{"intent":"update","price":9999,"departure_time":"rond de middag","summary":"x"}');
-  assert.deepEqual(bad, { intent: "unknown", price: null, departure_time: null, summary: "x" });
+  assert.deepEqual(bad, { intent: "unknown", price: null, departure_time: null, checkin_from: null, departure_rule: null, power: null, water: null, dump_station: null, open_all_year: null, season: null, summary: "x" });
   assert.equal(parseOwnerReply('{"intent":"hack","summary":"x"}')?.intent, "unknown");
   assert.equal(parseOwnerReply('{"intent":"confirm","price":null,"departure_time":null,"summary":"Klopt"}')?.intent, "confirm");
   assert.equal(parseOwnerReply("geen json"), null);
@@ -167,12 +176,26 @@ test("parseOwnerReply met mail: niet genoemde prijs of tijd wordt leeg, update z
     intent: "update",
     price: 18,
     departure_time: "11:00",
+    checkin_from: null,
+    departure_rule: "vast",
+    power: null,
+    water: null,
+    dump_station: null,
+    open_all_year: null,
+    season: null,
     summary: "Nieuwe prijs.",
   });
   assert.deepEqual(parseOwnerReply(raw, "Re: vraag\nDe prijs is gestegen."), {
     intent: "unknown",
     price: null,
     departure_time: null,
+    checkin_from: null,
+    departure_rule: null,
+    power: null,
+    water: null,
+    dump_station: null,
+    open_all_year: null,
+    season: null,
     summary: "Nieuwe prijs.",
   });
   // Gratis zonder het woord gratis: geen 0
@@ -183,5 +206,78 @@ test("parseOwnerReply met mail: niet genoemde prijs of tijd wordt leeg, update z
 });
 
 test("UNREAD_REPLY: mail die het model niet kon lezen wordt opgeslagen als unknown zonder waarden", () => {
-  assert.deepEqual({ ...UNREAD_REPLY, summary: "" }, { intent: "unknown", price: null, departure_time: null, summary: "" });
+  assert.deepEqual({ ...UNREAD_REPLY, summary: "" }, { intent: "unknown", price: null, departure_time: null, checkin_from: null, departure_rule: null, power: null, water: null, dump_station: null, open_all_year: null, season: null, summary: "" });
+});
+
+test("parseOwnerReply: aankomst, vertrekregel en afmelden", () => {
+  const a = parseOwnerReply('{"intent":"update","price":null,"departure_time":null,"checkin_from":"14.00","departure_rule":null,"summary":"Aankomst."}');
+  assert.equal(a?.checkin_from, "14:00");
+  assert.equal(a?.intent, "update", "alleen een aankomsttijd is een bruikbare update");
+  // Alleen een vertrekregel zonder tijd is ook een update
+  assert.equal(parseOwnerReply('{"intent":"update","departure_rule":"vrij","summary":"x"}')?.departure_rule, "vrij");
+  // 'vast' zonder tijd kan niemand toepassen: leeg. Een tijd gaat voor een tegenstrijdige regel.
+  assert.equal(parseOwnerReply('{"intent":"update","price":18,"departure_rule":"vast","summary":"x"}')?.departure_rule, null);
+  assert.equal(parseOwnerReply('{"intent":"update","departure_time":"11:00","departure_rule":"vrij","summary":"x"}')?.departure_rule, "vast");
+  // Ongeldige waarden worden leeg
+  const bad = parseOwnerReply('{"intent":"update","price":18,"checkin_from":"25:00","departure_rule":"soms","summary":"x"}');
+  assert.equal(bad?.checkin_from, null);
+  assert.equal(bad?.departure_rule, null);
+  assert.equal(parseOwnerReply('{"intent":"unsubscribe","summary":"Geen mail meer."}')?.intent, "unsubscribe");
+});
+
+test("looksLikeOptOut: afmelden herkennen zonder AI", () => {
+  for (const t of [
+    "Graag afmelden voor jullie mails.",
+    "Geen mail meer sturen aub",
+    "Ik wil geen e-mails meer van jullie",
+    "Please unsubscribe me",
+    "Haal mij van de lijst",
+    "Verwijder mijn e-mailadres uit jullie mailing",
+    "Dit is spam",
+    "Stop met mailen.",
+  ]) {
+    assert.ok(looksLikeOptOut(t), t);
+  }
+  for (const t of ["Aankomst vanaf 14:00, vertrek uiterlijk 11:00.", "Ja, dat klopt. Groet", "We sturen u graag een mail met de prijslijst."]) {
+    assert.ok(!looksLikeOptOut(t), t);
+  }
+});
+
+test("isAutomatedSender: bounces, noreply en afwezigheidsmeldingen", () => {
+  assert.ok(isAutomatedSender("mailer-daemon@googlemail.com"));
+  assert.ok(isAutomatedSender("postmaster@camping.nl"));
+  assert.ok(isAutomatedSender("noreply@camping.nl"));
+  assert.ok(isAutomatedSender("info@camping.nl", "Automatic reply: Klopt dit nog?"));
+  assert.ok(isAutomatedSender("info@camping.nl", "Re: Afwezig tot 12 november"));
+  assert.ok(!isAutomatedSender("info@camping.nl", "Re: Klopt dit nog? [VS-1]"));
+  assert.ok(!isAutomatedSender("jan@camping.nl"));
+});
+
+test("parseOwnerReply: voorzieningen en openingsperiode", () => {
+  const r = parseOwnerReply('{"intent":"update","power":true,"water":false,"dump_station":true,"open_all_year":false,"season":"  1 april   tot en met 31 oktober ","summary":"x"}');
+  assert.equal(r?.intent, "update");
+  assert.deepEqual([r?.power, r?.water, r?.dump_station, r?.open_all_year], [true, false, true, false]);
+  assert.equal(r?.season, "1 april tot en met 31 oktober");
+  // Alleen een voorziening is genoeg voor een update
+  assert.equal(parseOwnerReply('{"intent":"update","water":true,"summary":"x"}')?.intent, "update");
+  // Tekst in plaats van ja/nee wordt leeg, en dan is er niets te doen
+  const bad = parseOwnerReply('{"intent":"update","power":"ja","water":"misschien","summary":"x"}');
+  assert.equal(bad?.power, null);
+  assert.equal(bad?.intent, "unknown");
+  // Tegenspraak: het hele jaar open en een periode met data
+  const both = parseOwnerReply('{"intent":"update","price":18,"open_all_year":true,"season":"april tot oktober","summary":"x"}');
+  assert.equal(both?.open_all_year, null);
+  assert.equal(both?.season, null);
+  assert.equal(parseOwnerReply('{"intent":"update","season":"' + "x".repeat(200) + '","summary":"x"}')?.season?.length, 60);
+});
+
+test("parseOwnerReply met mail: aankomsttijd telt alleen als die in de mail staat", () => {
+  const raw = '{"intent":"update","price":null,"departure_time":null,"checkin_from":"14:00","departure_rule":null,"summary":"x"}';
+  assert.equal(parseOwnerReply(raw, "Aankomst: vanaf 14 uur")?.checkin_from, "14:00");
+  assert.equal(parseOwnerReply(raw, "Aankomst: 's middags")?.checkin_from, null);
+  assert.equal(parseOwnerReply(raw, "Aankomst: 's middags")?.intent, "unknown");
+  // Verzonnen vertrektijd valt weg; een losse regel 'vrij' blijft dan staan
+  const r = parseOwnerReply('{"intent":"update","departure_time":"11:00","departure_rule":"vrij","summary":"x"}', "Vertrek: wanneer u wilt");
+  assert.equal(r?.departure_time, null);
+  assert.equal(r?.departure_rule, "vrij");
 });

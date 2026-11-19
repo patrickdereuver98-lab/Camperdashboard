@@ -55,6 +55,9 @@ psql "$mc_url" -q -v ON_ERROR_STOP=1 -X <<SQL
 \set migration_ops $migrations/20261106200000_health_en_ops_probe.sql
 \set migration_cron $migrations/20261106200100_cron_rustiger_en_opschonen.sql
 \i $here/ops.test.sql
+\set migration_bevestiging $migrations/20261106100200_eigenaar_inbox_bevestiging.sql
+\set migration $migrations/20261119200000_outreach.sql
+\i $here/outreach.test.sql
 SQL
 
 # Publicatiedrempel en leesregel van places (RLS) in een eigen database

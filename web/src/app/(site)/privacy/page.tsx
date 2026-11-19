@@ -321,6 +321,13 @@ export default function PrivacyPage() {
             openbaar heeft gemaakt.
           </li>
           <li>
+            Eenmalig mailen we het openbare e-mailadres van een plek met de vraag naar gegevens die we missen, zoals de aankomst- en vertrektijd. Het adres
+            gaat naar Resend, onze mailverzender, en wat je terugschrijft leest een AI (Google Gemini), zonder je adres, om er
+            de gegevens uit te halen. Een medewerker beslist daarna of het op de site komt. We bewaren van een uitgaande mail
+            alleen een versleutelde code van het adres, geen adres. Met de afmeldlink in de mail, of door te antwoorden dat je
+            geen mail wilt, stoppen we direct; die afmelding bewaren we, zodat we je niet opnieuw mailen.
+          </li>
+          <li>
             Op foto&apos;s van de website van een plek staat klein waar ze vandaan komen. Wil de eigenaar of maker dat een
             foto verdwijnt, dan halen we hem weg na een melding via <Link href="/melden">Meld inhoud</Link>.
           </li>
@@ -357,12 +364,12 @@ export default function PrivacyPage() {
             rijtijd laat berekenen.
           </li>
           <li>
-            <strong>Resend</strong> (Verenigde Staten) ontvangt mail die eigenaren naar ons sturen en geeft die door aan onze
-            server.
+            <strong>Resend</strong> (Verenigde Staten) verstuurt de eenmalige vraag aan eigenaren, ontvangt de mail die zij naar
+            ons sturen en geeft die door aan onze server.
           </li>
           <li>
             <strong>Google</strong> (Gemini) leest het onderwerp en de tekst van zo&apos;n mail, zonder het afzenderadres, en
-            zegt ons of de eigenaar iets bevestigt of een nieuwe prijs of vertrektijd noemt. Een mens beslist daarna of we
+            zegt ons of de eigenaar iets bevestigt of nieuwe gegevens noemt, zoals een prijs, aankomst- of vertrektijd. Een mens beslist daarna of we
             iets aanpassen. Gemini helpt ons ook bij het controleren van wijzigingen die bezoekers doorgeven; daarbij gaan
             alleen gegevens van de plek mee, niets over jou.
           </li>
