@@ -346,11 +346,18 @@ export function TripApp() {
     setUndo({ text: `${p.name} is toegevoegd als stop ${before.length + 1}.`, revert: () => writeTripStops(id, before) });
   };
   const lastPoint = stops && stops.length ? stops[stops.length - 1].place : (start ?? undefined);
-  const header = (
-    <div>
-      <h1 className="font-display text-h1 font-semibold" data-testid="trip-name">
-        {trips.active.name}
-      </h1>
+  // Naam van de reis met de lijst met reizen; in de lege toestand is "Je reis is nog leeg" de kop
+  const header = (asHeading: boolean) => (
+    <div className="text-left">
+      {asHeading ? (
+        <h1 className="font-display text-h1 font-semibold" data-testid="trip-name">
+          {trips.active.name}
+        </h1>
+      ) : (
+        <p className="font-display text-h2 font-semibold" data-testid="trip-name">
+          {trips.active.name}
+        </p>
+      )}
       <TripSwitcher trips={trips} linkedId={linkedId} onRemoved={onTripRemoved} />
     </div>
   );
@@ -359,7 +366,7 @@ export function TripApp() {
     return (
       <div className="mx-auto max-w-xl px-4 pt-6 sm:pt-10">
         {undoToast}
-        {(trips.list.length > 1 || trips.active.name !== "Mijn reis") && <div className="mb-6">{header}</div>}
+        {(trips.list.length > 1 || trips.active.name !== "Mijn reis") && <div className="mb-6">{header(false)}</div>}
         <div className="text-center">
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
@@ -378,7 +385,7 @@ export function TripApp() {
         )}
         </div>
         {addingPoint && <AddPoint near={start ?? undefined} onAdd={addPoint} onClose={() => setAddingPoint(false)} />}
-        {trips.list.length === 1 && trips.active.name === "Mijn reis" && <div className="mt-8">{header}</div>}
+        {trips.list.length === 1 && trips.active.name === "Mijn reis" && <div className="mt-8">{header(false)}</div>}
       </div>
     );
   }
@@ -553,7 +560,7 @@ export function TripApp() {
     <div className="mx-auto max-w-6xl px-3 pt-3 pb-10 sm:px-6 sm:pt-5">
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
-          {header}
+          {header(true)}
           <p className="text-sm text-ink-2 sm:text-base">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
           </p>
