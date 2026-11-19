@@ -172,6 +172,16 @@ do $$ begin
   insert into public.places (id, name, kind, email, status) values ('a0000000-0000-4000-8000-0000000000b1', 'Zelfde eigenaar', 'camping', 'INFO@devlinder.nl', 'published');
   assert not exists (select 1 from private.outreach_candidates() where place_id = 'a0000000-0000-4000-8000-0000000000b1'), 'afgemeld adres kwam terug';
 end $$;
+
+-- Review 19 november 2026 (A3): een klacht blijft staan na afmelden, zodat de noodrem hem blijft tellen
+update private.outreach_log set status = 'complained' where place_id = 'a0000000-0000-4000-8000-000000000001';
+set role anon;
+select public.outreach_unsubscribe(:'t1') is not null as ok_a3 \gset
+reset role;
+do $$ begin
+  assert (select status from private.outreach_log where place_id = 'a0000000-0000-4000-8000-000000000001') = 'complained', 'klacht gewist door afmelden';
+end $$;
+update private.outreach_log set status = 'unsubscribed' where place_id = 'a0000000-0000-4000-8000-000000000001';
 \if :ok1
 \if :ok2
 \if :ok3
