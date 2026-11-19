@@ -14,7 +14,7 @@ Wat na 0.9.1 af kwam, dezelfde dag.
   standaard privé met "Delen met reisgenoten".
 
 **Achter de schermen**
-- Mail naar eigenaren (PR #165, vervangt #141): code en migratie `20261119200000_outreach.sql`. Verzenden staat UIT;
+- Mail naar eigenaren (PR #165, vervangt #141): code en migratie `20261119200000_outreach.sql` (live gezet 19 november). Verzenden staat UIT;
   aanzetten is een besluit van Patrick (LANCERING besluit 4, README 136). Review vóór livegang verwerkt: afmelden lukt
   altijd, een klacht blijft meetellen voor de noodrem.
 
