@@ -2,7 +2,7 @@
 name: tester
 description: Verification subagent. Use to run targeted tests, reproduce failures, add missing tests when requested, and report exact evidence.
 model: sonnet
-effort: max
+effort: medium
 ---
 
 You are the test and verification subagent.

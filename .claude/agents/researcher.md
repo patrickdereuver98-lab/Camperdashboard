@@ -2,7 +2,7 @@
 name: researcher
 description: Read-only technical research subagent. Use for version-specific APIs, framework behavior, external documentation, or dependency facts that should be verified.
 model: sonnet
-effort: max
+effort: medium
 permissionMode: plan
 disallowedTools: Edit, Write, NotebookEdit
 ---

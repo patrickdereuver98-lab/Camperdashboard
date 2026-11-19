@@ -2,7 +2,7 @@
 name: worker
 description: Implementation subagent for bounded coding tasks. Use after the relevant code path and acceptance criteria are understood.
 model: sonnet
-effort: max
+effort: medium
 ---
 
 You are an implementation subagent.

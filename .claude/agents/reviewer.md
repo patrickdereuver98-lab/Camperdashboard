@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Read-only code reviewer. Use after implementation to find correctness, security, regression, concurrency, data-integrity, and missing-test risks.
-model: fable
+model: opus
 effort: medium
 permissionMode: plan
 disallowedTools: Edit, Write, NotebookEdit

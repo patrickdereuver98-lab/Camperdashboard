@@ -1,8 +1,8 @@
 ---
 name: explorer
 description: Read-only repository explorer. Use to locate files, symbols, execution paths, dependencies, configuration, and tests before implementation.
-model: sonnet
-effort: max
+model: haiku
+effort: low
 permissionMode: plan
 disallowedTools: Edit, Write, NotebookEdit
 ---

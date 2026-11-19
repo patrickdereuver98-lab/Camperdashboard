@@ -70,6 +70,9 @@ github.com/rajatmshukla/claude-opus-sonnet-orchestrator (commit d5894f8, Apache 
   `effortLevel: medium`, subagents op Sonnet, en **2** agents tegelijk in plaats van 4 (gebruikslimiet; de review van
   november liep twee keer vast). Hun `sandbox`-instelling en `defaultMode` zijn niet overgenomen.
 - Hun projectregels staan als één punt in `CLAUDE.md`; CLAUDE.md en `docs/specs/` gaan voor.
+- **19 november 2026 (release 0.9.1):** gelijkgetrokken met de orchestratieregels van 19 november. `model: fable`,
+  `effortLevel` en `CLAUDE_CODE_SUBAGENT_MODEL` uit `.claude/settings.json` gehaald (die overschreven de keuze per agent);
+  `explorer` op Haiku (low), `worker`, `tester` en `researcher` op Sonnet (medium), `reviewer` op Opus (medium).
 
 ## /brag (launch-video's)
 
