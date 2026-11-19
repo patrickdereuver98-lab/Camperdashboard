@@ -5,6 +5,7 @@ import type { PlaceSummary, Town } from "./types";
 import { decodePlaceIndex, EARLY_PLACES, type PlaceRef } from "./place-index";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
+import { cleanRouteEnds, cleanRoutePrefs, DEFAULT_ROUTE_PREFS, EMPTY_ENDS, type RouteEnds, type RoutePrefs } from "./route-prefs";
 import { createLocalStore, onStorageFailure, storageFailed, type StoreOptions } from "./local-store";
 import { clampNights, decodeTrip, decodeTripPlaces, encodeTrip, encodeTripPlaces, type TripPlacesCopy } from "./trip-storage";
 
@@ -26,7 +27,9 @@ export const useStorageFailed = () => useSyncExternalStore(onStorageFailure, sto
 
 export interface TripStop {
   slug: string;
+  /** 0 = tussenstop (je rijdt dezelfde dag verder) */
   nights: number;
+  note?: string;
 }
 
 const EMPTY_TRIP: TripStop[] = [];
@@ -50,6 +53,15 @@ export function useTrip() {
     remove: (slug: string) => set(stops.filter((s) => s.slug !== slug)),
     setNights: (slug: string, nights: number) =>
       set(stops.map((s) => (s.slug === slug ? { ...s, nights: clampNights(nights) } : s))),
+    setNote: (slug: string, note: string) => set(stops.map((s) => (s.slug === slug ? { ...s, note } : s))),
+    /** Plek op een bepaalde plaats in de reis zetten (of daarheen verplaatsen als hij er al in staat) */
+    insertAt: (slug: string, at: number, nights = 1) => {
+      const rest = stops.filter((s) => s.slug !== slug);
+      const existing = stops.find((s) => s.slug === slug);
+      const i = Math.max(0, Math.min(rest.length, at));
+      set([...rest.slice(0, i), existing ?? { slug, nights: clampNights(nights) }, ...rest.slice(i)]);
+    },
+    reverse: () => set([...stops].reverse()),
     move: (from: number, to: number) => {
       if (to < 0 || to >= stops.length) return;
       const next = [...stops];
@@ -113,6 +125,21 @@ export const useTripSettings = () => [settingsStore.use(), settingsStore.write] 
 /** Vertrekdatum van de reis ("2026-11-06"); leeg = geen datums. Los van de instellingen, zodat oude opslag blijft werken */
 const tripDateStore = createStore<string | null>("vrijstaan:reisdatum", null, (v): v is string | null => v === null || typeof v === "string");
 export const useTripDate = () => [tripDateStore.use(), tripDateStore.write] as const;
+
+/** Routevoorkeuren: vertrektijd, rijtijd per dag, pauzes, camper meenemen, vermijden (zie route-prefs.ts) */
+const routePrefsStore = createStore<RoutePrefs>("vrijstaan:routevoorkeuren", DEFAULT_ROUTE_PREFS, (v): v is RoutePrefs => typeof v === "object" && v !== null, {
+  decode: cleanRoutePrefs,
+});
+export const useRoutePrefs = () => [routePrefsStore.use(), (p: RoutePrefs) => routePrefsStore.write(cleanRoutePrefs(p))] as const;
+
+/**
+ * Begin- en eindpunt van de reis. Alleen op dit toestel (niet in je account en niet in een gedeelde link): het kan
+ * je huisadres zijn. Naar onze server gaat het alleen afgerond op ±1 km.
+ */
+const routeEndsStore = createStore<RouteEnds>("vrijstaan:reispunten", EMPTY_ENDS, (v): v is RouteEnds => typeof v === "object" && v !== null, {
+  decode: cleanRouteEnds,
+});
+export const useRouteEnds = () => [routeEndsStore.use(), (e: RouteEnds) => routeEndsStore.write(cleanRouteEnds(e))] as const;
 
 // ── Cookie-toestemming ──────────────────────────────────────────────────────
 

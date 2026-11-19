@@ -1,20 +1,13 @@
 // Hoe Mijn reis op dit toestel wordt opgeslagen. Met een versienummer, zodat een latere vorm oude opslag kan omzetten.
 //
 // Versie 1 (tot november 2026): een losse lijst `[{ slug, nights }]`, zonder controle op het aantal nachten.
-// Versie 2: `{ v: 2, stops: [{ slug, nights }] }`; nachten heel, 1 tot en met 21 (standaard 1), elke plek één keer.
-import { mergeTrips, type Stop } from "./trip-merge";
+// Versie 2: `{ v: 2, stops: [{ slug, nights, note? }] }`; nachten heel, 0 (tussenstop) tot en met 21 (standaard 1),
+// elke plek één keer, notitie optioneel.
+import { clampNights, cleanNote, MAX_NIGHTS, MIN_NIGHTS, mergeTrips, type Stop } from "./trip-merge";
 import type { PlaceSummary } from "./types";
 
 export const TRIP_VERSION = 2;
-export const MIN_NIGHTS = 1;
-export const MAX_NIGHTS = 21;
-
-/** Aantal nachten begrenzen: heel getal van 1 tot en met 21, en 1 als het geen getal is */
-export function clampNights(n: unknown): number {
-  const x = Math.round(Number(n));
-  if (!Number.isFinite(x)) return MIN_NIGHTS;
-  return Math.max(MIN_NIGHTS, Math.min(MAX_NIGHTS, x));
-}
+export { clampNights, MAX_NIGHTS, MIN_NIGHTS };
 
 /** Opgeslagen reis (elke versie) naar een nette lijst stops; undefined als het geen reis is */
 export function decodeTrip(stored: unknown): Stop[] | undefined {
@@ -28,7 +21,10 @@ export function decodeTrip(stored: unknown): Stop[] | undefined {
 }
 
 export function encodeTrip(stops: Stop[]): { v: typeof TRIP_VERSION; stops: Stop[] } {
-  return { v: TRIP_VERSION, stops: stops.map((s) => ({ slug: s.slug, nights: clampNights(s.nights) })) };
+  return { v: TRIP_VERSION, stops: stops.map((s) => {
+    const note = cleanNote(s.note);
+    return note ? { slug: s.slug, nights: clampNights(s.nights), note } : { slug: s.slug, nights: clampNights(s.nights) };
+  }) };
 }
 
 // ── Kopie van de plekgegevens, voor Mijn reis zonder bereik ─────────────────
