@@ -55,10 +55,13 @@ jobs:
           cache: pip
           cache-dependency-path: tools/stealth-lezer/requirements.txt
 
+      # R58: de lezer start Chromium via patchright; `scrapling install` haalt de browser van playwright. Beide liggen
+      # vast op dezelfde minor (requirements.txt), en patchright installeert daarna zijn eigen browser.
       - name: Scrapling en browser installeren
         run: |
           pip install -r tools/stealth-lezer/requirements.txt pytest
           scrapling install
+          python -m patchright install --with-deps chromium
 
       - name: Tests
         run: python -m pytest -q tools/stealth-lezer
@@ -70,6 +73,8 @@ jobs:
   # Volgende run in een eigen job die altijd draait, ook als een lezer tegen de tijdslimiet aanloopt (25-26 okt brak de
   # keten twee keer doordat lezer 0 werd afgebroken). Niet als de lezers meldden dat de wachtrij leeg is.
   # GitHub start geplande runs bij openbare repositories vaak te laat of niet; het rooster blijft als vangnet.
+  # R58: mislukken de lezers drie runs op rij, dan start deze job niets meer (van 9 tot 16 november startte een kapotte
+  # browser 7.735 runs). Het uurrooster probeert het daarna één keer per uur opnieuw.
   volgende:
     needs: lezen
     if: always() && needs.lezen.outputs.meer != 'false'
@@ -81,4 +86,16 @@ jobs:
       - name: Volgende run starten
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run stealth-lezer.yml --ref main --repo ${{ github.repository }}
+          REPO: ${{ github.repository }}
+          LEZEN: ${{ needs.lezen.result }}
+        run: |
+          set -eu
+          if [ "$LEZEN" != "success" ]; then
+            vorige=$(gh run list --workflow stealth-lezer.yml --repo "$REPO" --status completed --limit 2 \
+              --json conclusion -q '.[].conclusion' | tr '\n' ' ')
+            if [ "$vorige" = "failure failure " ]; then
+              echo "::error::Drie mislukte runs op rij; geen nieuwe run gestart. Het uurrooster probeert het opnieuw."
+              exit 0
+            fi
+          fi
+          gh workflow run stealth-lezer.yml --ref main --repo "$REPO"

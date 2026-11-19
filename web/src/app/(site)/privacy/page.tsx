@@ -175,7 +175,7 @@ export default function PrivacyPage() {
     <ProsePage
       title="Privacyverklaring"
       intro="We verwerken zo weinig persoonsgegevens als we kunnen. Hier lees je welke, waarom, op welke grondslag en hoe lang."
-      updated="6 november 2026"
+      updated="19 november 2026"
     >
       <Section title="Wie zijn wij">
         <p>
@@ -267,6 +267,14 @@ export default function PrivacyPage() {
           niet aan andere gegevens over jou. Zodat de routeplanner niet te veel vragen krijgt, bewaart de server de uitkomst
           (de rijtijd bij een afgerond punt) een paar dagen in een technische cache. Daarin staat niets wat naar jou te
           herleiden is. De knop &quot;Open in navigatie&quot; opent Google Maps. Daar gelden de privacyregels van Google.
+        </p>
+        <p>
+          In Mijn reis kun je een begin- en eindpunt kiezen, bijvoorbeeld je huisadres. Dat punt staat alleen op je eigen
+          apparaat. Het gaat niet mee naar je account of in een gedeelde link, en naar de routeplanner gaat het afgerond op
+          ongeveer 1 kilometer. Heb je bij Mijn camper de hoogte, het gewicht, de lengte of de breedte ingevuld, dan stuurt
+          onze server die maten mee naar OpenRouteService, zodat de route lage bruggen en te zware wegen mijdt. Die maten
+          zijn niet aan jou te koppelen. Een GPX-bestand of agendabestand maakt je browser zelf; dat gaat niet langs onze
+          server.
         </p>
         <p>
           Zoek je op een adres, postcode of plaats, dan stuurt onze server wat je typt naar de Locatieserver van PDOK

@@ -3,11 +3,13 @@ import { test } from "node:test";
 import { clampNights, decodeTrip, decodeTripPlaces, encodeTrip, encodeTripPlaces, TRIP_VERSION } from "../src/lib/trip-storage.ts";
 import type { PlaceSummary } from "../src/lib/types.ts";
 
-test("clampNights: heel getal van 1 t/m 21, anders 1", () => {
+test("clampNights: heel getal van 0 (tussenstop) t/m 21, anders 1", () => {
   assert.equal(clampNights(3), 3);
   assert.equal(clampNights(2.6), 3);
-  assert.equal(clampNights(0), 1);
-  assert.equal(clampNights(-4), 1);
+  assert.equal(clampNights(0), 0);
+  assert.equal(clampNights(-4), 0);
+  assert.equal(clampNights(""), 1);
+  assert.equal(clampNights(null), 1);
   assert.equal(clampNights(99), 21);
   assert.equal(clampNights("5"), 5);
   assert.equal(clampNights("abc"), 1);
@@ -30,8 +32,15 @@ test("decodeTrip: versie 2 met begrensde nachten, rommel valt weg", () => {
   assert.equal(decodeTrip(null), undefined);
 });
 
+test("decodeTrip: 0 nachten uit versie 1 of 2 wordt 1, in versie 3 een tussenstop", () => {
+  assert.deepEqual(decodeTrip([{ slug: "a", nights: 0 }]), [{ slug: "a", nights: 1 }]);
+  assert.deepEqual(decodeTrip({ v: 2, stops: [{ slug: "a", nights: 0 }] }), [{ slug: "a", nights: 1 }]);
+  assert.deepEqual(decodeTrip({ v: 3, stops: [{ slug: "a", nights: 0, note: "lozen" }] }), [{ slug: "a", nights: 0, note: "lozen" }]);
+});
+
 test("encodeTrip: met versieveld", () => {
-  assert.deepEqual(encodeTrip([{ slug: "a", nights: 0 }]), { v: TRIP_VERSION, stops: [{ slug: "a", nights: 1 }] });
+  assert.equal(TRIP_VERSION, 3);
+  assert.deepEqual(encodeTrip([{ slug: "a", nights: 0, note: "water" }]), { v: TRIP_VERSION, stops: [{ slug: "a", nights: 0, note: "water" }] });
   assert.deepEqual(decodeTrip(encodeTrip([{ slug: "a", nights: 4 }])), [{ slug: "a", nights: 4 }]);
 });
 

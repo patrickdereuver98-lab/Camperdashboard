@@ -5,7 +5,10 @@ import type { PlaceSummary, Town } from "./types";
 import { decodePlaceIndex, EARLY_PLACES, type PlaceRef } from "./place-index";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
+import { cleanRouteEnds, cleanRoutePrefs, DEFAULT_ROUTE_PREFS, EMPTY_ENDS, type RouteEnds, type RoutePrefs } from "./route-prefs";
 import { createLocalStore, onStorageFailure, storageFailed, type StoreOptions } from "./local-store";
+import { mergeTrips } from "./trip-merge";
+import { addRecent, decodeRecentPlaces, decodeRecentSearches, type RecentPlace, type RecentSearch } from "./recent";
 import { clampNights, decodeTrip, decodeTripPlaces, encodeTrip, encodeTripPlaces, type TripPlacesCopy } from "./trip-storage";
 
 // ── Kleine localStorage-store met abonnement (kern in local-store.ts) ───────
@@ -26,7 +29,9 @@ export const useStorageFailed = () => useSyncExternalStore(onStorageFailure, sto
 
 export interface TripStop {
   slug: string;
+  /** 0 = tussenstop (je rijdt dezelfde dag verder) */
   nights: number;
+  note?: string;
 }
 
 const EMPTY_TRIP: TripStop[] = [];
@@ -37,7 +42,8 @@ const tripStore = createStore<TripStop[]>("vrijstaan:reis", EMPTY_TRIP, (v): v i
 });
 /** De reis zoals hij nu op dit toestel staat (buiten React, bijvoorbeeld na een await) */
 export const readTrip = () => tripStore.read();
-export const writeTrip = (next: TripStop[]) => tripStore.write(decodeTrip(next) ?? EMPTY_TRIP);
+// Een lijst uit de app zelf is al de nieuwste vorm (tussenstop met 0 nachten mag): niet als oude opslag lezen
+export const writeTrip = (next: TripStop[]) => tripStore.write(mergeTrips([], next));
 
 export function useTrip() {
   const stops = tripStore.use();
@@ -50,6 +56,15 @@ export function useTrip() {
     remove: (slug: string) => set(stops.filter((s) => s.slug !== slug)),
     setNights: (slug: string, nights: number) =>
       set(stops.map((s) => (s.slug === slug ? { ...s, nights: clampNights(nights) } : s))),
+    setNote: (slug: string, note: string) => set(stops.map((s) => (s.slug === slug ? { ...s, note } : s))),
+    /** Plek op een bepaalde plaats in de reis zetten (of daarheen verplaatsen als hij er al in staat) */
+    insertAt: (slug: string, at: number, nights = 1) => {
+      const rest = stops.filter((s) => s.slug !== slug);
+      const existing = stops.find((s) => s.slug === slug);
+      const i = Math.max(0, Math.min(rest.length, at));
+      set([...rest.slice(0, i), existing ?? { slug, nights: clampNights(nights) }, ...rest.slice(i)]);
+    },
+    reverse: () => set([...stops].reverse()),
     move: (from: number, to: number) => {
       if (to < 0 || to >= stops.length) return;
       const next = [...stops];
@@ -114,6 +129,21 @@ export const useTripSettings = () => [settingsStore.use(), settingsStore.write] 
 const tripDateStore = createStore<string | null>("vrijstaan:reisdatum", null, (v): v is string | null => v === null || typeof v === "string");
 export const useTripDate = () => [tripDateStore.use(), tripDateStore.write] as const;
 
+/** Routevoorkeuren: vertrektijd, rijtijd per dag, pauzes, camper meenemen, vermijden (zie route-prefs.ts) */
+const routePrefsStore = createStore<RoutePrefs>("vrijstaan:routevoorkeuren", DEFAULT_ROUTE_PREFS, (v): v is RoutePrefs => typeof v === "object" && v !== null, {
+  decode: cleanRoutePrefs,
+});
+export const useRoutePrefs = () => [routePrefsStore.use(), (p: RoutePrefs) => routePrefsStore.write(cleanRoutePrefs(p))] as const;
+
+/**
+ * Begin- en eindpunt van de reis. Alleen op dit toestel (niet in je account en niet in een gedeelde link): het kan
+ * je huisadres zijn. Naar onze server gaat het alleen afgerond op ±1 km.
+ */
+const routeEndsStore = createStore<RouteEnds>("vrijstaan:reispunten", EMPTY_ENDS, (v): v is RouteEnds => typeof v === "object" && v !== null, {
+  decode: cleanRouteEnds,
+});
+export const useRouteEnds = () => [routeEndsStore.use(), (e: RouteEnds) => routeEndsStore.write(cleanRouteEnds(e))] as const;
+
 // ── Cookie-toestemming ──────────────────────────────────────────────────────
 
 export interface Consent {
@@ -173,6 +203,8 @@ type LoaderState<T> = {
 /** `enabled` false: (nog) niets ophalen; de pagina vraagt de lijst pas als hij nodig is (R33) */
 function useLoader<T>(get: () => Promise<Loaded<T>>, enabled = true) {
   const [state, setState] = useState<LoaderState<T>>({ data: null, error: false, cachedAt: null });
+  // Na "Ververs" opnieuw ophalen; de oude lijst blijft staan tot de nieuwe er is
+  const version = useSyncExternalStore(subscribeData, () => dataVersion, () => 0);
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
@@ -183,7 +215,7 @@ function useLoader<T>(get: () => Promise<Loaded<T>>, enabled = true) {
     return () => {
       alive = false;
     };
-  }, [get, enabled]);
+  }, [get, enabled, version]);
   return state;
 }
 
@@ -199,7 +231,28 @@ function takeEarlyPlaces(): Promise<Response> | undefined {
   return started;
 }
 
-const getPlaces = () => (placesPromise ??= once<PlaceSummary[]>("/api/places", "places", undefined, takeEarlyPlaces()));
+// "Ververs" (Zoeken, Dichtbij): de volgende keer de plekkenlijst vers van de server, langs de cache van de service worker
+let reloadPlaces = false;
+let dataVersion = 0;
+const dataListeners = new Set<() => void>();
+export function refreshPlaces() {
+  placesPromise = null;
+  indexPromise = null;
+  reloadPlaces = true;
+  dataVersion++;
+  dataListeners.forEach((l) => l());
+}
+const subscribeData = (l: () => void) => {
+  dataListeners.add(l);
+  return () => dataListeners.delete(l);
+};
+
+const getPlaces = () => {
+  if (placesPromise) return placesPromise;
+  const started = reloadPlaces ? fetch("/api/places", { cache: "reload" }) : takeEarlyPlaces();
+  reloadPlaces = false;
+  return (placesPromise = once<PlaceSummary[]>("/api/places", "places", undefined, started));
+};
 const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 // Is de hele lijst al onderweg of binnen (zoeken), dan daaruit; anders de lichte index
 const fetchIndex = () => (indexPromise ??= once<PlaceRef[]>("/api/places/suggest", "index", decodePlaceIndex));
@@ -276,4 +329,38 @@ export function usePulse() {
     answers,
     answer: (key: string, answer: PulseAnswer) => pulseStore.write({ ...answers, [key]: { answer, at: new Date().toISOString() } }),
   };
+}
+
+// ── Eerder gezocht en bekeken (alleen op dit toestel, UX-audit Z1) ──────────
+
+const EMPTY_SEARCHES: RecentSearch[] = [];
+const EMPTY_VIEWED: RecentPlace[] = [];
+const searchesStore = createStore<RecentSearch[]>("vrijstaan:gezocht", EMPTY_SEARCHES, (v): v is RecentSearch[] => decodeRecentSearches(v) !== undefined, {
+  decode: decodeRecentSearches,
+});
+const viewedStore = createStore<RecentPlace[]>("vrijstaan:bekeken", EMPTY_VIEWED, (v): v is RecentPlace[] => decodeRecentPlaces(v) !== undefined, {
+  decode: decodeRecentPlaces,
+});
+
+export function useRecent() {
+  const searches = searchesStore.use();
+  const places = viewedStore.use();
+  return {
+    searches,
+    places,
+    removeSearch: (href: string) => searchesStore.write(searchesStore.read().filter((s) => s.href !== href)),
+    clear: () => {
+      searchesStore.write([]);
+      viewedStore.write([]);
+    },
+  };
+}
+
+export function rememberSearch(label: string, href: string) {
+  if (!label.trim()) return;
+  searchesStore.write(addRecent(searchesStore.read(), { label, href, at: new Date().toISOString() }, (a, b) => a.href === b.href || a.label === b.label));
+}
+
+export function rememberViewed(p: { slug: string; name: string; town: string }) {
+  viewedStore.write(addRecent(viewedStore.read(), { ...p, at: new Date().toISOString() }, (a, b) => a.slug === b.slug));
 }

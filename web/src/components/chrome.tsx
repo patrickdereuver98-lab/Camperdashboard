@@ -8,6 +8,7 @@ import { useSession } from "@/lib/auth";
 import { currentTheme, setTheme } from "@/lib/theme";
 import { useDarkTheme } from "@/lib/use-media";
 import { useTrip } from "@/lib/store";
+import { useLastSearch } from "@/lib/last-search";
 import { track } from "@/lib/track";
 import { Icon, Logo, type IconName } from "./icons";
 
@@ -72,6 +73,7 @@ function TripBadge({ className = "" }: { className?: string }) {
 function HeaderView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
   const onPlace = pathname.startsWith("/plek/");
+  const lastSearch = useLastSearch();
   if (pathname.startsWith("/admin")) return null;
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
@@ -95,7 +97,7 @@ function HeaderView({ pathname }: { pathname: string }) {
           {NAV.map((n) => (
             <Link
               key={n.href}
-              href={n.href}
+              href={n.href === "/zoeken" ? lastSearch : n.href}
               aria-current={isActive(n.href) ? "page" : undefined}
               className="flex h-11 items-center gap-2 rounded-lg px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
             >
@@ -198,16 +200,41 @@ function OfflineBar() {
   if (!offline) return null;
   return (
     <div role="status" className="flex items-center justify-center gap-2 bg-ink px-4 py-2 text-sm font-semibold text-surface">
-      <Icon name="wifiOff" size={16} /> Geen verbinding. Bewaarde plekken en eerder bekeken pagina&apos;s werken nog.
+      <Icon name="wifiOff" size={16} className="shrink-0" />
+      <span>
+        Geen verbinding. Mijn reis, je bewaarde plekken en de pagina&apos;s die je eerder bekeek werken gewoon.{" "}
+        <Link href="/mijn-reis" className="underline underline-offset-2">
+          Naar Mijn reis
+        </Link>
+      </span>
     </div>
   );
 }
 
+/**
+ * Tik op het tabblad waar je al bent, zoals op een iPhone (UX-audit november, G2): eerst naar boven; sta je al boven,
+ * dan de cursor in het zoekvak (Start en Zoeken). Op een subpagina (bv. Reisstatistieken) gaat de link gewoon door.
+ */
+function tapCurrentTab(e: React.MouseEvent, here: boolean) {
+  if (!here || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  if (window.scrollY > 4) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    return;
+  }
+  document.querySelector<HTMLInputElement>('form[role="search"] input[role="combobox"]')?.focus();
+}
+
 function TabBarView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
+  const lastSearch = useLastSearch();
   // Op een plekpagina neemt de actiebalk (prijs, bewaren, website) de onderrand over
   if (pathname.startsWith("/admin") || pathname.startsWith("/plek/")) return null;
   const tabs: { href: string; label: string; icon: IconName }[] = [{ href: "/", label: "Start", icon: "home" }, ...NAV];
+  // Zoeken brengt je terug naar je laatste zoekopdracht van dit bezoek, met alle filters
+  const linkOf = (href: string) => (href === "/zoeken" ? lastSearch : href);
+  const hereOn = (href: string) => pathname === href || (href === "/zoeken" && pathname === lastSearch.split("?")[0]);
   return (
     <>
     {/* Ruimte zodat de vaste tabbalk geen inhoud bedekt */}
@@ -222,8 +249,9 @@ function TabBarView({ pathname }: { pathname: string }) {
           return (
             <li key={t.href}>
               <Link
-                href={t.href}
+                href={linkOf(t.href)}
                 aria-current={active ? "page" : undefined}
+                onClick={(e) => tapCurrentTab(e, hereOn(t.href))}
                 className="relative flex h-16 flex-col items-center justify-center gap-0.5 text-sm font-semibold text-muted aria-[current=page]:text-forest"
               >
                 {active && <span className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-forest" />}
@@ -251,6 +279,13 @@ export function Runtime() {
 
 function RuntimeLive() {
   const pathname = usePathname();
+  // Aantal stops op het app-icoon (alleen als app op het beginscherm; iPhone vanaf iOS 16.4 met toestemming voor meldingen)
+  const { stops } = useTrip();
+  useEffect(() => {
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    if (!nav.setAppBadge) return;
+    (stops.length ? nav.setAppBadge(stops.length) : (nav.clearAppBadge?.() ?? Promise.resolve())).catch(() => undefined);
+  }, [stops.length]);
   useEffect(() => {
     pagesSeen += 1;
     if (!pathname.startsWith("/admin")) track("page_view");

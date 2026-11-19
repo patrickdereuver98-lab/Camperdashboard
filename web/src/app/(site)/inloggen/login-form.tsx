@@ -132,6 +132,7 @@ export function LoginForm() {
               autoFocus
               autoComplete="one-time-code"
               inputMode="numeric"
+              enterKeyHint="done"
               pattern="[0-9]{6,10}"
               maxLength={10}
               className={`${field} text-center font-mono text-2xl tracking-[0.3em]`}
@@ -190,7 +191,7 @@ export function LoginForm() {
       <form onSubmit={email} className="space-y-3">
         <label className="block">
           <span className="mb-1.5 block font-semibold">E-mailadres</span>
-          <input name="email" type="email" required autoComplete="email" inputMode="email" className={field} />
+          <input name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="send" className={field} />
         </label>
         <button type="submit" disabled={busy !== null} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
           {busy === "email" ? "Versturen…" : "Stuur mij een inlogcode"}

@@ -24,7 +24,7 @@ const SLIDES: { icon: IconName; title: string; lead: string; points: string[] }[
     title: "Actueel, met jouw hulp",
     lead: "Jij helpt mee als je er bent geweest.",
     points: [
-      "Bij elke plek staat wanneer we hem voor het laatst nakeken",
+      "Bij elke plek staat wanneer we de gegevens voor het laatst lazen",
       "Klopt iets niet meer? Op de pagina van de plek geef je het door",
       "Wat we niet weten, staat er als onbekend",
     ],

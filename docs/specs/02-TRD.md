@@ -55,8 +55,8 @@
 | Vercel | Hosting website | Hobby: niet-commercieel gebruik | Account van Patrick (nog koppelen) |
 | OpenStreetMap / Overpass | Plekken, servicepunten, `check_in`/`check_out`/`maxstay` | Publieke servers, vaak overbelast; we wisselen tussen 3 servers en wachten steeds langer (10 min tot 6 uur) | Geen sleutel; ODbL-naamsvermelding verplicht |
 | Websites van plekken | Prijzen, toeslagen, seizoen, voorzieningen, vertrektijden | `robots.txt` gerespecteerd, max. 7 pagina's per site, 9 s timeout, eigen user-agent `VrijStaanBot/1.0` | n.v.t. |
-| OpenRouteService (HeiGIT, Heidelberg) | Rijtijden en routes | Gratis sleutel met quotum | `ORS_API_KEY` (optioneel, nog niet ingesteld) |
-| routing.openstreetmap.de (FOSSGIS) | Rijtijden zonder ORS-sleutel | Publieke dienst, eerlijk gebruik | Geen sleutel |
+| OpenRouteService (HeiGIT, Heidelberg) | Rijtijden en routes; met camper (profiel `driving-hgv`: hoogte, gewicht, lengte, breedte) en vermijden (tol, veerponten, snelwegen) | Gratis sleutel met quotum | `ORS_API_KEY` (optioneel; of hij in Production staat: README 134) |
+| routing.openstreetmap.de (FOSSGIS) | Rijtijden zonder ORS-sleutel, als personenauto; kan niets vermijden (gemeten 19 november 2026) | Publieke dienst, eerlijk gebruik | Geen sleutel |
 | PDOK Locatieserver (Kadaster) | Zoekvak "waar": adressen, postcodes, woonplaatsen en gemeenten (`suggest`, `lookup` op `api.pdok.nl/bzk/locatieserver/search/v3_1`) | Gratis overheidsdienst, eerlijk gebruik; 4 s time-out, cache per zoekterm (`cacheLife("hours")`, lookup `"days"`), 120 verzoeken per minuut per IP op `/api/locatie` | Geen sleutel. Alleen onze server praat met PDOK (`/api/locatie`), zonder IP of andere gegevens van de bezoeker; staat in de privacyverklaring. Bij een fout of offline build: de eigen lijst `nl_towns` |
 | Openbare bronnen: gemeentesites, directories (Campercontact, park4night, ACSI, ANWB, Camping.info), fora, reviewsites | Tweede bron voor bestaan en feiten van plekken (dataplan, [bronnenbeleid](../bronnenbeleid.md)) | `robots.txt` gerespecteerd, wachttijd per host 5–20 s (`bron.sources.min_delay_s`), 15 s timeout, max. 2 MB per pagina, alleen openbare hostnamen, user-agent `VrijStaanBot/1.0`; geen inlogpagina's; Facebook, Instagram en Google Maps geblokkeerd | n.v.t. |
 | Stealth-lezer (Scrapling 0.4.15, `tools/stealth-lezer`, GitHub Actions: acht lezers tegelijk, elk op eigen hosts, in runs van 50 minuten die zichzelf opnieuw starten tot de wachtrij leeg is, plus uurrooster als vangnet) | Alle openbare bronnen, ook achter botbeveiliging (Cloudflare, captcha, 403), openbare Google Maps- en Facebook-pagina's | Zie [bronnenbeleid §3a](../bronnenbeleid.md): omzeilt botbeveiliging en `robots.txt`, wisselende proxy's toegestaan; geen inlog- of betaalmuren, geen bulk uit databanken, hoogstens 1 verzoek per 5 s per host, stoppen op verzoek | Geen geheim: GitHub-OIDC-token van `stealth-lezer.yml` op `main`, alleen voor de stealth-acties. Optioneel `STEALTH_PROXIES` (proxydienst nog te kiezen) |
@@ -76,7 +76,7 @@
 Bezoeker (telefoon)
    │  HTTPS
    ▼
-Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/locatie → PDOK, /api/route, /api/distances)
+Vercel: Next.js (pagina's met 'use cache', /api/places, /api/towns, /api/locatie → PDOK, /api/route, /api/matrix, /api/distances)
    │  REST + RPC (publishable key, Row Level Security)
    ▼
 Supabase Postgres (Frankfurt) ──pg_cron──► pg_net ──► Overpass (OSM)        [elke 3 min: volgende provincie]

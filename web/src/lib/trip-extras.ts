@@ -120,6 +120,8 @@ export function tripCosts(stops: ExtrasStop[], persons: number, touristTaxEstima
   const listed: TripCosts["listed"] = [];
   const assumed: NonNullable<TripCosts["assumed"]> = [];
   stops.forEach((s, index) => {
+    // Tussenstop: je overnacht er niet, dus geen nachtprijs en geen toeslagen per nacht
+    if (s.nights === 0) return;
     const sur = stopSurcharges(s, persons);
     if (s.place.priceEur !== undefined) stay += s.place.priceEur * s.nights;
     else if (sur.stayFromPerPerson !== undefined) stay += sur.stayFromPerPerson;

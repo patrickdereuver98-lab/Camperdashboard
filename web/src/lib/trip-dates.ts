@@ -6,7 +6,7 @@ import type { PlaceSummary } from "./types";
 export type DatedStop = {
   arrive: Date;
   leave: Date;
-  /** Nachten (avond van aankomst) waarop de plek volgens het seizoen dicht is */
+  /** Nachten (avond van aankomst) waarop de plek volgens het seizoen dicht is; bij een tussenstop de dag zelf */
   closedNights: Date[];
 };
 
@@ -34,6 +34,8 @@ export function tripDates(start: Date, stops: { nights: number; place: Pick<Plac
       const night = addDays(arrive, i);
       if (isOpenOn(s.place, night) === false) closedNights.push(night);
     }
+    // Tussenstop (0 nachten): dicht op de dag dat je er langskomt
+    if (s.nights === 0 && isOpenOn(s.place, arrive) === false) closedNights.push(arrive);
     cursor = leave;
     return { arrive, leave, closedNights };
   });

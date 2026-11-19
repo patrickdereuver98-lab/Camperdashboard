@@ -19,7 +19,9 @@
 | `events` | Anonieme gebeurtenis voor statistieken (alleen met toestemming) |
 | `consent_log` | Bewijs van cookiekeuze |
 | `audit_log` | Wie heeft wat veranderd in beheer |
+| `place_history` | Geschiedenis per plek per kernveld: oud, nieuw, bron, wanneer (ook wat de pipeline veranderde) |
 | `app_logs` | Systeem- en pipelinemeldingen, clientfouten |
+| `private.field_log` | Elke wijziging van een kernfeit door `apply_scrape`: plek, veld, oude en nieuwe waarde, parser, tijd. 180 dagen bewaard (cron `veldlog-opschonen`). Migratie `20261118200000_wislog_en_kanalen` (review 16 november 2026, R62) |
 | `ingest_runs` | Verloop van data-imports |
 | `nl_towns` | Woonplaatsen met coördinaten (zoeken en dichtstbijzijnde plaats) |
 | `route_cache` | Gecachete routes en rijtijden |
@@ -102,7 +104,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | Tabel | Velden (verplicht met *) | Standaarden en indexen |
 |---|---|---|
 | `profiles` | id* (= auth.users.id), display_name (≤ 80), avatar_url (https), created_at*, updated_at* | alleen eigen rij lezen/wijzigen |
-| `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200), updated_at* | alleen eigen rij |
+| `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200: `{ slug, nights 0–21, note? ≤ 500 tekens }`; 0 nachten = tussenstop, sinds 19 november 2026), updated_at* | alleen eigen rij; begin- en eindpunt en routevoorkeuren staan alleen op het toestel |
 | `place_photos` | id*, place_id*, user_id, storage_path* (`<user_id>/<uuid>.webp|jpg`), width/height (200–4.000), caption (≤ 140), credit (≤ 80), status* (`pending`, `approved`, `rejected`), reviewed_by, reviewed_at, created_at* | status `pending`; max. 20 per gebruiker per dag; vertrouwde gebruikers (`site_settings.trust`) worden automatisch goedgekeurd |
 | `duplicate_dismissals` | a*, b* (a < b), dismissed_by, created_at* | alleen beheer |
 | `shared_trips` | id*, owner_id*, name* (1–60), stops* (≤ 200), invite_code* (uniek, 18 hex), updated_by, updated_at*, created_at* | lezen en `stops`/`name` wijzigen alleen voor leden (`is_trip_member`); in de Realtime-publicatie; maken via `create_shared_trip`, meedoen via `join_shared_trip` (max. 6) |
@@ -136,6 +138,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `social_stats` | id*, platform* (`instagram`, `tiktok`, `facebook`), post_url*, content_item_id, measured_on*, views, reach, likes, comments, shares, saves, source* (`handmatig`, `api`); uniek op (post_url, measured_on) | Instagram via de Graph API in de nachtrun (optioneel), de rest handmatig |
 | `consent_log` | id*, ts*, consent_id*, analytics*, marketing*, version* | |
 | `audit_log` | id*, ts*, actor, actor_email, action*, entity*, entity_id, details* | |
+| `place_history` | id*, ts*, place_id* (→ places, `CASCADE`), field*, old_value (jsonb), new_value (jsonb), source* (`beheer`, `osm`, `website`, `pdok`, `ontdekken`, `samenvoegen`, `eigenaar`, `doe-mee`, `pipeline`, `systeem`), actor, actor_email (alleen bij beheer), revert_of (→ place_history) | Migratie `20261118400000_plekgeschiedenis.sql` (nog niet live). Trigger `place_history` op `places` (na elke update, elke schrijver) legt per gewijzigd veld uit `private.place_history_fields()` een rij vast: naam, soort, status, adres en coördinaten (verschil kleiner dan ±1 m telt niet), beschrijving, prijs en toeslagen, voorzieningen, tijden, contact. Niet: tijdstempels, `completeness`, `sources`, foto's, beoordelingen. Bron: `vrijstaan.bron` (als een functie die zet) > ingelogde beheerder > het deel van `sources` dat in dezelfde update veranderde (`website`/`stealth` → website, `pdok`, `osm`, `discovery` → ontdekken, `merged` → samenvoegen) > `service_role` → pipeline > systeem. Van een bezoeker wordt geen id bewaard. Terugzetten via `admin_revert_place_change(id)`: alleen als het veld sindsdien niet veranderde; zet het merkteken van beheer (bij status: `status_locked`). Index op (place_id, ts) en ts |
 | `app_logs` | id*, ts*, level* (debug, info, warn, error), source*, message*, context* | index op ts |
 | `ingest_runs` | id*, kind*, started_at*, finished_at, status* (running, ok, error), stats* | |
 | `nl_towns` | id*, name*, province*, lat*, lng* | |
@@ -213,6 +216,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `tickets`, `ticket_messages` | beheer; klant via `get_ticket(token)` | via `create_ticket`, `reply_ticket` | beheer | beheer |
 | `events`, `consent_log` | beheer | via `track`, `log_consent` | — | — |
 | `admins`, `audit_log`, `app_logs`, `ingest_runs` | beheer | systeem | — | — |
+| `place_history` | beheer (`is_admin()`) | trigger op `places` | — | bewaartermijn |
 | `admin_logs`, `updates_queue`, `dependency_updates`, `owner_replies` | `role = 'admin'` (`has_admin_role()`) | `role = 'admin'`, triggers en definer-functies | `role = 'admin'` | `role = 'admin'` |
 | `profiles.role` | eigen rij | trigger vanuit `admins` | nooit door de gebruiker (kolomrechten: alleen `display_name`, `avatar_url`) | — |
 | `internal_secrets`, `private.*` | niemand via de API | systeem | systeem | systeem |
@@ -228,6 +232,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `submit_review` | ingelogd (`authenticated`) met `email_confirmed_at`; anon heeft geen `EXECUTE` | Review indienen; `user_id` = `auth.uid()`, e-mailadres uit `auth.users`. Inloggen met de code per mail (`verifyOtp`) bevestigt het adres. Moderatie blijft: status `pending` |
 | `track`, `log_consent`, `report_client_error` | iedereen | Statistieken (na toestemming), cookiekeuze, clientfouten |
 | `cache_route` | server | Routecache vullen |
+| `admin_revert_place_change(p_id)` | beheer | Eén wijziging uit `place_history` terugzetten (weigert als het veld sindsdien veranderde) |
 | `admin_overview`, `admin_stats(p_days)`, `admin_pipeline(p_action)` | beheer | Dashboard, statistieken, pipeline-knoppen (`scrape-missing`, `scrape-all`, `osm-refresh`, `apply-threshold`) |
 | `apply_scrape`, `next_scrape_batch`, `enqueue_scrape`, `ingest_osm`, `ingest_osm_points`, `process_osm_staging`, `osm_response`, `export_snapshot` | pipeline/systeem | Data-import |
 | `place_completeness(p)`, `place_meets_must_haves(p)` | trigger | Score en harde eisen voor publicatie |
@@ -265,6 +270,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `cron.job_run_details` | 7 dagen | Idem |
 | `osm_staging` (verwerkt) | 14 dagen | Ja, na migratie `20261106200100` (live na samenvoegen PR #143, review R7) |
 | `places` | Zolang relevant; verwijderen op verzoek van de eigenaar | Handmatig |
+| `place_history` | 24 maanden; weg met de plek | Ja: `private.place_history_prune()`, cron `plekgeschiedenis-opschonen` (03:29), na migratie `20261118100000` |
 | `bron.documents` (tekst) | 30 dagen volledig, daarna alleen de citaten; zonder claims of kandidaten weg | Ja: `bron.prune()`, cron `bron-opschonen` (04:43) |
 | `bron.host_throttle` | 7 dagen | Idem |
 | `marketing_jobs` (afgerond) | 30 dagen | Ja: `private.marketing_cleanup()`, cron `marketing-opruimen` (03:41) |
@@ -293,7 +299,12 @@ Paden onder `/support/` gaan via `private.safe_path()` als `/support/[token]` de
 bezoeker, in het werkgeheugen van de server.
 
 Beheer markeert handmatig gewijzigde velden met `admin_mark_beheer(plek, velden[])`, dat ze server-side toevoegt aan
-`sources.beheer` zonder de rest van `sources` te overschrijven.
+`sources.beheer` zonder de rest van `sources` te overschrijven. Sinds migratie `20261118100000_beheerslot` (review 16 november 2026, R61) zetten
+ook `check_departure` (bevestigd of voorwaardelijk, niet bij afwijzen) en `mark_departure_checked` (vertrektijd uit de
+inbox) een slot op `departure`, `checkout_until` en `times_note`, en hebben de 40 prijzen uit de nacontrole van 8 november
+een slot op `price_eur`. Zegt een nieuwe lezing iets anders bij een vastgezet kernfeit (prijs, vertrekregel, tijd,
+seizoen, jaarrond, bronzin), dan zet `apply_scrape` dat als voorstel met bron `pipeline` in `updates_queue` (één open
+voorstel per plek, veld en waarde). Het slot zelf zetten gebeurt via `private.lock_fields` (alleen voor functies).
 
 Exporteren: `export_snapshot()` geeft alle gepubliceerde plekken, woonplaatsen, FAQ en reviews als JSON.
 

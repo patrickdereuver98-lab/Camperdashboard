@@ -1,1 +1,4 @@
 scrapling[fetchers]==0.4.15
+# R58: de browserversie moet bij patchright passen; playwright en patchright blijven op dezelfde minor, alleen samen omhoog
+playwright==1.64.1
+patchright==1.64.4
