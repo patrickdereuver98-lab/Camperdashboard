@@ -1,4 +1,4 @@
--- Tests voor 20261118100000_plekgeschiedenis.sql: bron per schrijver, alleen kernvelden, terugzetten en leesrecht.
+-- Tests voor 20261118400000_plekgeschiedenis.sql: bron per schrijver, alleen kernvelden, terugzetten en leesrecht.
 -- Draait in een eigen database met plekgeschiedenis_stub.sql (run.sh).
 \set ON_ERROR_STOP 1
 reset role;

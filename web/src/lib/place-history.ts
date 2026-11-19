@@ -1,4 +1,4 @@
-// Geschiedenis per plek (tabel place_history, migratie 20261118100000_plekgeschiedenis.sql): namen van velden en
+// Geschiedenis per plek (tabel place_history, migratie 20261118400000_plekgeschiedenis.sql): namen van velden en
 // bronnen, en hoe een oude of nieuwe waarde in beheer wordt getoond.
 
 export type HistoryRow = {
