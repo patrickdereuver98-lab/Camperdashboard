@@ -10,6 +10,7 @@ import { CreditedPhoto, PlaceCard } from "@/components/place-ui";
 import { CARD_CELL, CARD_GRID } from "@/lib/card-grid";
 import { looksLikeGraphic } from "@/lib/photos";
 import { Onboarding } from "@/components/deferred";
+import { InstallTip } from "@/components/install-tip";
 
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
@@ -90,6 +91,7 @@ export default async function Home() {
           <HomeSearch />
         </div>
       </section>
+      <InstallTip />
 
       {/* Hoe wil je staan: het antwoord op de vraag in de kop, direct eronder (concept "Eén vraag") */}
       <section aria-labelledby="hoe" className="mx-auto w-full max-w-6xl px-3 pt-7 sm:px-6 sm:pt-10">

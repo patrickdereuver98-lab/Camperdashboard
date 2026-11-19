@@ -6,6 +6,7 @@ import { decodePlaceIndex, EARLY_PLACES, type PlaceRef } from "./place-index";
 import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
 import { createLocalStore, onStorageFailure, storageFailed, type StoreOptions } from "./local-store";
+import { addRecent, decodeRecentPlaces, decodeRecentSearches, type RecentPlace, type RecentSearch } from "./recent";
 import { clampNights, decodeTrip, decodeTripPlaces, encodeTrip, encodeTripPlaces, type TripPlacesCopy } from "./trip-storage";
 
 // ── Kleine localStorage-store met abonnement (kern in local-store.ts) ───────
@@ -173,6 +174,8 @@ type LoaderState<T> = {
 /** `enabled` false: (nog) niets ophalen; de pagina vraagt de lijst pas als hij nodig is (R33) */
 function useLoader<T>(get: () => Promise<Loaded<T>>, enabled = true) {
   const [state, setState] = useState<LoaderState<T>>({ data: null, error: false, cachedAt: null });
+  // Na "Ververs" opnieuw ophalen; de oude lijst blijft staan tot de nieuwe er is
+  const version = useSyncExternalStore(subscribeData, () => dataVersion, () => 0);
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
@@ -183,7 +186,7 @@ function useLoader<T>(get: () => Promise<Loaded<T>>, enabled = true) {
     return () => {
       alive = false;
     };
-  }, [get, enabled]);
+  }, [get, enabled, version]);
   return state;
 }
 
@@ -199,7 +202,28 @@ function takeEarlyPlaces(): Promise<Response> | undefined {
   return started;
 }
 
-const getPlaces = () => (placesPromise ??= once<PlaceSummary[]>("/api/places", "places", undefined, takeEarlyPlaces()));
+// "Ververs" (Zoeken, Dichtbij): de volgende keer de plekkenlijst vers van de server, langs de cache van de service worker
+let reloadPlaces = false;
+let dataVersion = 0;
+const dataListeners = new Set<() => void>();
+export function refreshPlaces() {
+  placesPromise = null;
+  indexPromise = null;
+  reloadPlaces = true;
+  dataVersion++;
+  dataListeners.forEach((l) => l());
+}
+const subscribeData = (l: () => void) => {
+  dataListeners.add(l);
+  return () => dataListeners.delete(l);
+};
+
+const getPlaces = () => {
+  if (placesPromise) return placesPromise;
+  const started = reloadPlaces ? fetch("/api/places", { cache: "reload" }) : takeEarlyPlaces();
+  reloadPlaces = false;
+  return (placesPromise = once<PlaceSummary[]>("/api/places", "places", undefined, started));
+};
 const getTowns = () => (townsPromise ??= once<Town[]>("/api/towns", "towns"));
 // Is de hele lijst al onderweg of binnen (zoeken), dan daaruit; anders de lichte index
 const fetchIndex = () => (indexPromise ??= once<PlaceRef[]>("/api/places/suggest", "index", decodePlaceIndex));
@@ -276,4 +300,38 @@ export function usePulse() {
     answers,
     answer: (key: string, answer: PulseAnswer) => pulseStore.write({ ...answers, [key]: { answer, at: new Date().toISOString() } }),
   };
+}
+
+// ── Eerder gezocht en bekeken (alleen op dit toestel, UX-audit Z1) ──────────
+
+const EMPTY_SEARCHES: RecentSearch[] = [];
+const EMPTY_VIEWED: RecentPlace[] = [];
+const searchesStore = createStore<RecentSearch[]>("vrijstaan:gezocht", EMPTY_SEARCHES, (v): v is RecentSearch[] => decodeRecentSearches(v) !== undefined, {
+  decode: decodeRecentSearches,
+});
+const viewedStore = createStore<RecentPlace[]>("vrijstaan:bekeken", EMPTY_VIEWED, (v): v is RecentPlace[] => decodeRecentPlaces(v) !== undefined, {
+  decode: decodeRecentPlaces,
+});
+
+export function useRecent() {
+  const searches = searchesStore.use();
+  const places = viewedStore.use();
+  return {
+    searches,
+    places,
+    removeSearch: (href: string) => searchesStore.write(searchesStore.read().filter((s) => s.href !== href)),
+    clear: () => {
+      searchesStore.write([]);
+      viewedStore.write([]);
+    },
+  };
+}
+
+export function rememberSearch(label: string, href: string) {
+  if (!label.trim()) return;
+  searchesStore.write(addRecent(searchesStore.read(), { label, href, at: new Date().toISOString() }, (a, b) => a.href === b.href || a.label === b.label));
+}
+
+export function rememberViewed(p: { slug: string; name: string; town: string }) {
+  viewedStore.write(addRecent(viewedStore.read(), { ...p, at: new Date().toISOString() }, (a, b) => a.slug === b.slug));
 }

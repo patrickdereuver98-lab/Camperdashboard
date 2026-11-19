@@ -33,7 +33,8 @@ import { CrowdStatusCard } from "./crowd-status";
 import { DecisionGrid, needsDeparture } from "./decision-grid";
 import { GiveDepartureButton } from "@/components/departure-form";
 import { FacilityGrid } from "./facility-grid";
-import { DistanceFromMe } from "./live-facts";
+import { ArrivalTodayNote, CopyButton, DistanceFromMe, ResultsNav } from "./live-facts";
+import { departureShort } from "@/lib/format";
 import { PlekpulsVraag } from "@/components/plekpuls";
 import { departureQuestion, PLEKPULS_ACTIEF } from "@/lib/plekpuls";
 
@@ -143,6 +144,12 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const reserveLabel = rule === "verplicht" || rule === "mogelijk" ? "Reserveren via de website" : "Naar de website";
   // Plekpuls staat uit tot de koppeling met de bronnenlaag er is (lib/plekpuls.ts)
   const pulse = PLEKPULS_ACTIEF ? departureQuestion(place) : undefined;
+  // Delen met de feiten die we kennen (U3): "Geen vaste vertrektijd · € 15 per nacht + toeslagen". Onbekend laten we weg.
+  const shareFacts = [
+    departureShort(place),
+    price ? `${price.value}${price.extras || place.touristTaxIncluded === false ? " + toeslagen" : price.perNight ? " per nacht" : ""}` : undefined,
+  ].filter(Boolean);
+  const shareText = `${place.name} in ${place.town}${shareFacts.length ? `: ${shareFacts.join(" · ")}` : ""}`;
   // Springlinks in de volgorde van de telefoon; op een groot scherm staan ligging en contact in de zijkolom
   const sections: SectionLink[] = [
     { id: "overzicht", label: "Overzicht" },
@@ -155,7 +162,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 
   return (
     <article className="pb-24 md:pb-8">
-      <TrackView slug={place.slug} />
+      <TrackView slug={place.slug} name={place.name} town={place.town} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(crumbs) }} />
 
@@ -208,18 +215,22 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           </div>
           <div className="hidden shrink-0 gap-2 md:flex">
             <SaveButton slug={place.slug} name={place.name} variant="full" />
-            <ShareButton title={place.name} />
+            <ShareButton title={place.name} text={shareText} />
           </div>
         </header>
 
-        <ActionRow place={place} tel={tel} reserveLabel={reserveLabel} />
+        <ActionRow place={place} tel={tel} reserveLabel={reserveLabel} shareText={shareText} />
         {/* Alleen tot lg: daarna staan ligging en contact in de zijkolom, naast de rest */}
         <SectionNav links={sections} className="lg:hidden" />
 
         {/* Mobiel: beslissen, voorzieningen, beschrijving, ligging, ervaringen, praktisch. Groot scherm: zijkolom. */}
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div id="overzicht" className={`min-w-0 space-y-8 lg:col-start-1 lg:row-start-1 ${SECTION_OFFSET}`}>
-            <DecisionGrid place={place} visitors={visitors} />
+            <ResultsNav slug={place.slug} />
+            <div className="space-y-3">
+              <DecisionGrid place={place} visitors={visitors} />
+              <ArrivalTodayNote place={place} />
+            </div>
             <DecisionDetails place={place} />
             {pulse && (
               <div className="-mt-4 rounded-lg border border-line bg-surface px-4 py-3">
@@ -332,13 +343,13 @@ const SECTION_OFFSET = "scroll-mt-14 lg:scroll-mt-0";
  * Actierij onder de naam op de telefoon (redesign 18 november 2026): bewaren, delen, website en bellen binnen
  * duimbereik, als secundaire knoppen met een rand. De route staat als hoofdactie in de vaste balk onderaan.
  */
-function ActionRow({ place, tel, reserveLabel }: { place: Place; tel?: string; reserveLabel: string }) {
+function ActionRow({ place, tel, reserveLabel, shareText }: { place: Place; tel?: string; reserveLabel: string; shareText: string }) {
   const count = 2 + (place.website ? 1 : 0) + (tel ? 1 : 0);
   const cols = count === 4 ? "grid-cols-4" : count === 3 ? "grid-cols-3" : "grid-cols-2";
   return (
     <div className={`mt-4 grid gap-2 md:hidden ${cols}`}>
       <SaveButton slug={place.slug} name={place.name} variant="tile" />
-      <ShareButton title={place.name} variant="tile" />
+      <ShareButton title={place.name} text={shareText} variant="tile" />
       {place.website && (
         <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className={ACTION_TILE}>
           <Icon name="globe" size={21} /> Website
@@ -554,7 +565,16 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   add("Aantal plekken", place.capacity ? String(place.capacity) : undefined, "aantal plekken");
   add("Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : undefined, "ondergrond");
   add("Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : undefined, "maximaal verblijf");
-  rows.push({ label: "Adres", value: address ? `${address}, ${place.province}` : `${place.town}, ${place.province}` });
+  const fullAddress = address ? `${address}, ${place.province}` : `${place.town}, ${place.province}`;
+  rows.push({
+    label: "Adres",
+    value: (
+      <>
+        {fullAddress}
+        <CopyButton text={fullAddress} label="Adres kopiëren" />
+      </>
+    ),
+  });
   if (tel)
     rows.push({
       label: "Telefoon",

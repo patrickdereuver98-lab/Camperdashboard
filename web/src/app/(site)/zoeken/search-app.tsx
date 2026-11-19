@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { startTransition, useDeferredValue, useEffect, useMemo, useOptimistic, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   applyFilters,
@@ -30,7 +30,9 @@ import { Legend } from "@/components/legend";
 import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
-import { FACILITIES } from "@/lib/search";
+import { FACILITIES, normalize } from "@/lib/search";
+import { saveLastSearch, saveResultOrder } from "@/lib/last-search";
+import { DataDate } from "@/components/data-date";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 
 const PAGE = 20;
@@ -68,7 +70,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
   const [vehicle] = useVehicle();
   const filters = useMemo(() => applyVehicle(withPage(parseFilters(params), page), vehicle), [params, page, vehicle]);
   const key = filtersToQuery(filters);
-  const { data: places, error } = usePlaces();
+  const { data: places, error, cachedAt } = usePlaces();
   // Tot de hele dataset er is, tonen we de plekken die de server al meegaf (alleen als het om dezelfde zoekopdracht gaat)
   const early = !places && initial?.key === key ? initial : undefined;
   // Filteren over ±2.000 plekken kost op een trage telefoon een paar honderd ms: de chips reageren meteen, de lijst
@@ -87,7 +89,14 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
   const mapPlaces = useMemo(() => results?.map((r) => r.place) ?? [], [results]);
   // Telefoon: een tik op een stip toont de plek onderaan de kaart (MapPick) in plaats van een popup
   const [picked, setPicked] = useState<string | null>(null);
-  const pickedPlace = picked ? mapPlaces.find((p) => p.slug === picked) : undefined;
+  const pickedIndex = picked ? mapPlaces.findIndex((p) => p.slug === picked) : -1;
+  const pickedPlace = pickedIndex >= 0 ? mapPlaces[pickedIndex] : undefined;
+  const pickAt = (i: number) => {
+    const p = mapPlaces[i];
+    if (!p) return;
+    setPicked(p.slug);
+    setHovered(p.slug);
+  };
 
   // Elke vertrekgroep heeft een eigen pagina; een andere groep kiezen gaat naar die pagina
   // De gekozen filters staan meteen op de knoppen (optimistisch); lijst en kaart volgen zodra het adres is bijgewerkt (R36)
@@ -97,6 +106,44 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
       setShown(f);
       router.replace(searchHref(f), { scroll: false });
     });
+
+  // Het tabblad Zoeken brengt je hier terug, met dezelfde filters (deze sessie)
+  useEffect(() => {
+    saveLastSearch(window.location.pathname + window.location.search);
+  }, [params, page]);
+  // Volgorde van de lijst, voor Vorige en Volgende op de plekpagina
+  useEffect(() => {
+    if (results && places) saveResultOrder(results.map((r) => ({ slug: r.place.slug, name: r.place.name })), window.location.pathname + window.location.search);
+  }, [results, places]);
+
+  // Wegschuivende zoekbalk (K3): op een telefoon bij omlaag scrollen alleen de rij Filters, Sorteren en Kaart; bij
+  // omhoog scrollen alles terug, zoals de adresbalk van Safari
+  const topPart = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [topHeight, setTopHeight] = useState(0);
+  useEffect(() => {
+    if (wide || mapOpen) return;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) < 8) return;
+      setCollapsed(y > last && y > 160);
+      last = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      setCollapsed(false);
+    };
+  }, [wide, mapOpen]);
+  useEffect(() => {
+    const el = topPart.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setTopHeight(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const hideTop = collapsed && !wide && !mapOpen;
 
   // Oude links (/zoeken?vrij=1 of ?vertrek=…) naar de juiste pagina sturen
   const misplaced = !page && filters.departure ? searchHref(filters) : null;
@@ -125,6 +172,11 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
       user={filters.where === "Mijn locatie" ? filters.center : null}
       onShowList={() => setMapOpen(false)}
       popup={wide}
+      focus={wide ? null : picked}
+      locate
+      onSearchArea={(center, radiusKm) =>
+        update({ ...filters, where: "Kaartgebied", center, radiusKm, province: undefined, sort: filters.sort === "afstand" ? "afstand" : filters.sort })
+      }
       className="h-full w-full"
     />
   );
@@ -134,10 +186,16 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
       <div className="min-w-0">
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
         <DepartureIntro page={page} filters={filters} />
-        <div className="sticky top-14 z-30 border-b border-line bg-surface px-3 pt-2 pb-1 sm:top-16 sm:px-6 sm:pt-3 sm:pb-3 lg:static lg:border-0 lg:bg-transparent lg:pt-4">
+        <div
+          className="sticky top-14 z-30 border-b border-line bg-surface px-3 pt-2 pb-1 transition-transform duration-200 motion-reduce:transition-none sm:top-16 sm:px-6 sm:pt-3 sm:pb-3 lg:static lg:border-0 lg:bg-transparent lg:pt-4"
+          style={hideTop ? { transform: `translateY(-${topHeight}px)` } : undefined}
+          onFocusCapture={() => setCollapsed(false)}
+        >
+          <div ref={topPart} className={hideTop ? "invisible" : undefined}>
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} places={places} />
           <div className="mt-2 sm:mt-3">
             <QuickChips filters={shown} onChange={update} />
+          </div>
           </div>
           {/* Mobiel: één rustige rij zoals bij Booking (filters, sorteren, kaart); groter scherm: knoppen met rand */}
           <div className="mt-1 flex min-w-0 items-center divide-x divide-line sm:mt-3 sm:gap-2 sm:divide-x-0">
@@ -183,6 +241,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
               >
                 <Icon name={mapOpen ? "list" : "map"} size={18} />
                 {mapOpen ? "Lijst" : "Kaart"}
+                {!mapOpen && total !== undefined && <span className="font-normal text-muted tabular-nums">({total})</span>}
               </button>
             )}
           </div>
@@ -229,6 +288,9 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
                   setPicked(null);
                   setHovered(null);
                 }}
+                onPrev={pickedIndex > 0 ? () => pickAt(pickedIndex - 1) : undefined}
+                onNext={pickedIndex < mapPlaces.length - 1 ? () => pickAt(pickedIndex + 1) : undefined}
+                position={`${pickedIndex + 1} van ${mapPlaces.length}`}
               />
             )}
           </div>
@@ -251,6 +313,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           {/* Eén regel: datum, uitleg en afstand; loopt door op een smal scherm */}
           <div className="-mb-1 flex flex-wrap items-center gap-x-4">
             {updated && <p className="text-sm text-muted">Laatste update: {updated}</p>}
+            <DataDate cachedAt={cachedAt} />
             <Legend label="Uitleg icoontjes" />
             <DistanceToggle />
           </div>
@@ -385,27 +448,70 @@ function Results({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage bestaat pas in de browser
     if (n > PAGE) setLimit((l) => Math.max(l, n));
   }, [queryKey]);
-  const showMore = () => {
-    const n = limit + PAGE;
-    setLimit(n);
+  // Altijd vanaf de actuele stand ophogen: vanzelf laden en het teruggezette aantal mogen elkaar niet overschrijven
+  const showMore = () => setLimit((l) => l + PAGE);
+  useEffect(() => {
+    if (limit <= PAGE) return;
     try {
-      sessionStorage.setItem(SHOWN_KEY, JSON.stringify({ q: queryKey, n }));
+      sessionStorage.setItem(SHOWN_KEY, JSON.stringify({ q: queryKey, n: limit }));
     } catch {
       // Opslag uit (privévenster): dan begint de lijst bij terugkomen weer bij 20
     }
-  };
+  }, [limit, queryKey]);
   const [animate] = useState(!fromServer);
+
+  // Zoeken in deze plekken (Z4): bij veel resultaten op naam of plaats, alleen op het toestel
+  const [within, setWithin] = useState("");
+  const q = normalize(within);
+  const visible = q ? results.filter((r) => normalize(`${r.place.name} ${r.place.town}`).includes(q)) : results;
+  const shownTotal = q ? visible.length : total;
+
+  // Vanzelf meer laden als de knop in beeld komt; de knop blijft voor toetsenbord en schermlezer
+  const more = useRef<HTMLDivElement>(null);
+  const showMoreRef = useRef(showMore);
+  useEffect(() => {
+    showMoreRef.current = showMore;
+  });
+  const canLoadMore = limit < shownTotal;
+  useEffect(() => {
+    const el = more.current;
+    if (!el || !canLoadMore || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && showMoreRef.current(), { rootMargin: "400px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [canLoadMore, limit]);
+
   return (
     <>
+      {total > 40 && (
+        <label className="mt-3 flex h-11 items-center gap-2 rounded-lg bg-sunken px-3 text-ink-2 focus-within:ring-2 focus-within:ring-forest">
+          <Icon name="search" size={17} className="shrink-0 text-muted" />
+          <span className="sr-only">Zoek in deze plekken</span>
+          <input
+            type="search"
+            value={within}
+            onChange={(e) => setWithin(e.target.value)}
+            placeholder="Zoek in deze plekken op naam of plaats"
+            enterKeyHint="search"
+            autoComplete="off"
+            className="h-full min-w-0 flex-1 bg-transparent text-base placeholder:text-muted focus:outline-none"
+          />
+        </label>
+      )}
+      {q && (
+        <p role="status" className="mt-2 text-sm text-muted">
+          {visible.length === 0 ? `Geen plek met "${within.trim()}" in deze resultaten.` : `${pluralize(visible.length, "plek", "plekken")} met "${within.trim()}"`}
+        </p>
+      )}
       <ul className={`mt-2 sm:mt-4 ${RESULT_LIST}`}>
-        {results.slice(0, limit).map((r, i) => (
+        {visible.slice(0, limit).map((r, i) => (
           <li key={r.place.id} className={animate ? "enter cv-auto" : "cv-auto"} style={{ ["--i" as string]: i % 24 }}>
             <PlaceCard place={r.place} km={r.km} active={hovered === r.place.slug} onHover={onHover} eager={i < 2} />
           </li>
         ))}
       </ul>
-      {limit < total && (
-        <div className="mt-6 text-center">
+      {canLoadMore && (
+        <div ref={more} className="mt-6 text-center">
           <button
             type="button"
             onClick={showMore}
@@ -414,7 +520,7 @@ function Results({
             Toon meer plekken
           </button>
           <p className="mt-2 text-sm text-muted">
-            {Math.min(limit, results.length)} van {total} getoond
+            {Math.min(limit, visible.length)} van {shownTotal} getoond
           </p>
         </div>
       )}
@@ -424,7 +530,10 @@ function Results({
 
 function Empty({ filters, places, onChange }: { filters: Filters; places: PlaceSummary[]; onChange: (f: Filters) => void }) {
   // Concrete alternatieven met het aantal plekken dat ze opleveren
-  const options = relaxations(places, filters).slice(0, 4);
+  // Staat alleen de straal in de weg, dan "Binnen 50 km" vooraan: dat is de kleinste stap
+  const options = relaxations(places, filters)
+    .sort((a, b) => Number(b.label.startsWith("Binnen ")) - Number(a.label.startsWith("Binnen ")))
+    .slice(0, 4);
   return (
     <div className="mt-6 rounded-lg border border-line bg-surface p-5">
       <h2 className="font-display text-h2 font-semibold">Geen plekken die aan alles voldoen</h2>

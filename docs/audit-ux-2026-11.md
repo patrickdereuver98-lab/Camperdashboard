@@ -8,8 +8,16 @@
 > 2027. Een handvol punten is klein, raakt geen data en lost iets op wat nu stuk voelt; die staan in §1 als "kan vóór de
 > livegang" en vragen een besluit van Patrick.
 
-**Stand 18 november 2026:** G1, G2 en K1 zijn gebouwd (op verzoek van Patrick, vóór de livegang), met e2e-tests in
-`web/e2e/gestures.spec.ts`. De rest staat open.
+**Stand 19 november 2026 (versie 0.9.2):** alles uit dit rapport is gebouwd, op verzoek van Patrick, met tests in
+`web/e2e/gestures.spec.ts`, `web/e2e/ux-audit.spec.ts` en unit-tests voor de pure regels (zoekvraag, aankomen vandaag,
+agenda en tekst van de reis, gedeelde locatie). Twee punten zijn anders dan voorgesteld:
+
+- **Statusbalk `black-translucent` (§5) niet gedaan.** Dan schuift de hele site onder de klok van de iPhone en moeten
+  alle plakkende balken (kop, zoekbalk, springlinks) een extra marge krijgen. Dat kan alleen goed met een test op een
+  echte iPhone (LANCERING 3.2).
+- **Snelmenu (G5)** opent met lang indrukken of rechtsklikken, zonder extra ⋯-knop: die zou de vertrekregel in de rij
+  smaller maken. Alles in het menu staat ook op de plekpagina.
+- **Knijpen in de fotoweergave (G4)** doet de browser zelf; de site zoomt met dubbeltik of de knop +.
 
 Tekens bij elk punt: **S** = een paar uur, **M** = een dag, **L** = meerdere dagen. Plaatsen in de code zijn relatief
 aan `web/src/`.

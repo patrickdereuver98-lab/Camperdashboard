@@ -69,7 +69,7 @@ Snelle variant: `Start` → **Plekken bij mij in de buurt** → `Dichtbij` (loca
 | Route | Pad |
 |---|---|
 | Bewaren | Hartje op kaart of plekpagina → melding "Bewaard in Mijn reis – Bekijk" → teller op tabblad Mijn reis |
-| Reis plannen | `Mijn reis` → volgorde slepen of "Slimste volgorde" → nachten per stop → startpunt → totale route en kosten → **Delen** (link met `?r=`) of **Open in navigatie** |
+| Reis plannen | `Mijn reis` → volgorde slepen (greepje) of met de pijltjes, of "Slimste volgorde" → nachten per stop → startpunt → totale route en kosten → **Delen** (link met `?r=`) of **Open in navigatie** |
 | Gedeelde reis openen | Link `?r=` → voorbeeld van de stops → **Toevoegen aan mijn reis**, **Mijn reis vervangen** (met aantal stops dat weggaat), **Bewaar deze reis** of **Niet bewaren** |
 | Review schrijven | `Plek` → **Schrijf een review** → sheet met cijfer, deelscores, tekst, "Hoe laat moest je weg?" (optioneel), voertuig, maand van bezoek → ingelogd: **Review versturen**; niet ingelogd: e-mailadres → **Stuur mij een code** → code uit de mail → **Bevestigen en versturen** (de code logt je in), of **Liever inloggen met Google, Apple of Facebook** (`/inloggen?next=/plek/<slug>#review`, daarna gaat de sheet vanzelf weer open). Het concept staat per plek in de browser (`localStorage`, een week) en verdwijnt na versturen. Een vertrektijd gaat apart als inzending naar beheer → "We controleren je review" |
 | Vertrektijd doorgeven | `Plek` van een onvolledige plek (geen vertrekregel) → **Vertrektijd doorgeven** → zelfde sheet als bij Doe mee ("Hoe laat moet je hier weg?", hoe weet je het, optioneel naam en e-mail) → **Versturen** → `submit_place` (soort `correctie`, onderwerp `vertrektijd`) → "Bedankt, je vertrektijd is binnen. Hij wacht op controle. Dat doen we meestal binnen twee werkdagen, daarna staat hij op de site." (in een cel: "Bedankt. Wacht op controle, meestal binnen twee werkdagen.") → Beheer → Inzendingen |
@@ -131,6 +131,30 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
   `open`, `score`, `sort`, `kaart=1`.
 - Paginaovergangen met `<ViewTransition>`: de foto of tekening schuift mee van de lijst naar de plekpagina.
 
+- **UX-audit november (versie 0.9.2)**, alles op het toestel, niets naar de server:
+  - Zoekvak: leeg toont **Eerder gezocht** (5, met **Wis geschiedenis**) en **Laatst bekeken** (3), anders vier
+    provincies. Typ je filters in gewone taal ("gratis texel met stroom", "zonder vertrektijd zeeland", "onder 15 euro"),
+    dan staat er "Met filters: …" en gaan die filters mee. Alleen een filter typen ("honden") geeft **Filter: honden
+    welkom** voor de huidige bestemming. Kopjes per soort suggestie, getypte deel vet, plekken ook met een tikfout,
+    `/` opent het zoekvak op een computer, Home en End in de lijst.
+  - Tabblad **Zoeken** gaat naar je laatste zoekopdracht van dit bezoek (met filters); Dichtbij onthoudt zijn chips
+    binnen het bezoek.
+  - Zoeken: de zoekbalk schuift op de telefoon weg bij omlaag scrollen; meer plekken laden vanzelf onderaan; bij meer
+    dan 40 plekken **Zoek in deze plekken**; **Kaart (n)**; "Gegevens van … **Ververs**" als de lijst uit de cache van
+    de app komt (ook op Dichtbij).
+  - Kaart: knop **Naar mijn locatie** en na zelf schuiven **Zoek in dit gebied** (`waar=Kaartgebied`, straal uit wat je
+    ziet). Kaartpaneel: opzij vegen of de pijltjes voor de vorige of volgende plek in de volgorde van de lijst.
+  - Plekrij: lang indrukken of rechtsklikken opent een snelmenu (Bekijk plek, Bewaren, Delen, Route).
+  - Plek: tik op een foto opent hem schermvullend (vegen, dubbeltik zoomt, omlaag vegen, × of terug sluit); boven het
+    beslisblok **vorige** en **volgende** uit je laatste zoekresultaten; onder het beslisblok "Nog 2 uur om vandaag aan
+    te komen" (alleen met een bekende laatste aankomsttijd, binnen 4 uur) of "Vandaag kun je hier niet meer aankomen";
+    **Delen** stuurt de vertrekregel en prijs als tekst mee; kopieerknop bij het adres.
+  - Mijn reis: na weghalen 6 seconden **Ongedaan maken**; **Als tekst** (platte lijst) en, met een vertrekdatum, **In je
+    agenda** (.ics); op een reisdag bovenaan "Vandaag vertrek je bij …" en "Vannacht: …" met **Route**. Het aantal stops
+    staat op het app-icoon (waar het toestel dat toestaat).
+  - Delen vanuit een andere app naar VrijStaan (Android, `share_target`): `/delen` haalt een punt uit de link en opent
+    Zoeken rond dat punt; anders het zoekvak met de naam.
+  - Start: één keer een tip voor iPhone in Safari om VrijStaan op het beginscherm te zetten (na uitleg en cookiekeuze).
 - **Toon meer plekken** onthoudt per zoekopdracht hoeveel plekken open staan (`sessionStorage`, deze sessie): terug van een plek of herladen geeft dezelfde lijst (UX-audit K1).
 
 ## Lege en geblokkeerde toestanden
