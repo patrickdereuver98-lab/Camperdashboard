@@ -560,9 +560,10 @@ function NightTotalLine({ place }: { place: Place }) {
   );
 }
 
-/** Praktisch en contact: alleen wat we weten, de rest samen in één regel */
+/** Praktisch en contact: alleen wat we weten, de rest samen in één regel.
+ *  Telefoon, website en e-mail staan vanaf md al in de prijskaart van de zijkolom; hier tonen we ze alleen op mobiel. */
 function Practical({ place, address, tel, reserveLabel }: { place: Place; address: string; tel?: string; reserveLabel: string }) {
-  const rows: { label: string; value: React.ReactNode }[] = [];
+  const rows: { label: string; value: React.ReactNode; contact?: boolean }[] = [];
   const unknown: string[] = [];
   const add = (label: string, value: React.ReactNode | undefined, missing: string) => (value === undefined ? unknown.push(missing) : rows.push({ label, value }));
   add("Aantal plekken", place.capacity ? String(place.capacity) : undefined, "aantal plekken");
@@ -581,6 +582,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   if (tel)
     rows.push({
       label: "Telefoon",
+      contact: true,
       value: (
         <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
           {tel}
@@ -590,6 +592,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   if (place.website)
     rows.push({
       label: "Website",
+      contact: true,
       value: (
         <ContactLink
           soort="website"
@@ -607,6 +610,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   if (place.email)
     rows.push({
       label: "E-mail",
+      contact: true,
       value: (
         <a href={`mailto:${place.email}`} className="-my-3 inline-block py-3 font-semibold break-all text-forest underline underline-offset-2">
           {place.email}
@@ -615,10 +619,12 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
     });
   return (
     <section aria-labelledby="praktisch">
-      <h2 id="praktisch" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>Praktisch en contact</h2>
+      <h2 id="praktisch" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>
+        Praktisch<span className="md:hidden"> en contact</span>
+      </h2>
       <dl className="mt-3 divide-y divide-line rounded-lg border border-line bg-surface">
         {rows.map((r) => (
-          <div key={r.label} className="flex justify-between gap-4 px-4 py-2.5">
+          <div key={r.label} className={`flex justify-between gap-4 px-4 py-2.5${r.contact ? " md:hidden" : ""}`}>
             <dt className="shrink-0 text-ink-2">{r.label}</dt>
             <dd className="min-w-0 text-right font-semibold">{r.value}</dd>
           </div>
