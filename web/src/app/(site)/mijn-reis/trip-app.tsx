@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MotionConfig } from "motion/react";
+import { useSession } from "@/lib/auth";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { departureShort, eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
 import {
@@ -81,6 +82,7 @@ export function TripApp() {
   const trips = useTrips();
   const [sharedLink] = useSharedLink();
   const linkedId = linkedTripId(sharedLink);
+  const { session } = useSession();
   const router = useRouter();
   const params = useSearchParams();
   const { data: livePlaces, error: placesError, cachedAt } = usePlaces();
@@ -120,7 +122,8 @@ export function TripApp() {
   const dragRef = useRef<string[] | null>(null);
   // Ongedaan maken van de laatste grote wijziging
   // `revert` ontbreekt als er niets terug te zetten is (bijvoorbeeld "al de kortste volgorde")
-  const [undo, setUndo] = useState<{ text: string; revert?: () => void } | null>(null);
+  // `trip`: in welke reis de wijziging was; open je intussen een andere reis, dan verdwijnt "Ongedaan maken"
+  const [undo, setUndo] = useState<{ text: string; revert?: () => void; trip?: string } | null>(null);
   const [addingPoint, setAddingPoint] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [alongLeg, setAlongLeg] = useState<number | null>(null);
@@ -209,7 +212,8 @@ export function TripApp() {
 
   // Overnachten voorstellen waar een dag te lang wordt: per te lange etappe (positie in de route) hoogstens 3 plekken
   const overnight = useMemo(() => {
-    if (!plan || !route || !places || !stops || prefs.maxDriveMin <= 0) return null;
+    // Alleen op de actuele route: tijdens herberekenen hoort de oude lijn bij andere stops
+    if (!plan || !route || routeResult.key !== routeKey || !places || !stops || prefs.maxDriveMin <= 0) return null;
     const all = [
       ...plan.legs.map((l, i) => (l ? { routeLeg: start ? i : i - 1, plan: l } : null)),
       plan.endLeg ? { routeLeg: route.legs.length - 1, plan: plan.endLeg } : null,
@@ -225,7 +229,7 @@ export function TripApp() {
       legs: targets,
       maxDriveMin: prefs.maxDriveMin,
     });
-  }, [plan, route, places, stops, start, waypoints, prefs.maxDriveMin]);
+  }, [plan, route, routeResult.key, routeKey, places, stops, start, waypoints, prefs.maxDriveMin]);
 
   if (incomingStops && incomingStops.length) {
     // Eerst laten zien wat er gedeeld is; pas daarna toevoegen of vervangen
@@ -309,7 +313,7 @@ export function TripApp() {
   }
 
   // "Ongedaan maken" na weghalen, omdraaien, slimste volgorde of toevoegen; ook als de reis daarna leeg is
-  const undoToast = undo && (
+  const undoToast = undo && (!undo.trip || undo.trip === trips.active.id) && (
         <div
           role="status"
           // Zelfde vorm als de melding "Bewaard in Mijn reis" (chrome.tsx), maar boven de cookiebalk: anders is
@@ -343,7 +347,7 @@ export function TripApp() {
     const before = trip.stops;
     trip.addPoint(p);
     setAddingPoint(false);
-    setUndo({ text: `${p.name} is toegevoegd als stop ${before.length + 1}.`, revert: () => writeTripStops(id, before) });
+    setUndo({ text: `${p.name} is toegevoegd als stop ${before.length + 1}.`, revert: () => writeTripStops(id, before), trip: id });
   };
   const lastPoint = stops && stops.length ? stops[stops.length - 1].place : (start ?? undefined);
   // Naam van de reis met de lijst met reizen; in de lege toestand is "Je reis is nog leeg" de kop
@@ -358,7 +362,7 @@ export function TripApp() {
           {trips.active.name}
         </p>
       )}
-      <TripSwitcher trips={trips} linkedId={linkedId} onRemoved={onTripRemoved} />
+      <TripSwitcher trips={trips} linkedId={linkedId} signedIn={!!session} onRemoved={onTripRemoved} />
     </div>
   );
 
@@ -435,13 +439,19 @@ export function TripApp() {
     const before = trip.stops;
     const id = trips.active.id;
     change();
-    setUndo({ text, revert: () => writeTripStops(id, before) });
+    setUndo({ text, revert: () => writeTripStops(id, before), trip: id });
   };
 
   const names = [...(start ? [start.label] : []), ...stops.map((s) => s.place.name), ...(endPt ? [ends.end === "start" ? "beginpunt" : endPt.label] : [])];
   const alongLegs = names.slice(1).map((to, i) => ({ from: names[i], to, durationS: routeLegs[i]?.durationS, distanceM: routeLegs[i]?.distanceM }));
   // Etappe in de route naar de plaats in de lijst stops waar een nieuwe plek tussen moet
-  const insertIndexForLeg = (leg: number) => Math.min(stops.length, leg + (start ? 0 : 1));
+  // De route telt alleen stops met bekende plekgegevens (`stops`); invoegen gebeurt in de hele lijst (`trip.stops`)
+  const insertIndexForLeg = (leg: number) => {
+    const i = Math.min(stops.length, leg + (start ? 0 : 1));
+    if (i === 0) return 0;
+    const at = trip.stops.findIndex((s) => s.slug === stops[i - 1].slug);
+    return at < 0 ? i : at + 1;
+  };
   const routeLegIndexOfStop = (i: number) => (start ? i : i - 1);
   const openAlong = (leg: number | null) => {
     setAlongLeg(leg);

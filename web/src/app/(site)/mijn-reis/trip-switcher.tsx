@@ -56,10 +56,21 @@ function NameForm({ label, initial, submit, onSubmit, onCancel }: { label: strin
  * Meerdere reizen naast elkaar, alleen op dit toestel: lijst met naam, aanmaken, hernoemen, wisselen en verwijderen
  * (met "Ongedaan maken" via `onRemoved`). De reis die je samen plant kun je pas verwijderen als je stopt met samen plannen.
  */
-export function TripSwitcher({ trips, linkedId, onRemoved }: { trips: TripsApi; linkedId?: string; onRemoved: (r: Removed) => void }) {
+export function TripSwitcher({
+  trips,
+  linkedId,
+  signedIn = false,
+  onRemoved,
+}: {
+  trips: TripsApi;
+  linkedId?: string;
+  /** Ingelogd: de bovenste reis gaat met je account mee; die verwijderen zou je account stil vervangen */
+  signedIn?: boolean;
+  onRemoved: (r: Removed) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<"nieuw" | "naam" | null>(null);
-  const [blocked, setBlocked] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null);
   const panelId = useId();
   const active = trips.active;
   const full = trips.list.length >= MAX_TRIPS;
@@ -71,7 +82,7 @@ export function TripSwitcher({ trips, linkedId, onRemoved }: { trips: TripsApi; 
         onClick={() => {
           setOpen(!open);
           setForm(null);
-          setBlocked(false);
+          setBlocked(null);
         }}
         aria-expanded={open}
         aria-controls={panelId}
@@ -93,7 +104,7 @@ export function TripSwitcher({ trips, linkedId, onRemoved }: { trips: TripsApi; 
                     onClick={() => {
                       trips.select(t.id);
                       setForm(null);
-                      setBlocked(false);
+                      setBlocked(null);
                     }}
                     aria-current={current ? "true" : undefined}
                     className="flex min-h-12 w-full items-center gap-3 py-1.5 text-left"
@@ -151,7 +162,9 @@ export function TripSwitcher({ trips, linkedId, onRemoved }: { trips: TripsApi; 
               <button
                 type="button"
                 onClick={() => {
-                  if (active.id === linkedId) return setBlocked(true);
+                  if (active.id === linkedId) return setBlocked("Deze reis plan je samen. Stop eerst met samen plannen, dan kun je hem verwijderen.");
+                  if (signedIn && trips.list.length > 1 && trips.list[0].id === active.id)
+                    return setBlocked("Deze reis gaat mee met je account. Haal er stops uit of wis hem, maar verwijderen kan pas als het je enige reis is.");
                   const r = trips.remove(active.id);
                   if (r) onRemoved(r);
                 }}
@@ -164,7 +177,7 @@ export function TripSwitcher({ trips, linkedId, onRemoved }: { trips: TripsApi; 
           {full && !form && <p className="mt-2 text-sm text-muted">Je hebt {MAX_TRIPS} reizen. Verwijder er een om een nieuwe te maken.</p>}
           {blocked && (
             <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert">
-              Deze reis plan je samen. Stop eerst met samen plannen, dan kun je hem verwijderen.
+              {blocked}
             </p>
           )}
         </div>

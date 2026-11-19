@@ -206,7 +206,7 @@ function StopNotes({ notes, onSave, onRemove }: { notes: TripNote[]; onSave: (n:
           onCancel={() => setFresh(null)}
         />
       ) : (
-        notes.length < MAX_NOTES && (
+        notes.filter((n) => !n.shared).length < MAX_NOTES && (
           <button type="button" onClick={() => setFresh({ id: newNoteId(), text: "" })} className="-my-1 min-h-11 text-sm font-semibold text-forest underline">
             Notitie toevoegen
           </button>

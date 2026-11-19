@@ -85,8 +85,14 @@ function PointPicker({ near, onPick, onCancel }: { near?: LatLng; onPick: (p: La
   );
 }
 
-/** Kort label uit een adres van PDOK: "Dorpsstraat 1, 1234 AB Ergens" wordt "Dorpsstraat 1" */
-export const shortLabel = (label: string) => label.split(",")[0].trim().slice(0, MAX_POINT_NAME);
+/**
+ * Voorstel voor de naam uit een adres van PDOK: alleen de plaats ("Dorpsstraat 1, 1234 AB Ergens" wordt "Ergens"). Geen
+ * straat en huisnummer: de naam zien je reisgenoten en hij staat in een gedeelde tekst.
+ */
+export const shortLabel = (label: string) => {
+  const parts = label.split(",").map((p) => p.trim());
+  return parts[parts.length - 1].replace(/^\d{4}\s?[A-Za-z]{2}\s+/, "").slice(0, MAX_POINT_NAME);
+};
 
 /**
  * Eigen punt toevoegen aan de reis: een adres of een punt op de kaart, met je eigen naam. Geen VrijStaan-plek en
@@ -161,7 +167,7 @@ export function AddPoint({ near, onAdd, onClose }: { near?: LatLng; onAdd: (p: T
             onChange={(e) => setName(e.target.value)}
             className="mt-1 h-11 w-full rounded-lg border border-field bg-surface px-3 text-base focus:ring-2 focus:ring-forest focus:outline-none"
           />
-          <p className="mt-1 text-sm text-muted">Het punt komt achteraan je reis, als tussenstop. Plan je samen, dan zien je reisgenoten het ook.</p>
+          <p className="mt-1 text-sm text-muted">Het punt komt achteraan je reis, als tussenstop. Plan je samen, dan zien je reisgenoten het punt en de naam. De naam staat ook in je reis als tekst.</p>
           <button type="submit" disabled={!name.trim()} className="mt-2 h-11 rounded-md bg-forest px-4 font-semibold text-on-forest disabled:opacity-60">
             Toevoegen aan je reis
           </button>

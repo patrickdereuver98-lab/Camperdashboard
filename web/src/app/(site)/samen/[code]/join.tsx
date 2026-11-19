@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import { useSession } from "@/lib/auth";
-import { useSharedLink, useTrips, writeTripStops } from "@/lib/store";
+import { useSharedLink, useTrips } from "@/lib/store";
+import { MAX_TRIPS } from "@/lib/trip-storage";
 import { errorMessage, supabase } from "@/lib/supabase-browser";
 import { mergeTrips } from "@/lib/trip-merge";
 
@@ -37,14 +38,9 @@ export function JoinTrip({ params }: { params: Promise<{ code: string }> }) {
     setBusy(false);
     if (error) return setErr(errorMessage(error));
     const d = data as { id: string; name: string; stops: unknown };
-    // De gedeelde reis komt als nieuwe reis in je lijst; je eigen reizen blijven staan. Zitten er al 20 reizen op dit
-    // toestel, dan vervangt hij de reis die open staat.
-    const stops = mergeTrips([], d.stops, { legacyShared: true });
-    let localId = trips.create(d.name, stops);
-    if (!localId) {
-      localId = trips.active.id;
-      writeTripStops(localId, stops);
-    }
+    // De gedeelde reis komt als nieuwe reis in je lijst; je eigen reizen blijven staan
+    const localId = trips.create(d.name, mergeTrips([], d.stops, { legacyShared: true }));
+    if (!localId) return setErr(`Je hebt al ${MAX_TRIPS} reizen op dit toestel. Verwijder er eerst een in Mijn reis.`);
     setLink({ id: d.id, name: d.name, code, trip: localId });
     router.replace("/mijn-reis");
   }
@@ -53,7 +49,7 @@ export function JoinTrip({ params }: { params: Promise<{ code: string }> }) {
     <>
       <p className="mt-3 text-lg text-ink-2">Je bent uitgenodigd om samen een camperreis te plannen. Wijzigingen zien jullie allebei meteen.</p>
       <p className="mt-3 rounded-lg bg-sunken px-4 py-3 text-ink-2">
-        De gedeelde reis komt als nieuwe reis in Mijn reis. Je eigen reizen blijven staan.
+        De gedeelde reis komt als nieuwe reis in Mijn reis. Je eigen reizen blijven staan. Eigen punten in de reis (met hun ligging) zien alle reisgenoten.
       </p>
       <button type="button" onClick={join} disabled={busy} className="mt-6 h-14 w-full rounded-md bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Even geduld…" : "Meedoen"}

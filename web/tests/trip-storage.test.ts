@@ -183,3 +183,12 @@ test("reizen: stops van één reis vervangen raakt de andere niet", async () => 
   assert.deepEqual(next.trips[1].stops, [{ slug: "b", nights: 1 }]);
   assert.deepEqual(setTripStops(list, "weg", []), list);
 });
+
+test("reizen: terugzetten bij een volle lijst gooit geen andere reis weg", async () => {
+  const { addTrip, deleteTrip, emptyTripList, restoreTrip } = await import("../src/lib/trip-storage.ts");
+  let list = emptyTripList();
+  for (let i = 1; i < MAX_TRIPS; i++) list = addTrip(list, `R${i}`, [], `reis-r${i}`)!;
+  const r = deleteTrip(list, "reis-r3")!;
+  const refilled = addTrip(r.list, "Nieuw", [], "reis-nieuw")!;
+  assert.equal(restoreTrip(refilled, r.removed), refilled);
+});

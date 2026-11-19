@@ -80,8 +80,8 @@ export function SharedCard() {
       ) : !link ? (
         <>
           <p className="mt-2 text-ink-2">
-            Nodig iemand uit voor &ldquo;{trips.active.name}&rdquo;. Jullie zien allebei dezelfde reis, en wijzigingen komen direct bij de ander binnen. Je notities
-            blijven privé, tenzij je ze deelt met reisgenoten.
+            Nodig iemand uit voor &ldquo;{trips.active.name}&rdquo;. Jullie zien allebei dezelfde reis, en wijzigingen komen direct bij de ander binnen. Je reisgenoten
+            zien ook je eigen punten met hun ligging. Je notities blijven privé, tenzij je ze deelt met reisgenoten.
           </p>
           <button type="button" onClick={start} disabled={busy} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-forest font-semibold text-on-forest disabled:opacity-60">
             <Icon name="user" size={19} /> {busy ? "Even geduld…" : "Samen plannen"}

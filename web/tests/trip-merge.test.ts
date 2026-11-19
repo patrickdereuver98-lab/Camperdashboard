@@ -30,10 +30,11 @@ test("mergeTrips: oude notitie uit een gedeelde reis was al gedeeld", () => {
   ]);
 });
 
-test("notities: hoogstens 10, geldige sleutel, geen dubbele, shared alleen als true", () => {
-  const notes = Array.from({ length: 14 }, (_, i) => ({ id: `n${i + 1}`, text: `t${i}`, shared: i % 2 === 0 ? true : "ja" }));
+test("notities: hoogstens 10 privé en 10 gedeelde, geldige sleutel, geen dubbele, shared alleen als true", () => {
+  const notes = Array.from({ length: 24 }, (_, i) => ({ id: `n${i + 1}`, text: `t${i}`, shared: i % 2 === 0 ? true : "ja" }));
   const [s] = mergeTrips([{ slug: "a", nights: 1, notes: [...notes, { id: "n1", text: "dubbel" }, { id: "../x", text: "fout" }] }], []);
-  assert.equal(s.notes?.length, MAX_NOTES);
+  assert.equal(s.notes?.filter((n) => n.shared).length, MAX_NOTES);
+  assert.equal(s.notes?.filter((n) => !n.shared).length, MAX_NOTES);
   assert.deepEqual(s.notes?.[0], { id: "n1", text: "t0", shared: true });
   assert.deepEqual(s.notes?.[1], { id: "n2", text: "t1" });
 });
@@ -118,4 +119,16 @@ test("eigen punt toevoegen: achteraan als tussenstop, of op een plaats", async (
   assert.equal(addPoint(stops, p, "eigen-x", 1, 2)[1].nights, 2);
   assert.equal(addPoint(stops, p, "eigen-x", 1)[1].slug, "eigen-x");
   assert.equal(addPoint(stops, p, "eigen-x", 99).length, 3);
+});
+
+test("notities: privé en gedeeld tellen apart, en de hele reis blijft onder de grens", async () => {
+  const { withShared, MAX_NOTE_CHARS } = await import("../src/lib/trip-merge.ts");
+  const mine = Array.from({ length: 3 }, (_, i) => ({ id: `p${i}`, text: `privé ${i}` }));
+  const theirs = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}`, text: `gedeeld ${i}`, shared: true as const }));
+  const [s] = mergeTrips(withShared([{ slug: "a", nights: 1, notes: mine }], [{ slug: "a", nights: 1, notes: theirs }]), []);
+  assert.equal(s.notes?.filter((n) => !n.shared).length, 3);
+  assert.equal(s.notes?.filter((n) => n.shared).length, 10);
+  const big = Array.from({ length: 200 }, (_, i) => ({ slug: `p${i}`, nights: 1, notes: [{ id: "n1", text: "x".repeat(500) }] }));
+  const total = mergeTrips(big, []).reduce((t, x) => t + (x.notes?.[0]?.text.length ?? 0), 0);
+  assert.ok(total <= MAX_NOTE_CHARS);
 });

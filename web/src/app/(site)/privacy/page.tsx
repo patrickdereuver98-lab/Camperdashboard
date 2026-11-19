@@ -272,7 +272,7 @@ export default function PrivacyPage() {
           In Mijn reis kun je een begin- en eindpunt kiezen, bijvoorbeeld je huisadres. Dat punt staat alleen op je eigen
           apparaat. Het gaat niet mee naar je account of in een gedeelde link, en naar de routeplanner gaat het afgerond op
           ongeveer 1 kilometer. Een eigen punt in je reis (een adres of een punt op de kaart) gaat ook afgerond naar de
-          routeplanner. Het gaat wel mee naar je account en, als je samen plant, naar je reisgenoten. Je notities zijn
+          routeplanner. Het gaat wel mee naar je account (alleen in de bovenste reis in je lijst) en, als je samen plant, naar je reisgenoten. Je notities zijn
           privé: alleen notities waarbij je &quot;Delen met reisgenoten&quot; aanzet, zien je reisgenoten. Heb je bij Mijn camper de hoogte, het gewicht, de lengte of de breedte ingevuld, dan stuurt
           onze server die maten mee naar OpenRouteService, zodat de route lage bruggen en te zware wegen mijdt. Die maten
           zijn niet aan jou te koppelen. Een GPX-bestand of agendabestand maakt je browser zelf; dat gaat niet langs onze

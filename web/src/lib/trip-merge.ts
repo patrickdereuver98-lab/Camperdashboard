@@ -4,7 +4,7 @@
  * - `slug` is de sleutel van de stop: bij een VrijStaan-plek de slug van de plek, bij een eigen punt een eigen sleutel.
  * - `point`: een eigen punt (adres of punt op de kaart, met je eigen naam). Daarvan weten we alleen naam en ligging,
  *   geen plekgegevens. Een stop is een eigen punt als `point` er is, niet door de vorm van de slug.
- * - `notes`: je notities bij de stop (hoogstens 10, elk hoogstens 500 tekens). Standaard privé; `shared: true` betekent
+ * - `notes`: je notities bij de stop (hoogstens 10 privé en 10 gedeelde, elk hoogstens 500 tekens). Standaard privé; `shared: true` betekent
  *   "Delen met reisgenoten": alleen die gaan mee in een gedeelde reis en in delen als tekst (besluit 19 november 2026).
  */
 export type TripNote = { id: string; text: string; shared?: true };
@@ -77,9 +77,11 @@ export function cleanNotes(v: unknown, legacy?: unknown, legacyShared = false): 
     const o = n as Record<string, unknown>;
     const text = cleanNote(o.text);
     if (!text || typeof o.id !== "string" || !NOTE_ID.test(o.id) || ids.has(o.id)) continue;
+    // Privé en gedeeld tellen apart: notities van reisgenoten kunnen jouw privénotities niet verdringen
+    const shared = o.shared === true;
+    if (out.filter((n) => !!n.shared === shared).length >= MAX_NOTES) continue;
     ids.add(o.id);
-    out.push(o.shared === true ? { id: o.id, text, shared: true } : { id: o.id, text });
-    if (out.length >= MAX_NOTES) break;
+    out.push(shared ? { id: o.id, text, shared: true } : { id: o.id, text });
   }
   return out.length ? out : undefined;
 }
@@ -122,7 +124,24 @@ export function mergeTrips(local: unknown[], remote: unknown, options: MergeOpti
   };
   add(local, {});
   add(Array.isArray(remote) ? remote : [], options);
-  return out.slice(0, MAX_STOPS);
+  return capNotes(out.slice(0, MAX_STOPS));
+}
+
+/**
+ * Notities over de hele reis begrensd tot MAX_NOTE_CHARS tekens: zo blijft een reis ruim onder de grens van de database
+ * (`stops` < 200 kB), anders zou opslaan in je account of de gedeelde reis steeds mislukken. Wat te veel is valt weg,
+ * van achteren.
+ */
+export const MAX_NOTE_CHARS = 60_000;
+function capNotes(stops: Stop[]): Stop[] {
+  let left = MAX_NOTE_CHARS;
+  return stops.map((s) => {
+    if (!s.notes) return s;
+    const notes = s.notes.filter((n) => (left -= n.text.length) >= 0);
+    const rest: Stop = { ...s };
+    delete rest.notes;
+    return notes.length ? { ...rest, notes } : rest;
+  });
 }
 
 /** Zelfde reis: volgorde, nachten, eigen punten en notities (alles na opschonen) */
@@ -158,7 +177,7 @@ export function withShared(local: Stop[], remote: Stop[]): Stop[] {
     const texts = new Set(shared.map((n) => n.text.trim()));
     const ids = new Set(shared.map((n) => n.id));
     const own = (mine.get(s.slug) ?? []).filter((n) => !texts.has(n.text.trim()) && !ids.has(n.id));
-    const notes = [...shared, ...own].slice(0, MAX_NOTES);
+    const notes = [...shared, ...own];
     const rest: Stop = { ...s };
     delete rest.notes;
     return notes.length ? { ...rest, notes } : rest;
@@ -173,7 +192,7 @@ export function saveNote(stops: Stop[], slug: string, note: TripNote): Stop[] {
     if (s.slug !== slug) return s;
     const list = s.notes ?? [];
     const has = list.some((n) => n.id === note.id);
-    const notes = !note.text.trim() ? list.filter((n) => n.id !== note.id) : has ? list.map((n) => (n.id === note.id ? note : n)) : [...list, note].slice(0, MAX_NOTES);
+    const notes = !note.text.trim() ? list.filter((n) => n.id !== note.id) : has ? list.map((n) => (n.id === note.id ? note : n)) : [...list, note];
     return { ...s, notes };
   });
 }

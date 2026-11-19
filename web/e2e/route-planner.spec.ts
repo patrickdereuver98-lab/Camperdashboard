@@ -221,7 +221,7 @@ test("meerdere reizen en een eigen punt: aanmaken, punt toevoegen, hernoemen, wi
   await add.getByRole("button", { name: "Adres zoeken" }).click();
   await add.getByLabel("Adres, postcode of plaats").fill("Dorps");
   await add.getByRole("button", { name: "Dorpsstraat 1, Ergens" }).click();
-  await expect(add.getByLabel("Naam")).toHaveValue("Dorpsstraat 1");
+  await expect(add.getByLabel("Naam")).toHaveValue("Ergens");
   await add.getByLabel("Naam").fill("Oma");
   await add.getByRole("button", { name: "Toevoegen aan je reis" }).click();
   const stops = page.getByTestId("trip-stop");

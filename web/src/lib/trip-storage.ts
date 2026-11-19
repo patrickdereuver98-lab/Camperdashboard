@@ -145,8 +145,10 @@ export function deleteTrip(list: TripList, id: string): { list: TripList; remove
 
 /** Verwijderde reis terugzetten op dezelfde plaats ("Ongedaan maken") */
 export function restoreTrip(list: TripList, r: RemovedTrip): TripList {
+  // Intussen weer 20 reizen: niet terugzetten, anders valt er een andere reis weg
+  if (list.trips.length >= MAX_TRIPS && !list.trips.some((t) => t.id === r.trip.id)) return list;
   const rest = list.trips.filter((t) => t.id !== r.trip.id);
-  const trips = [...rest.slice(0, r.index), r.trip, ...rest.slice(r.index)].slice(0, MAX_TRIPS);
+  const trips = [...rest.slice(0, r.index), r.trip, ...rest.slice(r.index)];
   return { active: r.wasActive ? r.trip.id : list.active, trips };
 }
 
