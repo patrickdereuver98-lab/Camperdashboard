@@ -235,7 +235,7 @@ toestel. Pas bouwen als statistieken laten zien dat mensen lang scrollen.
 
 De App Flow (§ Andere routes, "Reis plannen") zegt "volgorde slepen of Slimste volgorde". In
 `app/(site)/mijn-reis/trip-app.tsx` kan je de volgorde alleen met de knoppen **Eerder in de reis** en **Later in de
-reis** veranderen; slepen bestaat niet. Genoteerd als open punt 119 in [`specs/README.md`](specs/README.md). Voorstel:
+reis** veranderen; slepen bestaat niet. Genoteerd als open punt 129 in [`specs/README.md`](specs/README.md). Voorstel:
 U2 bouwen ná de livegang, of tot dan de App Flow aanpassen naar "volgorde met de pijltjes".
 
 ## 8. Voorgestelde volgorde
