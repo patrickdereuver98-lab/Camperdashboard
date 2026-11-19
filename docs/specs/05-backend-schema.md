@@ -102,7 +102,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | Tabel | Velden (verplicht met *) | Standaarden en indexen |
 |---|---|---|
 | `profiles` | id* (= auth.users.id), display_name (≤ 80), avatar_url (https), created_at*, updated_at* | alleen eigen rij lezen/wijzigen |
-| `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200), updated_at* | alleen eigen rij |
+| `user_trips` | user_id* (pk), stops* (jsonb-array ≤ 200: `{ slug, nights 0–21, note? ≤ 500 tekens }`; 0 nachten = tussenstop, sinds 19 november 2026), updated_at* | alleen eigen rij; begin- en eindpunt en routevoorkeuren staan alleen op het toestel |
 | `place_photos` | id*, place_id*, user_id, storage_path* (`<user_id>/<uuid>.webp|jpg`), width/height (200–4.000), caption (≤ 140), credit (≤ 80), status* (`pending`, `approved`, `rejected`), reviewed_by, reviewed_at, created_at* | status `pending`; max. 20 per gebruiker per dag; vertrouwde gebruikers (`site_settings.trust`) worden automatisch goedgekeurd |
 | `duplicate_dismissals` | a*, b* (a < b), dismissed_by, created_at* | alleen beheer |
 | `shared_trips` | id*, owner_id*, name* (1–60), stops* (≤ 200), invite_code* (uniek, 18 hex), updated_by, updated_at*, created_at* | lezen en `stops`/`name` wijzigen alleen voor leden (`is_trip_member`); in de Realtime-publicatie; maken via `create_shared_trip`, meedoen via `join_shared_trip` (max. 6) |

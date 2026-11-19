@@ -112,6 +112,6 @@ test("reisopslag: oude lijst wordt omgezet en met versie teruggeschreven", () =>
   const s = createLocalStore("reis", [], { decode: decodeTrip, encode: encodeTrip });
   assert.deepEqual(s.read(), [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }]);
   s.write([...s.read(), { slug: "c", nights: 3 }]);
-  assert.deepEqual(JSON.parse(storage.getItem("reis")!), { v: 2, stops: [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }, { slug: "c", nights: 3 }] });
+  assert.deepEqual(JSON.parse(storage.getItem("reis")!), { v: 3, stops: [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }, { slug: "c", nights: 3 }] });
   assert.deepEqual(s.read(), [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }, { slug: "c", nights: 3 }]);
 });

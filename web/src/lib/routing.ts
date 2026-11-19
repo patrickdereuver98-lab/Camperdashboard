@@ -50,7 +50,6 @@ export function parsePoints(raw: string | null, max: number, min = 2): Point[] |
 }
 
 const ORS_AVOID: Record<Avoid, string> = { tolls: "tollways", ferries: "ferries", highways: "highways" };
-const OSRM_EXCLUDE: Record<Avoid, string> = { tolls: "toll", ferries: "ferry", highways: "motorway" };
 
 /** Profiel en opties voor OpenRouteService */
 function orsProfile(o: RouteOptions) {
@@ -104,19 +103,9 @@ async function osrmFetch(path: string) {
 
 async function osrmRoute(points: Point[], o: RouteOptions): Promise<RouteResult> {
   const coords = points.map((p) => p.join(",")).join(";");
-  const base = `/route/v1/driving/${coords}?overview=simplified&geometries=geojson`;
-  // OSRM kent maar een paar vaste combinaties om te vermijden; lukt het niet, dan zonder en zeggen we dat eerlijk
-  let data;
-  let avoidApplied = o.avoid.length === 0;
-  if (o.avoid.length) {
-    try {
-      data = await osrmFetch(`${base}&exclude=${o.avoid.map((a) => OSRM_EXCLUDE[a]).join(",")}`);
-      avoidApplied = true;
-    } catch {
-      /* zonder vermijden */
-    }
-  }
-  data ??= await osrmFetch(base);
+  // De openbare server van FOSSGIS kan niets vermijden ("Exclude flag combination is not supported", gemeten
+  // 19 november 2026); vraag je dat, dan zegt het antwoord eerlijk dat het niet is meegenomen
+  const data = await osrmFetch(`/route/v1/driving/${coords}?overview=simplified&geometries=geojson`);
   const r = data.routes[0];
   return {
     distanceM: Math.round(r.distance),
@@ -125,7 +114,7 @@ async function osrmRoute(points: Point[], o: RouteOptions): Promise<RouteResult>
     geometry: r.geometry.coordinates,
     provider: "osrm",
     vehicleApplied: false,
-    avoidApplied,
+    avoidApplied: o.avoid.length === 0,
   };
 }
 

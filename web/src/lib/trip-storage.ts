@@ -1,21 +1,25 @@
 // Hoe Mijn reis op dit toestel wordt opgeslagen. Met een versienummer, zodat een latere vorm oude opslag kan omzetten.
 //
 // Versie 1 (tot november 2026): een losse lijst `[{ slug, nights }]`, zonder controle op het aantal nachten.
-// Versie 2: `{ v: 2, stops: [{ slug, nights, note? }] }`; nachten heel, 0 (tussenstop) tot en met 21 (standaard 1),
-// elke plek één keer, notitie optioneel.
+// Versie 2: `{ v: 2, stops: [{ slug, nights }] }`; nachten heel, 1 tot en met 21 (standaard 1), elke plek één keer.
+// Versie 3 (november 2026): ook 0 nachten (tussenstop) en een notitie per stop. In versie 1 en 2 bestond 0 niet;
+// een 0 uit die opslag wordt 1.
 import { clampNights, cleanNote, MAX_NIGHTS, MIN_NIGHTS, mergeTrips, type Stop } from "./trip-merge";
 import type { PlaceSummary } from "./types";
 
-export const TRIP_VERSION = 2;
+export const TRIP_VERSION = 3;
 export { clampNights, MAX_NIGHTS, MIN_NIGHTS };
 
 /** Opgeslagen reis (elke versie) naar een nette lijst stops; undefined als het geen reis is */
 export function decodeTrip(stored: unknown): Stop[] | undefined {
+  // Vóór versie 3 bestond een tussenstop niet: 0 nachten wordt dan 1
+  const legacy = (list: unknown[]) => list.map((s) => (typeof s === "object" && s !== null && Number((s as Stop).nights) === 0 ? { ...(s as Stop), nights: 1 } : s));
   // Versie 1: de lijst zelf
-  if (Array.isArray(stored)) return mergeTrips([], stored);
+  if (Array.isArray(stored)) return mergeTrips([], legacy(stored));
   if (typeof stored === "object" && stored !== null && Array.isArray((stored as { stops?: unknown }).stops)) {
-    // Versie 2, of een latere versie met dezelfde lijst: alleen de stops gebruiken we
-    return mergeTrips([], (stored as { stops: unknown[] }).stops);
+    const { v, stops } = stored as { v?: unknown; stops: unknown[] };
+    // Versie 2 of 3, of een latere versie met dezelfde lijst: alleen de stops gebruiken we
+    return mergeTrips([], typeof v === "number" && v >= 3 ? stops : legacy(stops));
   }
   return undefined;
 }

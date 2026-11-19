@@ -99,6 +99,7 @@ Volgorde zoals uitgevoerd:
 | 2.4 Reizen zonder wrijving (R51, R54) | ✅ | Agent | Ja, 8 nov | Geen |
 | 2.5 Inbox en limieten (R11 tot en met R14, R26) | ✅ | Agent | Ja, 8 nov | Geen |
 | 2.6 Vindbaar (R38, R39) | 🔄 | Agent | Ja, 8 nov | R38 af; R39 deels (SEO-06 tot en met 15 per punt) |
+| 2.7 Routeplanner Mijn reis (opdracht Patrick 19 nov, buiten de bevriezing: README 119) | ✅ | Agent | Nee, PR open | `ORS_API_KEY` in Production nakijken (README 120); testen op een echte iPhone (slepen) |
 
 ## Fase 3: bevriezen en live (19 tot en met 31 december)
 

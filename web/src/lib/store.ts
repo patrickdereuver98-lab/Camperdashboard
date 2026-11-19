@@ -7,6 +7,7 @@ import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
 import { cleanRouteEnds, cleanRoutePrefs, DEFAULT_ROUTE_PREFS, EMPTY_ENDS, type RouteEnds, type RoutePrefs } from "./route-prefs";
 import { createLocalStore, onStorageFailure, storageFailed, type StoreOptions } from "./local-store";
+import { mergeTrips } from "./trip-merge";
 import { clampNights, decodeTrip, decodeTripPlaces, encodeTrip, encodeTripPlaces, type TripPlacesCopy } from "./trip-storage";
 
 // ── Kleine localStorage-store met abonnement (kern in local-store.ts) ───────
@@ -40,7 +41,8 @@ const tripStore = createStore<TripStop[]>("vrijstaan:reis", EMPTY_TRIP, (v): v i
 });
 /** De reis zoals hij nu op dit toestel staat (buiten React, bijvoorbeeld na een await) */
 export const readTrip = () => tripStore.read();
-export const writeTrip = (next: TripStop[]) => tripStore.write(decodeTrip(next) ?? EMPTY_TRIP);
+// Een lijst uit de app zelf is al de nieuwste vorm (tussenstop met 0 nachten mag): niet als oude opslag lezen
+export const writeTrip = (next: TripStop[]) => tripStore.write(mergeTrips([], next));
 
 export function useTrip() {
   const stops = tripStore.use();
