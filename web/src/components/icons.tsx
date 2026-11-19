@@ -29,6 +29,8 @@ const PATHS = {
   info: <><circle cx="12" cy="12" r="9.5" /><path d="M12 16.5v-5M12 8h.01" /></>,
   alert: <><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4.5M12 17h.01" /></>,
   trash: <path d="M3.5 6h17M8.5 6V4.5A1.5 1.5 0 0 1 10 3h4a1.5 1.5 0 0 1 1.5 1.5V6m3 0-.8 13.1a2 2 0 0 1-2 1.9H8.3a2 2 0 0 1-2-1.9L5.5 6" />,
+  copy: <><rect x="8.5" y="8.5" width="12" height="12" rx="2" /><path d="M15.5 8.5V5a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 5v9A1.5 1.5 0 0 0 5 15.5h3.5" /></>,
+  more: <path d="M5 12h.01M12 12h.01M19 12h.01" />,
   grip: <path d="M9 5h.01M9 12h.01M9 19h.01M15 5h.01M15 12h.01M15 19h.01" />,
   swap: <path d="M7 4v16m0 0-3.5-3.5M7 20l3.5-3.5M17 20V4m0 0-3.5 3.5M17 4l3.5 3.5" />,
   download: <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M4.5 19.5h15" />,
@@ -97,25 +99,25 @@ export function Logo({ size = 34 }: { size?: number }) {
   if (size <= 32)
     return (
       <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-        <rect width="64" height="64" rx="15" fill="#2d5a43" />
+        <rect width="64" height="64" rx="15" fill="#1f4e37" />
         <circle cx="44" cy="25" r="12.5" fill="#e8915c" />
-        <path d="M44 25v-8.5M44 25l6-3.4" fill="none" stroke="#2d5a43" strokeWidth="3.8" strokeLinecap="round" />
-        <path d={CAMPER} fill="#fffcf6" stroke="#2d5a43" strokeWidth="2" strokeLinejoin="round" />
-        <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#2d5a43" />
-        <circle cx="17.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#2d5a43" strokeWidth="2" />
-        <circle cx="32.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#2d5a43" strokeWidth="2" />
+        <path d="M44 25v-8.5M44 25l6-3.4" fill="none" stroke="#1f4e37" strokeWidth="3.8" strokeLinecap="round" />
+        <path d={CAMPER} fill="#fffcf6" stroke="#1f4e37" strokeWidth="2" strokeLinejoin="round" />
+        <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#1f4e37" />
+        <circle cx="17.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#1f4e37" strokeWidth="2" />
+        <circle cx="32.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#1f4e37" strokeWidth="2" />
         <path d="M8 55.5h48" stroke="#fffcf6" strokeWidth="3" strokeLinecap="round" />
       </svg>
     );
   const fine = size >= 48;
-  const wheel = { r: fine ? 3.4 : 3.6, fill: "#2d5a43", stroke: "#fffcf6", strokeWidth: fine ? 1.6 : 2 };
+  const wheel = { r: fine ? 3.4 : 3.6, fill: "#1f4e37", stroke: "#fffcf6", strokeWidth: fine ? 1.6 : 2 };
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="15" fill="#2d5a43" />
+      <rect width="64" height="64" rx="15" fill="#1f4e37" />
       <circle cx="44" cy="27" r="11" fill="#e8915c" />
-      <path d="M44 27v-7.5M44 27l5.2-3" fill="none" stroke="#2d5a43" strokeWidth={fine ? 2.6 : 3.4} strokeLinecap="round" />
+      <path d="M44 27v-7.5M44 27l5.2-3" fill="none" stroke="#1f4e37" strokeWidth={fine ? 2.6 : 3.4} strokeLinecap="round" />
       <path d="M0 44.5C11 39.2 21.5 36.5 32 36.5S53 39.2 64 44.5V49A15 15 0 0 1 49 64H15A15 15 0 0 1 0 49Z" fill="#fffcf6" />
-      <path d={CAMPER} fill="#2d5a43" stroke="#fffcf6" strokeWidth={fine ? 1.6 : 2} strokeLinejoin="round" />
+      <path d={CAMPER} fill="#1f4e37" stroke="#fffcf6" strokeWidth={fine ? 1.6 : 2} strokeLinejoin="round" />
       <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#fffcf6" />
       <circle cx="17.5" cy="49.5" {...wheel} />
       <circle cx="32.5" cy="49.5" {...wheel} />

@@ -42,3 +42,19 @@ test("oproep met knop, Klopt dit niet? en bevestiging met termijn", async ({ pag
   await expect(call.getByRole("status")).toContainText("Hij wacht op controle. Dat doen we meestal binnen twee werkdagen");
   expect(sent).toMatchObject({ p_kind: "correctie", p_payload: { onderwerp: "vertrektijd", vertrek: "vrij" } });
 });
+
+test("vaste tijd kiezen: het tijdveld begint leeg en is verplicht (R83)", async ({ page }) => {
+  test.skip(!place, "geen onvolledige plek in de snapshot");
+  await page.route(`${SUPABASE}/rest/v1/**`, async (r) => {
+    const name = new URL(r.request().url()).pathname.split("/").pop();
+    if (name === "crowd_status") return r.fulfill({ json: { level: null, reports: 0, last_at: null, counts: {} } });
+    await r.fulfill(r.request().method() === "GET" ? { json: [] } : { json: null });
+  });
+  await page.goto(`/plek/${place.slug}`);
+  await page.getByTestId("departure-call").getByRole("button", { name: "Vertrektijd doorgeven" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("radio", { name: /Op een vaste tijd/ }).click();
+  const time = sheet.locator('input[name="checkout"]');
+  await expect(time).toHaveValue("");
+  await expect(time).toHaveAttribute("required", "");
+});

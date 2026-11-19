@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState, ViewTransition } from "react";
+import { useRouter } from "next/navigation";
 import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/lib/search";
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
@@ -13,8 +14,10 @@ import { isIncomplete } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
+import { ACTION_TILE } from "@/lib/action-tile";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
+import { QuickMenu, useLongPress } from "./quick-menu";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
 import { NavigateButton } from "./navigate";
 
@@ -26,6 +29,13 @@ import { NavigateButton } from "./navigate";
  */
 export function photoProxy(src: string, width: number): string {
   return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${width}&fit=cover&output=webp&q=72&we`;
+}
+
+/** Bronnen voor een foto op volle grootte (schermvullend bekijken): verkleinde WebP, dan de grote versie, dan het origineel */
+export function fullPhotoSources(src: string): string[] {
+  const upgraded = upgradePhotoUrl(src);
+  const ownStorage = src.startsWith(`${SUPABASE_URL}/storage/`);
+  return [...new Set([...(ownStorage ? [] : [photoProxy(upgraded, 2000).replace("&fit=cover", "&fit=inside")]), upgraded, src])];
 }
 
 export function PlacePhoto({
@@ -178,7 +188,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
  * (review november R55, anders hoort een schermlezer in een lijst tien keer "Bewaren in mijn reis"). De brede knop op
  * de plekpagina houdt zijn zichtbare tekst als naam (WCAG 2.5.3); daar staat de plek al in de kop.
  */
-export function SaveButton({ slug, name, variant = "icon" }: { slug: string; name: string; variant?: "icon" | "full" | "plain" | "bar" }) {
+export function SaveButton({ slug, name, variant = "icon" }: { slug: string; name: string; variant?: "icon" | "full" | "plain" | "bar" | "tile" }) {
   const trip = useTrip();
   const saved = trip.has(slug);
   const toggle = (e: React.MouseEvent) => {
@@ -190,6 +200,13 @@ export function SaveButton({ slug, name, variant = "icon" }: { slug: string; nam
       window.dispatchEvent(new CustomEvent("vrijstaan:bewaard"));
     }
   };
+  if (variant === "tile")
+    return (
+      <button type="button" onClick={toggle} aria-pressed={saved} className={`${ACTION_TILE} aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest`}>
+        <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop" : ""} />
+        {saved ? "Bewaard" : "Bewaar"}
+      </button>
+    );
   if (variant === "full")
     return (
       <button
@@ -378,14 +395,20 @@ function PlaceRow({
   onHover?: (slug: string | null) => void;
   eager?: boolean;
 }) {
+  // Lang indrukken of rechtsklikken: snelmenu (G5)
+  const [menu, setMenu] = useState(false);
+  const press = useLongPress(() => setMenu(true));
   return (
+    <>
+    <QuickMenu place={place} open={menu} onClose={() => setMenu(false)} />
     <article
       data-slug={place.slug}
+      {...press}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
       // Eén lijst met een lijn onder elke rij (besluit eigenaar 30 oktober en 1 november 2026): geen kaartjes, geen schaduw.
       // De lijn tekent de lijst (ResultList); de actieve rij (kaart) krijgt een bosgroene streep links.
-      className={`group relative flex min-h-[6.5rem] gap-3 py-2.5 transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:-outline-offset-3 has-[a:focus-visible]:outline-forest ${
+      className={`group relative flex min-h-[6.5rem] gap-3 py-2.5 select-none [-webkit-touch-callout:none] transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:-outline-offset-3 has-[a:focus-visible]:outline-forest ${
         active ? "bg-forest-tint shadow-[inset_3px_0_0_var(--color-forest)]" : "hover:bg-sunken/50"
       }`}
     >
@@ -436,6 +459,7 @@ function PlaceRow({
         </div>
       </div>
     </article>
+    </>
   );
 }
 
@@ -532,10 +556,105 @@ function CardPrice({ place }: { place: PlaceSummary }) {
  * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route en Bekijk plek. Vervangt op de
  * telefoon de kleine popup van de kaart.
  */
-export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () => void }) {
+/** Hoe ver je het paneel moet vegen (px): omhoog opent de plek, omlaag sluit het */
+const PICK_OPEN = 56;
+const PICK_CLOSE = 72;
+
+/** Opzij vegen naar de vorige of volgende plek (UX-audit G3) */
+const PICK_SIDE = 60;
+
+export function MapPick({
+  place,
+  onClose,
+  onPrev,
+  onNext,
+  position,
+}: {
+  place: PlaceSummary;
+  onClose: () => void;
+  /** Vorige en volgende plek in de volgorde van de lijst (G3); ook met opzij vegen */
+  onPrev?: () => void;
+  onNext?: () => void;
+  /** "3 van 12" */
+  position?: string;
+}) {
   const arrival = arrivalShort(place);
+  const router = useRouter();
+  const href = `/plek/${place.slug}`;
+  // Vegen zoals in een kaart-app (redesign 18 november 2026): omhoog naar de plekpagina, omlaag dicht. De knoppen
+  // Route en Bekijk plek blijven de gewone weg; vegen is een snelkoppeling. Opzij vegen: vorige of volgende plek (G3).
+  const drag = useRef<{ id: number; y: number; x: number; moved: boolean; axis?: "x" | "y" } | null>(null);
+  const [dy, setDy] = useState(0);
+  const [dx, setDx] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    router.prefetch(href);
+  }, [router, href]);
+  const release = () => {
+    const d = drag.current;
+    drag.current = null;
+    setDragging(false);
+    if (!d?.moved) return setDy(0);
+    if (d.axis === "x") {
+      setDx(0);
+      if (dx <= -PICK_SIDE) onNext?.();
+      else if (dx >= PICK_SIDE) onPrev?.();
+      return;
+    }
+    if (dy <= -PICK_OPEN) {
+      setLeaving(true);
+      startTransition(() => router.push(href));
+    } else if (dy >= PICK_CLOSE) onClose();
+    else setDy(0);
+  };
   return (
-    <section aria-label={`Gekozen plek: ${place.name}`} className="animate-rise absolute inset-x-2 bottom-2 z-20 rounded-2xl bg-surface p-3 shadow-float">
+    <section
+      aria-label={`Gekozen plek: ${place.name}`}
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        drag.current = { id: e.pointerId, y: e.clientY, x: e.clientX, moved: false };
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (!d || d.id !== e.pointerId) return;
+        const raw = e.clientY - d.y;
+        const side = e.clientX - d.x;
+        if (!d.moved) {
+          if (Math.abs(raw) < 8 && Math.abs(side) < 8) return;
+          d.moved = true;
+          // Richting ligt vast na de eerste beweging; opzij alleen als er een vorige of volgende is
+          d.axis = Math.abs(side) > Math.abs(raw) && (onPrev || onNext) ? "x" : "y";
+          setDragging(true);
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }
+        if (d.axis === "x") return setDx(side * 0.6);
+        // Omhoog met weerstand (het paneel rekt een beetje mee), omlaag volgt het je vinger
+        setDy(raw < 0 ? Math.max(raw * 0.5, -PICK_OPEN * 1.6) : raw);
+      }}
+      onPointerUp={release}
+      onPointerCancel={() => {
+        drag.current = null;
+        setDragging(false);
+        setDy(0);
+        setDx(0);
+      }}
+      // Na vegen geen klik op de knop waar je vinger losliet
+      onClickCapture={(e) => {
+        if (dy !== 0 || dx !== 0 || leaving) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      style={{
+        transform: leaving ? `translateY(${-PICK_OPEN * 1.6}px)` : dx ? `translateX(${dx}px)` : dy ? `translateY(${dy}px)` : undefined,
+        opacity: leaving ? 0 : dy > 0 ? Math.max(0.4, 1 - dy / 240) : undefined,
+        transition: dragging ? "none" : "transform 220ms var(--ease-out), opacity 220ms var(--ease-out)",
+      }}
+      className="animate-rise absolute inset-x-2 bottom-2 z-20 touch-none rounded-2xl bg-surface p-3 pt-2 shadow-float select-none"
+    >
+      {/* Greepje: zegt "je kunt dit omhoog vegen"; de knop Bekijk plek doet hetzelfde */}
+      <span aria-hidden="true" className="mx-auto mb-2 block h-1 w-10 rounded-full bg-line" />
       <div className="flex gap-3">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-sunken">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
@@ -552,7 +671,7 @@ export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () =
           type="button"
           onClick={onClose}
           aria-label="Sluiten"
-          className="absolute top-1.5 right-1.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-sunken"
+          className="absolute top-2.5 right-1.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-sunken"
         >
           <Icon name="x" size={18} />
         </button>
@@ -561,6 +680,17 @@ export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () =
         <FacilitySigns place={place} max={4} size={22} />
         <CardPrice place={place} />
       </div>
+      {(onPrev || onNext) && (
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <button type="button" onClick={onPrev} disabled={!onPrev} aria-label="Vorige plek" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-30">
+            <Icon name="chevronLeft" size={20} />
+          </button>
+          {position && <span className="text-muted tabular-nums">{position}</span>}
+          <button type="button" onClick={onNext} disabled={!onNext} aria-label="Volgende plek" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-30">
+            <Icon name="chevronRight" size={20} />
+          </button>
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-2">
         <NavigateButton to={place} slug={place.slug} className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
           <Icon name="route" size={18} /> Route

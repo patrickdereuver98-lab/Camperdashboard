@@ -27,7 +27,9 @@ import { buildGpx, buildIcs, download, googleMapsParts, type ExportStop } from "
 import { endPoint } from "@/lib/route-prefs";
 import { routeOptionsQuery, type RouteOptions } from "@/lib/route-options";
 import type { PlaceSummary } from "@/lib/types";
+import { tripText, tripToday } from "@/lib/trip-share";
 import { Icon } from "@/components/icons";
+import { NavigateButton } from "@/components/navigate";
 import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
 import { Sign } from "@/components/sign";
@@ -91,6 +93,7 @@ export function TripApp() {
   const endPt = endPoint(ends);
   const [routeResult, setRouteResult] = useState<{ key: string; data: RouteData | null; failed: RouteFailure | null }>({ key: "", data: null, failed: null });
   const [shared, setShared] = useState(false);
+  const [textCopied, setTextCopied] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   // Volgorde tijdens het slepen; pas bij loslaten gaat hij de opslag in (anders bij elke stap een nieuwe route)
   const [dragOrder, setDragOrder] = useState<string[] | null>(null);
@@ -243,9 +246,38 @@ export function TripApp() {
     );
   }
 
+  // "Ongedaan maken" na weghalen, omdraaien, slimste volgorde of toevoegen; ook als de reis daarna leeg is
+  const undoToast = undo && (
+        <div
+          role="status"
+          // Zelfde vorm als de melding "Bewaard in Mijn reis" (chrome.tsx), maar boven de cookiebalk: anders is
+          // "Ongedaan maken" bij een eerste bezoek op de telefoon niet aan te tikken
+          className="animate-toast fixed left-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] flex w-[min(92vw,26rem)] items-center gap-2 rounded-xl bg-ink py-2 pr-1 pl-4 text-surface shadow-lift lg:bottom-6"
+          data-testid="undo-toast"
+        >
+          <p className="min-w-0 flex-1 text-sm">{undo.text}</p>
+          {undo.stops !== trip.stops && (
+            <button
+              type="button"
+              onClick={() => {
+                trip.replace(undo.stops);
+                setUndo(null);
+              }}
+              className="flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2 font-semibold underline"
+            >
+              <Icon name="undo" size={18} /> Ongedaan maken
+            </button>
+          )}
+          <button type="button" onClick={() => setUndo(null)} aria-label="Melding sluiten" className="grid h-11 w-11 shrink-0 place-items-center">
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+  );
+
   if (trip.stops.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-10 text-center sm:pt-14">
+        {undoToast}
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
@@ -272,6 +304,8 @@ export function TripApp() {
   // Met een vertrekdatum: per stop aankomst en vertrek, en de nachten waarop de plek volgens het seizoen dicht is
   const startDay = parseDay(tripDate);
   const dated = startDay ? tripDates(startDay, stops) : null;
+  // Reisdag: vandaag weg of vannacht ergens (alleen met een vertrekdatum; UX-audit)
+  const today = dated ? tripToday(dated, new Date()) : undefined;
   // Dagplanning: alleen met een berekende route (anders weten we de rijtijden niet)
   const plan = route ? planTrip({ stops, legs: stops.map((_, i) => legFor(i)), endLeg, prefs }) : null;
   // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag).
@@ -454,11 +488,53 @@ export function TripApp() {
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
+          <button
+            type="button"
+            onClick={async () => {
+              // Platte lijst voor groepen waar niemand een link opent (UX-audit)
+              const text = tripText(stops, dated);
+              if (navigator.share) await navigator.share({ title: "Mijn camperreis", text }).catch(() => undefined);
+              else {
+                await navigator.clipboard.writeText(text).catch(() => undefined);
+                setTextCopied(true);
+                setTimeout(() => setTextCopied(false), 2500);
+              }
+            }}
+            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest"
+          >
+            <Icon name={textCopied ? "check" : "list"} size={18} /> {textCopied ? "Tekst gekopieerd" : "Als tekst"}
+          </button>
           <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold hover:border-forest">
             <Icon name="chart" size={18} /> Statistieken
           </Link>
         </div>
       </div>
+
+      {today && (
+        <section aria-label="Vandaag" className="mt-4 rounded-lg border border-forest bg-forest-tint p-4" data-testid="trip-today">
+          {today.leaving !== undefined && (
+            <p className="font-semibold text-forest">
+              Vandaag vertrek je bij {stops[today.leaving].place.name}
+              {departureShort(stops[today.leaving].place) ? ` (${departureShort(stops[today.leaving].place)!.toLowerCase()})` : ""}.
+            </p>
+          )}
+          {today.tonight !== undefined && (
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+              <p className="min-w-0">
+                <span className="font-display text-h3 font-semibold">Vannacht: {stops[today.tonight].place.name}</span>
+                {stops[today.tonight].place.checkinUntil && <span className="block text-sm text-ink-2">Aankomen tot {stops[today.tonight].place.checkinUntil}</span>}
+              </p>
+              <NavigateButton
+                to={stops[today.tonight].place}
+                slug={stops[today.tonight].slug}
+                className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep"
+              >
+                <Icon name="route" size={18} /> Route
+              </NavigateButton>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="mt-4 grid gap-6 sm:mt-6 sm:gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
@@ -766,32 +842,7 @@ export function TripApp() {
         </aside>
       </div>
 
-      {undo && (
-        <div
-          role="status"
-          // Zelfde vorm als de melding "Bewaard in Mijn reis" (chrome.tsx), maar boven de cookiebalk: anders is
-          // "Ongedaan maken" bij een eerste bezoek op de telefoon niet aan te tikken
-          className="animate-toast fixed left-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] flex w-[min(92vw,26rem)] items-center gap-2 rounded-xl bg-ink py-2 pr-1 pl-4 text-surface shadow-lift lg:bottom-6"
-          data-testid="undo-toast"
-        >
-          <p className="min-w-0 flex-1 text-sm">{undo.text}</p>
-          {undo.stops !== trip.stops && (
-            <button
-              type="button"
-              onClick={() => {
-                trip.replace(undo.stops);
-                setUndo(null);
-              }}
-              className="flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2 font-semibold underline"
-            >
-              <Icon name="undo" size={18} /> Ongedaan maken
-            </button>
-          )}
-          <button type="button" onClick={() => setUndo(null)} aria-label="Melding sluiten" className="grid h-11 w-11 shrink-0 place-items-center">
-            <Icon name="x" size={18} />
-          </button>
-        </div>
-      )}
+      {undoToast}
     </div>
   );
 }

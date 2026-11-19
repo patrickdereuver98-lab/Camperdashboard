@@ -6,7 +6,7 @@
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
-import { type Candidate, domains, matches } from "../pipeline/discover.ts";
+import { type Candidate, domains, isUnsure, matches, SiteUnsure } from "../pipeline/discover.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -40,12 +40,15 @@ async function homepage(u: string): Promise<string | null> {
     redirect: "follow",
     signal: AbortSignal.timeout(6000),
   });
+  if (res.status >= 500) throw new SiteUnsure(`HTTP ${res.status}`);
   if (!res.ok || !(res.headers.get("content-type") ?? "").includes("html")) return null;
   if (!(await allowed(new URL(res.url)))) return null;
   return (await res.text()).slice(0, 800_000);
 }
 
-async function discoverOne(c: Candidate): Promise<string | null> {
+/** Gevonden adres, null (zeker geen passende site) of "onzeker" (een kandidaat gaf een time-out of serverfout). */
+async function discoverOne(c: Candidate): Promise<string | null | "onzeker"> {
+  let unsure = false;
   for (const d of domains(c.name, c.town)) {
     // www en zonder www tegelijk; de eerste die past wint
     const tries = await Promise.all(
@@ -53,7 +56,8 @@ async function discoverOne(c: Candidate): Promise<string | null> {
         try {
           const html = await homepage(u);
           return html && matches(c, html) ? u : null;
-        } catch {
+        } catch (e) {
+          if (isUnsure(e)) unsure = true;
           return null;
         }
       }),
@@ -61,7 +65,7 @@ async function discoverOne(c: Candidate): Promise<string | null> {
     const hit = tries.find(Boolean);
     if (hit) return hit;
   }
-  return null;
+  return unsure ? "onzeker" : null;
 }
 
 Deno.serve(async (req) => {
@@ -76,12 +80,24 @@ Deno.serve(async (req) => {
     if (error) throw error;
     const results = await Promise.all(
       (batch ?? []).map(async (c: Candidate) => {
-        const url = await discoverOne(c).catch(() => null);
-        await db.rpc("apply_discovery", { p_id: c.id, p_url: url });
-        return { id: c.id, name: c.name, url };
+        const res = await discoverOne(c).catch(() => "onzeker" as const);
+        // R71: een time-out of serverfout is geen "geen website"; apply_discovery plant dan een nieuwe poging
+        const unsure = res === "onzeker";
+        const url = unsure ? null : res;
+        const { error: e2 } = await db.rpc("apply_discovery", { p_id: c.id, p_url: url, p_unsure: unsure });
+        if (e2) console.error(`apply_discovery ${c.id}: ${e2.message}`);
+        return { id: c.id, name: c.name, url, unsure };
       }),
     );
     const found = results.filter((r) => r.url);
+    const unsure = results.filter((r) => r.unsure);
+    if (unsure.length)
+      await db.from("app_logs").insert({
+        level: "warn",
+        source: "discover",
+        message: `Geen antwoord (time-out of serverfout), later opnieuw: ${unsure.map((r) => r.name).join("; ")}`.slice(0, 2000),
+        context: {},
+      });
     if (found.length)
       await db.from("app_logs").insert({
         level: "info",
@@ -89,7 +105,7 @@ Deno.serve(async (req) => {
         message: `Websites gevonden: ${found.map((r) => `${r.name} → ${r.url}`).join("; ")}`.slice(0, 2000),
         context: {},
       });
-    return Response.json({ processed: results.length, found: found.length, results });
+    return Response.json({ processed: results.length, found: found.length, unsure: unsure.length, results });
   } catch (e) {
     return Response.json({ error: String(e) }, { status: 500 });
   }

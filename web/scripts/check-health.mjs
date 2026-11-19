@@ -13,6 +13,10 @@ export const DEFAULTS = {
   maxNetFailRate: 0.2,
   minNetCalls: 20,
   maxScrapeAgeHours: 48,
+  // R64: per kanaal. De stealth-lezer draait elk uur zolang er werk is; 24 uur stil met open werk is een storing
+  maxStealthAgeHours: 24,
+  // R62: zoveel gewiste kernvelden in 24 uur wijst op een parser of site die leegtrekt
+  maxWipedCore: 50,
 };
 
 const LABELS = { published: "gepubliceerde plekken", with_departure: "plekken met vertrekregel", with_price: "plekken met prijs" };
@@ -59,6 +63,24 @@ export function evaluate(prev, cur, opts = {}, now = new Date()) {
       errors.push(`Laatste scrape is ${Math.round(ageH)} uur oud (meer dan ${o.maxScrapeAgeHours} uur)`);
   } else {
     warnings.push("Geen laatste scrape bekend");
+  }
+
+  // Per kanaal (R64): alleen als health() de velden al levert
+  const stealthOpen = num(cur.stealth_open);
+  if (Number.isFinite(stealthOpen)) {
+    lines.push(`stealth-lezer: ${stealthOpen} open, laatste lezing ${cur.stealth_last ?? "onbekend"}`);
+    if (stealthOpen > 0 && typeof cur.stealth_last === "string") {
+      const ageH = (now.getTime() - Date.parse(cur.stealth_last)) / 3_600_000;
+      if (Number.isFinite(ageH) && ageH > o.maxStealthAgeHours)
+        errors.push(`Stealth-lezer las ${Math.round(ageH)} uur niets terwijl ${stealthOpen} plekken wachten (workflow Stealth-lezer)`);
+    }
+  }
+  if (Number.isFinite(num(cur.scrape_open))) lines.push(`gewone lezer: ${num(cur.scrape_open)} open, laatste lezing ${cur.web_last ?? "onbekend"}`);
+  const wiped = num(cur.core_wiped_24h);
+  if (Number.isFinite(wiped)) {
+    lines.push(`kernvelden gewijzigd (24 uur): ${num(cur.core_changed_24h)}, gewist: ${wiped}`);
+    if (wiped > o.maxWipedCore)
+      errors.push(`${wiped} kernvelden gewist in 24 uur (meer dan ${o.maxWipedCore}); zie private.field_log`);
   }
 
   const appErrors = num(cur.app_errors_24h);

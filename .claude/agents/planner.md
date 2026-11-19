@@ -1,8 +1,9 @@
 ---
 name: planner
-description: Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks.
+description: Expert planning specialist for complex features and refactoring. Use when users request feature implementation, architectural changes, or complex refactoring. Only for large multi-area changes; the main session plans normal work itself.
 tools: Read, Grep, Glob
 model: opus
+effort: high
 ---
 
 ## Prompt Defense Baseline

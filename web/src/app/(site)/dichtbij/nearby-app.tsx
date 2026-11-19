@@ -24,6 +24,7 @@ import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/plac
 import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { Chip } from "@/components/chip";
+import { DataDate } from "@/components/data-date";
 import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 
@@ -32,16 +33,44 @@ type Status = "idle" | "locating" | "denied" | "unavailable" | "ready";
 // Wat je onderweg het eerst wilt weten staat vooraan
 const NEARBY_ORDER: FacilityKey[] = ["power", "dogs", "water", "dumpStation", "toilet", "shower", "wifi"];
 
+const CHOICES_KEY = "vrijstaan:dichtbij-keuzes";
+
+/** Alleen bekende waarden uit de opslag overnemen */
+function cleanChoices(v: Partial<NearbyChoices>): Partial<NearbyChoices> {
+  const out: Partial<NearbyChoices> = {};
+  if (Array.isArray(v.facilities)) out.facilities = FACILITIES.map((f) => f.key).filter((k) => v.facilities!.includes(k));
+  for (const k of ["openNow", "arriveNow", "lengthOff", "within30"] as const) if (typeof v[k] === "boolean") out[k] = v[k];
+  if (v.departure === "vrij" || v.departure === "uitslapers") out.departure = v.departure;
+  return out;
+}
+
 export function NearbyApp() {
   const [status, setStatus] = useState<Status>("idle");
   // De plekkenlijst pas ophalen als je locatie wordt bepaald (tegelijk met de GPS); niet al op het welkomstscherm (R33)
-  const { data: places } = usePlaces(status === "locating" || status === "ready");
+  const { data: places, cachedAt } = usePlaces(status === "locating" || status === "ready");
   const [pos, setPos] = useState<LatLng | null>(null);
   // "Nu open" en "Nu nog aankomen" staan voor vannacht standaard aan: ze verbergen alleen wat zeker dicht is.
   // De lengte uit Mijn camper telt mee, net als bij Zoeken; met de chip zet je dat uit.
   const [choices, setChoices] = useState<NearbyChoices>(NEARBY_DEFAULTS);
   const { facilities, openNow, arriveNow, departure, lengthOff, within30 } = choices;
   const set = (patch: Partial<NearbyChoices>) => setChoices((c) => ({ ...c, ...patch }));
+  // Keuzes onthouden binnen dit bezoek: terug van een plek staan ze er nog (UX-audit)
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(CHOICES_KEY) ?? "null") as Partial<NearbyChoices> | null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage bestaat pas in de browser
+      if (saved && typeof saved === "object") setChoices({ ...NEARBY_DEFAULTS, ...cleanChoices(saved) });
+    } catch {
+      // Kapotte of geblokkeerde opslag: de standaardkeuzes
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CHOICES_KEY, JSON.stringify(choices));
+    } catch {
+      // Geen opslag: dan alleen voor deze pagina
+    }
+  }, [choices]);
   const [vehicle] = useVehicle();
   const [drives, setDrives] = useState<Record<string, Drive> | null>(null);
   const [driveError, setDriveError] = useState(false);
@@ -158,7 +187,8 @@ export function NearbyApp() {
   // zijn (of zeker niet komen), anders springt het voorstel weg zodra ze binnenkomen.
   const far = places && (drives || driveError) ? nearestIsFar(list, drives) : false;
   const closer = far && places ? closerSuggestions(places, pos, choices, vehicle, Math.min(...list.map((r) => r.km))) : [];
-  const pickedPlace = picked ? list.find((r) => r.place.slug === picked)?.place : undefined;
+  const pickedIndex = picked ? list.findIndex((r) => r.place.slug === picked) : -1;
+  const pickedPlace = pickedIndex >= 0 ? list[pickedIndex].place : undefined;
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <section className="min-w-0 px-3 pt-3 pb-8 sm:px-6 sm:pt-5">
@@ -231,9 +261,20 @@ export function NearbyApp() {
               highlight={picked}
               onSelect={setPicked}
               popup={false}
+              focus={picked}
               className="h-full w-full"
             />
-            {pickedPlace && <MapPick key={pickedPlace.slug} place={pickedPlace as PlaceSummary} onClose={() => setPicked(null)} />}
+            {pickedPlace && (
+              <MapPick
+                key={pickedPlace.slug}
+                place={pickedPlace as PlaceSummary}
+                onClose={() => setPicked(null)}
+                // Volgorde van de lijst: dichtstbij eerst (rijtijd als die er is)
+                onPrev={pickedIndex > 0 ? () => setPicked(list[pickedIndex - 1].place.slug) : undefined}
+                onNext={pickedIndex < list.length - 1 ? () => setPicked(list[pickedIndex + 1].place.slug) : undefined}
+                position={`${pickedIndex + 1} van ${list.length}`}
+              />
+            )}
           </div>
         )}
 
@@ -255,6 +296,7 @@ export function NearbyApp() {
           {arriveNow && list.length > 0 && " Ook niet waar je vandaag niet meer kunt aankomen."}
           {within30 && driveError && list.length > 0 && " Binnen 30 min werkt pas als de rijtijden er zijn."}
         </p>
+        <DataDate cachedAt={cachedAt} />
         {places && active.length > 0 && (
           <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-ink-2" data-testid="nearby-active">
             <span>Filters: {active.join(", ")}.</span>

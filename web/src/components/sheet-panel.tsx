@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useHydrated } from "@/lib/use-media";
+import { useBackToClose } from "@/lib/sheet-history";
 import { Icon } from "./icons";
 import type { SheetProps } from "./sheet";
 
@@ -28,6 +29,9 @@ export function SheetPanel({
   useEffect(() => {
     close.current = onClose;
   });
+
+  // Terugvegen of de terugknop sluit eerst de sheet (G1)
+  useBackToClose(open, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -60,6 +64,7 @@ export function SheetPanel({
       }
     };
     document.addEventListener("keydown", onKey);
+
     return () => {
       clearTimeout(t);
       document.removeEventListener("keydown", onKey);

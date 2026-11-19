@@ -1,7 +1,7 @@
 # 3. App Flow
 
 > Doel: elk scherm, elk pad en het gevolg van elke tik vastleggen.
-> Bijgewerkt: 19 november 2026 (routeplanner Mijn reis, README 119); eerder 7 november 2026 (review R45, R48, R51: doorkliks, oproep vertrektijd, Dichtbij helpt verder); eerder 29 oktober 2026 (redesign: start, gekozen plek op de kaart, Dichtbij kaart eerst). Routes verwijzen naar `web/src/app/`.
+> Bijgewerkt: 19 november 2026 (routeplanner Mijn reis, README 133); eerder 18 november 2026 (UX-audit G1, G2, K1: terug sluit de sheet, tik op het actieve tabblad, "Toon meer" onthouden); eerder 7 november 2026 (review R45, R48, R51: doorkliks, oproep vertrektijd, Dichtbij helpt verder); eerder 29 oktober 2026 (redesign: start, gekozen plek op de kaart, Dichtbij kaart eerst). Routes verwijzen naar `web/src/app/`.
 
 ## Ingangen
 
@@ -54,7 +54,7 @@
 | Samen plannen | kaart in `/mijn-reis`, uitnodiging `/samen/<code>` | Starten maakt een gedeelde reis van je reis; uitnodiging delen; meedoen vervangt je reis (met waarschuwing); wijzigingen realtime bij iedereen; stoppen maakt je los | `shared_trips` (Realtime), RPC's | Sessie, `user_trips` |
 | Drukte | kaart onder prijs op `/plek/<slug>` | Meldingen van de laatste 3 uur ("Druk, volgens 3 camperaars, laatste melding 20 minuten geleden") of "Nog niemand gemeld". Ingelogd: Rustig / Druk / Vol doorgeven; anders inloggen. Bij druk of vol: "Laat het me weten als het hier rustig is" → toestemming voor meldingen → één pushmelding binnen 24 uur (iPhone: alleen vanaf het beginscherm) | `crowd_status`, `report_crowd` |
 | Foto toevoegen | knop onder het beslisblok op `/plek/<slug>` | Niet ingelogd → `/inloggen`; ingelogd → foto kiezen, verkleinen (zonder EXIF), bijschrift, licentie aanvinken, versturen → "we bekijken je foto" of (vertrouwd) "staat zo online" | Storage `place-photos`, `place_photos` |
-| Beheer | `/admin/*` | Overzicht, Mission Control (Triage Inbox: update per veld met AI-score, **AI**, **Accepteer** schrijft de plek, **Wijs af**; Logboeken: stand per API en cron, rood = mislukt; Updates: Dependabot-PR's, "Klik nodig" met link naar de PR; alleen rol admin), Marketing (`/admin/marketing`, alleen rol admin: Overzicht met Google, bezoekers per bron, content, budget en feitenbank; Vindbaarheid met kansen, zoekvragen, pagina's, techniek, **Voorstel voor titel en omschrijving** (Gemini); Content: **Schrijf 3 varianten**, controle, **Bewaar als idee/klaar**; Studio: filmpjes met live voorbeeld, **Maak MP4** (klaar binnen ±10 minuten), **Nieuwe schermopnames**, afbeeldingen downloaden; Kalender en Bibliotheek; Campagnes: linkmaker met QR, campagnes met budget, sociale cijfers), Statistieken, Plekken, Dubbelen, Support, Inzendingen, Reviews, Foto's, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
+| Beheer | `/admin/*` | Overzicht, Mission Control (Triage Inbox: update per veld met AI-score, **AI**, **Accepteer** schrijft de plek, **Wijs af**; Logboeken: stand per API en cron, rood = mislukt; Updates: Dependabot-PR's, "Klik nodig" met link naar de PR; alleen rol admin), Marketing (`/admin/marketing`, alleen rol admin: Overzicht met Google, bezoekers per bron, content, budget en feitenbank; Vindbaarheid met kansen, zoekvragen, pagina's, techniek, **Voorstel voor titel en omschrijving** (Gemini); Content: **Schrijf 3 varianten**, controle, **Bewaar als idee/klaar**; Studio: filmpjes met live voorbeeld, **Maak MP4** (klaar binnen ±10 minuten), **Nieuwe schermopnames**, afbeeldingen downloaden; Kalender en Bibliotheek; Campagnes: linkmaker met QR, campagnes met budget, sociale cijfers), Statistieken, Plekken (bewerken; onderaan **Geschiedenis**: per veld oud en nieuw, bron en wanneer, met **Zet terug** voor de nieuwste wijziging per veld), Dubbelen, Support, Inzendingen, Reviews, Foto's, FAQ, Logs, Instellingen | Beheer-RPC's, RLS |
 
 ## Hoofdroute: vannacht een plek vinden
 
@@ -69,7 +69,7 @@ Snelle variant: `Start` → **Plekken bij mij in de buurt** → `Dichtbij` (loca
 | Route | Pad |
 |---|---|
 | Bewaren | Hartje op kaart of plekpagina → melding "Bewaard in Mijn reis – Bekijk" → teller op tabblad Mijn reis |
-| Reis plannen | `Mijn reis` → beginpunt en eindpunt → volgorde slepen, **Omdraaien** of **Slimste volgorde** → nachten per stop (of tussenstop) → vertrekdatum → per etappe vertrek, aankomst en waarschuwingen → zo nodig **Zoek een tussenstop** of **Langs de route** → totale route en kosten → **Delen** (link met `?r=`; begin- en eindpunt gaan niet mee), **Open route in Google Maps**, **GPX-bestand** of **In je agenda** |
+| Reis plannen | `Mijn reis` → beginpunt en eindpunt → volgorde slepen (greepje) of met de pijltjes, **Omdraaien** of **Slimste volgorde** → nachten per stop (of tussenstop) → vertrekdatum → per etappe vertrek, aankomst en waarschuwingen → zo nodig **Zoek een tussenstop** of **Langs de route** → totale route en kosten → **Delen** (link met `?r=`; begin- en eindpunt gaan niet mee), **Als tekst**, **Open route in Google Maps**, **GPX-bestand** of **In je agenda** |
 | Gedeelde reis openen | Link `?r=` → voorbeeld van de stops → **Toevoegen aan mijn reis**, **Mijn reis vervangen** (met aantal stops dat weggaat), **Bewaar deze reis** of **Niet bewaren** |
 | Review schrijven | `Plek` → **Schrijf een review** → sheet met cijfer, deelscores, tekst, "Hoe laat moest je weg?" (optioneel), voertuig, maand van bezoek → ingelogd: **Review versturen**; niet ingelogd: e-mailadres → **Stuur mij een code** → code uit de mail → **Bevestigen en versturen** (de code logt je in), of **Liever inloggen met Google, Apple of Facebook** (`/inloggen?next=/plek/<slug>#review`, daarna gaat de sheet vanzelf weer open). Het concept staat per plek in de browser (`localStorage`, een week) en verdwijnt na versturen. Een vertrektijd gaat apart als inzending naar beheer → "We controleren je review" |
 | Vertrektijd doorgeven | `Plek` van een onvolledige plek (geen vertrekregel) → **Vertrektijd doorgeven** → zelfde sheet als bij Doe mee ("Hoe laat moet je hier weg?", hoe weet je het, optioneel naam en e-mail) → **Versturen** → `submit_place` (soort `correctie`, onderwerp `vertrektijd`) → "Bedankt, je vertrektijd is binnen. Hij wacht op controle. Dat doen we meestal binnen twee werkdagen, daarna staat hij op de site." (in een cel: "Bedankt. Wacht op controle, meestal binnen twee werkdagen.") → Beheer → Inzendingen |
@@ -79,7 +79,7 @@ Snelle variant: `Start` → **Plekken bij mij in de buurt** → `Dichtbij` (loca
 | Plek aanmelden | Header **+** of footer → `Plek aanmelden` → formulier → bevestiging |
 | Contact en support | `Contact` → formulier → persoonlijke link `/support/<token>` → beheerder antwoordt → klant leest en reageert via de link |
 | Terug | Terugknop op `Plek` gaat naar de vorige pagina binnen VrijStaan, of naar `/zoeken` als je van buiten kwam (Google, een gedeelde link) |
-| Annuleren | Elke sheet sluit met ×, swipe omlaag of tik buiten de sheet; niets wordt opgeslagen |
+| Annuleren | Elke sheet sluit met ×, swipe omlaag, tik buiten de sheet of terug (terugvegen op de iPhone, terugknop op Android); niets wordt opgeslagen. Een open sheet heeft een eigen stap in de geschiedenis, dus terug verlaat de pagina niet (UX-audit G1) |
 
 ## Per actie: trigger, controle, laden, succes, fout, volgende scherm
 
@@ -88,7 +88,7 @@ Snelle variant: `Start` → **Plekken bij mij in de buurt** → `Dichtbij` (loca
 | Zoeken | Zoek-knop of Enter | Plaats, streek, eiland of provincie uit de eigen lijst (vergeeft typfouten en aliassen), anders adres, postcode, woonplaats of gemeente van PDOK | Kaarten als skelet; "Adres opzoeken…" als PDOK nog moet antwoorden | Resultaten met titel "n plekken in <plaats>" | "Geen plaats, adres of plek gevonden" onder het zoekveld | `Zoeken` |
 | Filter toepassen | **Toon n plekken** in de sheet | Knop uit bij 0 resultaten, met voorstel welke filter weg kan | Live teller | Chips boven de lijst, filters in de URL | — | `Zoeken` |
 | Lijst/kaart wisselen | **Kaart** / **Lijst** in de rij met Filters en Sorteren (telefoon en tablet) | — | "Kaart laden…" | Kaart met clusters; stipkleur = vertrekregel | "De kaart kon niet worden geladen" + **Toon lijst** | `Zoeken` |
-| Plek op de kaart kiezen | Tik op een stip (Zoeken in kaartweergave, Dichtbij) | — | — | Telefoon: paneel onderaan de kaart met vertrek, prijs, **Route** en **Bekijk plek**, × sluit; groot scherm: popup (naam, plaats en prijs, vertrekregel, **Bekijk plek** en het hartje om te bewaren) en de kaart in de lijst licht op | — | Zelfde scherm, `Plek` of navigatie-app |
+| Plek op de kaart kiezen | Tik op een stip (Zoeken in kaartweergave, Dichtbij) | — | — | Telefoon: paneel onderaan de kaart met vertrek, prijs, **Route** en **Bekijk plek**, × of omlaag vegen sluit, omhoog vegen opent `Plek`; groot scherm: popup (naam, plaats en prijs, vertrekregel, **Bekijk plek** en het hartje om te bewaren) en de kaart in de lijst licht op | — | Zelfde scherm, `Plek` of navigatie-app |
 | Locatie gebruiken | **Gebruik mijn locatie** | Browsertoestemming | "Locatie bepalen…" | Lijst; rijtijden volgen | Geweigerd: uitleg + verwijzing naar zoeken; onbekend: "Probeer opnieuw" | `Dichtbij` |
 | Afstand tonen | **Afstand tonen** boven de zoekresultaten (of stil als locatie al eerder is toegestaan) | Browsertoestemming | "Locatie bepalen…" | Op elke kaart "x km van je locatie" (hemelsbreed, berekend op het apparaat, niets naar de server) | Geweigerd: "Locatie staat uit, afstand onbekend" | `Zoeken` |
 | Rijtijd berekenen | **Rijtijd berekenen** (onder de kaart bij Ligging en route) | Toestemming; locatie afgerond op ±1 km | "Bezig…" | "x min rijden, y km over de weg" | "Open de route in je navigatie-app" | `Plek` |
@@ -118,8 +118,9 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 
 ## Navigatieregels
 
-- **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
-  vaste actiebalk met prijs, hartje, bellen, website en **Route**.
+- **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Tik op het tabblad waar je al bent: naar boven; sta je al boven, dan de cursor in het zoekvak (Start en Zoeken; UX-audit G2). Verborgen op `/plek/*`; daar staat een
+  vaste actiebalk met prijs en **Route**. Bewaren, delen, website en bellen staan in de actierij onder de naam, en een
+  rij springlinks (Overzicht tot In de buurt) blijft onder de header plakken (18 november 2026).
 - **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden), zon/maan wisselt licht en donker (gevolg: thema direct om, keuze bewaard op het toestel; gelijk aan het systeem = geen keuze bewaard). Op `/plek/*` een terugknop.
 - **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
 - **Kruimelpad op de plekpagina**: Zoeken › provincie (naar `/camperplaatsen/<provincie>`) › plek; onder "In de buurt"
@@ -129,6 +130,32 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
   toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`ruim`, `vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),
   `open`, `score`, `sort`, `kaart=1`.
 - Paginaovergangen met `<ViewTransition>`: de foto of tekening schuift mee van de lijst naar de plekpagina.
+
+- **UX-audit november (versie 0.9.1)**, alles op het toestel, niets naar de server:
+  - Zoekvak: leeg toont **Eerder gezocht** (5, met **Wis geschiedenis**) en **Laatst bekeken** (3), anders vier
+    provincies. Typ je filters in gewone taal ("gratis texel met stroom", "zonder vertrektijd zeeland", "onder 15 euro"),
+    dan staat er "Met filters: …" en gaan die filters mee. Alleen een filter typen ("honden") geeft **Filter: honden
+    welkom** voor de huidige bestemming. Kopjes per soort suggestie, getypte deel vet, plekken ook met een tikfout,
+    `/` opent het zoekvak op een computer, Home en End in de lijst.
+  - Tabblad **Zoeken** gaat naar je laatste zoekopdracht van dit bezoek (met filters); Dichtbij onthoudt zijn chips
+    binnen het bezoek.
+  - Zoeken: de zoekbalk schuift op de telefoon weg bij omlaag scrollen; meer plekken laden vanzelf onderaan; bij meer
+    dan 40 plekken **Zoek in deze plekken**; **Kaart (n)**; "Gegevens van … **Ververs**" als de lijst uit de cache van
+    de app komt (ook op Dichtbij).
+  - Kaart: knop **Naar mijn locatie** en na zelf schuiven **Zoek in dit gebied** (`waar=Kaartgebied`, straal uit wat je
+    ziet). Kaartpaneel: opzij vegen of de pijltjes voor de vorige of volgende plek in de volgorde van de lijst.
+  - Plekrij: lang indrukken of rechtsklikken opent een snelmenu (Bekijk plek, Bewaren, Delen, Route).
+  - Plek: tik op een foto opent hem schermvullend (vegen, dubbeltik zoomt, omlaag vegen, × of terug sluit); boven het
+    beslisblok **vorige** en **volgende** uit je laatste zoekresultaten; onder het beslisblok "Nog 2 uur om vandaag aan
+    te komen" (alleen met een bekende laatste aankomsttijd, binnen 4 uur) of "Vandaag kun je hier niet meer aankomen";
+    **Delen** stuurt de vertrekregel en prijs als tekst mee; kopieerknop bij het adres.
+  - Mijn reis: na weghalen 6 seconden **Ongedaan maken**; **Als tekst** (platte lijst) en, met een vertrekdatum, **In je
+    agenda** (.ics); op een reisdag bovenaan "Vandaag vertrek je bij …" en "Vannacht: …" met **Route**. Het aantal stops
+    staat op het app-icoon (waar het toestel dat toestaat).
+  - Delen vanuit een andere app naar VrijStaan (Android, `share_target`): `/delen` haalt een punt uit de link en opent
+    Zoeken rond dat punt; anders het zoekvak met de naam.
+  - Start: één keer een tip voor iPhone in Safari om VrijStaan op het beginscherm te zetten (na uitleg en cookiekeuze).
+- **Toon meer plekken** onthoudt per zoekopdracht hoeveel plekken open staan (`sessionStorage`, deze sessie): terug van een plek of herladen geeft dezelfde lijst (UX-audit K1).
 
 ## Lege en geblokkeerde toestanden
 

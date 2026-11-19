@@ -460,6 +460,7 @@ export type Database = {
           code: string
           last_run_at: string | null
           name: string
+          places_done_at: string | null
           places_req: number | null
           points_req: number | null
         }
@@ -468,6 +469,7 @@ export type Database = {
           code: string
           last_run_at?: string | null
           name: string
+          places_done_at?: string | null
           places_req?: number | null
           points_req?: number | null
         }
@@ -476,6 +478,7 @@ export type Database = {
           code?: string
           last_run_at?: string | null
           name?: string
+          places_done_at?: string | null
           places_req?: number | null
           points_req?: number | null
         }
@@ -504,6 +507,60 @@ export type Database = {
           row?: Json
         }
         Relationships: []
+      }
+      place_history: {
+        Row: {
+          actor: string | null
+          actor_email: string | null
+          field: string
+          id: number
+          new_value: Json | null
+          old_value: Json | null
+          place_id: string
+          revert_of: number | null
+          source: string
+          ts: string
+        }
+        Insert: {
+          actor?: string | null
+          actor_email?: string | null
+          field: string
+          id?: never
+          new_value?: Json | null
+          old_value?: Json | null
+          place_id: string
+          revert_of?: number | null
+          source: string
+          ts?: string
+        }
+        Update: {
+          actor?: string | null
+          actor_email?: string | null
+          field?: string
+          id?: never
+          new_value?: Json | null
+          old_value?: Json | null
+          place_id?: string
+          revert_of?: number | null
+          source?: string
+          ts?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "place_history_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "place_history_revert_of_fkey"
+            columns: ["revert_of"]
+            isOneToOne: false
+            referencedRelation: "place_history"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       place_photos: {
         Row: {
@@ -1315,6 +1372,7 @@ export type Database = {
       admin_overview: { Args: never; Returns: Json }
       admin_pipeline: { Args: { p_action: string }; Returns: string }
       admin_reject_update: { Args: { p_id: string; p_note?: string }; Returns: Json }
+      admin_revert_place_change: { Args: { p_id: number }; Returns: Json }
       admin_stats: { Args: { p_days?: number }; Returns: Json }
       apply_discovery: {
         Args: { p_id: string; p_url: string }

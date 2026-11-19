@@ -9,11 +9,15 @@ import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { fieldAria, fieldError, formError, REVIEW_RULES } from "@/lib/form-errors";
 import { FieldError, FormAlert, useFormError } from "@/components/form-error";
 import { track } from "@/lib/track";
+import { rememberViewed } from "@/lib/store";
 import { CHECK_TERM, isPossiblyOutdated } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import type { Photo, Place as PlaceFacilities, Review } from "@/lib/types";
 import { Icon } from "@/components/icons";
-import { PlacePhoto } from "@/components/place-ui";
+import { fullPhotoSources, PlacePhoto } from "@/components/place-ui";
+import { createPortal } from "react-dom";
+import { useBackToClose } from "@/lib/sheet-history";
+import { ACTION_TILE } from "@/lib/action-tile";
 import { KIND_SIGN, Sign } from "@/components/sign";
 import { Sheet } from "@/components/sheet";
 import { RadioCards } from "@/components/radio-cards";
@@ -32,6 +36,8 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
   // Foto's die niet laden verdwijnen uit de carrousel (geen lege dia's met "1 / 4")
   const [failed, setFailed] = useState<string[]>([]);
   const visible = photos.filter((p) => !failed.includes(p.url));
+  // Schermvullend bekijken (G4): index van de foto, of null
+  const [full, setFull] = useState<number | null>(null);
   const go = (i: number) => {
     const el = track_.current;
     if (!el) return;
@@ -86,8 +92,14 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
               ) : (
                 photo
               )}
+              <button
+                type="button"
+                onClick={() => setFull(i)}
+                aria-label={`Foto ${i + 1} van ${visible.length} groot bekijken`}
+                className="absolute inset-0 cursor-zoom-in"
+              />
               {p.credit && (
-                <figcaption className="animate-fade-in-late absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-sm text-white">
+                <figcaption className="animate-fade-in-late pointer-events-none absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-sm text-white">
                   Foto: {p.credit}
                 </figcaption>
               )}
@@ -112,7 +124,143 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
           </div>
         </>
       )}
+      {full !== null && (
+        <Lightbox
+          photos={visible}
+          start={full}
+          name={name}
+          onClose={(last) => {
+            setFull(null);
+            go(last);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Foto's schermvullend (UX-audit G4): opzij vegen naar de volgende, dubbeltik of de knop zoomt (daarna schuif je met
+ * één vinger), omlaag vegen, ×, Escape of terug sluit. Knijpen doet de browser zelf.
+ */
+function Lightbox({ photos, start, name, onClose }: { photos: Photo[]; start: number; name: string; onClose: (index: number) => void }) {
+  const track_ = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(start);
+  const [zoomed, setZoomed] = useState(false);
+  const drag = useRef<{ y: number; x: number; id: number } | null>(null);
+  const indexRef = useRef(start);
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
+  const close = () => onClose(indexRef.current);
+  useBackToClose(true, close);
+
+  useEffect(() => {
+    const el = track_.current;
+    if (el) el.scrollLeft = start * el.clientWidth;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const prev = document.activeElement as HTMLElement | null;
+    track_.current?.focus();
+    return () => {
+      document.body.style.overflow = overflow;
+      prev?.focus?.();
+    };
+  }, [start]);
+
+  const go = (i: number) => {
+    const el = track_.current;
+    if (!el) return;
+    setZoomed(false);
+    el.scrollTo({ left: Math.max(0, Math.min(photos.length - 1, i)) * el.clientWidth, behavior: "smooth" });
+  };
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Foto's van ${name}`}
+      className="animate-fade-in fixed inset-0 z-[60] flex flex-col bg-black text-white"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") close();
+        else if (e.key === "ArrowRight") go(index + 1);
+        else if (e.key === "ArrowLeft") go(index - 1);
+      }}
+    >
+      <div className="flex shrink-0 items-center justify-between px-2 pt-[env(safe-area-inset-top)]">
+        <span className="px-3 text-sm font-semibold tabular-nums">
+          {index + 1} / {photos.length}
+        </span>
+        <div className="flex items-center">
+          <button type="button" onClick={() => setZoomed((z) => !z)} aria-pressed={zoomed} aria-label={zoomed ? "Uitzoomen" : "Inzoomen"} className="grid h-11 w-11 place-items-center rounded-full hover:bg-white/10">
+            <Icon name={zoomed ? "minus" : "plus"} size={22} />
+          </button>
+          <button type="button" onClick={close} aria-label="Sluiten" className="grid h-11 w-11 place-items-center rounded-full hover:bg-white/10">
+            <Icon name="x" size={24} />
+          </button>
+        </div>
+      </div>
+      <div
+        ref={track_}
+        tabIndex={-1}
+        onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+        className={`no-scrollbar flex min-h-0 flex-1 snap-x snap-mandatory focus:outline-none ${zoomed ? "overflow-hidden" : "overflow-x-auto"}`}
+        style={{ touchAction: zoomed ? "auto" : "pan-x pinch-zoom" }}
+        onPointerDown={(e) => {
+          if (!zoomed && e.pointerType !== "mouse") drag.current = { y: e.clientY, x: e.clientX, id: e.pointerId };
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current;
+          if (!d || d.id !== e.pointerId || !track_.current) return;
+          const dy = e.clientY - d.y;
+          if (dy > 0 && dy > Math.abs(e.clientX - d.x)) track_.current.style.transform = `translateY(${dy}px)`;
+        }}
+        onPointerUp={(e) => {
+          const d = drag.current;
+          drag.current = null;
+          if (track_.current) track_.current.style.transform = "";
+          if (d && d.id === e.pointerId && e.clientY - d.y > 100 && e.clientY - d.y > Math.abs(e.clientX - d.x)) close();
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+          if (track_.current) track_.current.style.transform = "";
+        }}
+      >
+        {photos.map((p, i) => (
+          <figure key={p.url} className="relative flex h-full w-full shrink-0 snap-center flex-col">
+            <div className={`min-h-0 flex-1 ${zoomed && i === index ? "overflow-auto" : "grid place-items-center overflow-hidden"}`}>
+              <FullPhoto
+                src={p.url}
+                alt={`Foto ${i + 1} van ${name}`}
+                zoomed={zoomed && i === index}
+                onDoubleClick={() => setZoomed((z) => !z)}
+              />
+            </div>
+            {p.credit && <figcaption className="shrink-0 px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] text-sm text-white/80">Foto: {p.credit}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** Eén foto op volle grootte; valt terug op de volgende bron als een bron niet laadt */
+function FullPhoto({ src, alt, zoomed, onDoubleClick }: { src: string; alt: string; zoomed: boolean; onDoubleClick: () => void }) {
+  const sources = fullPhotoSources(src);
+  const [stage, setStage] = useState(0);
+  if (stage >= sources.length) return <p className="p-6 text-center text-white/70">De foto kon niet worden geladen</p>;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- bronnen van derden, al verkleind via wsrv.nl
+    <img
+      src={sources[stage]}
+      alt={alt}
+      onError={() => setStage((s) => s + 1)}
+      onDoubleClick={onDoubleClick}
+      draggable={false}
+      className={zoomed ? "max-w-none" : "max-h-full max-w-full object-contain"}
+      style={zoomed ? { width: "250%", height: "auto" } : undefined}
+    />
   );
 }
 
@@ -592,6 +740,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                       autoFocus
                       autoComplete="one-time-code"
                       inputMode="numeric"
+                      enterKeyHint="done"
                       pattern="[0-9]{6,10}"
                       maxLength={10}
                       className={`${input} text-center font-mono text-xl tracking-[0.3em]`}
@@ -624,7 +773,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                     <span className="mb-1.5 block font-semibold">
                       Je e-mailadres <span className="text-alert">*</span>
                     </span>
-                    <input name="email" type="email" required autoComplete="email" inputMode="email" className={input} {...fieldAria(err, R, "email")} />
+                    <input name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="send" className={input} {...fieldAria(err, R, "email")} />
                   </label>
                   <FieldError error={err} form={R} field="email" />
                 </div>
@@ -812,12 +961,14 @@ export function ReportProblem({
   );
 }
 
-export function TrackView({ slug }: { slug: string }) {
+export function TrackView({ slug, name, town }: { slug: string; name: string; town: string }) {
   useEffect(() => track("place_view", { slug }), [slug]);
+  // Laatst bekeken, alleen op dit toestel: het zoekvak toont ze als je het leeg opent (UX-audit Z1)
+  useEffect(() => rememberViewed({ slug, name, town }), [slug, name, town]);
   return null;
 }
 
-export function ShareButton({ title, className = "" }: { title: string; className?: string }) {
+export function ShareButton({ title, text, className = "", variant = "full" }: { title: string; text?: string; className?: string; variant?: "full" | "tile" }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -826,20 +977,25 @@ export function ShareButton({ title, className = "" }: { title: string; classNam
         const url = location.href;
         if (navigator.share) {
           try {
-            await navigator.share({ title, url });
+            // De tekst met vertrekregel en prijs, zodat een WhatsApp-groep het ziet zonder de link te openen (U3)
+            await navigator.share({ title, text, url });
           } catch {
             /* geannuleerd */
           }
         } else {
-          await navigator.clipboard.writeText(url);
+          await navigator.clipboard.writeText(text ? `${text}\n${url}` : url);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         }
       }}
-      className={`flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest ${className}`}
+      className={
+        variant === "tile"
+          ? `${ACTION_TILE} ${className}`
+          : `flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest ${className}`
+      }
     >
-      <Icon name={copied ? "check" : "share"} size={19} />
-      {copied ? "Link gekopieerd" : "Delen"}
+      <Icon name={copied ? "check" : "share"} size={variant === "tile" ? 21 : 19} />
+      {copied ? (variant === "tile" ? "Gekopieerd" : "Link gekopieerd") : "Delen"}
     </button>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { Sheet } from "@/components/sheet";
 import { eur } from "@/lib/format";
+import { FIELD_LABEL, SOURCE_LABEL, formatHistoryValue, revertableIds, type HistoryRow } from "@/lib/place-history";
 import { KIND_LABEL, PROVINCES } from "@/lib/types";
 import { errorMessage, type Database } from "@/lib/supabase-browser";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, db, input, primary, secondary, textarea, useQuery, when } from "../ui";
@@ -221,6 +222,7 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     // Snel naar een andere plek: het antwoord van de vorige mag de nieuwe niet overschrijven
@@ -233,7 +235,7 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
     return () => {
       live = false;
     };
-  }, [id]);
+  }, [id, version]);
 
   const v = (k: string) => (k in draft ? draft[k] : place?.[k]);
   const set = (k: string, value: unknown) => setDraft((d) => ({ ...d, [k]: value }));
@@ -378,10 +380,100 @@ function Editor({ id, onClose, onSaved }: { id: string; onClose: () => void; onS
             <summary className="cursor-pointer font-semibold">Bronnen per veld</summary>
             <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-sm">{JSON.stringify(place.sources, null, 2)}</pre>
           </details>
+          <History
+            placeId={id}
+            version={version}
+            onReverted={(field) => {
+              // Het teruggezette veld komt opnieuw van de server; een open wijziging in dat veld vervalt
+              setDraft((d) => Object.fromEntries(Object.entries(d).filter(([k]) => k !== field)));
+              setVersion((n) => n + 1);
+              onSaved();
+              void db()
+                .auth.getSession()
+                .then(({ data }) => revalidatePlaces(data.session?.access_token))
+                .catch(() => {});
+            }}
+          />
           <ErrorNote message={err} />
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** Tijdlijn per plek: wat veranderde, van wat naar wat, door wie. De nieuwste wijziging per veld kan terug. */
+function History({ placeId, version, onReverted }: { placeId: string; version: number; onReverted: (field: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<number | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const rows = useQuery(
+    () =>
+      open
+        ? db()
+            .from("place_history")
+            .select("id,ts,field,old_value,new_value,source,actor_email,revert_of")
+            .eq("place_id", placeId)
+            .order("id", { ascending: false })
+            .limit(100)
+        : Promise.resolve({ data: null, error: null }),
+    [placeId, open, version],
+  );
+  const list = (rows.data ?? []) as HistoryRow[];
+  const canRevert = revertableIds(list);
+
+  async function revert(r: HistoryRow) {
+    const label = FIELD_LABEL[r.field] ?? r.field;
+    if (!window.confirm(`${label} terugzetten naar "${formatHistoryValue(r.field, r.old_value)}"?`)) return;
+    setBusy(r.id);
+    setErr(null);
+    const { error } = await db().rpc("admin_revert_place_change", { p_id: r.id });
+    setBusy(null);
+    if (error) return setErr(errorMessage(error));
+    onReverted(r.field);
+  }
+
+  return (
+    <details className="rounded-xl bg-sunken p-4 text-sm" onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="cursor-pointer font-semibold">Geschiedenis</summary>
+      <div className="mt-3 space-y-3">
+        <ErrorNote message={err ?? rows.error} />
+        {open && rows.loading && !rows.data && <p className="text-muted">Laden…</p>}
+        {rows.data && !list.length && <Empty>Nog geen wijzigingen vastgelegd.</Empty>}
+        {list.length > 0 && (
+          <ol className="divide-y divide-line rounded-lg border border-line bg-surface">
+            {list.map((r) => (
+              <li key={r.id} className="space-y-1 px-3 py-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{FIELD_LABEL[r.field] ?? r.field}</span>
+                  <Badge tone={r.source === "beheer" ? "green" : "neutral"}>{SOURCE_LABEL[r.source] ?? r.source}</Badge>
+                  {r.revert_of && <Badge tone="neutral">teruggezet</Badge>}
+                  <span className="ml-auto text-muted">{when(r.ts)}</span>
+                </div>
+                <p className="break-words">
+                  <span className="text-muted line-through">{formatHistoryValue(r.field, r.old_value)}</span>
+                  <span className="text-muted"> wordt </span>
+                  <span>{formatHistoryValue(r.field, r.new_value)}</span>
+                </p>
+                <div className="flex items-center gap-3">
+                  {r.actor_email && <span className="text-muted">door {r.actor_email}</span>}
+                  {canRevert.has(r.id) && (
+                    <button
+                      type="button"
+                      className={`${secondary} ml-auto h-9 px-3 text-sm`}
+                      onClick={() => revert(r)}
+                      disabled={busy !== null}
+                    >
+                      {busy === r.id ? "Terugzetten…" : "Zet terug"}
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+        {list.length === 100 && <p className="text-muted">Alleen de laatste 100 wijzigingen.</p>}
+      </div>
+    </details>
   );
 }
 
