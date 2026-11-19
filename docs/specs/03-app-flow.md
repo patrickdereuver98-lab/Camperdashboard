@@ -1,7 +1,7 @@
 # 3. App Flow
 
 > Doel: elk scherm, elk pad en het gevolg van elke tik vastleggen.
-> Bijgewerkt: 7 november 2026 (review R45, R48, R51: doorkliks, oproep vertrektijd, Dichtbij helpt verder); eerder 29 oktober 2026 (redesign: start, gekozen plek op de kaart, Dichtbij kaart eerst). Routes verwijzen naar `web/src/app/`.
+> Bijgewerkt: 18 november 2026 (UX-audit G1, G2, K1: terug sluit de sheet, tik op het actieve tabblad, "Toon meer" onthouden); eerder 7 november 2026 (review R45, R48, R51: doorkliks, oproep vertrektijd, Dichtbij helpt verder); eerder 29 oktober 2026 (redesign: start, gekozen plek op de kaart, Dichtbij kaart eerst). Routes verwijzen naar `web/src/app/`.
 
 ## Ingangen
 
@@ -79,7 +79,7 @@ Snelle variant: `Start` → **Plekken bij mij in de buurt** → `Dichtbij` (loca
 | Plek aanmelden | Header **+** of footer → `Plek aanmelden` → formulier → bevestiging |
 | Contact en support | `Contact` → formulier → persoonlijke link `/support/<token>` → beheerder antwoordt → klant leest en reageert via de link |
 | Terug | Terugknop op `Plek` gaat naar de vorige pagina binnen VrijStaan, of naar `/zoeken` als je van buiten kwam (Google, een gedeelde link) |
-| Annuleren | Elke sheet sluit met ×, swipe omlaag of tik buiten de sheet; niets wordt opgeslagen |
+| Annuleren | Elke sheet sluit met ×, swipe omlaag, tik buiten de sheet of terug (terugvegen op de iPhone, terugknop op Android); niets wordt opgeslagen. Een open sheet heeft een eigen stap in de geschiedenis, dus terug verlaat de pagina niet (UX-audit G1) |
 
 ## Per actie: trigger, controle, laden, succes, fout, volgende scherm
 
@@ -118,7 +118,7 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 
 ## Navigatieregels
 
-- **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Verborgen op `/plek/*`; daar staat een
+- **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Tik op het tabblad waar je al bent: naar boven; sta je al boven, dan de cursor in het zoekvak (Start en Zoeken; UX-audit G2). Verborgen op `/plek/*`; daar staat een
   vaste actiebalk met prijs, hartje, bellen, website en **Route**.
 - **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden), zon/maan wisselt licht en donker (gevolg: thema direct om, keuze bewaard op het toestel; gelijk aan het systeem = geen keuze bewaard). Op `/plek/*` een terugknop.
 - **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
@@ -129,6 +129,8 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
   toilet, douche, wifi, honden), `type`, `gratis`, `maxprijs`, `onbekend`, `lengte`, `vertrek` (`ruim`, `vroeg` of `onbekend`, alleen op `/overige-plekken`; de andere groepen zijn eigen pagina's, oude links met `vrij=1` gaan naar `/zonder-vertrektijd`),
   `open`, `score`, `sort`, `kaart=1`.
 - Paginaovergangen met `<ViewTransition>`: de foto of tekening schuift mee van de lijst naar de plekpagina.
+
+- **Toon meer plekken** onthoudt per zoekopdracht hoeveel plekken open staan (`sessionStorage`, deze sessie): terug van een plek of herladen geeft dezelfde lijst (UX-audit K1).
 
 ## Lege en geblokkeerde toestanden
 

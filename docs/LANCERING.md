@@ -129,6 +129,7 @@ Gaat vóór de rest van fase 1 en 2. Volgorde: eerst beheer beschermen en meten,
 | 2.4 Reizen zonder wrijving (R51, R54) | ✅ | Agent | Ja, 8 nov | Geen |
 | 2.5 Inbox en limieten (R11 tot en met R14, R26) | ✅ | Agent | Ja, 8 nov | Geen |
 | 2.6 Vindbaar (R38, R39) | 🔄 | Agent | Ja, 8 nov | R38 af; R39 deels (SEO-06 tot en met 15 per punt) |
+| 2.7 Gebaren en lijst (UX-audit november G1, G2, K1; [audit](audit-ux-2026-11.md)) | ✅ | Agent | Nee, na samenvoegen | Terug sluit de sheet, tik op het actieve tabblad, "Toon meer" onthouden. Gebouwd op verzoek van Patrick (18 november) ondanks de bevriezing; geen data of schema. Overige auditpunten na 1 januari |
 
 ## Fase 3: bevriezen en live (19 tot en met 31 december)
 

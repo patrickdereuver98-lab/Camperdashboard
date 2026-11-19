@@ -203,6 +203,21 @@ function OfflineBar() {
   );
 }
 
+/**
+ * Tik op het tabblad waar je al bent, zoals op een iPhone (UX-audit november, G2): eerst naar boven; sta je al boven,
+ * dan de cursor in het zoekvak (Start en Zoeken). Op een subpagina (bv. Reisstatistieken) gaat de link gewoon door.
+ */
+function tapCurrentTab(e: React.MouseEvent, here: boolean) {
+  if (!here || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  if (window.scrollY > 4) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    return;
+  }
+  document.querySelector<HTMLInputElement>('form[role="search"] input[role="combobox"]')?.focus();
+}
+
 function TabBarView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
   // Op een plekpagina neemt de actiebalk (prijs, bewaren, website) de onderrand over
@@ -224,6 +239,7 @@ function TabBarView({ pathname }: { pathname: string }) {
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
+                onClick={(e) => tapCurrentTab(e, pathname === t.href)}
                 className="relative flex h-16 flex-col items-center justify-center gap-0.5 text-sm font-semibold text-muted aria-[current=page]:text-forest"
               >
                 {active && <span className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-forest" />}
