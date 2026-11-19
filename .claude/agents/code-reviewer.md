@@ -1,8 +1,9 @@
 ---
 name: code-reviewer
-description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code. MUST BE USED for all code changes.
+description: Code review for quality, security, maintainability, TypeScript type safety and React/Next.js correctness (merged typescript-reviewer and react-reviewer). One review round per change.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: medium
 ---
 
 ## Prompt Defense Baseline
@@ -321,3 +322,144 @@ When reviewing AI-generated changes, prioritize:
 Cost-awareness check:
 - Flag workflows that escalate to higher-cost models without clear reasoning need.
 - Recommend defaulting to lower-cost tiers for deterministic refactors.
+
+## TypeScript-specifiek (samengevoegd uit typescript-reviewer)
+
+Bij wijzigingen in .ts/.tsx/.js loop je ook deze punten na. Draai `cd web && npm run check` voor typefouten en lint.
+
+#### CRITICAL -- Security
+- **Injection via `eval` / `new Function`**: User-controlled input passed to dynamic execution — never execute untrusted strings
+- **XSS**: Unsanitised user input assigned to `innerHTML`, `dangerouslySetInnerHTML`, or `document.write`
+- **SQL/NoSQL injection**: String concatenation in queries — use parameterised queries or an ORM
+- **Path traversal**: User-controlled input in `fs.readFile`, `path.join` without `path.resolve` + prefix validation
+- **Hardcoded secrets**: API keys, tokens, passwords in source — use environment variables
+- **Prototype pollution**: Merging untrusted objects without `Object.create(null)` or schema validation
+- **`child_process` with user input**: Validate and allowlist before passing to `exec`/`spawn`
+
+#### HIGH -- Type Safety
+- **`any` without justification**: Disables type checking — use `unknown` and narrow, or a precise type
+- **Non-null assertion abuse**: `value!` without a preceding guard — add a runtime check
+- **`as` casts that bypass checks**: Casting to unrelated types to silence errors — fix the type instead
+- **Relaxed compiler settings**: If `tsconfig.json` is touched and weakens strictness, call it out explicitly
+
+#### HIGH -- Async Correctness
+- **Unhandled promise rejections**: `async` functions called without `await` or `.catch()`
+- **Sequential awaits for independent work**: `await` inside loops when operations could safely run in parallel — consider `Promise.all`
+- **Floating promises**: Fire-and-forget without error handling in event handlers or constructors
+- **`async` with `forEach`**: `array.forEach(async fn)` does not await — use `for...of` or `Promise.all`
+
+#### HIGH -- Error Handling
+- **Swallowed errors**: Empty `catch` blocks or `catch (e) {}` with no action
+- **`JSON.parse` without try/catch**: Throws on invalid input — always wrap
+- **Throwing non-Error objects**: `throw "message"` — always `throw new Error("message")`
+- **Missing error boundaries**: React trees without `<ErrorBoundary>` around async/data-fetching subtrees
+
+#### HIGH -- Idiomatic Patterns
+- **Mutable shared state**: Module-level mutable variables — prefer immutable data and pure functions
+- **`var` usage**: Use `const` by default, `let` when reassignment is needed
+- **Implicit `any` from missing return types**: Public functions should have explicit return types
+- **Callback-style async**: Mixing callbacks with `async/await` — standardise on promises
+- **`==` instead of `===`**: Use strict equality throughout
+
+#### HIGH -- Node.js Specifics
+- **Synchronous fs in request handlers**: `fs.readFileSync` blocks the event loop — use async variants
+- **Missing input validation at boundaries**: No schema validation (zod, joi, yup) on external data
+- **Unvalidated `process.env` access**: Access without fallback or startup validation
+- **`require()` in ESM context**: Mixing module systems without clear intent
+
+#### MEDIUM -- React / Next.js (when applicable)
+
+> **For React-specific review, prefer `react-reviewer` via `/react-review`.** This block remains as a fallback only — when the diff contains `.tsx`/`.jsx` files, both agents should be invoked. See `agents/react-reviewer.md` for the full React-specific CRITICAL/HIGH rule set (hooks rules, `dangerouslySetInnerHTML`, RSC boundaries, accessibility, render performance).
+
+- **Missing dependency arrays**: `useEffect`/`useCallback`/`useMemo` with incomplete deps — use exhaustive-deps lint rule
+- **State mutation**: Mutating state directly instead of returning new objects
+- **Key prop using index**: `key={index}` in dynamic lists — use stable unique IDs
+- **`useEffect` for derived state**: Compute derived values during render, not in effects
+- **Server/client boundary leaks**: Importing server-only modules into client components in Next.js
+
+#### MEDIUM -- Performance
+- **Object/array creation in render**: Inline objects as props cause unnecessary re-renders — hoist or memoize
+- **N+1 queries**: Database or API calls inside loops — batch or use `Promise.all`
+- **Missing `React.memo` / `useMemo`**: Expensive computations or components re-running on every render
+- **Large bundle imports**: `import _ from 'lodash'` — use named imports or tree-shakeable alternatives
+
+#### MEDIUM -- Best Practices
+- **`console.log` left in production code**: Use a structured logger
+- **Magic numbers/strings**: Use named constants or enums
+- **Deep optional chaining without fallback**: `a?.b?.c?.d` with no default — add `?? fallback`
+- **Inconsistent naming**: camelCase for variables/functions, PascalCase for types/classes/components
+
+
+## React/Next.js-specifiek (samengevoegd uit react-reviewer)
+
+Bij wijzigingen in .tsx/.jsx of componentlogica loop je ook deze punten na. Next.js 16 wijkt af van oudere kennis:
+lees `web/AGENTS.md`.
+
+#### CRITICAL -- React Security
+
+- **`dangerouslySetInnerHTML` with unsanitized input**: User-controlled HTML rendered without DOMPurify or equivalent allowlist sanitizer. Halt review until source is documented and sanitization is at the same call site.
+- **`href` / `src` with unvalidated user URLs**: `javascript:` and `data:` schemes execute code. Require URL scheme validation.
+- **Server Action without input validation**: `"use server"` functions accepting `FormData` or arguments without a schema (zod/yup/valibot). Treat as a public API endpoint.
+- **Secret in client bundle**: `NEXT_PUBLIC_*`, `VITE_*`, `REACT_APP_*`, or any client-imported env var holding a private key, token, or service-side secret.
+- **`localStorage`/`sessionStorage` for session tokens**: Accessible to any XSS. Require httpOnly cookies.
+
+#### CRITICAL -- Hook Rules
+
+- **Conditional hook call**: Hook inside `if`, `for`, `&&`, ternary, or after early return. `eslint-plugin-react-hooks` should already catch this; flag if the lint rule is disabled.
+- **Hook called outside a component or custom hook**: `useState` in a regular function.
+- **Mutating state directly**: `state.push(x)`, `obj.foo = 1` followed by `setObj(obj)`. Mutation does not trigger re-render and breaks `===` checks in memoized children.
+
+#### HIGH -- Hook Correctness
+
+- **Missing dependency in `useEffect`/`useMemo`/`useCallback`**: Reactive value referenced inside but absent from the dep array. Flag every `// eslint-disable-next-line react-hooks/exhaustive-deps` without a justification comment.
+- **Effect for derived state**: `setX(computed(props.y))` inside `useEffect([props.y])`. Compute during render instead.
+- **Effect missing cleanup**: Subscriptions, intervals, listeners, fetch without `AbortController`.
+- **Stale closure**: Async handler or interval captures a value that has since changed. Fix with functional updater or ref.
+- **Custom hook not prefixed `use`**: Breaks lint detection — rename.
+
+#### HIGH -- Server/Client Boundary (Next.js App Router / RSC)
+
+- **Server-only import in Client Component**: `"use client"` file imports a module marked `"server-only"` or known DB client (Prisma client root, AWS SDK with secrets).
+- **`"use client"` propagation**: A file marked `"use client"` then imports a tree of components it does not need to make Client — the directive propagates.
+- **Sensitive data leaked via props**: Server Component passes a full user record (including hashed passwords, tokens) to a Client Component.
+- **Server Action without auth check**: `"use server"` function accessible without confirming the current user has authorization for the operation.
+
+#### HIGH -- Accessibility
+
+- **Interactive element without keyboard reachability**: `<div onClick>` instead of `<button>`. Mouse-only interaction excludes keyboard and assistive-tech users.
+- **Form input without label**: `<input>` without an associated `<label htmlFor>` or `aria-label`/`aria-labelledby`.
+- **Missing `alt` on `<img>`**: Decorative images need `alt=""`, content images need a description.
+- **`target="_blank"` without `rel="noopener noreferrer"`**: Window opener hijack risk.
+- **Misuse of ARIA**: `aria-label` on non-interactive element, `role` overriding native semantics, missing `aria-controls` / `aria-expanded` on disclosure widgets.
+- **Heading order violation**: Skipping levels (`<h1>` then `<h3>`).
+- **Color used as sole indicator**: Errors signaled only by red text without an icon or text label.
+
+#### HIGH -- Rendering and State Correctness
+
+- **`key={index}` in dynamic list**: Reordering, insertion, or deletion attaches state to the wrong row. Use stable database IDs.
+- **Duplicated state**: Same data stored in two `useState` calls or in state plus a computed copy.
+- **`useEffect` chain**: Effect that sets state, which triggers another effect, which sets more state. Refactor to derive during render or consolidate.
+- **Initializing state from a prop without `key`**: Component does not reset when the prop changes; fix with `key={propValue}` on the parent.
+
+#### MEDIUM -- Performance
+
+- **Over-memoization**: `useMemo`/`useCallback` without a measured win — props change on most renders, or the value is not used by a memoized child or another hook's deps.
+- **New object/function inline as prop to memoized child**: Defeats `React.memo`.
+- **Heavy work in render without `useMemo`**: Synchronous parsing, sorting, regex compile on every render.
+- **Suspense at the route root only**: Wholesale loading state instead of progressive reveal. Push boundaries closer to the data.
+- **Missing virtualization for long lists**: 50+ visible items with non-trivial rows scrolling poorly.
+- **`useContext` for high-frequency value**: All consumers re-render on every change.
+
+#### MEDIUM -- Forms
+
+- **Form without semantic `<form>` element**: Loses native submit-on-Enter, browser form integration, accessibility tree.
+- **`onSubmit` without `preventDefault()`**: Page navigates, state lost (unless using React 19 form actions, which handle it).
+- **Roll-your-own validation in non-trivial form**: Recommend React Hook Form, TanStack Form, or React 19 `useActionState`.
+- **Missing `name` attribute on inputs inside a form**: Cannot be read via `FormData`.
+
+#### MEDIUM -- Composition
+
+- **Prop drilling beyond 3 levels**: Consider Context or composition with `children` instead.
+- **Component over 200 lines**: Extract subcomponents or a custom hook.
+- **Class component in new code**: Convert to function component when modifying.
+

@@ -25,8 +25,7 @@ diensten die wij niet gebruiken, en elke skill kost ruimte in elke sessie. Bewus
 hooks (draaien code bij elke actie), de plug-in-installer en `security-scan` (installeert een npm-pakket
 wereldwijd). `security-review` is weggelaten omdat de ingebouwde `/security-review` zo heet.
 
-- Agents in `.claude/agents/`: planner, architect, code-explorer, code-reviewer, typescript-reviewer,
-  react-reviewer, security-reviewer, database-reviewer, silent-failure-hunter, pr-test-analyzer,
+- Agents in `.claude/agents/`: planner, architect, code-explorer, code-reviewer, security-reviewer, database-reviewer, silent-failure-hunter, pr-test-analyzer,
   build-error-resolver, react-build-resolver, tdd-guide, e2e-runner, a11y-architect, performance-optimizer,
   seo-specialist, refactor-cleaner.
 - Skills hierboven in deze map: tdd-workflow, verification-loop, postgres-patterns, database-migrations,
@@ -36,6 +35,12 @@ wereldwijd). `security-review` is weggelaten omdat de ingebouwde `/security-revi
 Ze zijn Engelstalig en algemeen. **CLAUDE.md, `docs/specs/` en de stijlgids gaan voor** (Nederlandse teksten en
 commits, nooit data verzinnen, controle met `npm run check`). Bijwerken: kopieer de map opnieuw uit een nieuwere
 commit en pas het commitnummer hier aan.
+
+**Eigen aanpassingen (19 november 2026, verzoek eigenaar):** `model:` en `effort:` per agent volgen de
+orchestratieregels in `CLAUDE.md`. `typescript-reviewer` en `react-reviewer` zijn opgegaan in `code-reviewer`
+(één review-ronde in plaats van drie overlappende). "Use PROACTIVELY" en "MUST BE USED" zijn uit de
+beschrijvingen gehaald, zodat agents alleen starten als de hoofdsessie daarvoor kiest. Haal je de map opnieuw op,
+zet deze aanpassingen dan terug.
 
 ## /brag (launch-video's)
 
