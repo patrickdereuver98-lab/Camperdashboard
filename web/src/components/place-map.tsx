@@ -6,7 +6,8 @@ import { createPortal } from "react-dom";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./place-map.css";
 import type { GeoJSONSource, Map as MlMap, Popup } from "maplibre-gl";
-import type { LatLng } from "@/lib/geo";
+import { distanceKm, type LatLng } from "@/lib/geo";
+import { Icon } from "./icons";
 import { MAP_LOCALE_NL } from "@/lib/map-locale";
 import { byClusterSize, CLUSTER_RADIUS, clusterColors, popupProps, toGeoJSON, type MapPlace, type PinProps, type PopupProps } from "@/lib/map-data";
 import { currentTheme } from "@/lib/theme";
@@ -79,6 +80,9 @@ export function PlaceMap({
   onShowList,
   popup = true,
   whenVisible = false,
+  focus,
+  locate = false,
+  onSearchArea,
   className = "",
 }: {
   places: MapPlace[];
@@ -98,6 +102,12 @@ export function PlaceMap({
   popup?: boolean;
   /** MapLibre (±295 KB gz) pas laden als de kaart bijna in beeld komt, bijvoorbeeld onderaan de plekpagina (R35) */
   whenVisible?: boolean;
+  /** Deze plek in beeld schuiven (vorige/volgende in het kaartpaneel op de telefoon) */
+  focus?: string | null;
+  /** Knop "Mijn locatie" op de kaart (K2): je stip tonen en ernaartoe schuiven, niet continu volgen */
+  locate?: boolean;
+  /** Na zelf schuiven of zoomen de knop "Zoek in dit gebied" (K2): middelpunt en straal van wat je ziet */
+  onSearchArea?: (center: LatLng, radiusKm: number) => void;
   className?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
@@ -110,6 +120,11 @@ export function PlaceMap({
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [inView, setInView] = useState(!whenVisible);
+  // Zelf verschoven of gezoomd (niet door fitBounds of easeTo van de site): dan "Zoek in dit gebied"
+  const [moved, setMoved] = useState(false);
+  const [located, setLocated] = useState<LatLng | null>(null);
+  const [locating, setLocating] = useState<"idle" | "busy" | "denied">("idle");
+  const shownUser = user ?? located;
   // Licht of donker wisselt live (systeem bij zonsondergang of de zon/maan-knop): dan wordt de kaart opnieuw opgebouwd
   const dark = useDarkTheme();
   // Kaartbeeld van de vorige opbouw, zodat een themawissel de kaart niet laat verspringen
@@ -314,6 +329,10 @@ export function PlaceMap({
           popupRef.current = next;
           setOpenPopup({ node, props });
         });
+        // originalEvent bestaat alleen bij een gebaar of muis; fitBounds en easeTo van de site tellen niet
+        map.on("moveend", (e) => {
+          if ((e as { originalEvent?: Event }).originalEvent) setMoved(true);
+        });
         for (const id of ["clusters-hit", "points-hit"]) {
           map.on("mouseenter", id, () => map && (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", id, () => map && (map.getCanvas().style.cursor = ""));
@@ -366,6 +385,7 @@ export function PlaceMap({
     // Na een nieuwe opbouw door een themawissel staat het kaartbeeld al goed
     if (fitted.current && fitted.current.key === fitKey) return;
     fitted.current = { key: fitKey };
+    setMoved(false);
     if (pts.length === 1) {
       map.easeTo({ center: pts[0], zoom: 12, duration: 500 });
       return;
@@ -393,7 +413,8 @@ export function PlaceMap({
     if (!ready || !map) return;
     userMarker.current?.remove();
     userMarker.current = null;
-    if (!user) return;
+    const pos = shownUser;
+    if (!pos) return;
     let alive = true;
     import("maplibre-gl").then((maplibregl) => {
       if (!alive || !mapRef.current) return;
@@ -402,12 +423,53 @@ export function PlaceMap({
         "width:20px;height:20px;border-radius:50%;background:#2f6f7e;border:3px solid #fff;box-shadow:0 0 0 8px rgb(47 111 126 / .25)";
       dot.setAttribute("role", "img");
       dot.setAttribute("aria-label", "Jouw locatie");
-      userMarker.current = new maplibregl.Marker({ element: dot }).setLngLat([user.lng, user.lat]).addTo(mapRef.current);
+      userMarker.current = new maplibregl.Marker({ element: dot }).setLngLat([pos.lng, pos.lat]).addTo(mapRef.current);
     });
     return () => {
       alive = false;
     };
-  }, [user, ready]);
+  }, [shownUser, ready]);
+
+  // Gekozen plek in beeld houden (vorige/volgende); alleen schuiven als hij buiten het midden valt
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !focus) return;
+    const p = latest.current.places.find((x) => x.slug === focus);
+    if (!p) return;
+    const pt = map.project([p.lng, p.lat]);
+    const { clientWidth: w, clientHeight: h } = map.getContainer();
+    // Het paneel bedekt de onderste helft: de stip hoort in het bovenste deel
+    if (pt.x < w * 0.15 || pt.x > w * 0.85 || pt.y < h * 0.1 || pt.y > h * 0.5)
+      map.easeTo({ center: [p.lng, p.lat], offset: [0, -h * 0.2], duration: 350 });
+  }, [focus, ready]);
+
+  function locateMe() {
+    if (!("geolocation" in navigator)) return setLocating("denied");
+    setLocating("busy");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setLocated(here);
+        setLocating("idle");
+        mapRef.current?.easeTo({ center: [here.lng, here.lat], zoom: Math.max(mapRef.current.getZoom(), 11), duration: 500 });
+        setMoved(true);
+      },
+      (err) => setLocating(err.code === err.PERMISSION_DENIED ? "denied" : "idle"),
+      { timeout: 12000, maximumAge: 300000 },
+    );
+  }
+
+  function searchArea() {
+    const map = mapRef.current;
+    if (!map || !onSearchArea) return;
+    const c = map.getCenter();
+    const b = map.getBounds();
+    const center = { lat: c.lat, lng: c.lng };
+    // Halve breedte of hoogte van wat je ziet, wat het grootst is; afgerond op hele km
+    const half = Math.max(distanceKm(center, { lat: c.lat, lng: b.getEast() }), distanceKm(center, { lat: b.getNorth(), lng: c.lng }));
+    onSearchArea(center, Math.min(150, Math.max(2, Math.ceil(half))));
+    setMoved(false);
+  }
 
   return (
     <div className={`relative overflow-hidden bg-sunken ${className}`}>
@@ -415,6 +477,27 @@ export function PlaceMap({
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
       {openPopup && createPortal(<PopupCard p={openPopup.props} departures={departures} />, openPopup.node)}
       {!ready && !failed && <div className="absolute inset-0 grid place-items-center text-muted">Kaart laden…</div>}
+      {ready && onSearchArea && moved && (
+        <button
+          type="button"
+          onClick={searchArea}
+          className="animate-fade-in absolute top-3 left-1/2 z-10 flex h-11 -translate-x-1/2 items-center gap-2 rounded-full bg-surface px-4 font-semibold text-forest shadow-float"
+        >
+          <Icon name="search" size={17} /> Zoek in dit gebied
+        </button>
+      )}
+      {ready && locate && (
+        <button
+          type="button"
+          onClick={locateMe}
+          disabled={locating === "busy"}
+          aria-label={locating === "denied" ? "Locatie staat uit in je browser" : "Naar mijn locatie"}
+          title={locating === "denied" ? "Locatie staat uit in je browser" : "Naar mijn locatie"}
+          className="absolute top-[76px] right-2.5 z-10 grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface text-forest shadow-float disabled:opacity-60"
+        >
+          <Icon name="locate" size={20} className={locating === "busy" ? "animate-pulse" : undefined} />
+        </button>
+      )}
       {failed && (
         <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-ink-2">
           <p>De kaart kon niet worden geladen. Controleer je verbinding.</p>

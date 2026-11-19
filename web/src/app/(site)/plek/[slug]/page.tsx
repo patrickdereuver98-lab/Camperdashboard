@@ -31,7 +31,8 @@ import { CrowdStatusCard } from "./crowd-status";
 import { DecisionGrid, needsDeparture } from "./decision-grid";
 import { GiveDepartureButton } from "@/components/departure-form";
 import { FacilityGrid } from "./facility-grid";
-import { DistanceFromMe } from "./live-facts";
+import { ArrivalTodayNote, CopyButton, DistanceFromMe, ResultsNav } from "./live-facts";
+import { departureShort } from "@/lib/format";
 import { PlekpulsVraag } from "@/components/plekpuls";
 import { departureQuestion, PLEKPULS_ACTIEF } from "@/lib/plekpuls";
 
@@ -141,10 +142,16 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const reserveLabel = rule === "verplicht" || rule === "mogelijk" ? "Reserveren via de website" : "Naar de website";
   // Plekpuls staat uit tot de koppeling met de bronnenlaag er is (lib/plekpuls.ts)
   const pulse = PLEKPULS_ACTIEF ? departureQuestion(place) : undefined;
+  // Delen met de feiten die we kennen (U3): "Geen vaste vertrektijd · € 15 per nacht + toeslagen". Onbekend laten we weg.
+  const shareFacts = [
+    departureShort(place),
+    price ? `${price.value}${price.extras || place.touristTaxIncluded === false ? " + toeslagen" : price.perNight ? " per nacht" : ""}` : undefined,
+  ].filter(Boolean);
+  const shareText = `${place.name} in ${place.town}${shareFacts.length ? `: ${shareFacts.join(" · ")}` : ""}`;
 
   return (
     <article className="pb-24 md:pb-8">
-      <TrackView slug={place.slug} />
+      <TrackView slug={place.slug} name={place.name} town={place.town} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(crumbs) }} />
 
@@ -165,7 +172,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {/* Kop (redesign 30 oktober 2026): naam, plaats, score en afstand in één blik; de rest staat in het beslisblok */}
         <header className="flex flex-col gap-2 pt-3 md:flex-row md:items-start md:justify-between md:pt-6">
           <div className="min-w-0">
-            <h1 className="font-display text-h1 font-semibold">{place.name}</h1>
+            <div className="flex items-start justify-between gap-2">
+              <h1 className="font-display text-h1 font-semibold">{place.name}</h1>
+              {/* Delen staat op de telefoon naast de naam; op groot scherm rechts bij Bewaren */}
+              <ShareButton title={place.name} text={shareText} compact className="-mt-1 -mr-2 md:hidden" />
+            </div>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-ink-2">
               <Sign name={KIND_SIGN[place.kind ?? "camperplaats"]} size={20} />
               {/* "Soort in plaats, provincie"; het adres staat bij Praktisch en contact (review R52) */}
@@ -197,14 +208,18 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           </div>
           <div className="hidden shrink-0 gap-2 md:flex">
             <SaveButton slug={place.slug} name={place.name} variant="full" />
-            <ShareButton title={place.name} />
+            <ShareButton title={place.name} text={shareText} />
           </div>
         </header>
 
         {/* Mobiel: beslissen, voorzieningen, beschrijving, ligging, ervaringen, praktisch. Groot scherm: zijkolom. */}
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
-            <DecisionGrid place={place} visitors={visitors} />
+            <ResultsNav slug={place.slug} />
+            <div className="space-y-3">
+              <DecisionGrid place={place} visitors={visitors} />
+              <ArrivalTodayNote place={place} />
+            </div>
             <DecisionDetails place={place} />
             {pulse && (
               <div className="-mt-4 rounded-lg border border-line bg-surface px-4 py-3">
@@ -520,7 +535,16 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   add("Aantal plekken", place.capacity ? String(place.capacity) : undefined, "aantal plekken");
   add("Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : undefined, "ondergrond");
   add("Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : undefined, "maximaal verblijf");
-  rows.push({ label: "Adres", value: address ? `${address}, ${place.province}` : `${place.town}, ${place.province}` });
+  const fullAddress = address ? `${address}, ${place.province}` : `${place.town}, ${place.province}`;
+  rows.push({
+    label: "Adres",
+    value: (
+      <>
+        {fullAddress}
+        <CopyButton text={fullAddress} label="Adres kopiëren" />
+      </>
+    ),
+  });
   if (tel)
     rows.push({
       label: "Telefoon",

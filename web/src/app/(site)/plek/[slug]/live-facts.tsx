@@ -3,7 +3,11 @@
 import { useHydrated } from "@/lib/use-media";
 import { useMyLocation } from "@/lib/my-location";
 import { distanceKm, formatKm } from "@/lib/geo";
-import { openStatus } from "@/lib/search";
+import { isOpenOn, nowInNL, openStatus } from "@/lib/search";
+import { arrivalToday } from "@/lib/arrival-today";
+import { readResultOrder } from "@/lib/last-search";
+import { useState } from "react";
+import Link from "next/link";
 import { Icon } from "@/components/icons";
 import type { Place } from "@/lib/types";
 
@@ -24,5 +28,78 @@ export function DistanceFromMe({ place }: { place: Pick<Place, "lat" | "lng"> })
     <span className="inline-flex items-center gap-1 text-sm font-semibold text-forest">
       <Icon name="locate" size={15} /> {formatKm(distanceKm(pos, place))} van je locatie
     </span>
+  );
+}
+
+/** "Nog 2 uur om vandaag aan te komen" (UX-audit): pas na hydratatie, met de klok in Nederland */
+export function ArrivalTodayNote({ place }: { place: Pick<Place, "checkinFrom" | "checkinUntil" | "access24h" | "openAllYear" | "season"> }) {
+  const hydrated = useHydrated();
+  if (!hydrated) return null;
+  // Volgens het seizoen dicht: dan zegt de klok niets
+  if (isOpenOn(place) === false) return null;
+  const now = nowInNL();
+  const note = arrivalToday(place, now.getHours() * 60 + now.getMinutes());
+  if (!note) return null;
+  return (
+    <p role="status" className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${note.closed ? "bg-alert-tint text-alert" : "bg-forest-tint text-forest"}`}>
+      <Icon name="clock" size={17} className="shrink-0" /> {note.text}
+    </p>
+  );
+}
+
+/** Kopieerknop naast het adres; het adres zelf staat ernaast als tekst */
+export function CopyButton({ text, label }: { text: string; label: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 2000);
+        } catch {
+          // Geen toegang tot het klembord: het adres staat er als tekst, selecteren kan altijd
+        }
+      }}
+      aria-label={done ? "Gekopieerd" : label}
+      className="-my-2 ml-1 inline-grid h-11 w-11 shrink-0 place-items-center rounded-lg align-middle text-forest hover:bg-sunken"
+    >
+      <Icon name={done ? "check" : "copy"} size={17} />
+    </button>
+  );
+}
+
+/**
+ * "Vorige" en "Volgende" uit je laatste zoekresultaten (UX-audit), zodat je niet heen en weer hoeft. Alleen als je
+ * via die lijst op deze plek kwam (de plek staat erin).
+ */
+export function ResultsNav({ slug }: { slug: string }) {
+  const hydrated = useHydrated();
+  const order = hydrated ? readResultOrder() : null;
+  const i = order ? order.items.findIndex((x) => x.slug === slug) : -1;
+  if (!order || i < 0 || order.items.length < 2) return null;
+  const prev = order.items[i - 1];
+  const next = order.items[i + 1];
+  return (
+    <nav aria-label="Zoekresultaten" className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface px-1 text-sm">
+      {prev ? (
+        <Link href={`/plek/${prev.slug}`} className="flex min-h-11 min-w-0 flex-1 items-center gap-1 px-2 font-semibold text-forest">
+          <Icon name="chevronLeft" size={17} className="shrink-0" /> <span className="truncate">{prev.name}</span>
+        </Link>
+      ) : (
+        <span className="flex-1" />
+      )}
+      <Link href={order.href} className="flex min-h-11 shrink-0 items-center px-2 text-muted tabular-nums hover:underline">
+        {i + 1} van {order.items.length}
+      </Link>
+      {next ? (
+        <Link href={`/plek/${next.slug}`} className="flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1 px-2 text-right font-semibold text-forest">
+          <span className="truncate">{next.name}</span> <Icon name="chevronRight" size={17} className="shrink-0" />
+        </Link>
+      ) : (
+        <span className="flex-1" />
+      )}
+    </nav>
   );
 }

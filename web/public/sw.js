@@ -156,6 +156,8 @@ async function data(event, req, name) {
       // Een serverfout: dan liever de bewaarde versie (met datum) dan niets
       return hit || res;
     });
+  // "Ververs" op de site (fetch met cache: "reload"): eerst het netwerk, de bewaarde versie alleen als dat niet lukt
+  if (req.cache === "reload") return refresh().catch(() => hit || Response.error());
   if (hit && age < DATA_FRESH) return hit;
   if (hit && age < DATA_MAX_AGE) {
     event.waitUntil(refresh().then(() => undefined, () => undefined));

@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useHydrated } from "@/lib/use-media";
-import { backFromSheet, SHEET_STATE_KEY } from "@/lib/sheet-history";
+import { useBackToClose } from "@/lib/sheet-history";
 import { Icon } from "./icons";
 import type { SheetProps } from "./sheet";
 
@@ -29,6 +29,9 @@ export function SheetPanel({
   useEffect(() => {
     close.current = onClose;
   });
+
+  // Terugvegen of de terugknop sluit eerst de sheet (G1)
+  useBackToClose(open, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -62,29 +65,8 @@ export function SheetPanel({
     };
     document.addEventListener("keydown", onKey);
 
-    // Eigen stap in de geschiedenis: terug sluit eerst de sheet (G1). Pas na een tik, zodat de dubbele effecten van
-    // StrictMode geen stap toevoegen en weer weghalen.
-    const token = Math.random().toString(36).slice(2);
-    let pushed = false;
-    let popped = false;
-    const push = setTimeout(() => {
-      history.pushState({ [SHEET_STATE_KEY]: token }, "");
-      pushed = true;
-    }, 0);
-    const onPop = () => {
-      if (history.state?.[SHEET_STATE_KEY] === token) return;
-      popped = true;
-      close.current();
-    };
-    window.addEventListener("popstate", onPop);
-
     return () => {
       clearTimeout(t);
-      clearTimeout(push);
-      window.removeEventListener("popstate", onPop);
-      // Zelf gesloten (×, vegen, Escape, versturen): de stap weer weghalen, maar alleen als hij nog bovenaan staat.
-      // Ging je met een link naar een andere pagina, dan staat daar nu die pagina en blijft alles zoals het is.
-      if (pushed && !popped && history.state?.[SHEET_STATE_KEY] === token) backFromSheet();
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
       prev?.focus?.();

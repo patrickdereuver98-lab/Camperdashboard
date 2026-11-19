@@ -8,6 +8,7 @@ import { useSession } from "@/lib/auth";
 import { currentTheme, setTheme } from "@/lib/theme";
 import { useDarkTheme } from "@/lib/use-media";
 import { useTrip } from "@/lib/store";
+import { useLastSearch } from "@/lib/last-search";
 import { track } from "@/lib/track";
 import { Icon, Logo, type IconName } from "./icons";
 
@@ -72,6 +73,7 @@ function TripBadge({ className = "" }: { className?: string }) {
 function HeaderView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
   const onPlace = pathname.startsWith("/plek/");
+  const lastSearch = useLastSearch();
   if (pathname.startsWith("/admin")) return null;
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface">
@@ -95,7 +97,7 @@ function HeaderView({ pathname }: { pathname: string }) {
           {NAV.map((n) => (
             <Link
               key={n.href}
-              href={n.href}
+              href={n.href === "/zoeken" ? lastSearch : n.href}
               aria-current={isActive(n.href) ? "page" : undefined}
               className="flex h-11 items-center gap-2 rounded-lg px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
             >
@@ -220,9 +222,13 @@ function tapCurrentTab(e: React.MouseEvent, here: boolean) {
 
 function TabBarView({ pathname }: { pathname: string }) {
   const isActive = activeIn(pathname);
+  const lastSearch = useLastSearch();
   // Op een plekpagina neemt de actiebalk (prijs, bewaren, website) de onderrand over
   if (pathname.startsWith("/admin") || pathname.startsWith("/plek/")) return null;
   const tabs: { href: string; label: string; icon: IconName }[] = [{ href: "/", label: "Start", icon: "home" }, ...NAV];
+  // Zoeken brengt je terug naar je laatste zoekopdracht van dit bezoek, met alle filters
+  const linkOf = (href: string) => (href === "/zoeken" ? lastSearch : href);
+  const hereOn = (href: string) => pathname === href || (href === "/zoeken" && pathname === lastSearch.split("?")[0]);
   return (
     <>
     {/* Ruimte zodat de vaste tabbalk geen inhoud bedekt */}
@@ -237,9 +243,9 @@ function TabBarView({ pathname }: { pathname: string }) {
           return (
             <li key={t.href}>
               <Link
-                href={t.href}
+                href={linkOf(t.href)}
                 aria-current={active ? "page" : undefined}
-                onClick={(e) => tapCurrentTab(e, pathname === t.href)}
+                onClick={(e) => tapCurrentTab(e, hereOn(t.href))}
                 className="relative flex h-16 flex-col items-center justify-center gap-0.5 text-sm font-semibold text-muted aria-[current=page]:text-forest"
               >
                 {active && <span className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-forest" />}
@@ -267,6 +273,13 @@ export function Runtime() {
 
 function RuntimeLive() {
   const pathname = usePathname();
+  // Aantal stops op het app-icoon (alleen als app op het beginscherm; iPhone vanaf iOS 16.4 met toestemming voor meldingen)
+  const { stops } = useTrip();
+  useEffect(() => {
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    if (!nav.setAppBadge) return;
+    (stops.length ? nav.setAppBadge(stops.length) : (nav.clearAppBadge?.() ?? Promise.resolve())).catch(() => undefined);
+  }, [stops.length]);
   useEffect(() => {
     pagesSeen += 1;
     if (!pathname.startsWith("/admin")) track("page_view");

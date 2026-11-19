@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { MotionConfig, motion } from "motion/react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { MotionConfig, Reorder, useDragControls } from "motion/react";
+import { tripIcs, tripText, tripToday } from "@/lib/trip-share";
+import { NavigateButton } from "@/components/navigate";
 import { coarse, distanceKm, formatKm, type LatLng } from "@/lib/geo";
-import { eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
+import { departureShort, eur, extraLabel, formatDuration, pluralize } from "@/lib/format";
 import { readTripPlacesCopy, rememberTripPlaces, usePlaces, useTrip, useTripDate, useTripSettings, type TripStop } from "@/lib/store";
 import { closedText, dayValue, parseDay, shortDay, tripDates } from "@/lib/trip-dates";
 import { tripCosts } from "@/lib/trip-extras";
@@ -68,6 +70,16 @@ export function TripApp() {
   const [shared, setShared] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  // Ongedaan maken na weghalen (U1): de stop en waar hij stond, 6 seconden lang
+  const [removed, setRemoved] = useState<{ stop: TripStop; index: number; name: string; id: number } | null>(null);
+  useEffect(() => {
+    if (!removed) return;
+    const t = setTimeout(() => setRemoved(null), 6000);
+    return () => clearTimeout(t);
+  }, [removed]);
+  // Slepen (U2): tijdens het slepen een eigen volgorde; pas bij loslaten opslaan (anders rekent de route bij elke stap)
+  const [dragOrder, setDragOrder] = useState<string[] | null>(null);
+  const [textCopied, setTextCopied] = useState(false);
 
   // Gedeelde reis: /mijn-reis?r=slug.2,slug.1, met vertrekdatum &d=2026-11-06
   const incoming = params.get("r");
@@ -180,9 +192,33 @@ export function TripApp() {
     );
   }
 
+  // "Weggehaald · Ongedaan maken": ook als de reis daarna leeg is
+  const undoToast = removed && (
+    <div
+      key={removed.id}
+      role="status"
+      className="animate-toast fixed left-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-xl bg-ink py-2 pr-2 pl-4 text-surface shadow-lift lg:bottom-6"
+    >
+      <span className="min-w-0 flex-1 truncate font-semibold">{removed.name} weggehaald</span>
+      <button
+        type="button"
+        onClick={() => {
+          const next = trip.stops.filter((x) => x.slug !== removed.stop.slug);
+          next.splice(Math.min(removed.index, next.length), 0, removed.stop);
+          trip.replace(next);
+          setRemoved(null);
+        }}
+        className="flex h-11 shrink-0 items-center rounded-lg px-3 font-semibold text-surface underline underline-offset-2"
+      >
+        Ongedaan maken
+      </button>
+    </div>
+  );
+
   if (trip.stops.length === 0) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-10 text-center sm:pt-14">
+        {undoToast}
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
           <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
         </div>
@@ -206,6 +242,9 @@ export function TripApp() {
   // Met een vertrekdatum: per stop aankomst en vertrek, en de nachten waarop de plek volgens het seizoen dicht is
   const startDay = parseDay(tripDate);
   const dated = startDay ? tripDates(startDay, stops) : null;
+  // Reisdag: vandaag weg of vannacht ergens (alleen met een vertrekdatum)
+  const today = dated ? tripToday(dated, new Date()) : undefined;
+  const shownStops = dragOrder ? dragOrder.map((slug) => stops.find((x) => x.slug === slug)!).filter(Boolean) : stops;
   // Alleen bekende prijzen optellen; plekken zonder prijs noemen we apart (nooit een geschat bedrag).
   // Verplichte kosten per persoon en toeristenbelasting van de plek zelf tellen mee; andere toeslagen noemen we apart.
   const costs = tripCosts(stops, settings.persons, settings.touristTax);
@@ -232,6 +271,7 @@ export function TripApp() {
 
   return (
     <div className="mx-auto max-w-6xl px-3 pt-3 pb-10 sm:px-6 sm:pt-5">
+      {undoToast}
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
           <h1 className="font-display text-h1 font-semibold">Mijn reis</h1>
@@ -273,11 +313,71 @@ export function TripApp() {
           >
             <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
           </button>
+          <button
+            type="button"
+            onClick={async () => {
+              // Platte lijst voor groepen waar niemand een link opent
+              const text = tripText(stops, dated);
+              if (navigator.share) await navigator.share({ title: "Mijn camperreis", text }).catch(() => undefined);
+              else {
+                await navigator.clipboard.writeText(text).catch(() => undefined);
+                setTextCopied(true);
+                setTimeout(() => setTextCopied(false), 2500);
+              }
+            }}
+            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest"
+          >
+            <Icon name={textCopied ? "check" : "list"} size={18} /> {textCopied ? "Tekst gekopieerd" : "Als tekst"}
+          </button>
+          {dated && (
+            <button
+              type="button"
+              onClick={() => {
+                // Agendabestand op het toestel gemaakt; de telefoon biedt aan het in de agenda te zetten
+                const blob = new Blob([tripIcs(stops, dated, location.origin)], { type: "text/calendar;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "mijn-camperreis.ics";
+                document.body.append(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+              }}
+              className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest"
+            >
+              <Icon name="calendar" size={18} /> In je agenda
+            </button>
+          )}
           <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold hover:border-forest">
             <Icon name="chart" size={18} /> Statistieken
           </Link>
         </div>
       </div>
+
+      {today && (
+        <section aria-label="Vandaag" className="mt-4 rounded-lg border border-forest bg-forest-tint p-4" data-testid="trip-today">
+          {today.leaving !== undefined && (
+            <p className="font-semibold text-forest">
+              Vandaag vertrek je bij {stops[today.leaving].place.name}
+              {departureShort(stops[today.leaving].place) ? ` (${departureShort(stops[today.leaving].place)!.toLowerCase()})` : ""}.
+            </p>
+          )}
+          {today.tonight !== undefined && (
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+              <p className="min-w-0">
+                <span className="font-display text-h3 font-semibold">Vannacht: {stops[today.tonight].place.name}</span>
+                {stops[today.tonight].place.checkinUntil && (
+                  <span className="block text-sm text-ink-2">Aankomen tot {stops[today.tonight].place.checkinUntil}</span>
+                )}
+              </p>
+              <NavigateButton to={stops[today.tonight].place} slug={stops[today.tonight].slug} className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep">
+                <Icon name="route" size={18} /> Route
+              </NavigateButton>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="mt-4 grid gap-6 sm:mt-6 sm:gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
@@ -347,11 +447,20 @@ export function TripApp() {
           </div>
 
           <MotionConfig reducedMotion="user">
-          <ol>
-            {stops.map((s, i) => {
-              const leg = legFor(i);
+          <Reorder.Group as="ol" axis="y" values={shownStops.map((x) => x.slug)} onReorder={setDragOrder}>
+            {shownStops.map((s, i) => {
+              const leg = dragOrder ? undefined : legFor(i);
               return (
-                <motion.li key={s.slug} layout="position" transition={{ type: "spring", stiffness: 520, damping: 42 }}>
+                <DragItem
+                  key={s.slug}
+                  value={s.slug}
+                  onDrop={() => {
+                    if (dragOrder) trip.replace(dragOrder.map((slug) => trip.stops.find((x) => x.slug === slug)!).filter(Boolean));
+                    setDragOrder(null);
+                  }}
+                >
+                  {(startDrag) => (
+                  <>
                   {(i > 0 || start) && (
                     <div className="flex items-center gap-3 py-2 pl-5 text-sm text-ink-2">
                       <span className="h-8 border-l-[3px] border-dotted border-forest" aria-hidden="true" />
@@ -411,22 +520,39 @@ export function TripApp() {
                         </button>
                       </div>
                       <div className="ml-auto flex items-center">
+                        <button
+                          type="button"
+                          aria-label={`${s.place.name} verslepen`}
+                          title="Houd vast en sleep om de volgorde te veranderen"
+                          onPointerDown={startDrag}
+                          className="grid h-11 w-11 cursor-grab touch-none place-items-center rounded-lg text-muted hover:bg-sunken active:cursor-grabbing"
+                        >
+                          <Icon name="grip" size={20} />
+                        </button>
                         <button type="button" aria-label="Eerder in de reis" disabled={i === 0} onClick={() => trip.move(i, i - 1)} className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-25">
                           <Icon name="chevronUp" />
                         </button>
                         <button type="button" aria-label="Later in de reis" disabled={i === stops.length - 1} onClick={() => trip.move(i, i + 1)} className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-25">
                           <Icon name="chevronDown" />
                         </button>
-                        <button type="button" aria-label={`${s.place.name} verwijderen`} onClick={() => trip.remove(s.slug)} className="grid h-11 w-11 place-items-center rounded-lg text-alert hover:bg-alert-tint">
+                        <button
+                          type="button"
+                          aria-label={`${s.place.name} verwijderen`}
+                          onClick={() => {
+                            setRemoved({ stop: { slug: s.slug, nights: s.nights }, index: i, name: s.place.name, id: Date.now() });
+                            trip.remove(s.slug);
+                          }} className="grid h-11 w-11 place-items-center rounded-lg text-alert hover:bg-alert-tint">
                           <Icon name="trash" size={19} />
                         </button>
                       </div>
                     </div>
                   </div>
-                </motion.li>
+                  </>
+                  )}
+                </DragItem>
               );
             })}
-          </ol>
+          </Reorder.Group>
           </MotionConfig>
           <Link href="/zoeken" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-lg border border-dashed border-line font-semibold text-forest hover:border-forest">
             <Icon name="plus" size={19} /> Plek toevoegen
@@ -590,5 +716,28 @@ export function TripApp() {
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * Eén stop die je aan het greepje kunt verslepen (U2). Alleen via het greepje (dragListener uit), zodat scrollen door de
+ * lijst gewoon werkt; de pijltjes blijven voor toetsenbord en schermlezer.
+ */
+function DragItem({ value, onDrop, children }: { value: string; onDrop: () => void; children: (startDrag: (e: React.PointerEvent) => void) => ReactNode }) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      as="li"
+      value={value}
+      dragListener={false}
+      dragControls={controls}
+      onDragEnd={onDrop}
+      layout="position"
+      transition={{ type: "spring", stiffness: 520, damping: 42 }}
+      whileDrag={{ scale: 1.02, zIndex: 10 }}
+      className="relative"
+    >
+      {children((e) => controls.start(e))}
+    </Reorder.Item>
   );
 }

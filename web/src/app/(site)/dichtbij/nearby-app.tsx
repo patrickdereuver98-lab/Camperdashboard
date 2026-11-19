@@ -158,7 +158,8 @@ export function NearbyApp() {
   // zijn (of zeker niet komen), anders springt het voorstel weg zodra ze binnenkomen.
   const far = places && (drives || driveError) ? nearestIsFar(list, drives) : false;
   const closer = far && places ? closerSuggestions(places, pos, choices, vehicle, Math.min(...list.map((r) => r.km))) : [];
-  const pickedPlace = picked ? list.find((r) => r.place.slug === picked)?.place : undefined;
+  const pickedIndex = picked ? list.findIndex((r) => r.place.slug === picked) : -1;
+  const pickedPlace = pickedIndex >= 0 ? list[pickedIndex].place : undefined;
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <section className="min-w-0 px-3 pt-3 pb-8 sm:px-6 sm:pt-5">
@@ -231,9 +232,20 @@ export function NearbyApp() {
               highlight={picked}
               onSelect={setPicked}
               popup={false}
+              focus={picked}
               className="h-full w-full"
             />
-            {pickedPlace && <MapPick key={pickedPlace.slug} place={pickedPlace as PlaceSummary} onClose={() => setPicked(null)} />}
+            {pickedPlace && (
+              <MapPick
+                key={pickedPlace.slug}
+                place={pickedPlace as PlaceSummary}
+                onClose={() => setPicked(null)}
+                // Volgorde van de lijst: dichtstbij eerst (rijtijd als die er is)
+                onPrev={pickedIndex > 0 ? () => setPicked(list[pickedIndex - 1].place.slug) : undefined}
+                onNext={pickedIndex < list.length - 1 ? () => setPicked(list[pickedIndex + 1].place.slug) : undefined}
+                position={`${pickedIndex + 1} van ${list.length}`}
+              />
+            )}
           </div>
         )}
 

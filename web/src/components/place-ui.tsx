@@ -15,6 +15,7 @@ import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
+import { QuickMenu, useLongPress } from "./quick-menu";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
 import { NavigateButton } from "./navigate";
 
@@ -26,6 +27,13 @@ import { NavigateButton } from "./navigate";
  */
 export function photoProxy(src: string, width: number): string {
   return `https://wsrv.nl/?url=${encodeURIComponent(src)}&w=${width}&fit=cover&output=webp&q=72&we`;
+}
+
+/** Bronnen voor een foto op volle grootte (schermvullend bekijken): verkleinde WebP, dan de grote versie, dan het origineel */
+export function fullPhotoSources(src: string): string[] {
+  const upgraded = upgradePhotoUrl(src);
+  const ownStorage = src.startsWith(`${SUPABASE_URL}/storage/`);
+  return [...new Set([...(ownStorage ? [] : [photoProxy(upgraded, 2000).replace("&fit=cover", "&fit=inside")]), upgraded, src])];
 }
 
 export function PlacePhoto({
@@ -378,14 +386,20 @@ function PlaceRow({
   onHover?: (slug: string | null) => void;
   eager?: boolean;
 }) {
+  // Lang indrukken of rechtsklikken: snelmenu (G5)
+  const [menu, setMenu] = useState(false);
+  const press = useLongPress(() => setMenu(true));
   return (
+    <>
+    <QuickMenu place={place} open={menu} onClose={() => setMenu(false)} />
     <article
       data-slug={place.slug}
+      {...press}
       onMouseEnter={() => onHover?.(place.slug)}
       onMouseLeave={() => onHover?.(null)}
       // Eén lijst met een lijn onder elke rij (besluit eigenaar 30 oktober en 1 november 2026): geen kaartjes, geen schaduw.
       // De lijn tekent de lijst (ResultList); de actieve rij (kaart) krijgt een bosgroene streep links.
-      className={`group relative flex min-h-[6.5rem] gap-3 py-2.5 transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:-outline-offset-3 has-[a:focus-visible]:outline-forest ${
+      className={`group relative flex min-h-[6.5rem] gap-3 py-2.5 select-none [-webkit-touch-callout:none] transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:-outline-offset-3 has-[a:focus-visible]:outline-forest ${
         active ? "bg-forest-tint shadow-[inset_3px_0_0_var(--color-forest)]" : "hover:bg-sunken/50"
       }`}
     >
@@ -436,6 +450,7 @@ function PlaceRow({
         </div>
       </div>
     </article>
+    </>
   );
 }
 
@@ -532,10 +547,60 @@ function CardPrice({ place }: { place: PlaceSummary }) {
  * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route en Bekijk plek. Vervangt op de
  * telefoon de kleine popup van de kaart.
  */
-export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () => void }) {
+export function MapPick({
+  place,
+  onClose,
+  onPrev,
+  onNext,
+  position,
+}: {
+  place: PlaceSummary;
+  onClose: () => void;
+  /** Vorige en volgende plek in de volgorde van de lijst (G3); ook met vegen */
+  onPrev?: () => void;
+  onNext?: () => void;
+  /** "3 van 12" */
+  position?: string;
+}) {
   const arrival = arrivalShort(place);
+  // Vegen (UX-audit G3): omlaag sluit, opzij naar de vorige of volgende plek. Met gewone pointer-events, zodat motion
+  // niet mee hoeft op elke pagina met plekkaarten. Knoppen blijven voor wie niet veegt (WCAG 2.5.1).
+  const card = useRef<HTMLElement>(null);
+  const start = useRef<{ x: number; y: number; id: number } | null>(null);
+  const reset = () => {
+    if (card.current) card.current.style.transform = "";
+    start.current = null;
+  };
   return (
-    <section aria-label={`Gekozen plek: ${place.name}`} className="animate-rise absolute inset-x-2 bottom-2 z-20 rounded-2xl bg-surface p-3 shadow-float">
+    <section
+      ref={card}
+      aria-label={`Gekozen plek: ${place.name}`}
+      className="animate-rise absolute inset-x-2 bottom-2 z-20 touch-none rounded-2xl bg-surface p-3 shadow-float transition-transform duration-150 motion-reduce:transition-none"
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse") return;
+        start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      }}
+      onPointerMove={(e) => {
+        const s0 = start.current;
+        if (!s0 || s0.id !== e.pointerId || !card.current) return;
+        const dx = e.clientX - s0.x;
+        const dy = Math.max(0, e.clientY - s0.y);
+        if ((Math.abs(dx) > 10 || dy > 10) && !card.current.hasPointerCapture(e.pointerId)) card.current.setPointerCapture(e.pointerId);
+        if (Math.abs(dx) > 10 || dy > 10) card.current.style.transform = Math.abs(dx) > dy ? `translateX(${dx * 0.6}px)` : `translateY(${dy}px)`;
+      }}
+      onPointerUp={(e) => {
+        const s0 = start.current;
+        reset();
+        if (!s0 || s0.id !== e.pointerId) return;
+        const dx = e.clientX - s0.x;
+        const dy = e.clientY - s0.y;
+        if (dy > 70 && dy > Math.abs(dx)) onClose();
+        else if (dx < -60 && Math.abs(dx) > Math.abs(dy)) onNext?.();
+        else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) onPrev?.();
+      }}
+      onPointerCancel={reset}
+    >
+      <span aria-hidden="true" className="mx-auto -mt-1 mb-2 block h-1 w-10 rounded-full bg-line" />
       <div className="flex gap-3">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-sunken">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
@@ -561,6 +626,17 @@ export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () =
         <FacilitySigns place={place} max={4} size={22} />
         <CardPrice place={place} />
       </div>
+      {(onPrev || onNext) && (
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <button type="button" onClick={onPrev} disabled={!onPrev} aria-label="Vorige plek" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-30">
+            <Icon name="chevronLeft" size={20} />
+          </button>
+          {position && <span className="text-muted tabular-nums">{position}</span>}
+          <button type="button" onClick={onNext} disabled={!onNext} aria-label="Volgende plek" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-sunken disabled:opacity-30">
+            <Icon name="chevronRight" size={20} />
+          </button>
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-2">
         <NavigateButton to={place} slug={place.slug} className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
           <Icon name="route" size={18} /> Route
