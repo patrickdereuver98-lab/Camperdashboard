@@ -45,3 +45,8 @@ Werkwijze:
   code samengevoegd is, zodat de live site niet breekt. Test eerst (`npm test`), leg elke migratie vast in `web/supabase/migrations/`, en vermeld een
   nieuwe edge-functieversie in het implementatieplan. Ook MCP-servers aansluiten en skills installeren mag zonder
   vragen (zelfde besluit); noteer wat je toevoegt in `.claude/skills/BRONNEN.md`.
+- Orchestratie (16 november 2026): voor complex werk de skill `opus-orchestrator`. Fable stuurt aan (plan, samenvoegen,
+  eindcontrole), Sonnet doet verkennen, bouwen, testen en opzoeken (`explorer`, `worker`, `tester`, `researcher`), een
+  aparte `reviewer` leest alleen. Hoogstens 2 agents tegelijk (`.claude/settings.json`). Kleine taken niet uitbesteden;
+  nooit twee workers in dezelfde bestanden. Deze instructies en `docs/specs/` gaan voor (herkomst in
+  `.claude/skills/BRONNEN.md`).
