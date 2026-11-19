@@ -22,6 +22,8 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icon-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
       { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
+    // Delen vanuit Google Maps of WhatsApp naar VrijStaan opent Zoeken rond dat punt (Android en computer; niet op iOS)
+    share_target: { action: "/delen", method: "GET", params: { title: "title", text: "text", url: "url" } },
     shortcuts: [
       { name: "Zoeken op de kaart", short_name: "Zoeken", url: "/zoeken" },
       { name: "Plekken dichtbij", short_name: "Dichtbij", url: "/dichtbij" },

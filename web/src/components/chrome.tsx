@@ -200,7 +200,13 @@ function OfflineBar() {
   if (!offline) return null;
   return (
     <div role="status" className="flex items-center justify-center gap-2 bg-ink px-4 py-2 text-sm font-semibold text-surface">
-      <Icon name="wifiOff" size={16} /> Geen verbinding. Bewaarde plekken en eerder bekeken pagina&apos;s werken nog.
+      <Icon name="wifiOff" size={16} className="shrink-0" />
+      <span>
+        Geen verbinding. Mijn reis, je bewaarde plekken en de pagina&apos;s die je eerder bekeek werken gewoon.{" "}
+        <Link href="/mijn-reis" className="underline underline-offset-2">
+          Naar Mijn reis
+        </Link>
+      </span>
     </div>
   );
 }

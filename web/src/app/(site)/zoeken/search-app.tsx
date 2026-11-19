@@ -448,15 +448,16 @@ function Results({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage bestaat pas in de browser
     if (n > PAGE) setLimit((l) => Math.max(l, n));
   }, [queryKey]);
-  const showMore = () => {
-    const n = limit + PAGE;
-    setLimit(n);
+  // Altijd vanaf de actuele stand ophogen: vanzelf laden en het teruggezette aantal mogen elkaar niet overschrijven
+  const showMore = () => setLimit((l) => l + PAGE);
+  useEffect(() => {
+    if (limit <= PAGE) return;
     try {
-      sessionStorage.setItem(SHOWN_KEY, JSON.stringify({ q: queryKey, n }));
+      sessionStorage.setItem(SHOWN_KEY, JSON.stringify({ q: queryKey, n: limit }));
     } catch {
       // Opslag uit (privévenster): dan begint de lijst bij terugkomen weer bij 20
     }
-  };
+  }, [limit, queryKey]);
   const [animate] = useState(!fromServer);
 
   // Zoeken in deze plekken (Z4): bij veel resultaten op naam of plaats, alleen op het toestel

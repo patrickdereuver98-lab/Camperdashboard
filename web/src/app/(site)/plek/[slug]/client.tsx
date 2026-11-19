@@ -740,6 +740,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                       autoFocus
                       autoComplete="one-time-code"
                       inputMode="numeric"
+                      enterKeyHint="done"
                       pattern="[0-9]{6,10}"
                       maxLength={10}
                       className={`${input} text-center font-mono text-xl tracking-[0.3em]`}
@@ -772,7 +773,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
                     <span className="mb-1.5 block font-semibold">
                       Je e-mailadres <span className="text-alert">*</span>
                     </span>
-                    <input name="email" type="email" required autoComplete="email" inputMode="email" className={input} {...fieldAria(err, R, "email")} />
+                    <input name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="send" className={input} {...fieldAria(err, R, "email")} />
                   </label>
                   <FieldError error={err} form={R} field="email" />
                 </div>
