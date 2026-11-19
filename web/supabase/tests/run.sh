@@ -65,3 +65,12 @@ psql "$dr_url" -q -v ON_ERROR_STOP=1 -X <<SQL
 \set migration $migrations/20261106200200_publicatiedrempel.sql
 \i $here/drempel_rls.test.sql
 SQL
+
+# Geschiedenis per plek (trigger, terugzetten, leesrecht) in een eigen database
+psql "$DATABASE_URL" -q -X -c "drop database if exists plekgeschiedenis" -c "create database plekgeschiedenis"
+pg_url="$(python3 -c 'import sys,urllib.parse as u;p=u.urlsplit(sys.argv[1]);print(u.urlunsplit(p._replace(path="/plekgeschiedenis")))' "$DATABASE_URL")"
+psql "$pg_url" -q -v ON_ERROR_STOP=1 -X <<SQL
+\i $here/plekgeschiedenis_stub.sql
+\set migration $migrations/20261118100000_plekgeschiedenis.sql
+\i $here/plekgeschiedenis.test.sql
+SQL
