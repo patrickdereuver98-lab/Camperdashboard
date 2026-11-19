@@ -112,7 +112,7 @@ export function AlongRoute({
             return (
               <li key={p.slug} className="flex items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
-                  <Link href={`/plek/${p.slug}`} className="block truncate font-semibold hover:text-forest">
+                  <Link href={`/plek/${p.slug}`} className="-my-3 block truncate py-3 font-semibold hover:text-forest">
                     {p.name}
                   </Link>
                   <p className="truncate text-sm text-ink-2">

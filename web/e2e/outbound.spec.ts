@@ -26,8 +26,8 @@ test("website en route tellen elk apart, met de slug van de plek", async ({ page
   });
   await page.goto(`/plek/${place.slug}`);
 
-  const praktisch = page.locator("section", { has: page.getByRole("heading", { name: "Praktisch en contact" }) });
-  await praktisch.locator("a[target=_blank]").first().click();
+  // Mobiel staat de website bij Praktisch en contact, vanaf md alleen in de prijskaart van de zijkolom
+  await page.locator("main a[target=_blank]:visible").first().click();
   await expect.poll(() => events.filter((e) => e.p_name === "outbound").map((e) => e.p_props)).toContainEqual({ soort: "website", slug: place.slug });
 
   await page.locator("#ligging").getByRole("button", { name: "Open in navigatie" }).click();

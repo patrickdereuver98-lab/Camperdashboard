@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { beforeEach, test } from "node:test";
 import { createLocalStore, onStorageFailure, resetStorageFailure, storageFailed } from "../src/lib/local-store.ts";
-import { decodeTrip, encodeTrip } from "../src/lib/trip-storage.ts";
+import { decodeTrips, emptyTripList, encodeTrips, type TripList } from "../src/lib/trip-storage.ts";
 
 class FakeStorage {
   data = new Map<string, string>();
@@ -107,11 +107,16 @@ test("kapotte of ongeldige opslag geeft de standaardwaarde", () => {
   assert.deepEqual(numbers("u").read(), []);
 });
 
-test("reisopslag: oude lijst wordt omgezet en met versie teruggeschreven", () => {
+test("reisopslag: oude lijst wordt de eerste reis en met versie 4 teruggeschreven", () => {
   storage.setItem("reis", JSON.stringify([{ slug: "a", nights: 0 }, { slug: "b", nights: 40 }, { slug: "a", nights: 2 }]));
-  const s = createLocalStore("reis", [], { decode: decodeTrip, encode: encodeTrip });
-  assert.deepEqual(s.read(), [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }]);
-  s.write([...s.read(), { slug: "c", nights: 3 }]);
-  assert.deepEqual(JSON.parse(storage.getItem("reis")!), { v: 3, stops: [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }, { slug: "c", nights: 3 }] });
-  assert.deepEqual(s.read(), [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }, { slug: "c", nights: 3 }]);
+  const s = createLocalStore<TripList>("reis", emptyTripList(), { decode: decodeTrips, encode: encodeTrips });
+  const first = s.read();
+  assert.deepEqual(first.trips[0].stops, [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }]);
+  s.write({ ...first, trips: [{ ...first.trips[0], stops: [...first.trips[0].stops, { slug: "c", nights: 3 }] }] });
+  assert.deepEqual(JSON.parse(storage.getItem("reis")!), {
+    v: 4,
+    active: "reis-1",
+    trips: [{ id: "reis-1", name: "Mijn reis", stops: [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }, { slug: "c", nights: 3 }] }],
+  });
+  assert.deepEqual(s.read().trips[0].stops, [{ slug: "a", nights: 1 }, { slug: "b", nights: 21 }, { slug: "c", nights: 3 }]);
 });

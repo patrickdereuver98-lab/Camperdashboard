@@ -18,7 +18,7 @@ const ROWS: string[][] = [
   ],
   [
     "Samen plannen",
-    "De gedeelde reis (plekken en nachten), wie hem het laatst wijzigde, en je naam zoals de andere deelnemers die zien. Alleen deelnemers kunnen de reis zien",
+    "De gedeelde reis (plekken, eigen punten, nachten en de notities die je deelt), wie hem het laatst wijzigde, en je naam zoals de andere deelnemers die zien. Alleen deelnemers kunnen de reis zien",
     "Uitvoering van de overeenkomst (art. 6 lid 1 sub b): je doet zelf mee",
     "Zolang de gedeelde reis bestaat; je deelname eindigt als je stopt of je account verwijdert",
   ],
@@ -271,7 +271,9 @@ export default function PrivacyPage() {
         <p>
           In Mijn reis kun je een begin- en eindpunt kiezen, bijvoorbeeld je huisadres. Dat punt staat alleen op je eigen
           apparaat. Het gaat niet mee naar je account of in een gedeelde link, en naar de routeplanner gaat het afgerond op
-          ongeveer 1 kilometer. Heb je bij Mijn camper de hoogte, het gewicht, de lengte of de breedte ingevuld, dan stuurt
+          ongeveer 1 kilometer. Een eigen punt in je reis (een adres of een punt op de kaart) gaat ook afgerond naar de
+          routeplanner. Het gaat wel mee naar je account (alleen in de bovenste reis in je lijst) en, als je samen plant, naar je reisgenoten. Je notities zijn
+          privé: alleen notities waarbij je &quot;Delen met reisgenoten&quot; aanzet, zien je reisgenoten. Heb je bij Mijn camper de hoogte, het gewicht, de lengte of de breedte ingevuld, dan stuurt
           onze server die maten mee naar OpenRouteService, zodat de route lage bruggen en te zware wegen mijdt. Die maten
           zijn niet aan jou te koppelen. Een GPX-bestand of agendabestand maakt je browser zelf; dat gaat niet langs onze
           server.
@@ -321,6 +323,13 @@ export default function PrivacyPage() {
             openbaar heeft gemaakt.
           </li>
           <li>
+            Eenmalig mailen we het openbare e-mailadres van een plek met de vraag naar gegevens die we missen, zoals de aankomst- en vertrektijd. Het adres
+            gaat naar Resend, onze mailverzender, en wat je terugschrijft leest een AI (Google Gemini), zonder je adres, om er
+            de gegevens uit te halen. Een medewerker beslist daarna of het op de site komt. We bewaren van een uitgaande mail
+            alleen een versleutelde code van het adres, geen adres. Met de afmeldlink in de mail, of door te antwoorden dat je
+            geen mail wilt, stoppen we direct; die afmelding bewaren we, zodat we je niet opnieuw mailen.
+          </li>
+          <li>
             Op foto&apos;s van de website van een plek staat klein waar ze vandaan komen. Wil de eigenaar of maker dat een
             foto verdwijnt, dan halen we hem weg na een melding via <Link href="/melden">Meld inhoud</Link>.
           </li>
@@ -357,12 +366,12 @@ export default function PrivacyPage() {
             rijtijd laat berekenen.
           </li>
           <li>
-            <strong>Resend</strong> (Verenigde Staten) ontvangt mail die eigenaren naar ons sturen en geeft die door aan onze
-            server.
+            <strong>Resend</strong> (Verenigde Staten) verstuurt de eenmalige vraag aan eigenaren, ontvangt de mail die zij naar
+            ons sturen en geeft die door aan onze server.
           </li>
           <li>
             <strong>Google</strong> (Gemini) leest het onderwerp en de tekst van zo&apos;n mail, zonder het afzenderadres, en
-            zegt ons of de eigenaar iets bevestigt of een nieuwe prijs of vertrektijd noemt. Een mens beslist daarna of we
+            zegt ons of de eigenaar iets bevestigt of nieuwe gegevens noemt, zoals een prijs, aankomst- of vertrektijd. Een mens beslist daarna of we
             iets aanpassen. Gemini helpt ons ook bij het controleren van wijzigingen die bezoekers doorgeven; daarbij gaan
             alleen gegevens van de plek mee, niets over jou.
           </li>

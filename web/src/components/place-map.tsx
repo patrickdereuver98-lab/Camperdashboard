@@ -14,17 +14,17 @@ import { currentTheme } from "@/lib/theme";
 import { useDarkTheme } from "@/lib/use-media";
 import { SaveButton } from "./place-ui";
 
-const NL_BOUNDS: [[number, number], [number, number]] = [
+export const NL_BOUNDS: [[number, number], [number, number]] = [
   [3.3, 50.75],
   [7.25, 53.55],
 ];
-const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
-const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
+export const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
+export const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 /** Straal van het onzichtbare tikvlak rond een punt: 22 px = een tikdoel van 44 × 44 px */
 const HIT_RADIUS = 22;
 
 /** Basiskaart in de tinten van de site: koel wit, zacht groen, meerblauw */
-function tint(map: MlMap, dark: boolean) {
+export function tint(map: MlMap, dark: boolean) {
   const colors = dark
     ? { bg: "#141b16", water: "#17303a", green: "#1a2a20" }
     : { bg: "#f1ebdf", water: "#cfe3e4", green: "#dde7d6" };
@@ -83,6 +83,7 @@ export function PlaceMap({
   focus,
   locate = false,
   onSearchArea,
+  pins,
   className = "",
 }: {
   places: MapPlace[];
@@ -108,6 +109,8 @@ export function PlaceMap({
   locate?: boolean;
   /** Na zelf schuiven of zoomen de knop "Zoek in dit gebied" (K2): middelpunt en straal van wat je ziet */
   onSearchArea?: (center: LatLng, radiusKm: number) => void;
+  /** Eigen punten (Mijn reis): een gestippelde ruit met nummer, geen popup en geen link; ze tellen mee bij inzoomen */
+  pins?: (LatLng & { label: string; number?: number })[];
   className?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
@@ -116,6 +119,7 @@ export function PlaceMap({
   // Inhoud van de open popup: React rendert die via een portal in het vak van MapLibre
   const [openPopup, setOpenPopup] = useState<{ node: HTMLElement; props: PopupProps } | null>(null);
   const userMarker = useRef<{ remove(): void } | null>(null);
+  const pinMarkers = useRef<{ remove(): void }[]>([]);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -379,6 +383,7 @@ export function PlaceMap({
     if (!ready || !map) return;
     const pts: [number, number][] = [
       ...places.map((p) => [p.lng, p.lat] as [number, number]),
+      ...(pins ?? []).map((p) => [p.lng, p.lat] as [number, number]),
       ...(user ? [[user.lng, user.lat] as [number, number]] : []),
     ];
     if (!pts.length) return;
@@ -429,6 +434,35 @@ export function PlaceMap({
       alive = false;
     };
   }, [shownUser, ready]);
+
+  // Eigen punten als losse markers: anders dan de stippen van plekken, zonder popup
+  const pinsKey = JSON.stringify(pins ?? []);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    const list = JSON.parse(pinsKey) as NonNullable<typeof pins>;
+    let alive = true;
+    import("maplibre-gl").then((maplibregl) => {
+      if (!alive || !mapRef.current) return;
+      pinMarkers.current = list.map((p) => {
+        const el = document.createElement("div");
+        el.style.cssText =
+          "width:26px;height:26px;display:grid;place-items:center;border:2px dashed currentColor;border-radius:6px;transform:rotate(45deg);background:var(--surface);color:var(--ink);font:600 12px/1 var(--font-sans,sans-serif)";
+        const n = document.createElement("span");
+        n.style.cssText = "transform:rotate(-45deg)";
+        n.textContent = p.number !== undefined ? String(p.number) : "";
+        el.appendChild(n);
+        el.setAttribute("role", "img");
+        el.setAttribute("aria-label", `Eigen punt: ${p.label}`);
+        return new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(mapRef.current!);
+      });
+    });
+    return () => {
+      alive = false;
+      pinMarkers.current.forEach((m) => m.remove());
+      pinMarkers.current = [];
+    };
+  }, [pinsKey, ready]);
 
   // Gekozen plek in beeld houden (vorige/volgende); alleen schuiven als hij buiten het midden valt
   useEffect(() => {

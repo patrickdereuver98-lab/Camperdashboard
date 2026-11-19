@@ -7,7 +7,7 @@ import { Chip } from "@/components/chip";
 import { Icon } from "@/components/icons";
 
 /** Adres zoeken via onze eigen /api/locatie (PDOK); de browser praat zelf niet met PDOK */
-function AddressSearch({ onPick, onCancel }: { onPick: (e: Endpoint) => void; onCancel: () => void }) {
+export function AddressSearch({ onPick, onCancel }: { onPick: (e: Endpoint) => void; onCancel: () => void }) {
   const id = useId();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Location[]>([]);

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Cookiebeleid", description: "Welke l
 
 const ROWS = [
   ["vrijstaan:toestemming", "Noodzakelijk", "Je keuze over statistieken, met een willekeurig id, de versie van de melding en het tijdstip", "Tot je hem wijzigt of je browsergegevens wist"],
-  ["vrijstaan:reis", "Noodzakelijk", "De plekken die je bewaart en het aantal nachten (Mijn reis)", "Tot je hem wist"],
+  ["vrijstaan:reis", "Noodzakelijk", "Je reizen in Mijn reis: de plekken die je bewaart, eigen punten, nachten en notities", "Tot je hem wist"],
   ["vrijstaan:reis-plekken", "Noodzakelijk", "Een kopie van de gegevens van je bewaarde plekken, zodat Mijn reis ook zonder bereik werkt", "Tot je je reis wist"],
   ["vrijstaan:reisinstellingen", "Noodzakelijk", "Verbruik, brandstofprijs, personen en toeristenbelasting voor de kostenberekening", "Tot je hem wist"],
   ["vrijstaan:welkom", "Noodzakelijk", "Dat je de korte uitleg op de startpagina hebt gezien, zodat hij niet terugkomt", "Tot je je browsergegevens wist"],

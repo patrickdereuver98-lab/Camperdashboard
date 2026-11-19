@@ -85,7 +85,8 @@ export function StatsApp() {
   const stops = useMemo(() => {
     if (!places) return null;
     const bySlug = new Map(places.map((p) => [p.slug, p]));
-    return trip.stops.map((s) => ({ ...s, place: bySlug.get(s.slug)! })).filter((s) => s.place);
+    // Eigen punten hebben geen plekgegevens: die tellen niet mee
+    return trip.stops.filter((s) => !s.point).map((s) => ({ ...s, place: bySlug.get(s.slug)! })).filter((s) => s.place);
   }, [places, trip.stops]);
 
   const routeKey = useMemo(

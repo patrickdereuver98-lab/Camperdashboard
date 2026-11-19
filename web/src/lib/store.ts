@@ -7,9 +7,27 @@ import { cleanVehicle, type Vehicle } from "./vehicle";
 import { cleanExpenses, type Expense } from "./expenses";
 import { cleanRouteEnds, cleanRoutePrefs, DEFAULT_ROUTE_PREFS, EMPTY_ENDS, type RouteEnds, type RoutePrefs } from "./route-prefs";
 import { createLocalStore, onStorageFailure, storageFailed, type StoreOptions } from "./local-store";
-import { mergeTrips } from "./trip-merge";
+import { addPoint, newPointSlug, removeNote, saveNote, type Stop, type TripNote, type TripPoint } from "./trip-merge";
 import { addRecent, decodeRecentPlaces, decodeRecentSearches, type RecentPlace, type RecentSearch } from "./recent";
-import { clampNights, decodeTrip, decodeTripPlaces, encodeTrip, encodeTripPlaces, type TripPlacesCopy } from "./trip-storage";
+import {
+  activeTrip,
+  addTrip,
+  clampNights,
+  decodeTripPlaces,
+  decodeTrips,
+  deleteTrip,
+  emptyTripList,
+  encodeTrips,
+  encodeTripPlaces,
+  renameTrip,
+  restoreTrip,
+  selectTrip,
+  setTripStops,
+  type RemovedTrip,
+  type Trip,
+  type TripList,
+  type TripPlacesCopy,
+} from "./trip-storage";
 
 // ── Kleine localStorage-store met abonnement (kern in local-store.ts) ───────
 
@@ -27,26 +45,70 @@ export const useStorageFailed = () => useSyncExternalStore(onStorageFailure, sto
 
 // ── Mijn reis ───────────────────────────────────────────────────────────────
 
-export interface TripStop {
-  slug: string;
-  /** 0 = tussenstop (je rijdt dezelfde dag verder) */
-  nights: number;
-  note?: string;
+export type TripStop = Stop;
+export type { Trip, TripList, TripNote, TripPoint };
+
+const EMPTY_TRIPS: TripList = emptyTripList();
+// Met versieveld (trip-storage.ts): oude opslag wordt bij het lezen omgezet naar versie 4 (meerdere reizen)
+const tripsStore = createStore<TripList>("vrijstaan:reis", EMPTY_TRIPS, (v): v is TripList => decodeTrips(v) !== undefined, {
+  decode: decodeTrips,
+  encode: encodeTrips,
+});
+
+const writeTrips = (next: TripList) => tripsStore.write(next);
+const findTrip = (list: TripList, id: string) => list.trips.find((t) => t.id === id);
+
+/** Stops van één reis (voor de synchronisatie); leeg als die reis er niet (meer) is */
+export const readTripStops = (id: string): TripStop[] => findTrip(tripsStore.read(), id)?.stops ?? [];
+/** Stops van één reis vervangen; bestaat die reis niet (meer), dan gebeurt er niets */
+export function writeTripStops(id: string, stops: TripStop[]) {
+  const list = tripsStore.read();
+  if (findTrip(list, id)) writeTrips(setTripStops(list, id, stops));
 }
 
-const EMPTY_TRIP: TripStop[] = [];
-// Met versieveld (trip-storage.ts): oude opslag (een losse lijst) wordt bij het lezen omgezet, nachten begrensd
-const tripStore = createStore<TripStop[]>("vrijstaan:reis", EMPTY_TRIP, (v): v is TripStop[] => decodeTrip(v) !== undefined, {
-  decode: decodeTrip,
-  encode: encodeTrip,
-});
-/** De reis zoals hij nu op dit toestel staat (buiten React, bijvoorbeeld na een await) */
-export const readTrip = () => tripStore.read();
-// Een lijst uit de app zelf is al de nieuwste vorm (tussenstop met 0 nachten mag): niet als oude opslag lezen
-export const writeTrip = (next: TripStop[]) => tripStore.write(mergeTrips([], next));
+/** De reis die nu open staat (buiten React, bijvoorbeeld na een await) */
+export const readTrip = () => activeTrip(tripsStore.read()).stops;
+export const writeTrip = (next: TripStop[]) => writeTripStops(activeTrip(tripsStore.read()).id, next);
+
+/**
+ * De reis die met je account meegaat (`user_trips`): de eerste in de lijst. Andere reizen staan alleen op dit toestel
+ * (besluit 19 november 2026).
+ */
+export const accountTripId = (list: TripList = tripsStore.read()) => list.trips[0].id;
+export const readAccountTrip = () => readTripStops(accountTripId());
+export const writeAccountTrip = (next: TripStop[]) => writeTripStops(accountTripId(), next);
+export const useAccountTrip = () => tripsStore.use().trips[0].stops;
+
+/** Alle reizen op dit toestel: lijst, open reis, aanmaken, hernoemen, wisselen, verwijderen en terugzetten */
+export function useTrips() {
+  const list = tripsStore.use();
+  return {
+    list: list.trips,
+    active: activeTrip(list),
+    /** Nieuwe reis maken en openen; geeft de sleutel terug (undefined als er al MAX_TRIPS zijn) */
+    create: (name: string, stops: TripStop[] = []) => {
+      const next = addTrip(tripsStore.read(), name, stops);
+      if (!next) return undefined;
+      writeTrips(next);
+      return next.active;
+    },
+    rename: (id: string, name: string) => writeTrips(renameTrip(tripsStore.read(), id, name)),
+    select: (id: string) => writeTrips(selectTrip(tripsStore.read(), id)),
+    /** Reis verwijderen; de laatste reis blijft altijd bestaan (die wordt leeggemaakt) */
+    remove: (id: string): RemovedTrip | undefined => {
+      const r = deleteTrip(tripsStore.read(), id);
+      if (!r) return undefined;
+      writeTrips(r.list);
+      return r.removed;
+    },
+    /** Verwijderde reis terugzetten op dezelfde plaats ("Ongedaan maken") */
+    restore: (r: RemovedTrip) => writeTrips(restoreTrip(tripsStore.read(), r)),
+  };
+}
 
 export function useTrip() {
-  const stops = tripStore.use();
+  const list = tripsStore.use();
+  const stops = activeTrip(list).stops;
   const set = writeTrip;
   return {
     stops,
@@ -56,13 +118,21 @@ export function useTrip() {
     remove: (slug: string) => set(stops.filter((s) => s.slug !== slug)),
     setNights: (slug: string, nights: number) =>
       set(stops.map((s) => (s.slug === slug ? { ...s, nights: clampNights(nights) } : s))),
-    setNote: (slug: string, note: string) => set(stops.map((s) => (s.slug === slug ? { ...s, note } : s))),
+    /** Notitie bewaren (nieuw of aangepast); lege tekst haalt hem weg */
+    saveNote: (slug: string, note: TripNote) => set(saveNote(stops, slug, note)),
+    removeNote: (slug: string, id: string) => set(removeNote(stops, slug, id)),
     /** Plek op een bepaalde plaats in de reis zetten (of daarheen verplaatsen als hij er al in staat) */
     insertAt: (slug: string, at: number, nights = 1) => {
       const rest = stops.filter((s) => s.slug !== slug);
       const existing = stops.find((s) => s.slug === slug);
       const i = Math.max(0, Math.min(rest.length, at));
       set([...rest.slice(0, i), existing ?? { slug, nights: clampNights(nights) }, ...rest.slice(i)]);
+    },
+    /** Eigen punt toevoegen (achteraan, of op plaats `at`); geeft de sleutel van de nieuwe stop terug */
+    addPoint: (point: TripPoint, at = stops.length, nights = 0) => {
+      const slug = newPointSlug();
+      set(addPoint(stops, point, slug, at, nights));
+      return slug;
     },
     reverse: () => set([...stops].reverse()),
     move: (from: number, to: number) => {
@@ -87,11 +157,24 @@ export const writeVehicle = (v: Vehicle) => vehicleStore.write(cleanVehicle(v));
 
 // ── Samen plannen (gedeelde reis) ─────────────────────────────────────────
 
-export type SharedLink = { id: string; name: string; code: string };
+/** `trip`: de reis op dit toestel die je samen plant (sleutel uit Mijn reis); zonder (van vóór versie 4) de eerste */
+export type SharedLink = { id: string; name: string; code: string; trip?: string };
 const sharedStore = createStore<SharedLink | null>("vrijstaan:samen", null, (v): v is SharedLink | null =>
   v === null || (typeof v === "object" && typeof (v as SharedLink).id === "string" && typeof (v as SharedLink).code === "string"),
 );
 export const useSharedLink = () => [sharedStore.use(), sharedStore.write] as const;
+/** De reis op dit toestel die bij de gedeelde reis hoort: de gekozen reis, of (oude koppeling) de eerste */
+export const linkedTripId = (link: SharedLink | null, list: TripList = tripsStore.read()): string | undefined => {
+  if (!link) return undefined;
+  const id = link.trip ?? accountTripId(list);
+  return findTrip(list, id) ? id : undefined;
+};
+/** Stops van de gekoppelde reis, voor React */
+export function useLinkedTrip(link: SharedLink | null) {
+  const list = tripsStore.use();
+  const id = linkedTripId(link, list);
+  return { id, trip: id ? findTrip(list, id) : undefined };
+}
 
 // ── Uitgaven onderweg ──────────────────────────────────────────────────────
 

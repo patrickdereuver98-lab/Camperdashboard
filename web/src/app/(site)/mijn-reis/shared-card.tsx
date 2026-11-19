@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
-import { useSharedLink, useTrip } from "@/lib/store";
+import { useLinkedTrip, useSharedLink, useTrips } from "@/lib/store";
+import { forShared } from "@/lib/trip-merge";
 import { errorMessage, supabase, toJson } from "@/lib/supabase-browser";
 import { Icon } from "@/components/icons";
 
@@ -11,7 +12,10 @@ import { Icon } from "@/components/icons";
 export function SharedCard() {
   const { session, loading } = useSession();
   const [link, setLink] = useSharedLink();
-  const trip = useTrip();
+  const trips = useTrips();
+  const linked = useLinkedTrip(link);
+  // Plan je een andere reis samen dan de reis die nu open staat, dan zeggen we welke
+  const elsewhere = linked.trip && linked.trip.id !== trips.active.id ? linked.trip : undefined;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -37,10 +41,12 @@ export function SharedCard() {
   async function start() {
     setBusy(true);
     setErr(null);
-    const { data, error } = await (await supabase()).rpc("create_shared_trip", { p_stops: toJson(trip.stops), p_name: "Onze reis" });
+    // Alleen notities met "Delen met reisgenoten" aan gaan mee; de rest blijft privé
+    const active = trips.active;
+    const { data, error } = await (await supabase()).rpc("create_shared_trip", { p_stops: toJson(forShared(active.stops)), p_name: active.name });
     setBusy(false);
     if (error) return setErr(errorMessage(error));
-    setLink(data as { id: string; code: string; name: string });
+    setLink({ ...(data as { id: string; code: string; name: string }), trip: active.id });
   }
 
   async function stop() {
@@ -73,20 +79,29 @@ export function SharedCard() {
         </>
       ) : !link ? (
         <>
-          <p className="mt-2 text-ink-2">Nodig iemand uit. Jullie zien allebei dezelfde reis, en wijzigingen komen direct bij de ander binnen.</p>
+          <p className="mt-2 text-ink-2">
+            Nodig iemand uit voor &ldquo;{trips.active.name}&rdquo;. Jullie zien allebei dezelfde reis, en wijzigingen komen direct bij de ander binnen. Je reisgenoten
+            zien ook je eigen punten met hun ligging. Je notities blijven privé, tenzij je ze deelt met reisgenoten.
+          </p>
           <button type="button" onClick={start} disabled={busy} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-forest font-semibold text-on-forest disabled:opacity-60">
             <Icon name="user" size={19} /> {busy ? "Even geduld…" : "Samen plannen"}
           </button>
         </>
       ) : (
         <>
-          <p className="mt-2 text-ink-2">
+          <p className="mt-2 text-ink-2" data-testid="shared-status">
+            {elsewhere ? `Je plant “${elsewhere.name}” samen` : "Je plant deze reis samen"}
             {members === null
-              ? "Je plant deze reis samen."
+              ? "."
               : members.length
-                ? `Je plant deze reis samen met ${members.join(" en ")}.`
-                : "Nog niemand heeft je uitnodiging geopend. Stuur de link naar je reisgenoot."}
+                ? ` met ${members.join(" en ")}.`
+                : ". Nog niemand heeft je uitnodiging geopend. Stuur de link naar je reisgenoot."}
           </p>
+          {elsewhere && (
+            <button type="button" onClick={() => trips.select(elsewhere.id)} className="mt-2 h-11 font-semibold text-forest underline">
+              Naar {elsewhere.name}
+            </button>
+          )}
           <button type="button" onClick={share} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-md border border-line font-semibold hover:border-forest">
             <Icon name={copied ? "check" : "share"} size={19} /> {copied ? "Link gekopieerd" : "Uitnodiging sturen"}
           </button>
