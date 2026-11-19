@@ -3,16 +3,22 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Reorder, useDragControls } from "motion/react";
-import { eur, formatDuration, pluralize } from "@/lib/format";
+import { departureShort, eur, formatDuration, pluralize } from "@/lib/format";
 import { distanceKm, formatKm, type LatLng } from "@/lib/geo";
 import { closedText, shortDay, type DatedStop } from "@/lib/trip-dates";
 import { clock, minutesText, type Leg, type LegPlan } from "@/lib/trip-plan";
-import { MAX_NOTE } from "@/lib/trip-merge";
+import { MAX_NOTE, MAX_NOTES, newNoteId, type TripNote, type TripPoint } from "@/lib/trip-merge";
+import type { CorridorHit } from "@/lib/route-corridor";
 import type { PlaceSummary } from "@/lib/types";
+import { Chip } from "@/components/chip";
 import { Icon } from "@/components/icons";
 import { OpenChip, PlacePhoto } from "@/components/place-ui";
 
-export type StopView = { slug: string; nights: number; note?: string; place: PlaceSummary };
+/**
+ * Een stop zoals de lijst hem toont. Bij een eigen punt (`point`) is `place` alleen naam en ligging (zie `pointPlace`
+ * in trip-app.tsx): geen plekgegevens, en die tonen we ook niet.
+ */
+export type StopView = { slug: string; nights: number; notes?: TripNote[]; point?: TripPoint; place: PlaceSummary };
 
 const warnBox = "mt-1.5 flex items-start gap-2 rounded-lg px-3 py-2 text-sm";
 
@@ -26,6 +32,7 @@ export function LegRow({
   loading,
   maxDriveMin,
   onFindStop,
+  suggestions,
 }: {
   leg?: Leg;
   plan?: LegPlan;
@@ -35,6 +42,8 @@ export function LegRow({
   loading: boolean;
   maxDriveMin: number;
   onFindStop?: () => void;
+  /** Voorstellen om te overnachten rond het punt waar de dag vol is (OvernightList) */
+  suggestions?: React.ReactNode;
 }) {
   return (
     <div className="flex gap-3 py-2 pl-5 text-sm text-ink-2" data-testid="leg">
@@ -83,10 +92,11 @@ export function LegRow({
         {plan?.overLimit && (
           <div className={`${warnBox} bg-sunken text-ink`} data-testid="leg-long">
             <Icon name="alert" size={17} className="mt-0.5 shrink-0" />
-            <div>
+            <div className="min-w-0 flex-1">
               <p>
                 Deze dag rijd je {minutesText(plan.dayDriveMin)}, langer dan de {minutesText(maxDriveMin)} die je wilt.
               </p>
+              {suggestions}
               {onFindStop && (
                 <button type="button" onClick={onFindStop} className="-my-1 min-h-11 font-semibold text-forest underline">
                   Zoek een tussenstop
@@ -100,23 +110,14 @@ export function LegRow({
   );
 }
 
-function StopNote({ note, onSave }: { note?: string; onSave: (n: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(note ?? "");
-  if (!open)
-    return (
-      <div className="mt-1">
-        {note && <p className="text-sm whitespace-pre-line text-ink-2" data-testid="stop-note">{note}</p>}
-        <button type="button" onClick={() => setOpen(true)} className="-my-1 min-h-11 text-sm font-semibold text-forest underline">
-          {note ? "Notitie aanpassen" : "Notitie toevoegen"}
-        </button>
-      </div>
-    );
+/** Bewerken van één notitie: tekst en de schakelaar "Delen met reisgenoten" (standaard uit) */
+function NoteEditor({ note, onSave, onCancel, onRemove }: { note: TripNote; onSave: (n: TripNote) => void; onCancel: () => void; onRemove?: () => void }) {
+  const [draft, setDraft] = useState(note.text);
+  const [shared, setShared] = useState(!!note.shared);
   return (
-    <div className="mt-2">
+    <div className="mt-2" data-testid="note-editor">
       <label className="block">
         <span className="mb-1 block text-sm font-semibold">Notitie</span>
-        <span className="mb-1 block text-sm text-muted">Plan je samen, dan zien je reisgenoten hem ook.</span>
         <textarea
           autoFocus
           value={draft}
@@ -126,35 +127,141 @@ function StopNote({ note, onSave }: { note?: string; onSave: (n: string) => void
           className="w-full rounded-lg border border-field bg-surface px-3 py-2 text-base focus:ring-2 focus:ring-forest focus:outline-none"
         />
       </label>
-      <div className="mt-1 flex gap-2">
+      <Chip pressed={shared} onClick={() => setShared(!shared)} className="mt-1">
+        Delen met reisgenoten
+      </Chip>
+      <p className="mt-1 text-sm text-muted">
+        {shared ? "Je reisgenoten zien deze notitie als je samen plant, en hij gaat mee als je de reis als tekst deelt." : "Alleen jij ziet deze notitie."}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => {
-            onSave(draft.trim());
-            setOpen(false);
-          }}
+          onClick={() => onSave({ id: note.id, text: draft.trim(), ...(shared ? { shared: true as const } : {}) })}
           className="h-11 rounded-md bg-forest px-4 font-semibold text-on-forest"
         >
           Bewaren
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setDraft(note ?? "");
-            setOpen(false);
-          }}
-          className="h-11 px-3 font-semibold text-forest underline"
-        >
+        <button type="button" onClick={onCancel} className="h-11 px-3 font-semibold text-forest underline">
           Annuleren
         </button>
+        {onRemove && (
+          <button type="button" onClick={onRemove} className="ml-auto h-11 px-3 font-semibold text-alert underline">
+            Notitie weghalen
+          </button>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** Notities bij een stop: standaard privé; per notitie "Delen met reisgenoten" */
+function StopNotes({ notes, onSave, onRemove }: { notes: TripNote[]; onSave: (n: TripNote) => void; onRemove: (id: string) => void }) {
+  // Welke notitie open staat; "nieuw" voor een nieuwe
+  const [editing, setEditing] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<TripNote | null>(null);
+  return (
+    <div className="mt-1">
+      {notes.length > 0 && (
+        <ul className="mt-1 space-y-1">
+          {notes.map((n) =>
+            editing === n.id ? (
+              <li key={n.id}>
+                <NoteEditor
+                  note={n}
+                  onSave={(x) => {
+                    onSave(x);
+                    setEditing(null);
+                  }}
+                  onCancel={() => setEditing(null)}
+                  onRemove={() => {
+                    onRemove(n.id);
+                    setEditing(null);
+                  }}
+                />
+              </li>
+            ) : (
+              <li key={n.id} className="flex items-start gap-2" data-testid="stop-note">
+                <div className="min-w-0 flex-1 pt-2.5">
+                  <p className="text-sm whitespace-pre-line text-ink-2" data-testid="stop-note-text">{n.text}</p>
+                  <p className="flex items-center gap-1 text-sm text-muted" data-testid="stop-note-scope">
+                    <Icon name={n.shared ? "user" : "eye"} size={14} />
+                    {n.shared ? "Gedeeld met reisgenoten" : "Privé"}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setEditing(n.id)} className="h-11 shrink-0 px-2 text-sm font-semibold text-forest underline">
+                  Aanpassen
+                </button>
+              </li>
+            ),
+          )}
+        </ul>
+      )}
+      {fresh ? (
+        <NoteEditor
+          note={fresh}
+          onSave={(x) => {
+            if (x.text) onSave(x);
+            setFresh(null);
+          }}
+          onCancel={() => setFresh(null)}
+        />
+      ) : (
+        notes.length < MAX_NOTES && (
+          <button type="button" onClick={() => setFresh({ id: newNoteId(), text: "" })} className="-my-1 min-h-11 text-sm font-semibold text-forest underline">
+            Notitie toevoegen
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+/** Voorstellen om te overnachten waar de dag vol is: hoogstens 3, alleen uit onze data, toevoegen doe je zelf */
+export function OvernightList({ hits, onAdd }: { hits: CorridorHit<PlaceSummary>[]; onAdd: (slug: string) => void }) {
+  if (!hits.length)
+    return (
+      <p className="mt-1 text-sm text-ink-2" data-testid="overnight-none">
+        Rond het punt waar je dag vol is, kennen we geen plek dicht bij de route.
+      </p>
+    );
+  return (
+    <div className="mt-2" data-testid="overnight">
+      <p className="font-semibold">Overnachten rond waar je dag vol is</p>
+      <ul className="mt-1 divide-y divide-line">
+        {hits.map((h) => {
+          const p = h.item;
+          return (
+            <li key={p.slug} className="flex items-center gap-2 py-2" data-testid="overnight-place">
+              <div className="min-w-0 flex-1">
+                <Link href={`/plek/${p.slug}`} className="block truncate font-semibold hover:text-forest">
+                  {p.name}
+                </Link>
+                {/* Vertrektijd is het kernfeit: op een eigen regel, nooit afgekapt */}
+                <p className="text-sm text-ink-2">{departureShort(p) ?? "Vertrektijd onbekend"}</p>
+                <p className="text-sm text-muted">
+                  {p.town}, {formatKm(h.offKm)} van de route
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onAdd(p.slug)}
+                aria-label={`${p.name} toevoegen als overnachting`}
+                className="flex h-11 shrink-0 items-center gap-1 rounded-md border border-line bg-surface px-3 font-semibold hover:border-forest"
+              >
+                <Icon name="plus" size={18} /> Toevoegen
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
 
 export interface StopActions {
   setNights: (slug: string, n: number) => void;
-  setNote: (slug: string, note: string) => void;
+  saveNote: (slug: string, note: TripNote) => void;
+  removeNote: (slug: string, id: string) => void;
   move: (from: number, to: number) => void;
   remove: (slug: string) => void;
 }
@@ -179,6 +286,7 @@ export function StopItem({
 }) {
   const controls = useDragControls();
   const s = stop;
+  const own = s.point;
   return (
     <Reorder.Item value={s.slug} dragListener={false} dragControls={controls} onDragEnd={onDragEnd} className="relative list-none" data-testid="trip-stop">
       {legRow}
@@ -193,34 +301,54 @@ export function StopItem({
           >
             <Icon name="grip" size={22} strokeWidth={3} />
           </button>
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
-            <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
-            <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">
-              {index + 1}
-            </span>
-          </div>
+          {own ? (
+            // Eigen punt: geen foto, maar een gestippeld vak met een speld; zo is het meteen anders dan een plek
+            <div className="relative grid h-16 w-16 shrink-0 place-items-center rounded-lg border border-dashed border-ink-2 text-ink-2">
+              <Icon name="pin" size={24} />
+              <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full border border-ink-2 bg-surface font-display text-sm font-semibold text-ink">
+                {index + 1}
+              </span>
+            </div>
+          ) : (
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg">
+              <PlacePhoto src={s.place.imageUrl} alt="" kind={s.place.kind} className="h-full w-full" />
+              <span className="absolute top-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-forest font-display text-sm font-semibold text-on-forest">
+                {index + 1}
+              </span>
+            </div>
+          )}
           <div className="min-w-0 flex-1">
-            <Link href={`/plek/${s.slug}`} className="-my-2 block truncate py-2.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
-              {s.place.name}
-            </Link>
+            {own ? (
+              <p className="truncate py-0.5 font-display text-[1.0625rem] font-semibold sm:text-lg">{s.place.name}</p>
+            ) : (
+              <Link href={`/plek/${s.slug}`} className="-my-2 block truncate py-2.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
+                {s.place.name}
+              </Link>
+            )}
             {dated ? (
               <p className="text-sm font-semibold text-ink-2" data-testid="stop-dates">
                 {s.nights === 0 ? `Tussenstop op ${shortDay(dated.arrive)}` : `${shortDay(dated.arrive)} tot ${shortDay(dated.leave)}`}
               </p>
-            ) : (
+            ) : own ? null : (
               <OpenChip place={s.place} />
             )}
-            <p className="truncate text-sm text-muted">
-              {s.place.town},{" "}
-              {s.place.priceEur === undefined
-                ? "prijs onbekend"
-                : s.place.priceEur === 0
-                  ? "gratis"
-                  : `${s.place.priceFrom ? "vanaf " : ""}${eur(s.place.priceEur)} per nacht`}
-            </p>
+            {own ? (
+              <p className="text-sm text-muted" data-testid="own-point">
+                Eigen punt, geen plekgegevens
+              </p>
+            ) : (
+              <p className="truncate text-sm text-muted">
+                {s.place.town},{" "}
+                {s.place.priceEur === undefined
+                  ? "prijs onbekend"
+                  : s.place.priceEur === 0
+                    ? "gratis"
+                    : `${s.place.priceFrom ? "vanaf " : ""}${eur(s.place.priceEur)} per nacht`}
+              </p>
+            )}
           </div>
         </div>
-        {dated && dated.closedNights.length > 0 && (
+        {!own && dated && dated.closedNights.length > 0 && (
           <p className="mt-2 flex items-start gap-2 rounded-lg bg-alert-tint px-3 py-2 text-sm text-alert" data-testid="stop-closed">
             <Icon name="calendar" size={17} className="mt-0.5 shrink-0" />
             <span>
@@ -276,7 +404,7 @@ export function StopItem({
             </button>
           </div>
         </div>
-        <StopNote key={s.note ?? ""} note={s.note} onSave={(n) => actions.setNote(s.slug, n)} />
+        <StopNotes notes={s.notes ?? []} onSave={(n) => actions.saveNote(s.slug, n)} onRemove={(id) => actions.removeNote(s.slug, id)} />
       </div>
     </Reorder.Item>
   );

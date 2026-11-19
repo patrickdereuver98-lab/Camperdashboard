@@ -36,3 +36,15 @@ test("reisdag: vannacht, vertrekdag en buiten de reis", () => {
   assert.deepEqual(tripToday(dated, new Date(2026, 10, 9, 10)), { leaving: 1 });
   assert.equal(tripToday(dated, new Date(2026, 10, 12)), undefined);
 });
+
+test("tekst: eigen punt alleen met naam, alleen gedeelde notities", () => {
+  const t = tripText(
+    [
+      { nights: 1, place: place("a"), notes: [{ text: "Pincode 1234" }, { text: "Bakker\nom de hoek", shared: true }] },
+      { nights: 0, own: true, place: { slug: "eigen-x", name: "Oma", town: "" } },
+    ],
+    null,
+  );
+  assert.equal(t, "Mijn camperreis\n1. Plek a, Texel (1 nacht)\n   Notitie: Bakker om de hoek\n2. Oma (eigen punt, tussenstop)");
+  assert.equal(t.includes("Pincode"), false);
+});

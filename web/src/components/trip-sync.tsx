@@ -3,21 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "@/lib/auth";
 import {
+  readAccountTrip,
   readExpenses,
-  readTrip,
+  readTripStops,
   readVehicle,
+  useAccountTrip,
   useExpenses,
+  useLinkedTrip,
   useSharedLink,
-  useTrip,
   useVehicle,
+  writeAccountTrip,
   writeExpenses,
-  writeTrip,
+  writeTripStops,
   writeVehicle,
 } from "@/lib/store";
 import { mergeExpenses, type Expense } from "@/lib/expenses";
 import { cleanVehicle, hasVehicle, type Vehicle } from "@/lib/vehicle";
 import { supabase, toJson } from "@/lib/supabase-browser";
-import { mergeTrips, sameTrip, type Stop } from "@/lib/trip-merge";
+import { forShared, mergeTrips, sameTrip, withShared, type Stop } from "@/lib/trip-merge";
 import { StorageNotice } from "./storage-notice";
 
 /** Na een mislukte poging opnieuw proberen na zoveel tijd (en eerder bij weer online of terug in beeld) */
@@ -57,7 +60,8 @@ function useRetry(): Retry {
 /** Houdt "Mijn reis" en "Mijn camper" gelijk tussen dit toestel en het account (alleen als je bent ingelogd) */
 export function TripSync() {
   const { tick, later } = useRetry();
-  const { stops } = useTrip();
+  // Met je account gaat de eerste reis mee; andere reizen staan alleen op dit toestel
+  const stops = useAccountTrip();
   const [vehicle] = useVehicle();
   const { list } = useExpenses();
   return (
@@ -90,10 +94,13 @@ type SyncSpec<T> = {
 
 const now = () => new Date().toISOString();
 
-/** Reis: samenvoegen (toestel eerst, daarna wat alleen in het account staat) */
+/**
+ * Reis: samenvoegen (toestel eerst, daarna wat alleen in het account staat). Je account is van jou alleen: daar gaan
+ * ook je privénotities en eigen punten heen.
+ */
 const TRIP: SyncSpec<Stop[]> = {
-  read: readTrip,
-  write: writeTrip,
+  read: readAccountTrip,
+  write: writeAccountTrip,
   same: sameTrip,
   pull: (userId) => supabase().then((sb) => sb.from("user_trips").select("stops").eq("user_id", userId).maybeSingle()),
   merge: (local, remote) => {
@@ -203,23 +210,32 @@ function AccountSync<T>({ spec, value, tick, later }: { spec: SyncSpec<T>; value
 
 /**
  * Gedeelde reis: de reis in de database is leidend. Wijzigingen van de anderen komen realtime binnen en vervangen
- * de reis op dit toestel; eigen wijzigingen gaan kort uitgesteld naar de database (laatste wijziging wint).
+ * de gekoppelde reis op dit toestel; eigen wijzigingen gaan kort uitgesteld naar de database (laatste wijziging wint).
+ * Naar de database gaan alleen de notities met "Delen met reisgenoten" aan (`forShared`); je privénotities blijven
+ * hier staan als de gedeelde reis binnenkomt (`withShared`).
  */
 function SharedTripSync({ tick, later }: Retry) {
   const { session } = useSession();
   const userId = session?.user.id;
   const [link, setLink] = useSharedLink();
-  const { stops } = useTrip();
+  const linked = useLinkedTrip(link);
+  const localId = linked.id;
+  const stops = linked.trip?.stops;
   // Voor welke gedeelde reis de eerste stand binnen is
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   // Wat de database zeker heeft, en wat we nu versturen (om onze eigen wijziging in de realtime-stroom te herkennen)
   const lastSynced = useRef<Stop[] | null>(null);
   const sending = useRef<Stop[] | null>(null);
-  const tripId = userId ? link?.id : undefined;
+  const tripId = userId && localId ? link?.id : undefined;
+
+  // De reis op dit toestel bestaat niet meer (opslag gewist): koppeling losmaken
+  useEffect(() => {
+    if (link && !localId) setLink(null);
+  }, [link, localId, setLink]);
 
   // Eerste stand ophalen; mislukt dat, dan later opnieuw
   useEffect(() => {
-    if (!tripId || loadedFor === tripId) return;
+    if (!tripId || !localId || loadedFor === tripId) return;
     let alive = true;
     supabase()
       .then((sb) => sb.from("shared_trips").select("stops").eq("id", tripId).maybeSingle())
@@ -229,9 +245,9 @@ function SharedTripSync({ tick, later }: Retry) {
           if (error) return later();
           // Geen toegang meer (verlaten of verwijderd): koppeling losmaken, je eigen reis blijft staan
           if (!data) return setLink(null);
-          const next = mergeTrips([], data.stops);
-          lastSynced.current = next;
-          writeTrip(next);
+          const remote = mergeTrips([], data.stops, { legacyShared: true });
+          lastSynced.current = forShared(remote);
+          writeTripStops(localId, withShared(readTripStops(localId), remote));
           setLoadedFor(tripId);
         },
         () => alive && later(),
@@ -239,11 +255,11 @@ function SharedTripSync({ tick, later }: Retry) {
     return () => {
       alive = false;
     };
-  }, [tripId, loadedFor, tick, later, setLink]);
+  }, [tripId, localId, loadedFor, tick, later, setLink]);
 
   // Wijzigingen van de anderen
   useEffect(() => {
-    if (!tripId) return;
+    if (!tripId || !localId) return;
     let alive = true;
     let stop = () => undefined as void;
     void supabase().then(
@@ -252,11 +268,12 @@ function SharedTripSync({ tick, later }: Retry) {
         const channel = sb
           .channel(`reis-${tripId}`)
           .on("postgres_changes", { event: "UPDATE", schema: "public", table: "shared_trips", filter: `id=eq.${tripId}` }, (payload) => {
-            const remote = mergeTrips([], (payload.new as { stops?: unknown }).stops);
-            if (lastSynced.current && sameTrip(remote, lastSynced.current)) return;
-            if (sending.current && sameTrip(remote, sending.current)) return;
-            lastSynced.current = remote;
-            writeTrip(remote);
+            const remote = mergeTrips([], (payload.new as { stops?: unknown }).stops, { legacyShared: true });
+            const shared = forShared(remote);
+            if (lastSynced.current && sameTrip(shared, lastSynced.current)) return;
+            if (sending.current && sameTrip(shared, sending.current)) return;
+            lastSynced.current = shared;
+            writeTripStops(localId, withShared(readTripStops(localId), remote));
           })
           .subscribe();
         stop = () => void sb.removeChannel(channel);
@@ -267,13 +284,13 @@ function SharedTripSync({ tick, later }: Retry) {
       alive = false;
       stop();
     };
-  }, [tripId]);
+  }, [tripId, localId]);
 
-  // Eigen wijzigingen naar de database; pas na succes geldt de reis als gedeeld
+  // Eigen wijzigingen naar de database (zonder privénotities); pas na succes geldt de reis als gedeeld
   useEffect(() => {
-    if (!tripId || loadedFor !== tripId || !lastSynced.current || sameTrip(lastSynced.current, stops)) return;
+    if (!tripId || !localId || !stops || loadedFor !== tripId || !lastSynced.current || sameTrip(lastSynced.current, forShared(stops))) return;
     const t = setTimeout(() => {
-      const current = readTrip();
+      const current = forShared(readTripStops(localId));
       sending.current = current;
       void attempt(() => supabase().then((sb) => sb.from("shared_trips").update({ stops: toJson(current) }).eq("id", tripId))).then((ok) => {
         if (ok) lastSynced.current = current;
@@ -282,7 +299,7 @@ function SharedTripSync({ tick, later }: Retry) {
       });
     }, 500);
     return () => clearTimeout(t);
-  }, [stops, tripId, loadedFor, tick, later]);
+  }, [stops, tripId, localId, loadedFor, tick, later]);
 
   return null;
 }
