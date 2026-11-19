@@ -104,7 +104,7 @@ test("slepen verandert de volgorde", async ({ page, request }, info) => {
   await page.mouse.move(x, target.y + target.height + 20, { steps: 25 });
   await page.mouse.up();
   await expect(stops.last()).toContainText(picked[0].name);
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis")!).trips[0].stops.at(-1).slug)).toBe(picked[0].slug);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("vrijstaan:reis") ?? "null")?.trips?.[0]?.stops?.at(-1)?.slug)).toBe(picked[0].slug);
 });
 
 test("Google Maps in delen bij meer dan 10 stops, en een GPX-bestand", async ({ page, request }) => {
@@ -184,6 +184,10 @@ test("te lange dag: overnachtingen voorstellen, toevoegen doe je zelf", async ({
   // Zonder vaste vertrektijd eerst
   await expect(items.first()).toContainText(free.name);
   await expect(items.nth(1)).toContainText(fixed.name);
+  // Huisregel: de naam is een tikdoel van minstens 44 px hoog (CI vond 20 px, release 0.9.2)
+  const link = items.first().getByRole("link", { name: free.name });
+  // Wachten tot de lijst is ingeschoven (animatie): daarna is het vlak op volle grootte
+  await expect.poll(async () => (await link.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   // Er is niets vanzelf toegevoegd
   const stops = page.getByTestId("trip-stop");
   await expect(stops).toHaveCount(2);

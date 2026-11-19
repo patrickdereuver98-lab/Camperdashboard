@@ -233,7 +233,7 @@ export function OvernightList({ hits, onAdd }: { hits: CorridorHit<PlaceSummary>
           return (
             <li key={p.slug} className="flex items-center gap-2 py-2" data-testid="overnight-place">
               <div className="min-w-0 flex-1">
-                <Link href={`/plek/${p.slug}`} className="block truncate font-semibold hover:text-forest">
+                <Link href={`/plek/${p.slug}`} className="-my-3 block truncate py-3 font-semibold hover:text-forest">
                   {p.name}
                 </Link>
                 {/* Vertrektijd is het kernfeit: op een eigen regel, nooit afgekapt */}
