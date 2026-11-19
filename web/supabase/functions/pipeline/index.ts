@@ -1,7 +1,8 @@
 // VrijStaan data-pipeline (Supabase Edge Function, Deno)
 //
-//   { "action": "parse", "region": "NL-GE", "places_req": 1, "points_req": 2 }
-//       → Overpass-antwoorden verwerken die de database via pg_net heeft opgehaald (standaardroute)
+//   { "action": "parse", "region": "NL-GE", "places_req": 1 }  (of "points_req": 2, of allebei)
+//       → Overpass-antwoorden verwerken die de database via pg_net heeft opgehaald (standaardroute); collect_osm
+//         stuurt plekken en servicepunten na elkaar, elk apart
 //   { "action": "osm", "region": "NL-GE" }  → Overpass rechtstreeks (handmatig; edge-IP's worden soms geweigerd)
 //   { "action": "scrape", "n": 6 }          → volgende batch websites
 //   { "action": "enqueue" }                 → plekken met website in de scrape-wachtrij
@@ -102,14 +103,24 @@ async function stageOsm(region: string, elements: Element[], pointElements: Elem
   }
 }
 
-/** Overpass-antwoorden die de database zelf heeft opgehaald (pg_net) verwerken */
-async function runParse(region: string, placesReq: number, pointsReq: number) {
-  const [a, b] = await Promise.all([
-    db.rpc("osm_response", { p_id: placesReq }),
-    db.rpc("osm_response", { p_id: pointsReq }),
-  ]);
-  if (a.error || b.error || !a.data || !b.data) throw new Error(`Overpass-antwoord niet gevonden (${a.error?.message ?? b.error?.message ?? "leeg"})`);
-  return stageOsm(region, JSON.parse(a.data).elements, JSON.parse(b.data).elements);
+/** Overpass-antwoorden die de database zelf heeft opgehaald (pg_net) verwerken. collect_osm haalt plekken en
+ *  servicepunten na elkaar op en stuurt ze elk apart: het ontbrekende deel is dan null en blijft leeg. */
+async function runParse(region: string, placesReq: number | null, pointsReq: number | null) {
+  if (placesReq === null && pointsReq === null) throw new Error("parse zonder places_req of points_req");
+  const response = async (id: number | null): Promise<Element[]> => {
+    if (id === null) return [];
+    const { data, error } = await db.rpc("osm_response", { p_id: id });
+    if (error || !data) throw new Error(`Overpass-antwoord ${id} niet gevonden (${error?.message ?? "leeg"})`);
+    return JSON.parse(data).elements;
+  };
+  const [places, points] = await Promise.all([response(placesReq), response(pointsReq)]);
+  return stageOsm(region, places, points);
+}
+
+/** Verzoeknummer uit de body: ontbreekt het, dan null (niet 0 of NaN) */
+function reqId(v: unknown): number | null {
+  const n = Number(v);
+  return v === undefined || v === null || !Number.isInteger(n) || n <= 0 ? null : n;
 }
 
 /** Rechtstreeks via Overpass (handmatig, als de database-route niet beschikbaar is) */
@@ -554,7 +565,7 @@ Deno.serve(async (req) => {
   try {
     let result: unknown;
     if (body.action === "osm") result = await runOsm(String(body.region));
-    else if (body.action === "parse") result = await runParse(String(body.region), Number(body.places_req), Number(body.points_req));
+    else if (body.action === "parse") result = await runParse(String(body.region), reqId(body.places_req), reqId(body.points_req));
     else if (body.action === "scrape" && body.background) {
       // Meteen antwoorden en op de achtergrond doorwerken: pg_net wacht dan niet op de traagste site van de batch, zodat
       // de workers het tempo bepalen. Fouten komen via apply_scrape in de wachtrij en via log() in app_logs.

@@ -9,7 +9,7 @@ import { beeldParams } from "./params";
 
 // Huisstijl (globals.css): zandpapier, bosgroen, inkt
 const PAPER = "#f5f0e6";
-const FOREST = "#2d5a43";
+const FOREST = "#1f4e37";
 const ON_FOREST = "#fffcf6";
 const INK = "#1f2b24";
 const INK_2 = "#46524a";
