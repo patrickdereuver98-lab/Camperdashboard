@@ -13,6 +13,8 @@ Eerste genummerde versie. Alles wat op 19 november af was, uit twaalf losse bran
   meer" wordt onthouden, slimmere zoekbalk (PR #152).
 - Eerlijke beloftes op start en FAQ, en geen standaardvertrektijd meer in formulieren (R66, R83; PR #153).
 - Dieper bosgroen voor knoppen en links (PR #146).
+- Routeplanner in Mijn reis: dagplanning, begin- en eindpunt, camperprofiel, slimste volgorde, plekken langs de
+  route, export naar GPX en agenda (PR #162). Opslag van Mijn reis gaat naar versie 3.
 
 **Rest van de UX-audit** ([rapport](docs/audit-ux-2026-11.md), PR #152; geen migraties)
 - Zoekvak onthoudt wat je zocht en bekeek (alleen op je toestel), begrijpt filters in gewone taal ("gratis texel met
