@@ -460,6 +460,7 @@ export type Database = {
           code: string
           last_run_at: string | null
           name: string
+          places_done_at: string | null
           places_req: number | null
           points_req: number | null
         }
@@ -468,6 +469,7 @@ export type Database = {
           code: string
           last_run_at?: string | null
           name: string
+          places_done_at?: string | null
           places_req?: number | null
           points_req?: number | null
         }
@@ -476,6 +478,7 @@ export type Database = {
           code?: string
           last_run_at?: string | null
           name?: string
+          places_done_at?: string | null
           places_req?: number | null
           points_req?: number | null
         }
