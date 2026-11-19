@@ -52,8 +52,13 @@ export function pluralize(n: number, one: string, many: string) {
   return `${new Intl.NumberFormat("nl-NL").format(n)} ${n === 1 ? one : many}`;
 }
 
+/** Alleen het domein ("streejp.nl"): een pad als "/c" of "/nl/camperplaats" zegt een bezoeker niets */
 export function websiteLabel(url: string) {
-  return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\/(www\.)?/, "").replace(/[/?#].*$/, "");
+  }
 }
 
 /** "11:30" of "9.00" als minuten na middernacht (00:00 tot en met 23:59); undefined als het geen geldige tijd is */
