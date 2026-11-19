@@ -309,7 +309,7 @@ def main() -> int:
     shard = {"shard": int(os.environ.get("STEALTH_SHARD", "0")), "shards": int(os.environ.get("STEALTH_SHARDS", "1"))}
     pipe = Pipeline(url, key, None if key else GithubToken(oidc_url, oidc_token))
     reader = Reader(proxies)
-    done = found = 0
+    done = found = errors = record_failed = 0
     empty = False
     try:
         while time.monotonic() < deadline:
@@ -329,15 +329,27 @@ def main() -> int:
                     print(f"  {len(fields)} velden: {', '.join(fields)}")
                 except Exception as e:  # noqa: BLE001 - fout vastleggen, door met de volgende
                     print(f"  fout: {e}", file=sys.stderr)
+                    errors += 1
                     try:
                         pipe.call("stealth_apply", id=place["id"], error=str(e)[:300])
                     except Exception as e2:  # noqa: BLE001
                         print(f"  fout vastleggen mislukt: {e2}", file=sys.stderr)
+                        record_failed += 1
                 done += 1
     finally:
         reader.close()
-    print(f"Klaar: {done} plekken gelezen, {found} met gegevens")
+    print(f"Klaar: {done} plekken gelezen, {found} met gegevens, {errors} fouten")
     write_output("meer", "false" if empty else "true")
+    return exit_code(done, errors, record_failed)
+
+
+def exit_code(done: int, errors: int, record_failed: int) -> int:
+    """R72: een run waarin elke plek faalde, of waarin fouten niet eens vastgelegd konden worden (sleutel of OIDC
+    stuk), is rood. Anders zag Actions een groen vinkje terwijl er niets gelezen werd."""
+    if record_failed:
+        return 1
+    if done and errors == done:
+        return 1
     return 0
 
 

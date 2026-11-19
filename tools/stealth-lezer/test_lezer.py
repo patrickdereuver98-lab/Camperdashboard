@@ -1,5 +1,8 @@
 """Tests voor de pure delen van de stealth-lezer: python -m pytest tools/stealth-lezer"""
 
+import re
+from pathlib import Path
+
 from lezer import GithubToken, HostClock, Pipeline, home_candidates, is_login_wall, robots_disallows, sitemaps_from_robots
 
 
@@ -170,3 +173,67 @@ def test_alles_in_orde_geeft_geen_failed():
     pipe = _Pipe(["https://camping.nl/oud"])
     read_place(_reader(pages, lambda url: (404, "text/plain", b"")), pipe, {"id": "p2", "website": home})
     assert pipe.applied["failed"] == 0
+
+
+def _pins(requirements: str) -> dict[str, str]:
+    """Exacte pins (`naam==versie`, ook met extras) uit een requirements-bestand; commentaar telt niet mee."""
+    pins = {}
+    for line in requirements.splitlines():
+        m = re.fullmatch(r"([A-Za-z0-9._-]+)(?:\[[^\]]*\])?==(\d[\w.+!-]*)", line.split("#", 1)[0].strip())
+        if m:
+            pins[re.sub(r"[-_.]+", "-", m.group(1)).lower()] = m.group(2)
+    return pins
+
+
+def test_browserversies_liggen_vast():
+    """R58: patchright zoekt de Chromium die bij zijn eigen versie hoort, maar `scrapling install` haalt die van
+    playwright. Lopen ze los mee (>=), dan installeert een nieuwe playwright een andere browser en breekt elke run."""
+    pins = _pins((Path(__file__).parent / "requirements.txt").read_text())
+    for naam in ("playwright", "patchright"):
+        assert naam in pins, f"{naam} moet exact vastgepind staan (naam==versie) in requirements.txt"
+    assert pins["playwright"].split(".")[:2] == pins["patchright"].split(".")[:2], (
+        f"playwright {pins['playwright']} en patchright {pins['patchright']} moeten dezelfde major.minor hebben"
+    )
+
+
+def test_lege_wachtrij_zegt_klaar(tmp_path, monkeypatch):
+    """Lege wachtrij: browser dicht, exitcode 0 en `meer=false`, zodat de workflow zichzelf niet opnieuw start."""
+    import lezer
+
+    out = tmp_path / "out"
+    for naam in ("STEALTH_PROXIES", "STEALTH_MINUTES", "STEALTH_BATCH", "STEALTH_SHARD", "STEALTH_SHARDS"):
+        monkeypatch.delenv(naam, raising=False)  # onafhankelijk van de omgeving van de workflowjob
+    monkeypatch.setenv("PIPELINE_URL", "https://pipeline.test/")
+    monkeypatch.setenv("PIPELINE_KEY", "geheim")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+
+    readers = []
+
+    class NepReader:
+        def __init__(self, proxies):
+            self.proxies, self.gesloten = proxies, False
+            readers.append(self)
+
+        def close(self):
+            self.gesloten = True
+
+    def call(self, action, **body):
+        assert action == "stealth_batch", action
+        return []
+
+    monkeypatch.setattr(lezer, "Reader", NepReader)
+    monkeypatch.setattr(lezer.Pipeline, "call", call)
+
+    assert lezer.main() == 0
+    assert out.read_text() == "meer=false\n"
+    assert len(readers) == 1 and readers[0].gesloten
+
+
+def test_run_waarin_alles_faalt_is_rood():
+    """R72: alles mislukt of fouten niet vast te leggen geeft exitcode 1; een paar fouten tussen goede plekken niet."""
+    from lezer import exit_code
+
+    assert exit_code(done=5, errors=5, record_failed=0) == 1
+    assert exit_code(done=5, errors=2, record_failed=1) == 1
+    assert exit_code(done=5, errors=2, record_failed=0) == 0
+    assert exit_code(done=0, errors=0, record_failed=0) == 0
