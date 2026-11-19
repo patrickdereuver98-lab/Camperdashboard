@@ -617,7 +617,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
 
   return (
     <>
-      <button type="button" onClick={openSheet} className="flex h-12 items-center gap-2 rounded-lg bg-forest px-5 font-semibold text-on-forest">
+      <button type="button" onClick={openSheet} className="flex h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest">
         <Icon name="edit" size={19} /> Schrijf een review
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt!" : `Review voor ${placeName}`}>
