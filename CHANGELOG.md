@@ -49,10 +49,12 @@ Eerste genummerde versie. Alles wat op 19 november af was, uit veertien losse br
 - Review 16 november (data en scraping, steekproef van 60 plekken) en het statusbord bijgewerkt (PR #149).
 - Orchestratie: model en effort per agent vastgelegd (PR #160), de installatie van 16 november daarmee gelijkgetrokken.
 
-**Migraties** (live toe te passen na samenvoegen, in deze volgorde)
+**Migraties** (live gezet op 19 november 2026, in deze volgorde; versies gelijk aan de bestanden)
 `20261118100000_beheerslot`, `20261118120000_osm_ophalen_per_deel` (stond al live), `20261118200000_wislog_en_kanalen`,
 `20261118300000_niets_weggooien`, `20261118400000_plekgeschiedenis` (hernummerd: botste met `beheerslot`).
 `20261108100000_bronnen_en_claims` blijft bewust uit (R41).
+
+**Edge functions**: `pipeline` versie 67 en `discover` versie 2, beide vastgezet op `17a6030`.
 
 **Niet in deze versie**
 - PR #141 (mail naar eigenaren): wacht op het besluit over mailen en een juridische toets (LANCERING besluit 4) en
