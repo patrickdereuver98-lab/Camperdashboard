@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, ViewTransition } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState, ViewTransition } from "react";
+import { useRouter } from "next/navigation";
 import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/lib/search";
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
@@ -13,6 +14,7 @@ import { isIncomplete } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
 import { track } from "@/lib/track";
 import { SUPABASE_URL } from "@/lib/env";
+import { ACTION_TILE } from "@/lib/action-tile";
 import { KIND_LABEL, type PlaceSummary } from "@/lib/types";
 import { Icon } from "./icons";
 import { KIND_SIGN, Sign, type SignName } from "./sign";
@@ -178,7 +180,7 @@ export function ScoreBadge({ avg, count, size = "md" }: { avg?: number; count: n
  * (review november R55, anders hoort een schermlezer in een lijst tien keer "Bewaren in mijn reis"). De brede knop op
  * de plekpagina houdt zijn zichtbare tekst als naam (WCAG 2.5.3); daar staat de plek al in de kop.
  */
-export function SaveButton({ slug, name, variant = "icon" }: { slug: string; name: string; variant?: "icon" | "full" | "plain" | "bar" }) {
+export function SaveButton({ slug, name, variant = "icon" }: { slug: string; name: string; variant?: "icon" | "full" | "plain" | "bar" | "tile" }) {
   const trip = useTrip();
   const saved = trip.has(slug);
   const toggle = (e: React.MouseEvent) => {
@@ -190,6 +192,13 @@ export function SaveButton({ slug, name, variant = "icon" }: { slug: string; nam
       window.dispatchEvent(new CustomEvent("vrijstaan:bewaard"));
     }
   };
+  if (variant === "tile")
+    return (
+      <button type="button" onClick={toggle} aria-pressed={saved} className={`${ACTION_TILE} aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest`}>
+        <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop" : ""} />
+        {saved ? "Bewaard" : "Bewaar"}
+      </button>
+    );
   if (variant === "full")
     return (
       <button
@@ -532,10 +541,76 @@ function CardPrice({ place }: { place: PlaceSummary }) {
  * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route en Bekijk plek. Vervangt op de
  * telefoon de kleine popup van de kaart.
  */
+/** Hoe ver je het paneel moet vegen (px): omhoog opent de plek, omlaag sluit het */
+const PICK_OPEN = 56;
+const PICK_CLOSE = 72;
+
 export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () => void }) {
   const arrival = arrivalShort(place);
+  const router = useRouter();
+  const href = `/plek/${place.slug}`;
+  // Vegen zoals in een kaart-app (redesign 18 november 2026): omhoog naar de plekpagina, omlaag dicht. De knoppen
+  // Route en Bekijk plek blijven de gewone weg; vegen is een snelkoppeling.
+  const drag = useRef<{ id: number; y: number; moved: boolean } | null>(null);
+  const [dy, setDy] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    router.prefetch(href);
+  }, [router, href]);
+  const release = () => {
+    const d = drag.current;
+    drag.current = null;
+    setDragging(false);
+    if (!d?.moved) return setDy(0);
+    if (dy <= -PICK_OPEN) {
+      setLeaving(true);
+      startTransition(() => router.push(href));
+    } else if (dy >= PICK_CLOSE) onClose();
+    else setDy(0);
+  };
   return (
-    <section aria-label={`Gekozen plek: ${place.name}`} className="animate-rise absolute inset-x-2 bottom-2 z-20 rounded-2xl bg-surface p-3 shadow-float">
+    <section
+      aria-label={`Gekozen plek: ${place.name}`}
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        drag.current = { id: e.pointerId, y: e.clientY, moved: false };
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (!d || d.id !== e.pointerId) return;
+        const raw = e.clientY - d.y;
+        if (!d.moved) {
+          if (Math.abs(raw) < 8) return;
+          d.moved = true;
+          setDragging(true);
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }
+        // Omhoog met weerstand (het paneel rekt een beetje mee), omlaag volgt het je vinger
+        setDy(raw < 0 ? Math.max(raw * 0.5, -PICK_OPEN * 1.6) : raw);
+      }}
+      onPointerUp={release}
+      onPointerCancel={() => {
+        drag.current = null;
+        setDragging(false);
+        setDy(0);
+      }}
+      // Na vegen geen klik op de knop waar je vinger losliet
+      onClickCapture={(e) => {
+        if (dy !== 0 || leaving) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      style={{
+        transform: leaving ? `translateY(${-PICK_OPEN * 1.6}px)` : dy ? `translateY(${dy}px)` : undefined,
+        opacity: leaving ? 0 : dy > 0 ? Math.max(0.4, 1 - dy / 240) : undefined,
+        transition: dragging ? "none" : "transform 220ms var(--ease-out), opacity 220ms var(--ease-out)",
+      }}
+      className="animate-rise absolute inset-x-2 bottom-2 z-20 touch-none rounded-2xl bg-surface p-3 pt-2 shadow-float select-none"
+    >
+      {/* Greepje: zegt "je kunt dit omhoog vegen"; de knop Bekijk plek doet hetzelfde */}
+      <span aria-hidden="true" className="mx-auto mb-2 block h-1 w-10 rounded-full bg-line" />
       <div className="flex gap-3">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-sunken">
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} className="h-full w-full" />
@@ -552,7 +627,7 @@ export function MapPick({ place, onClose }: { place: PlaceSummary; onClose: () =
           type="button"
           onClick={onClose}
           aria-label="Sluiten"
-          className="absolute top-1.5 right-1.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-sunken"
+          className="absolute top-2.5 right-1.5 grid h-11 w-11 place-items-center rounded-full text-muted hover:bg-sunken"
         >
           <Icon name="x" size={18} />
         </button>

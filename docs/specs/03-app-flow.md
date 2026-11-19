@@ -88,7 +88,7 @@ Snelle variant: `Start` → **Plekken bij mij in de buurt** → `Dichtbij` (loca
 | Zoeken | Zoek-knop of Enter | Plaats, streek, eiland of provincie uit de eigen lijst (vergeeft typfouten en aliassen), anders adres, postcode, woonplaats of gemeente van PDOK | Kaarten als skelet; "Adres opzoeken…" als PDOK nog moet antwoorden | Resultaten met titel "n plekken in <plaats>" | "Geen plaats, adres of plek gevonden" onder het zoekveld | `Zoeken` |
 | Filter toepassen | **Toon n plekken** in de sheet | Knop uit bij 0 resultaten, met voorstel welke filter weg kan | Live teller | Chips boven de lijst, filters in de URL | — | `Zoeken` |
 | Lijst/kaart wisselen | **Kaart** / **Lijst** in de rij met Filters en Sorteren (telefoon en tablet) | — | "Kaart laden…" | Kaart met clusters; stipkleur = vertrekregel | "De kaart kon niet worden geladen" + **Toon lijst** | `Zoeken` |
-| Plek op de kaart kiezen | Tik op een stip (Zoeken in kaartweergave, Dichtbij) | — | — | Telefoon: paneel onderaan de kaart met vertrek, prijs, **Route** en **Bekijk plek**, × sluit; groot scherm: popup (naam, plaats en prijs, vertrekregel, **Bekijk plek** en het hartje om te bewaren) en de kaart in de lijst licht op | — | Zelfde scherm, `Plek` of navigatie-app |
+| Plek op de kaart kiezen | Tik op een stip (Zoeken in kaartweergave, Dichtbij) | — | — | Telefoon: paneel onderaan de kaart met vertrek, prijs, **Route** en **Bekijk plek**, × of omlaag vegen sluit, omhoog vegen opent `Plek`; groot scherm: popup (naam, plaats en prijs, vertrekregel, **Bekijk plek** en het hartje om te bewaren) en de kaart in de lijst licht op | — | Zelfde scherm, `Plek` of navigatie-app |
 | Locatie gebruiken | **Gebruik mijn locatie** | Browsertoestemming | "Locatie bepalen…" | Lijst; rijtijden volgen | Geweigerd: uitleg + verwijzing naar zoeken; onbekend: "Probeer opnieuw" | `Dichtbij` |
 | Afstand tonen | **Afstand tonen** boven de zoekresultaten (of stil als locatie al eerder is toegestaan) | Browsertoestemming | "Locatie bepalen…" | Op elke kaart "x km van je locatie" (hemelsbreed, berekend op het apparaat, niets naar de server) | Geweigerd: "Locatie staat uit, afstand onbekend" | `Zoeken` |
 | Rijtijd berekenen | **Rijtijd berekenen** (onder de kaart bij Ligging en route) | Toestemming; locatie afgerond op ±1 km | "Bezig…" | "x min rijden, y km over de weg" | "Open de route in je navigatie-app" | `Plek` |
@@ -119,7 +119,8 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 ## Navigatieregels
 
 - **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Tik op het tabblad waar je al bent: naar boven; sta je al boven, dan de cursor in het zoekvak (Start en Zoeken; UX-audit G2). Verborgen op `/plek/*`; daar staat een
-  vaste actiebalk met prijs, hartje, bellen, website en **Route**.
+  vaste actiebalk met prijs en **Route**. Bewaren, delen, website en bellen staan in de actierij onder de naam, en een
+  rij springlinks (Overzicht tot In de buurt) blijft onder de header plakken (18 november 2026).
 - **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden), zon/maan wisselt licht en donker (gevolg: thema direct om, keuze bewaard op het toestel; gelijk aan het systeem = geen keuze bewaard). Op `/plek/*` een terugknop.
 - **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
 - **Kruimelpad op de plekpagina**: Zoeken › provincie (naar `/camperplaatsen/<provincie>`) › plek; onder "In de buurt"

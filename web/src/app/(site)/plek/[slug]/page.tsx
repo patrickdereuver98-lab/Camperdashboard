@@ -19,6 +19,7 @@ import { KIND_LABEL, type Place, type PlaceSummary } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { KIND_SIGN, Sign, type SignName } from "@/components/sign";
 import { PlaceCard, SaveButton, ScoreBadge } from "@/components/place-ui";
+import { ACTION_TILE } from "@/lib/action-tile";
 import { CARD_CELL, CARD_GRID } from "@/lib/card-grid";
 import { PlaceMap } from "@/components/place-map";
 import { pickFacilities } from "@/lib/facility-update";
@@ -27,6 +28,7 @@ import { Gallery, OutdatedNote, ReportProblem, ReviewList, ReviewSummary, RouteC
 import { OwnerUpdate } from "./owner-update";
 import { ownerValues } from "@/lib/owner-update";
 import { PhotoUpload } from "./photo-upload";
+import { SectionNav, type SectionLink } from "./section-nav";
 import { CrowdStatusCard } from "./crowd-status";
 import { DecisionGrid, needsDeparture } from "./decision-grid";
 import { GiveDepartureButton } from "@/components/departure-form";
@@ -141,6 +143,15 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
   const reserveLabel = rule === "verplicht" || rule === "mogelijk" ? "Reserveren via de website" : "Naar de website";
   // Plekpuls staat uit tot de koppeling met de bronnenlaag er is (lib/plekpuls.ts)
   const pulse = PLEKPULS_ACTIEF ? departureQuestion(place) : undefined;
+  // Springlinks in de volgorde van de telefoon; op een groot scherm staan ligging en contact in de zijkolom
+  const sections: SectionLink[] = [
+    { id: "overzicht", label: "Overzicht" },
+    { id: "voorzieningen", label: "Voorzieningen" },
+    { id: "ligging", label: "Ligging" },
+    { id: "reviews", label: "Ervaringen" },
+    { id: "praktisch", label: "Contact" },
+    ...(nearby.length > 0 ? [{ id: "buurt", label: "In de buurt" }] : []),
+  ];
 
   return (
     <article className="pb-24 md:pb-8">
@@ -201,9 +212,13 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           </div>
         </header>
 
+        <ActionRow place={place} tel={tel} reserveLabel={reserveLabel} />
+        {/* Alleen tot lg: daarna staan ligging en contact in de zijkolom, naast de rest */}
+        <SectionNav links={sections} className="lg:hidden" />
+
         {/* Mobiel: beslissen, voorzieningen, beschrijving, ligging, ervaringen, praktisch. Groot scherm: zijkolom. */}
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
-          <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
+          <div id="overzicht" className={`min-w-0 space-y-8 lg:col-start-1 lg:row-start-1 ${SECTION_OFFSET}`}>
             <DecisionGrid place={place} visitors={visitors} />
             <DecisionDetails place={place} />
             {pulse && (
@@ -220,7 +235,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                <h2 id="voorzieningen" className="font-display text-h2 font-semibold">Voorzieningen</h2>
+                <h2 id="voorzieningen" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>Voorzieningen</h2>
                 <Legend />
               </div>
               <FacilityGrid placeId={place.id} placeName={place.name} values={pickFacilities(place)} />
@@ -245,7 +260,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             {/* Reviews */}
             <section aria-labelledby="reviews">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <h2 id="reviews" className="font-display text-h2 font-semibold">Ervaringen</h2>
+                <h2 id="reviews" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>Ervaringen</h2>
                 <WriteReview placeId={place.id} placeName={place.name} slug={place.slug} />
               </div>
               {reviews.length > 0 ? (
@@ -265,7 +280,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
 
         {nearby.length > 0 && (
           <section className="mt-10" aria-labelledby="buurt">
-            <h2 id="buurt" className="font-display text-h2 font-semibold">In de buurt</h2>
+            <h2 id="buurt" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>In de buurt</h2>
             <ul className={`${CARD_GRID} -mx-4 mt-3 scroll-px-4 px-4 sm:mx-0 sm:px-0`}>
               {nearby.map(({ place: p, km }) => (
                 <li key={p.id} className={CARD_CELL}>
@@ -287,10 +302,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         </p>
       </div>
 
-      {/* Vaste actiebalk op mobiel: altijd binnen één tik bellen, website of route */}
+      {/* Vaste actiebalk op mobiel: prijs en één brede routeknop. Bewaren, delen, website en bellen staan in de
+          actierij onder de naam (redesign 18 november 2026). */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 shrink-0">
             <p className={`font-display leading-none font-semibold ${price ? "text-lg" : "text-sm text-muted"}`}>{price?.value ?? "Prijs onbekend"}</p>
             {/* Eén label voor toeslagen, overal hetzelfde en niet afgekapt (review R52) */}
             {price && (price.extras || place.touristTaxIncluded === false) ? (
@@ -299,23 +315,41 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               price?.perNight && <p className="mt-0.5 text-sm leading-tight whitespace-nowrap text-muted">per nacht</p>
             )}
           </div>
-          <SaveButton slug={place.slug} name={place.name} variant="bar" />
-          {tel && (
-            <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bel ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
-              <Icon name="phone" size={19} />
-            </ContactLink>
-          )}
-          {place.website && (
-            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface">
-              <Icon name="globe" size={19} />
-            </ContactLink>
-          )}
-          <NavigateButton to={place} slug={place.slug} className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep">
-            <Icon name="route" size={18} /> Route
+          <NavigateButton to={place} slug={place.slug} className="flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep active:scale-[0.98]">
+            <Icon name="route" size={19} /> Route
           </NavigateButton>
         </div>
       </div>
     </article>
+  );
+}
+
+/** Ruimte boven een onderdeel waar een springlink naartoe gaat */
+// html heeft al scroll-padding-top voor de header (globals.css); dit is de hoogte van de rij springlinks
+const SECTION_OFFSET = "scroll-mt-14 lg:scroll-mt-0";
+
+/**
+ * Actierij onder de naam op de telefoon (redesign 18 november 2026): bewaren, delen, website en bellen binnen
+ * duimbereik, als secundaire knoppen met een rand. De route staat als hoofdactie in de vaste balk onderaan.
+ */
+function ActionRow({ place, tel, reserveLabel }: { place: Place; tel?: string; reserveLabel: string }) {
+  const count = 2 + (place.website ? 1 : 0) + (tel ? 1 : 0);
+  const cols = count === 4 ? "grid-cols-4" : count === 3 ? "grid-cols-3" : "grid-cols-2";
+  return (
+    <div className={`mt-4 grid gap-2 md:hidden ${cols}`}>
+      <SaveButton slug={place.slug} name={place.name} variant="tile" />
+      <ShareButton title={place.name} variant="tile" />
+      {place.website && (
+        <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" aria-label={`${reserveLabel}: ${place.name}`} className={ACTION_TILE}>
+          <Icon name="globe" size={21} /> Website
+        </ContactLink>
+      )}
+      {tel && (
+        <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} aria-label={`Bellen naar ${place.name}`} className={ACTION_TILE}>
+          <Icon name="phone" size={21} /> Bellen
+        </ContactLink>
+      )}
+    </div>
   );
 }
 
@@ -349,7 +383,7 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         {place.website && <p className="mt-3 text-center text-sm text-muted">{websiteLabel(place.website)}</p>}
       </div>
 
-      <section id="ligging" aria-labelledby="ligging-kop" className="scroll-mt-20 space-y-3">
+      <section id="ligging" aria-labelledby="ligging-kop" className={`space-y-3 ${SECTION_OFFSET}`}>
         <h2 id="ligging-kop" className="font-display text-h2 font-semibold lg:sr-only">Ligging en route</h2>
         <PlaceMap
           places={[place, ...nearby]}
@@ -558,7 +592,7 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
     });
   return (
     <section aria-labelledby="praktisch">
-      <h2 id="praktisch" className="font-display text-h2 font-semibold">Praktisch en contact</h2>
+      <h2 id="praktisch" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>Praktisch en contact</h2>
       <dl className="mt-3 divide-y divide-line rounded-lg border border-line bg-surface">
         {rows.map((r) => (
           <div key={r.label} className="flex justify-between gap-4 px-4 py-2.5">
