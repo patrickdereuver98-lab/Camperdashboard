@@ -2,7 +2,24 @@
 
 Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat live in Supabase staat, staat erbij.
 
-## Volgende versie (in de maak, dataplan november 2026)
+## Volgende versie (in de maak)
+
+**Herlezing** (dataplan november, spoor 1.4)
+- Een vertrekregel verdwijnt nooit stil: zegt een lezing niets over het vertrek, dan blijven regel, tijd en bronzin
+  staan en wordt het wissen een voorstel in de Triage Inbox (migratie `20261120400000_vertrek_niet_stil_wissen`). In de
+  tweede herlezingsportie wiste parser 47 25 regels op 391 plekken (twee tijden, of een subpagina die niet gelezen
+  werd); die zijn uit het veldlog teruggezet (back-up `private.herstel_p47_20261120`).
+
+**Data** (README 140, PR #176)
+- AI-lezer (README 140): Gemini leest de ingekorte websitetekst een tweede keer; elk feit moet een letterlijk citaat
+  hebben en gaat als voorstel (met citaat en bronpagina) naar de Triage Inbox. Nooit rechtstreeks in de plek.
+- Kandidaten uit officiële bekendmakingen: vergunningen en besluiten van gemeenten over camperplaatsen, met afstand
+  tot de dichtstbijzijnde bekende plek, in Mission Control → Kandidaten.
+- Herlees-rem: de scrape-taken gaan uit als de nieuwste parser bij meer dan 5% van de gelezen plekken een kernfeit wist.
+
+## 0.9.3 (20 november 2026)
+
+Dataplan november ([dataplan](docs/dataplan-2026-11.md)), PR #170 en #172.
 
 **Data en dataketen** ([dataplan](docs/dataplan-2026-11.md))
 - Gouden set: 23 echte pagina's als regressietest voor de lezer (R69).
@@ -16,6 +33,11 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
 - Publiceren op regels: contact plus 2 van 4 kernfeiten (vertrekregel dubbel); de score telt alleen nog voor de
   volgorde (+46 plekken, 14 met vertrekregel). Grijze plekpagina's `noindex, follow` en niet in de sitemap (README 139).
 
+- Parser 47 (na de eerste herlezingsportie van 20 november): later vertrekken tegen betaling botst niet meer met de
+  vertrektijd, "uw plaats" telt als kampeerplek, bij tegenspraak tussen pagina's wint de pagina over kampeerplekken.
+  In de eerste portie van 117 plekken wiste parser 46 9 vertrekregels; 6 daarvan onterecht, die zijn hiermee terug.
+
+
 **Meer plekken en vertrektijden** ([plan.md](plan.md), 20 november 2026)
 - Lezer herkent de boekingsmodule (Tommy, Booking Experts, Camping.care en anderen) en afrekenen met een zuil of app
   (Aanuit.net, i-Marina, betaalautomaat). Bewaard als aanwijzing in `sources.booking` en `sources.payment_hint`, nooit
@@ -26,10 +48,12 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
   een concept en gaat pas online als de eigen site de vertrekregel noemt. Jachthavens uit Overture koppelen alleen.
 - Een plek die wegging omdat OSM geen website had, mag terugkomen als een andere bron er een heeft (316 plekken).
 
-**Migraties** (pas live na samenvoegen, in deze volgorde): `20261120100000_dataplan_osm_en_kernfeit`,
-`20261120200000_publicatie_op_regels` (daarna "Regels opnieuw toepassen"), `20261121100000_boekingssysteem_en_betaalwijze`,
+**Migraties** (live gezet op 20 november 2026, in deze volgorde): `20261120100000_dataplan_osm_en_kernfeit`,
+`20261120200000_publicatie_op_regels`, daarna de regels opnieuw toegepast (2.169 naar 2.214 gepubliceerd).
+Nog niet live (na samenvoegen, in deze volgorde): `20261121100000_boekingssysteem_en_betaalwijze`,
 `20261121110000_kandidaten_met_website`.
-**Edge functions** (na samenvoegen uitrollen): `pipeline` met parser 46.
+**Edge functions**: `pipeline` versie 69 (parser 47, stub op `89fbb17`); versie 68 (parser 46) was kort live. Na
+samenvoegen opnieuw uitrollen (herkenning boekingsmodule en betaalzuil).
 
 ## 0.9.2 (19 november 2026)
 

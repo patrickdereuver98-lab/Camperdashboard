@@ -66,12 +66,12 @@ export async function askGemini(key: string, model: string, text: string): Promi
 }
 
 // ── Groeperen in de Triage Inbox ────────────────────────────────────────────────────────────────────────────────────
-type QueueRow = { field_changed: string; submission_id: string | null; owner_reply_id: string | null };
+type QueueRow = { field_changed: string; submission_id: string | null; owner_reply_id: string | null; reading_id?: string | null };
 
 const DEPARTURE_FIELDS = new Set(["departure", "checkout_until"]);
 
 /**
- * Vertrekregel (`departure`) en tijd (`checkout_until`) uit dezelfde inzending of mail zijn één voorstel: de database
+ * Vertrekregel (`departure`) en tijd (`checkout_until`) uit dezelfde inzending, mail of lezing van de AI-lezer zijn één voorstel: de database
  * (admin_apply_update, admin_reject_update) beslist ze ook samen. De eerste rij van een groep is de rij die je
  * accepteert of afwijst; `fields` heeft eerst de regel, dan de tijd. Andere velden blijven losse rijen.
  */
@@ -79,7 +79,7 @@ export function groupUpdates<T extends QueueRow>(rows: T[]): (T & { fields: T[] 
   const out: (T & { fields: T[] })[] = [];
   const byKey = new Map<string, T & { fields: T[] }>();
   for (const r of rows) {
-    const origin = r.submission_id ?? r.owner_reply_id;
+    const origin = r.submission_id ?? r.owner_reply_id ?? r.reading_id ?? null;
     const key = DEPARTURE_FIELDS.has(r.field_changed) && origin ? origin : null;
     const existing = key ? byKey.get(key) : undefined;
     if (existing) {

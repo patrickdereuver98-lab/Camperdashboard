@@ -21,7 +21,7 @@ in de specs gaan over dat archiefstuk.
 
 Daarnaast zijn de live cijfers uit de database gelezen, alleen met SELECT. Patrick vroeg om het onderzoek met Fable te
 doen, maar Fable gaf in deze sessie de foutmelding "requires usage credits". Het onderzoek is daarom op Opus gedaan
-(zie README 140).
+(zie README 141).
 
 **Hoe je de cijfers leest.** Waar de twee onderzoeken verschillen, geldt het gemeten cijfer. Een cijfer zonder meting
 is een hypothese en staat zo in de tabel (§3).
@@ -35,7 +35,8 @@ Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 | A1 OSM-gat | ✅ Gemeten: alle 466 ontbrekende objecten zijn bewust opgeruimd. 316 omdat OSM geen website had, 150 omdat de site ook met stealth onleesbaar was. De query zelf mist niets: parkeren en jachthavens met `motorhome=yes/designated` zaten er al in. Gebouwd: een plek die zonder website wegging, mag terug als een andere bron een website heeft (migratie `20261121110000`). `leisure=marina` wordt nu jachthaven |
 | A2 Provincies | ✅ Zeeland (CC0, WFS `recreatie:ext_rec_vblreczld`): 462 kandidaten, 120 zonder plek binnen 150 m, 418 met website. Overijssel: geen openbare laag gevonden. Zuid-Holland stond er al. Utrecht en de rest: ⬜ |
 | A3 Overture | ✅ Gebouwd: `overture.py` (export per week in de workflow), tier 3 in `geo_bronnen`, proefroute (alleen Overture; alle inhoudelijke controles blijven; concept met website, online pas met een vertrekregel van de eigen site of Beheer; geen website als een geblokkeerde bron meedoet; een nieuwe plek neemt de OSM-sleutel over van de plek die zonder website wegging), jachthavens koppelen alleen. Elk kwartaal de release in `overture.py` bijwerken (Overture ruimt oude releases op; dan meldt de keten "wacht op bestand"). Voorbeeldexport: 4.364 kandidaten (confidence ≥ 0,7), 2.159 zonder plek binnen 150 m. Live na samenvoegen |
-| A4 Jachthavens, A5 Gemeentebesluiten | ⬜ |
+| A4 Jachthavens | ⬜ |
+| A5 Gemeentebesluiten | ✅ Door een andere sessie gebouwd (README 140, PR #176): officiële bekendmakingen via de SRU-API, elke maandag, als kandidaten in `discovery_candidates` (Mission Control → Kandidaten). Eerste ronde: 758 publicaties, 502 zonder bekende plek binnen 300 m. Een AI-lezer (Gemini) doet daarnaast voorstellen met citaat |
 | B1 JSON-LD en OSM `check_out` | ✅ Bestond al (lezer en `osm.ts`) |
 | B2 Boekingssystemen | 🔄 B2.2 gebouwd: de lezer bewaart de module in `sources.booking` (migratie `20261121100000`). B2.1 onderzoek per systeem: ⬜ |
 | B3 Dieper lezen | Grotendeels al gebouwd (sitemap, focuspagina's, pdf's, vaste paden). Uitbreiden pas met de gouden set |
@@ -107,8 +108,9 @@ Dataketen-workflow met de hand draaien als proef (`proef` aan), en daarna echt.
 | KvK | Open set heeft geen naam en geen volledig adres; selecties uit het Handelsregister zijn betaald | Betaald, AVG-beperkt | Niet |
 
 **Gemini noemt ook dingen die niet bestaan.** Het rapport heeft het over een "besluit 6.4" met tabellen `url_cache`
-en `discovery_candidates`. Het dataplan heeft vier besluiten (§6), en geen van die tabellen bestaat. De tabel
-`service_points` bestaat al. Voor kandidaten gebruiken we de bestaande `geo_master`.
+en `discovery_candidates`. Het dataplan heeft vier besluiten (§6). Bij het schrijven van dit plan bestonden die tabellen niet; later op 20 november
+maakte een andere sessie `discovery_candidates` voor de officiële bekendmakingen (README 140). Kandidaten uit
+Overture en provincies gaan via `geo_master`. De tabel `service_points` bestond al.
 
 ## 4. Spoor A: meer plekken
 

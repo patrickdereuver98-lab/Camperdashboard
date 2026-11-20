@@ -3,7 +3,7 @@
 -- apply_scrape bewaart dat als aanwijzing in sources.booking en sources.payment_hint. Het is geen feit voor de
 -- plekpagina en verandert geen kolom; de vertrekregel volgt er nooit uit. Alleen met een geslaagde lezing: bij een
 -- haperende site (_pages_failed) blijft de vorige aanwijzing staan.
--- Basis: apply_scrape uit 20261120100000_dataplan_osm_en_kernfeit (gelijk aan live op 20 november 2026).
+-- Basis: de live apply_scrape van 20 november 2026, 22:10 UTC (na vertrek_niet_stil_wissen, versie 20261120500000).
 
 CREATE OR REPLACE FUNCTION public.apply_scrape(p_id uuid, p_data jsonb, p_error text DEFAULT NULL::text)
  RETURNS void
@@ -23,7 +23,7 @@ declare
   core text[] := array['price_eur','departure','checkout_until','season','open_all_year'];
   f text;
   old jsonb;
-  -- Nieuw: max_stay_nights
+  keep_departure boolean := false;
   fields text[] := array['price_eur','tourist_tax_included','power','water','dump_station','toilet','shower','wifi','dogs',
                          'capacity','max_length_m','max_stay_nights','open_all_year','season','reservation','phone','email','street','postcode',
                          'description','image_url','departure','checkout_until','checkin_from','checkin_until','access_hours','access_24h','times_note','price_extras',
@@ -46,6 +46,14 @@ begin
   select * into p from public.places where id = p_id for update;
   if not found then return; end if;
   prev := coalesce(p.sources->'website_fields', '[]'::jsonb);
+  keep_departure := p.departure is not null and not (p_data ? 'departure') and not coalesce(p.sources->'beheer' ? 'departure', false);
+  -- Een vertrekregel verdwijnt nooit stil: het wissen wordt een voorstel voor Beheer (bron 'pipeline', nieuw = leeg)
+  if keep_departure and prev ? 'departure' and not (p_data ? '_pages_failed') and not exists (select 1 from public.updates_queue q
+                                     where q.place_id = p.id and q.field_changed = 'departure' and q.source = 'pipeline'
+                                       and q.status = 'pending' and q.new_value = 'null'::jsonb) then
+    insert into public.updates_queue (place_id, field_changed, old_value, new_value, source)
+    values (p.id, 'departure', to_jsonb(p.departure), 'null'::jsonb, 'pipeline');
+  end if;
 
   foreach f in array fields loop
     if p.sources->'beheer' ? f then
@@ -62,6 +70,12 @@ begin
       continue;
     end if;
     old := to_jsonb(p)->f;
+    -- Nieuw (herlezing 20 november 2026): zegt deze lezing niets over het vertrek terwijl de plek een vertrekregel heeft,
+    -- dan blijven regel, tijd en bronzin staan; ook een notitie "Twee vertrektijden" vervangt de bronzin niet
+    if keep_departure and f = any (array['departure', 'checkout_until', 'times_note']) then
+      if prev ? f then applied := applied || to_jsonb(f); end if;
+      continue;
+    end if;
     if p_data ? f then
       if f = any(priority) or old is null or old = 'null'::jsonb or prev ? f then
         patch := patch || jsonb_build_object(f, p_data->f);
@@ -109,8 +123,7 @@ begin
     access_hours = r.access_hours, access_24h = r.access_24h, times_note = r.times_note, price_extras = r.price_extras,
     photos = case when p_data ? 'photos' then p_data->'photos' when prev ? 'image_url' and not (p_data ? 'image_url') and not (p_data ? '_pages_failed') then '[]'::jsonb else t.photos end,
     sources = (coalesce(t.sources, '{}'::jsonb) - 'website_error'
-               - case when p_data ? '_pages_failed' then array[]::text[] else array['booking', 'payment_hint'] end)
-              || jsonb_build_object('website', now(), 'website_fields', applied)
+               - case when p_data ? '_pages_failed' then array[]::text[] else array['booking', 'payment_hint'] end) || jsonb_build_object('website', now(), 'website_fields', applied)
               || case when p_data ? '_parser' then jsonb_build_object('website_parser', p_data->>'_parser') else '{}'::jsonb end
               -- plan.md B2.2 en B4: aanwijzingen, alleen bij een volledige lezing bijwerken (ook wissen als ze weg zijn)
               || case when p_data ? '_pages_failed' then '{}'::jsonb
@@ -120,4 +133,3 @@ begin
   where t.id = p_id;
   update private.scrape_queue set done_at = now(), last_error = null where place_id = p_id;
 end $function$;
-

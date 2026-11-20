@@ -29,5 +29,5 @@ cat > "$work/supabase/functions/pipeline/index.ts" <<STUB
 import "https://raw.githubusercontent.com/$REPO/$commit/web/supabase/functions/pipeline/index.ts";
 STUB
 echo "Uitrollen: pipeline @ $commit"
-npx supabase functions deploy pipeline --project-ref "$PROJECT" --no-verify-jwt --workdir "$work"
+npx supabase functions deploy pipeline --project-ref "$PROJECT" --no-verify-jwt --workdir "$work" --yes  # --yes: CLI v3 vraagt anders om bevestiging (toestemming Patrick, CLAUDE.md)
 echo "Klaar. Noteer de nieuwe versie in docs/specs/06-implementatieplan.md."
