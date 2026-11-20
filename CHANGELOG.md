@@ -2,7 +2,9 @@
 
 Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat live in Supabase staat, staat erbij.
 
-## Volgende versie (in de maak, dataplan november 2026)
+## 0.9.3 (20 november 2026)
+
+Dataplan november ([dataplan](docs/dataplan-2026-11.md)), PR #170 en #172.
 
 **Data en dataketen** ([dataplan](docs/dataplan-2026-11.md))
 - Gouden set: 23 echte pagina's als regressietest voor de lezer (R69).
@@ -26,9 +28,9 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
   vertrektijd, "uw plaats" telt als kampeerplek, bij tegenspraak tussen pagina's wint de pagina over kampeerplekken.
   In de eerste portie van 117 plekken wiste parser 46 9 vertrekregels; 6 daarvan onterecht, die zijn hiermee terug.
 
-**Migraties** (pas live na samenvoegen, in deze volgorde): `20261120100000_dataplan_osm_en_kernfeit`,
-`20261120200000_publicatie_op_regels` (daarna "Regels opnieuw toepassen").
-**Edge functions** (na samenvoegen uitrollen): `pipeline` met parser 46.
+**Migraties** (live gezet op 20 november 2026, in deze volgorde): `20261120100000_dataplan_osm_en_kernfeit`,
+`20261120200000_publicatie_op_regels`, daarna de regels opnieuw toegepast (2.169 naar 2.214 gepubliceerd).
+**Edge functions**: `pipeline` versie 69 (parser 47, stub op `89fbb17`); versie 68 (parser 46) was kort live.
 
 ## 0.9.2 (19 november 2026)
 
