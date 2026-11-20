@@ -268,8 +268,8 @@ Plan: [`plan.md`](../../plan.md). Juistheid uit het [dataplan](../dataplan-2026-
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
-| ⬜ Spoor A: meer plekken (OSM-gat, provincies, Overture, jachthavens, gemeentebesluiten) | Agent | `plan.md` §4 | Kandidaten in `geo_master`, lagen in `run_pipeline.py` | Camperplaatsen ≥ 550, jachthavens ≥ 70 | Besluit 1 (`plan.md` §10) voor Overture |
-| ⬜ Spoor B: meer vertrektijden (JSON-LD, boekingssystemen, dieper lezen, betaalzuil als aanwijzing) | Agent | `plan.md` §5 | Lezer en pipeline | ≥ 1.900 online plekken met vertrektijd | Gouden set (dataplan 1.1) |
+| 🔄 Spoor A: meer plekken. Gebouwd (20 nov): laag Zeeland, Overture (tier 3, proefroute), website mee bij promotie, terugkeer van plekken die zonder website weggingen (migratie `20261121110000`, live na samenvoegen). Open: jachthavens (A4), gemeentebesluiten (A5) | Agent | `plan.md` §4 | Kandidaten in `geo_master`, lagen in `run_pipeline.py` | Camperplaatsen ≥ 550, jachthavens ≥ 70 | Samenvoegen; daarna migratie, pipeline en dataketen |
+| 🔄 Spoor B: meer vertrektijden. Bestond al: JSON-LD `checkoutTime`, OSM `check_out`, sitemap en focuspagina's. Gebouwd (20 nov): herkenning boekingsmodule en betaalzuil (migratie `20261121100000`). Open: B2.1 onderzoek per boekingssysteem, B5 mail | Agent | `plan.md` §5 | Lezer en pipeline | ≥ 1.900 online plekken met vertrektijd | Gouden set (dataplan 1.1) |
 | ⬜ Spoor C: dekking meten tegen CBS per provincie | Agent | `plan.md` §6 | Regel in de datategel | Per provincie zichtbaar | Datategel (dataplan spoor 5) |
 
 ## Mission Control (opdracht 1 november 2026) 🟡

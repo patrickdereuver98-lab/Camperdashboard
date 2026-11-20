@@ -59,6 +59,14 @@ jobs:
             openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "$f" -out "${f%.enc}" -pass env:AANLEVERING_SLEUTEL
             echo "ontsleuteld: ${f%.enc}"
           done
+      # plan.md A3: Overture Places (open data, CDLA-Permissive-2.0) vers ophalen. Mislukt dit, dan draait de keten door
+      # en meldt run_pipeline de bron als "wacht op bestand".
+      - name: Overture-export
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          pip install duckdb==1.2.2
+          python tools/data-collectors/overture.py
       - name: Bronnen → merge_master → promote
         env:
           PIPELINE_URL: https://qkrmthrhwmmmwswmfgwc.supabase.co/functions/v1/pipeline

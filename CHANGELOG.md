@@ -16,8 +16,19 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
 - Publiceren op regels: contact plus 2 van 4 kernfeiten (vertrekregel dubbel); de score telt alleen nog voor de
   volgorde (+46 plekken, 14 met vertrekregel). Grijze plekpagina's `noindex, follow` en niet in de sitemap (README 139).
 
+**Meer plekken en vertrektijden** ([plan.md](plan.md), 20 november 2026)
+- Lezer herkent de boekingsmodule (Tommy, Booking Experts, Camping.care en anderen) en afrekenen met een zuil of app
+  (Aanuit.net, i-Marina, betaalautomaat). Bewaard als aanwijzing in `sources.booking` en `sources.payment_hint`, nooit
+  als vertrekregel.
+- OSM: `leisure=marina` met campers wordt jachthaven, ook zonder "haven" in de naam.
+- Tweede bronnen: laag Zeeland (CC0, 462 kandidaten, 120 zonder plek binnen 150 m) en Overture Places (tier 3, export
+  per week in de workflow). Een kandidaat krijgt zijn website mee. Een kandidaat uit één tier-3-bron met website wordt
+  een concept en gaat pas online als de eigen site de vertrekregel noemt. Jachthavens uit Overture koppelen alleen.
+- Een plek die wegging omdat OSM geen website had, mag terugkomen als een andere bron er een heeft (316 plekken).
+
 **Migraties** (pas live na samenvoegen, in deze volgorde): `20261120100000_dataplan_osm_en_kernfeit`,
-`20261120200000_publicatie_op_regels` (daarna "Regels opnieuw toepassen").
+`20261120200000_publicatie_op_regels` (daarna "Regels opnieuw toepassen"), `20261121100000_boekingssysteem_en_betaalwijze`,
+`20261121110000_kandidaten_met_website`.
 **Edge functions** (na samenvoegen uitrollen): `pipeline` met parser 46.
 
 ## 0.9.2 (19 november 2026)

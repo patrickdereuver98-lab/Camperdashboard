@@ -179,3 +179,8 @@ test("OSM: een tijd met onmogelijke minuten wordt niet overgenomen", () => {
   assert.equal(r.checkout_until, undefined);
   assert.equal(r.checkin_from, undefined);
 });
+
+test("jachthaven met camperplekken (leisure=marina) wordt jachthaven, ook zonder 'haven' in de naam", () => {
+  const r = mapOsm({ type: "node", id: 9, lat: 52.1, lon: 5.1, tags: { leisure: "marina", motorhome: "yes", name: "De Kreupel" } });
+  assert.equal(r?.kind, "jachthaven");
+});

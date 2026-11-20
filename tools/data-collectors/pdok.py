@@ -43,7 +43,8 @@ DEFAULT_PAGE = 1000
 DEFAULT_MAX_PAGES = 50
 LAAG_ID = re.compile(r"[a-z0-9_]{2,40}")
 # Standaardnamen die `velden` mag koppelen
-VELD_NAMEN = {"naam", "id", "gemeente", "capaciteit", *set(FACILITY_ALIASES.values())}
+# `website` en `soort` (de soort volgens de bron, bv. "Camping < 40 plaatsen") komen als feit in faciliteiten
+VELD_NAMEN = {"naam", "id", "gemeente", "capaciteit", "website", "soort", *set(FACILITY_ALIASES.values())}
 
 # Nederland in WGS84 (zelfde rechthoek als promote_geo_master) en in RD
 NL_LAT = (50.70, 53.60)
@@ -228,6 +229,20 @@ def position(geom: Any) -> tuple[tuple[float, float] | None, str | None]:
 
 # ── Omzetten ─────────────────────────────────────────────────────────────────
 
+def clean_website(value: Any) -> str | None:
+    """Een website zoals de bron hem geeft ("www.x.nl", "http://x.nl/"), als adres met schema; iets wat geen domein is
+    → None. Alleen het schema wordt aangevuld, niets wordt verzonnen."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text or " " in text:
+        return None
+    if not re.match(r"^https?://", text, re.I):
+        text = "https://" + text
+    host = urlparse(text).hostname or ""
+    return text if re.fullmatch(r"[a-z0-9.-]+\.[a-z]{2,}", host.lower()) else None
+
+
 def map_features(collection: dict[str, Any], bron: str, laag: dict[str, Any], keep_unknown: bool = False) -> ParseResult:
     result = ParseResult()
     rd = _crs_is_rd(collection.get("crs"))
@@ -268,6 +283,8 @@ def map_features(collection: dict[str, Any], bron: str, laag: dict[str, Any], ke
             if std in ("naam", "id", "gemeente"):
                 continue
             value = parse_value(props.get(col))
+            if std == "website":
+                value = clean_website(value)
             if value is not None:
                 fac[std] = value
         gemeente = clean_name(props.get(velden["gemeente"])) if "gemeente" in velden else None

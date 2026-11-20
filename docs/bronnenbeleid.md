@@ -48,6 +48,10 @@ laatste 24 maanden.
   domein registreren; de server zet er een notitie bij en een mens zet echte overheidsdomeinen in `bron.sources` op
   `kind = 'overheid'`, tier 1. Tier 2 krijgt alleen het domein (bij Facebook, Wix en dergelijke: het pad) uit
   `places.website` van de opgegeven plek.
+- **Verzamelbronnen** (besluit 20 november 2026, `plan.md` A3): open datasets die zelf uit andere bronnen zijn
+  samengesteld, zoals Overture Places (CDLA-Permissive-2.0), zijn tier 3. Ze leveren kandidaten, geen feiten. Een
+  kandidaat uit zo'n bron wordt alleen een concept als hij een website heeft, en gaat pas online als die eigen site
+  (tier 2) de vertrekregel noemt. Jachthavens uit een verzamelbron koppelen alleen aan een bestaande plek.
 - **De vertrekregel blijft het kernfeit.** De bevestiging op de site (`departure_check`) blijft bij beheer en de
   eigenaar; claims maken kandidaten, geen bevestiging.
 

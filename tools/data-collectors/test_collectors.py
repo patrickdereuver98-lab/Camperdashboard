@@ -588,7 +588,7 @@ def test_geojson_van_een_gemeente(tmp_path):
 def test_bronnen_json_klopt():
     """E1, E2: voorbereide bronnen staan uit; Archies is geblokkeerd (20 november 2026, R81)."""
     active, inactive = rp.load_config(rp.DEFAULT_CONFIG)
-    assert [b["bron"] for b in active] == ["osm", "pdok"]
+    assert [b["bron"] for b in active] == ["osm", "pdok", "overture"]
     assert {b["bron"]: b["status"] for b in inactive} == {
         "archies": "geblokkeerd", "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand",
         "partner_2": "wacht_op_bestand", "svr": "geblokkeerd"}
@@ -804,4 +804,139 @@ def test_pdok_params_filter_en_rd_van_de_server(tmp_path):
 def test_pdok_laag_in_bronnen_json():
     active, _ = rp.load_config(rp.DEFAULT_CONFIG)
     (b,) = [x for x in active if x["bron"] == "pdok"]
-    assert [l["id"] for l in b["lagen"]] == ["zuid_holland"] and b["lagen"][0]["srs"] == "EPSG:28992"
+    assert [l["id"] for l in b["lagen"]] == ["zuid_holland", "zeeland"] and b["lagen"][0]["srs"] == "EPSG:28992"
+
+
+# ── A2: provinciale open data (Zeeland) ──────────────────────────────────────
+
+import overture  # noqa: E402
+
+
+def _zld(soort, naam, web, x, y):
+    """Een vlak zoals opengeodata.zeeland.nl het geeft (WGS84, kolomnamen afgekort)."""
+    d = 0.0005
+    ring = [[x, y], [x + d, y], [x + d, y + d], [x, y + d], [x, y]]
+    return {"type": "Feature", "id": f"ext_rec_vblreczld.{naam}", "geometry": {"type": "MultiPolygon", "coordinates": [[ring]]},
+            "properties": {"aanboddata": soort, "aanbodd_10": naam, "aanbodd_12": web, "xyz_geol_4": "Biggekerke"}}
+
+
+def _zeeland_laag():
+    active, _ = rp.load_config(rp.DEFAULT_CONFIG)
+    (b,) = [x for x in active if x["bron"] == "pdok"]
+    (laag,) = [l for l in b["lagen"] if l["id"] == "zeeland"]
+    return laag
+
+
+def test_zeeland_laag_in_bronnen_json():
+    laag = _zeeland_laag()
+    assert laag["url"] == "https://opengeodata.zeeland.nl/geoserver/recreatie/wfs"
+    assert laag["typename"] == "recreatie:ext_rec_vblreczld" and laag["licentie"] == "CC0 1.0"
+    b = next(x for x in json.loads(rp.DEFAULT_CONFIG.read_text(encoding="utf-8")) if x["bron_id"] == "pdok")
+    assert "indicatief" in b["notitie"]
+
+
+def test_zeeland_mapping_naam_soort_website_en_filter():
+    laag = _zeeland_laag()
+    coll = _fc([
+        _zld("Camping < 40 plaatsen", "Boerderijcamping Krabbeneiland", "www.krabbeneiland.nl", 3.5475, 51.5028),
+        _zld("camperplaats", "Camperplaats De Zandweg", "http://camperplaatszierikzee.nl/", 3.9, 51.64),
+        _zld("Camping", "Camping Zonder Site", None, 3.8, 51.5),
+        _zld("Vakantiewoningen op park", "Bungalowpark X", "www.x.nl", 3.6, 51.5),
+        _zld("Gemengd bedrijf", "Boer Y", "www.y.nl", 3.7, 51.5),
+        _zld("Appartementen", "Flat Z", "www.z.nl", 3.7, 51.4),
+    ], crs="urn:ogc:def:crs:EPSG::4326")
+    r = pdok.map_features(coll, "pdok", laag)
+    assert [x["naam"] for x in r.records] == ["Boerderijcamping Krabbeneiland", "Camperplaats De Zandweg", "Camping Zonder Site"]
+    assert r.skipped == {"buiten het filter van de laag (geen kampeerplek)": 3}
+    k, z, s = r.records
+    assert k["faciliteiten"] == {"soort": "Camping < 40 plaatsen", "website": "https://www.krabbeneiland.nl"}
+    assert z["faciliteiten"]["website"] == "http://camperplaatszierikzee.nl/"
+    assert "website" not in s["faciliteiten"]            # onbekend blijft leeg
+    assert 51.50 < k["lat"] < 51.51 and 3.54 < k["lon"] < 3.55   # zwaartepunt van het vlak, WGS84 (geen omdraaiing)
+    assert k["bron_id"].startswith("pdok:zeeland/ext_rec_vblreczld.")
+
+
+def test_website_alleen_een_domein():
+    assert pdok.clean_website("www.a.nl") == "https://www.a.nl"
+    assert pdok.clean_website("http://a.nl/x") == "http://a.nl/x"
+    assert pdok.clean_website("geen website") is None and pdok.clean_website("n.v.t.") is None and pdok.clean_website(None) is None
+
+
+# ── A3: Overture Places (tier 3) ─────────────────────────────────────────────
+
+OVERTURE_CSV = (
+    "id,name,confidence,cat,basic_category,cc,src,lic,x,y,website\n"
+    "5acfda0e-7b01-4703-9f2c-af24b511a4ee,Camping Polderzicht,0.9978,campground,campground,NL,meta,CDLA-Permissive-2.0,3.39040,51.27733,http://www.camping-polderzicht.nl/\n"
+    "bdf8a232-de6c-41a7-87c5-b31be3f2c637,Sas Van Gent,0.5,marina,marina,NL,BrightQuery,CDLA-Permissive-2.0,3.80158,51.22537,\n"
+    "11111111-0000-0000-0000-000000000001,Jachthaven Test,0.85,marina,marina,NL,meta,CDLA-Permissive-2.0,5.1,52.1,\n"
+    "11111111-0000-0000-0000-000000000002,Hotel Test,0.95,hotel,hotel,NL,meta,CDLA-Permissive-2.0,5.2,52.2,\n"
+    "11111111-0000-0000-0000-000000000003,Camping Belgie,0.95,campground,campground,BE,meta,CDLA-Permissive-2.0,4.3,51.0,\n"
+)
+
+
+def test_overture_inlezen_filter_en_feiten():
+    r = overture.parse_overture_csv(OVERTURE_CSV.encode())
+    assert [x["naam"] for x in r.records] == ["Camping Polderzicht", "Jachthaven Test"]
+    p, j = r.records
+    assert p["bron_id"] == "overture:5acfda0e-7b01-4703-9f2c-af24b511a4ee"
+    assert p["faciliteiten"] == {"soort": "campground", "website": "http://www.camping-polderzicht.nl/"}
+    assert j["faciliteiten"] == {"soort": "marina"}      # geen website: blijft leeg
+    assert abs(p["lat"] - 51.27733) < 1e-6 and abs(p["lon"] - 3.3904) < 1e-6
+    assert sum(r.skipped.values()) == 3 and "confidence onder 0.7" in r.skipped
+
+
+def test_overture_bron_staat_op_tier_3_en_actief():
+    cfg = json.loads(rp.DEFAULT_CONFIG.read_text(encoding="utf-8"))
+    (b,) = [x for x in cfg if x["bron_id"] == "overture"]
+    assert b["betrouwbaarheid"] == 3 and b["type"] == "file_overture" and b["pad"] == "aanlevering/overture_nl.csv"
+    assert "CDLA-Permissive-2.0" in b["licentie"] and "aanwijzing" in b["notitie"] and "eigen site" in b["notitie"]
+    active, inactive = rp.load_config(rp.DEFAULT_CONFIG)
+    assert "overture" in [x["bron"] for x in active]
+
+
+def test_overture_in_de_hele_keten(tmp_path, monkeypatch):
+    monkeypatch.setattr(rp, "HERE", tmp_path)          # het pad moet binnen de map van de collectors liggen
+    (tmp_path / "aanlevering").mkdir()
+    (tmp_path / "aanlevering" / "overture_nl.csv").write_text(OVERTURE_CSV, encoding="utf-8")
+    cfg = _config(tmp_path, [{"bron_id": "overture", "type": "file_overture", "status": "actief",
+                              "pad": "aanlevering/overture_nl.csv", "betrouwbaarheid": 3}])
+    fake = FakePipeline()
+    rp.run(cfg, True, {}, pipeline=fake)
+    (lijst,) = fake.calls[0][1]["lists"]
+    assert [x["bron_id"].split(":")[0] for x in lijst] == ["overture", "overture"]
+
+
+def test_overture_alleen_promoveert_niet_maar_met_een_tweede_bron_wel():
+    """De regel staat in de database (private.geo_promotie_bezwaar): tier 3–5 telt als zwak, er zijn twee verschillende
+    zwakke bronnen nodig (of één tier 1–2). Overture is tier 3, dus alleen niet; met OSM (tier 4) of een provincie
+    (tier 2) wel. We lezen de regel uit de migratie en rekenen hem hier na."""
+    sql = (rp.HERE.parents[1] / "web/supabase/migrations/20261102132558_baseline.sql").read_text(encoding="utf-8")
+    assert "count(*) filter (where b.status = 'toegestaan' and b.tier <= 2)" in sql
+    assert "count(distinct b.bron) filter (where b.status = 'toegestaan' and b.tier >= 3)" in sql
+    assert "if n_sterk = 0 and n_zwak < 2 then" in sql
+
+    def bezwaar(bronnen):  # bronnen: {bron: tier}, alleen toegestane
+        sterk = sum(1 for t in bronnen.values() if t <= 2)
+        zwak = sum(1 for t in bronnen.values() if t >= 3)
+        if sterk == 0 and zwak == 0:
+            return "geen toegestane bron"
+        if sterk == 0 and zwak < 2:
+            return "één bron uit tier 3–5"
+        return None
+
+    assert bezwaar({"overture": 3}) is not None
+    assert bezwaar({"overture": 3, "osm": 4}) is None
+    assert bezwaar({"overture": 3, "pdok": 2}) is None
+
+
+def test_overture_jachthaven_krijgt_geen_website():
+    """plan.md A3/A4: een haven uit Overture gaat niet via de proefroute (website = concept); hij koppelt alleen."""
+    data = (
+        "id,name,confidence,cat,basic_category,cc,src,lic,x,y,website\n"
+        "22222222-0000-0000-0000-000000000002,Jachthaven Proef,0.9,marina,marina,NL,meta,CDLA-Permissive-2.0,5.1,52.1,https://haven.example.nl\n"
+        "33333333-0000-0000-0000-000000000003,Camping Proef,0.9,campground,campground,NL,meta,CDLA-Permissive-2.0,5.2,52.2,https://camping.example.nl\n"
+    ).encode()
+    res = overture.parse_overture_csv(data)
+    fac = {r["naam"]: r["faciliteiten"] for r in res.records}
+    assert "website" not in fac["Jachthaven Proef"]
+    assert fac["Camping Proef"]["website"] == "https://camping.example.nl"

@@ -169,7 +169,7 @@ function times(t: Tags): Record<string, unknown> {
 function kind(t: Tags): string {
   const name = placeName(t) ?? "";
   if (/boerderij|boerencamping|\bboer\b|hoeve|farm/i.test(name)) return "boerderij";
-  if (/jachthaven|marina|passantenhaven/i.test(name)) return "jachthaven";
+  if (/jachthaven|marina|passantenhaven/i.test(name) || t.leisure === "marina") return "jachthaven";
   if (t.tourism === "camp_site") return "camping";
   if (t.amenity === "parking") return "parkeerplaats";
   return "camperplaats";

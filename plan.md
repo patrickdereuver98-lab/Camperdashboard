@@ -28,6 +28,23 @@ is een hypothese en staat zo in de tabel (§3).
 
 Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 
+## Stand van uitvoering (20 november 2026, opdracht Patrick: "maak alles waarvan je denkt dat het helpt")
+
+| Taak | Stand |
+|---|---|
+| A1 OSM-gat | ✅ Gemeten: alle 466 ontbrekende objecten zijn bewust opgeruimd. 316 omdat OSM geen website had, 150 omdat de site ook met stealth onleesbaar was. De query zelf mist niets: parkeren en jachthavens met `motorhome=yes/designated` zaten er al in. Gebouwd: een plek die zonder website wegging, mag terug als een andere bron een website heeft (migratie `20261121110000`). `leisure=marina` wordt nu jachthaven |
+| A2 Provincies | ✅ Zeeland (CC0, WFS `recreatie:ext_rec_vblreczld`): 462 kandidaten, 120 zonder plek binnen 150 m, 418 met website. Overijssel: geen openbare laag gevonden. Zuid-Holland stond er al. Utrecht en de rest: ⬜ |
+| A3 Overture | ✅ Gebouwd: `overture.py` (export per week in de workflow), tier 3 in `geo_bronnen`, proefroute (concept met website, online pas met vertrekregel van de eigen site), jachthavens koppelen alleen. Voorbeeldexport: 4.364 kandidaten (confidence ≥ 0,7), 2.159 zonder plek binnen 150 m. Live na samenvoegen |
+| A4 Jachthavens, A5 Gemeentebesluiten | ⬜ |
+| B1 JSON-LD en OSM `check_out` | ✅ Bestond al (lezer en `osm.ts`) |
+| B2 Boekingssystemen | 🔄 B2.2 gebouwd: de lezer bewaart de module in `sources.booking` (migratie `20261121100000`). B2.1 onderzoek per systeem: ⬜ |
+| B3 Dieper lezen | Grotendeels al gebouwd (sitemap, focuspagina's, pdf's, vaste paden). Uitbreiden pas met de gouden set |
+| B4 Betaalzuil | ✅ Aanwijzing in `sources.payment_hint`. Tonen in Beheer: ⬜ |
+| B5 Mail aan eigenaren | 👤 Wacht op Resend-domein, `outreach_key` en een site zonder Vercel-login |
+
+Na samenvoegen, in deze volgorde: migraties `20261121100000` en `20261121110000`, `pipeline` uitrollen, dan de
+Dataketen-workflow met de hand draaien als proef (`proef` aan), en daarna echt.
+
 ---
 
 ## 1. De kern in vijf punten
@@ -100,7 +117,7 @@ concept, en hij gaat pas online volgens de publicatieregels van README 139. Er k
 
 | # | Werk | Levert op | Bron en tier | Omvang |
 |---|---|---|---|---|
-| A1 | **De 466 OSM-objecten die nooit in `places` landden** per reden indelen: opgeruimd, geen naam, dubbel, nooit verwerkt. Wat ten onrechte ontbreekt alsnog verwerken. Daarna de query uitbreiden met `amenity=parking` met `motorhome`, `leisure=marina` met `motorhome`, `camp_site=basic`, en `tents=only` alleen als `motorhome=yes` er ook staat | +50 tot +150 plekken, vooral camperplaatsen | OSM, tier 1 | S |
+| A1 | **De 466 OSM-objecten die nooit in `places` landden** per reden indelen. Uitkomst: 316 weg omdat OSM geen website had, 150 omdat de site onleesbaar was. Een plek die zonder website wegging, mag terug als een andere bron (Overture, provincie) een website levert. De query had parkeren en jachthavens met `motorhome` al | Tot +316 plekken, als een andere bron de website heeft | OSM, tier 1 | S |
 | A2 | **Provinciale open data**: Zeeland (CC0), Overijssel (CC0), Zuid-Holland (staat al in `bronnen.json`) en Utrecht als laag in `run_pipeline.py`. Met `zoek_ckan.py` op data.overheid.nl zoeken naar de andere acht provincies | Zeeland +94 (gemeten); alle vier samen naar schatting tot +250 | Overheid, tier 1. De datasets noemen zichzelf "indicatief": een kandidaat zonder bereikbare website of zonder tweede bron gaat naar Beheer | S tot M |
 | A3 | **Overture Places** (`campground`, `rv_park`, `marina`, alleen confidence ≥ 0,7) als kandidatenlaag in `geo_master`. Koppelen op afstand en domein. Een kandidaat telt pas als de eigen site hem bevestigt: de lezer haalt naam, adres en "camper" of "kampeer" van de eigen site. Eerst de 764 met website | +300 tot +700 plekken (schatting, veel ruis: stacaravanparken, gesloten, dubbel) | CDLA-Permissive-2.0 en Apache-2.0. Overture is een verzamelbron en krijgt **tier 3**: aanwijzing, geen bewijs. Eigen site tier 2 bevestigt | M |
 | A4 | **Jachthavens**: OSM `leisure=marina` met website (1.198 objecten) door de lezer halen op "camper", "kampeerauto", "passanten" en "havenreglement". Alleen met een citaat over campers wordt het een kandidaat | +20 tot +60 jachthavens, vaak met `24h` of `vrij` | OSM tier 1 voor de plek, eigen site tier 2 voor het feit | M |
