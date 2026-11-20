@@ -8,7 +8,8 @@
 import { checkQuote, type QuoteAnswer } from "./quote.ts";
 import { decodeEntities } from "./extract.ts";
 
-/** Ophogen bij elke wijziging in de prompt of de controles: dan leest de AI-lezer alle plekken opnieuw */
+/** Ophogen bij elke wijziging in de prompt of de controles: elke plek krijgt dan bij de volgende lezing van de site een
+ * nieuwe hash en wordt opnieuw door de AI-lezer gelezen */
 export const AI_VERSION = "1";
 
 /** Hoogstens zoveel tekens per plek naar het model (en in `private.page_texts`) */
@@ -17,12 +18,22 @@ export const MAX_CHARS = 12_000;
 /** Scheiding tussen pagina's in de opgeslagen tekst; een citaat mag er nooit overheen lopen */
 const PAGE_MARK = "\n### ";
 const PAGE_SPLIT = /(?:^|\n)### /;
-/** De tekst zonder kopregels, voor de zinscontrole van quote.ts */
-const withoutMarks = (text: string) => text.replace(/(?:^|\n)### [^\n]*(?=\n)/g, "\n");
+/**
+ * De tekst voor de zinscontrole van quote.ts: zonder kopregels, en elke regel als eigen zin (" | " is daar een
+ * zinsgrens). Anders plakt een tabelregel zonder punt aan de volgende regel vast en leest de extractor de buurregel mee.
+ */
+const forCheck = (text: string) =>
+  text
+    .split("\n")
+    .filter((l) => l.trim() && !/^### /.test(l))
+    .join(" | ");
 // Vrij vertrek zonder bevestiging van de extractor alleen bij een ondubbelzinnige zin (kernbelofte)
-const PLAIN_FREE = /geen (vaste )?(aankomst|vertrek|uitcheck|check-?out)|vertrek(ken)? wanneer|wanneer (je|u) (wilt|wil)|vrije? vertrek/;
+const PLAIN_FREE = /geen (vaste )?(vertrek|uitcheck|check-?out)|vertrek(ken)? wanneer|vrije? vertrek/;
+// Elke vrij-regel moet over vertrekken gaan, niet alleen over aankomen ("geen vaste aankomsttijden")
+const DEPARTURE_WORD = /vertrek|uitcheck|check-?out|weggaan|verlaten|vrij (in en uit|komen en gaan)|komen en gaan/;
 
-export type SeenPage = { url: string; html: string };
+/** Een gelezen pagina; `url` null bij een PDF waarvan het adres niet bekend is */
+export type SeenPage = { url: string | null; html: string };
 
 // Regels die iets zeggen over vertrek, aankomst, prijs, maten, verblijfsduur of open/dicht. De rest (menu's, sfeertekst,
 // cookiemeldingen) gaat niet naar het model: dat scheelt kosten en verkleint de kans op een verkeerd onderwerp.
@@ -88,7 +99,7 @@ export function condense(pages: SeenPage[], max = MAX_CHARS): string {
   let out = "";
   pages.forEach((p, page) => {
     const lines = kept.filter((k) => k.page === page && chosen.has(k.order)).map((k) => k.line);
-    if (lines.length) out += `${PAGE_MARK}${p.url.slice(0, 200)}\n${lines.join("\n")}`;
+    if (lines.length) out += `${PAGE_MARK}${(p.url ?? "(pdf)").slice(0, 200)}\n${lines.join("\n")}`;
   });
   return out.trim().slice(0, max);
 }
@@ -217,6 +228,9 @@ const PITCH = /camper|kampeerauto|kampeerplaats|camperplaats|camperplek|standpla
 // Woorden vlak vóór een bedrag die het bedrag tot een toeslag maken
 const EXTRA = /(toeristen\s?belasting|toeristenbijdrage|hond(en)?|huisdier(en)?|stroom|elektra|kwh|douche|extra (persoon|personen|volwassene|kind)|per persoon|p\.?p\.?|kind(eren)?|bezoek(ers)?|auto|aanhanger|boot|wasmachine|borg)\W{0,12}(?:[a-z.]+\W{0,4}){0,3}$/;
 
+// Woorden vlak ná een bedrag die het tot een toeslag maken ("€ 12,50 per persoon", "€ 3,50 voor stroom")
+const EXTRA_AFTER = /^[\d.,\s-]*(?:€|euro|eur)?\s*(per (persoon|hond|kind|kwh|douche)|p\.?\s?p\.?|pp\b|voor (de |het )?(stroom|elektra|hond|douche|bezoek)|toeslag)/;
+
 const WORDS: Record<string, number> = { een: 1, twee: 2, drie: 3, vier: 4, vijf: 5, zes: 6, zeven: 7, acht: 8, negen: 9, tien: 10, veertien: 14 };
 
 /**
@@ -238,8 +252,9 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     if (url === undefined) fail("vertrek", "citaat niet letterlijk in de tekst");
     else if (rule === "vast" && !checkout) fail("vertrek", "vaste regel zonder geldige tijd");
     else if (RENTAL.test(norm(q)) && !PITCH.test(norm(q))) fail("vertrek", "citaat gaat over verhuur of een voorziening");
+    else if (rule === "vrij" && !DEPARTURE_WORD.test(norm(q))) fail("vertrek", "citaat gaat niet over vertrekken");
     else {
-      const check = checkQuote({ departure: rule as QuoteAnswer["departure"], checkout, quote: q }, withoutMarks(text));
+      const check = checkQuote({ departure: rule as QuoteAnswer["departure"], checkout, quote: q }, forCheck(text));
       if (!check) fail("vertrek", "citaat onderbouwt de regel of tijd niet");
       // Per 24 uur alleen als de extractor het zelf ook leest ("hond € 1,- per 24 uur" is een toeslag, review R56);
       // vrij zonder bevestiging alleen bij een letterlijke zin als "geen vaste vertrektijd"
@@ -267,8 +282,10 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     if (RENTAL.test(q) && !PITCH.test(q)) return fail(field, "citaat gaat over verhuur of een voorziening");
     proposals.push({ field, value: t, quote: String(quote), url, confirmed: false });
   };
-  timeField("checkin_from", a.aankomst_vanaf, a.aankomst_vanaf_citaat, /aankom|arriv|incheck|check[- ]?in|welkom vanaf|vanaf/, 6, 18);
-  timeField("checkin_until", a.laatste_aankomst, a.laatste_aankomst_citaat, /aankom|arriv|incheck|check[- ]?in|binnenrijden|slagboom|uiterlijk|tot/, 14, 23);
+  // Alleen met een woord over aankomen of inchecken: "Bar open tot 22:00" of "elektra vanaf 8 uur" is geen aankomsttijd
+  const ARRIVE = /\b(aankom\w*|aangekomen|arriv\w*|incheck\w*|check[- ]?in|binnenrijden|binnenkomen|slagboom|welkom vanaf)/;
+  timeField("checkin_from", a.aankomst_vanaf, a.aankomst_vanaf_citaat, ARRIVE, 6, 18);
+  timeField("checkin_until", a.laatste_aankomst, a.laatste_aankomst_citaat, ARRIVE, 14, 23);
 
   // Nachtprijs: het bedrag staat in het citaat, het citaat gaat over de kampeerplaats, en het bedrag is geen toeslag
   if (a.nachtprijs != null) {
@@ -281,7 +298,7 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     else if (url === undefined) fail("prijs", "citaat niet letterlijk in de tekst");
     else if (at < 0) fail("prijs", "bedrag staat niet in het citaat");
     else if (!/€|euro|eur\b|,-/.test(q)) fail("prijs", "citaat noemt geen bedrag in euro");
-    else if (EXTRA.test(q.slice(Math.max(0, at - 40), at))) fail("prijs", "bedrag is een toeslag");
+    else if (EXTRA.test(q.slice(Math.max(0, at - 40), at)) || EXTRA_AFTER.test(q.slice(at, at + 40))) fail("prijs", "bedrag is een toeslag");
     else if (RENTAL.test(q) && !PITCH.test(q)) fail("prijs", "citaat gaat over verhuur");
     else if (/\b(per week|per maand|per seizoen|jaarplaats|seizoensplaats)\b/.test(q)) fail("prijs", "geen prijs per nacht");
     else proposals.push({ field: "price_eur", value: Math.round(price * 100) / 100, quote: raw, url, confirmed: false });
@@ -295,8 +312,9 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     if (!Number.isFinite(len) || len < 4 || len > 20) fail("lengte", "lengte buiten 4 tot 20 meter");
     else if (url === undefined) fail("lengte", "citaat niet letterlijk in de tekst");
     else if (!numbersIn(q).some((n) => same(n, len))) fail("lengte", "lengte staat niet in het citaat");
-    else if (!/lengte|lang\b|langer|meter|\d\s?m\b/.test(q)) fail("lengte", "citaat gaat niet over lengte");
-    else if (/hoogte|hoog\b|breedte|breed\b|afstand|km\b/.test(q) && !/lengte|lang\b|langer/.test(q)) fail("lengte", "citaat gaat over een andere maat");
+    // Getal en lengtewoord in hetzelfde zinsdeel: "max lengte 8 m, breedte 3 m" geeft 8, nooit 3
+    else if (!clauses(q).some((c) => numbersIn(c).some((n) => same(n, len)) && LENGTH.test(c) && !/hoogte|hoog\b|breedte|breed\b|afstand|km\b/.test(c)))
+      fail("lengte", "citaat gaat niet over de lengte");
     else proposals.push({ field: "max_length_m", value: len, quote: String(a.max_lengte_citaat), url, confirmed: false });
   }
 
@@ -305,7 +323,10 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     const n = Number(a.max_nachten);
     const url = quoteSource(a.max_nachten_citaat, text);
     const q = norm(String(a.max_nachten_citaat ?? ""));
-    const said = [...numbersIn(q), ...Object.entries(WORDS).filter(([w]) => new RegExp(`\\b${w}\\b`).test(q)).map(([, v]) => v)];
+    // Aantal en "nacht" in hetzelfde zinsdeel: "maximaal 3 nachten, 2 honden" geeft 3, nooit 2
+    const said = clauses(q)
+      .filter((c) => /nacht|dagen|etmaal|x\s?24|24 uur/.test(c))
+      .flatMap((c) => [...numbersIn(c), ...Object.entries(WORDS).filter(([w]) => new RegExp(`\\b${w}\\b`).test(c)).map(([, v]) => v)]);
     if (!Number.isInteger(n) || n < 1 || n > 30) fail("nachten", "aantal buiten 1 tot 30");
     else if (url === undefined) fail("nachten", "citaat niet letterlijk in de tekst");
     else if (!said.includes(n)) fail("nachten", "aantal staat niet in het citaat");
@@ -329,13 +350,20 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
   return { proposals, closed, rejected };
 }
 
-/** Plaats van het bedrag in de tekst, of -1 */
+/** Plaats van het bedrag in de tekst, of -1. Alleen een getal met € ervoor of ",-", "euro" erna is een bedrag. */
 function amountIndex(q: string, price: number): number {
   for (const m of q.matchAll(/(?<![\d.,])(\d{1,3})(?:[.,](\d{1,2}))?(?:\s*,[-–])?(?![\d])/g)) {
-    if (amounts(m[0]).some((x) => same(x, price))) return m.index!;
+    if (!amounts(m[0]).some((x) => same(x, price))) continue;
+    const before = q.slice(Math.max(0, m.index! - 3), m.index!);
+    const after = q.slice(m.index! + m[0].length, m.index! + m[0].length + 6);
+    if (/€\s?$/.test(before) || /,[-–]$/.test(m[0]) || /^\s?(euro|eur\b)/.test(after)) return m.index!;
   }
   return -1;
 }
+
+/** Zinsdelen: een getal hoort bij het woord in hetzelfde deel */
+const clauses = (q: string) => q.split(/[,;|]|\s(?:en|maar|of)\s/);
+const LENGTH = /lengte|lang\b|langer|(camper|voertuig|kampeerauto)\w*\b.*\b(meter|\d\s?m)\b|(meter|\d\s?m)\b.*\b(camper|voertuig|kampeerauto)/;
 
 /** Getallen met een decimaal ("7,5", "8.00") en hele getallen */
 function numbersIn(q: string): number[] {

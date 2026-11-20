@@ -115,6 +115,7 @@ declare
   n integer := 0;
   v_reading uuid := gen_random_uuid();
   v_departure text;
+  v_row public.places;
 begin
   if p_error is not null then
     -- "limiet:" (Gemini 429): geen echte mislukking, de poging telt niet
@@ -125,7 +126,7 @@ begin
     return jsonb_build_object('id', p_id, 'error', true);
   end if;
   update private.page_texts
-     set ai_hash = p_hash, ai_model = p_model, ai_at = now(), ai_error = null, ai_result = p_result
+     set ai_hash = p_hash, ai_model = p_model, ai_at = now(), ai_error = null, ai_result = p_result, ai_tries = 0
    where place_id = p_id;
 
   select to_jsonb(p) into cur from public.places p where p.id = p_id and p.merged_into is null and p.status <> 'hidden';
@@ -135,6 +136,14 @@ begin
     f := pr ->> 'field';
     v := pr -> 'value';
     continue when f is null or not (f = any (private.queue_fields())) or v is null or v = 'null'::jsonb;
+    -- Waarde in het type van de kolom ("20" wordt 20); past hij niet, dan geen voorstel (anders faalt pas het accepteren)
+    begin
+      v_row := jsonb_populate_record(null::public.places, jsonb_build_object(f, v));
+      v := to_jsonb(v_row) -> f;
+    exception when others then
+      continue;
+    end;
+    continue when v is null or v = 'null'::jsonb;
     continue when f in ('departure', 'checkout_until') and cur ->> 'departure_check' = 'bevestigd';
     continue when cur -> f = v;
     continue when exists (
@@ -151,8 +160,12 @@ begin
   if v_departure in ('vrij', 'per24') and cur ->> 'checkout_until' is not null then
     insert into public.updates_queue (place_id, field_changed, old_value, new_value, source, quote, source_url, reading_id)
     select p_id, 'checkout_until', cur -> 'checkout_until', 'null'::jsonb, 'ai-lezer', q.quote, q.source_url, v_reading
-      from public.updates_queue q where q.reading_id = v_reading and q.field_changed = 'departure';
-    n := n + 1;
+      from public.updates_queue q
+     where q.reading_id = v_reading and q.field_changed = 'departure'
+       and not exists (select 1 from public.updates_queue c where c.reading_id = v_reading and c.field_changed = 'checkout_until')
+       and not exists (select 1 from public.updates_queue c where c.place_id = p_id and c.field_changed = 'checkout_until'
+                                                             and c.status = 'pending' and c.new_value = 'null'::jsonb);
+    if found then n := n + 1; end if;
   end if;
 
   -- Mogelijk gesloten: geen veld in de inbox, wel een inzending voor Beheer (één open melding per plek)
@@ -201,14 +214,17 @@ create table if not exists public.discovery_candidates (
 );
 comment on table public.discovery_candidates is 'Mogelijke nieuwe plekken uit overheidspublicaties (tier 1); Beheer beslist';
 alter table public.discovery_candidates enable row level security;
-revoke all on public.discovery_candidates from public, anon;
-grant select, update on public.discovery_candidates to authenticated;
+revoke all on public.discovery_candidates from public, anon, authenticated;
+-- Beheer leest alles en wijzigt alleen de beslissing
+grant select on public.discovery_candidates to authenticated;
+grant update (status, decided_at) on public.discovery_candidates to authenticated;
 drop policy if exists discovery_candidates_admin_read on public.discovery_candidates;
 create policy discovery_candidates_admin_read on public.discovery_candidates for select to authenticated using (public.has_admin_role());
 drop policy if exists discovery_candidates_admin_update on public.discovery_candidates;
 create policy discovery_candidates_admin_update on public.discovery_candidates for update to authenticated
   using (public.has_admin_role()) with check (public.has_admin_role());
 create index if not exists discovery_candidates_status on public.discovery_candidates (status, published_on desc);
+create index if not exists discovery_candidates_nearest on public.discovery_candidates (nearest_place_id) where nearest_place_id is not null;
 
 -- Opslaan zonder dubbelingen; de dichtstbijzijnde bekende plek bepaalt of het nieuw is (300 m)
 create or replace function public.store_discovery_candidates(p_items jsonb) returns jsonb
@@ -222,12 +238,22 @@ declare
   v_m integer;
   n_new integer := 0;
   n_known integer := 0;
+  n_bad integer := 0;
+  v_date date;
+  v_rows integer;
 begin
   for it in select * from jsonb_array_elements(coalesce(p_items, '[]'::jsonb)) loop
     continue when coalesce(it ->> 'id', '') = '' or coalesce(it ->> 'title', '') = '' or coalesce(it ->> 'url', '') !~ '^https://';
     continue when exists (select 1 from public.discovery_candidates c where c.source = 'officielebekendmakingen' and c.external_id = it ->> 'id');
-    v_lat := nullif(it ->> 'lat', '')::double precision;
-    v_lng := nullif(it ->> 'lng', '')::double precision;
+    -- Eén kapot record mag de hele ronde niet laten mislukken
+    begin
+      v_lat := case when it ->> 'lat' ~ '^-?\d+(\.\d+)?$' then (it ->> 'lat')::double precision end;
+      v_lng := case when it ->> 'lng' ~ '^-?\d+(\.\d+)?$' then (it ->> 'lng')::double precision end;
+      v_date := case when it ->> 'date' ~ '^\d{4}-\d{2}-\d{2}$' then (it ->> 'date')::date end;
+    exception when others then
+      n_bad := n_bad + 1;
+      continue;
+    end;
     if v_lat is null or v_lng is null or v_lat not between 50.7 and 53.7 or v_lng not between 3.2 and 7.3 then
       v_lat := null; v_lng := null;
     end if;
@@ -244,12 +270,14 @@ begin
     insert into public.discovery_candidates (source, external_id, title, url, authority, doc_type, street, postcode, town,
                                              published_on, lat, lng, nearest_place_id, nearest_m, status)
     values ('officielebekendmakingen', left(it ->> 'id', 100), left(it ->> 'title', 600), it ->> 'url', it ->> 'authority',
-            it ->> 'type', it ->> 'street', it ->> 'postcode', it ->> 'town', nullif(it ->> 'date', '')::date, v_lat, v_lng,
+            it ->> 'type', it ->> 'street', it ->> 'postcode', it ->> 'town', v_date, v_lat, v_lng,
             v_near, v_m, case when v_m is not null and v_m <= 300 then 'bekend' else 'nieuw' end)
     on conflict (source, external_id) do nothing;
+    get diagnostics v_rows = row_count;
+    continue when v_rows = 0;
     if v_m is not null and v_m <= 300 then n_known := n_known + 1; else n_new := n_new + 1; end if;
   end loop;
-  return jsonb_build_object('nieuw', n_new, 'bekend', n_known);
+  return jsonb_build_object('nieuw', n_new, 'bekend', n_known, 'onbruikbaar', n_bad);
 end $$;
 revoke all on function public.store_discovery_candidates(jsonb) from public, anon, authenticated;
 grant execute on function public.store_discovery_candidates(jsonb) to service_role;
@@ -268,6 +296,7 @@ declare
   v_read integer;
   v_wiped integer;
   v_parser text;
+  v_since timestamptz;
   j record;
 begin
   -- Alleen de nieuwste parser telt: wat een oudere versie wiste, is al gebeurd en zegt niets over de huidige
@@ -275,10 +304,16 @@ begin
    where at > now() - interval '6 hours' and parser ~ '^\d+$'
    order by parser::integer desc limit 1;
   if v_parser is null then return jsonb_build_object('gepauzeerd', false); end if;
-  select count(*) into v_read from public.places where last_scraped_at > now() - interval '6 hours';
+  -- Venster: de laatste 6 uur, maar niet vóór de eerste lezing van deze parser (anders verdunnen lezingen van de vorige
+  -- parser het percentage) en niet vóór de vorige pauze (anders pauzeert de rem meteen weer na het aanzetten)
+  select greatest(now() - interval '6 hours',
+                  (select min(at) from private.field_log where parser = v_parser and at > now() - interval '6 hours'),
+                  coalesce((select max(ts) from public.app_logs where source = 'herlees-rem'), '-infinity'::timestamptz))
+    into v_since;
+  select count(*) into v_read from public.places where last_scraped_at > v_since;
   select count(distinct place_id) into v_wiped
     from private.field_log
-   where at > now() - interval '6 hours'
+   where at > v_since
      and parser = v_parser
      and field in ('departure', 'checkout_until', 'price_eur', 'season', 'open_all_year')
      and old_value is not null and old_value <> 'null'::jsonb

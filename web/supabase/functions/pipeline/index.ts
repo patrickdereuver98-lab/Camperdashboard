@@ -419,7 +419,8 @@ async function extractAll(pages: string[], home: URL, pdfs: () => Promise<PdfRes
     failed += extra.failed;
     if (extra.texts.length) {
       pages.push(...extra.texts);
-      seen?.push(...extra.texts.map((html) => ({ url: home.href, html })));
+      // Adres van de PDF is hier niet bekend: geen bronlink (beter dan een link naar de verkeerde pagina)
+      seen?.push(...extra.texts.map((html) => ({ url: null, html })));
       data = extract(pages, home) as typeof data;
     }
   }
@@ -610,8 +611,12 @@ async function gemini(key: string, prompt: string): Promise<string> {
   });
   if (res.status === 429) throw new AiLimit("limiet: Gemini 429");
   if (!res.ok) throw new Error(`Gemini antwoordde ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const out = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  return out.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  const out = (await res.json()) as { candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[] };
+  const c = out.candidates?.[0];
+  const text = c?.content?.parts?.[0]?.text ?? "";
+  // Geblokkeerd, afgekapt of leeg: geen lezing (anders telt de plek als gelezen en komt hij niet terug)
+  if (!text || (c?.finishReason && c.finishReason !== "STOP")) throw new Error(`Gemini gaf geen volledig antwoord (${c?.finishReason ?? "leeg"})`);
+  return text;
 }
 
 /** Volgende plekken lezen; bij de limiet van Gemini stopt de ronde (de lease van een uur laat de rest wachten) */
@@ -640,8 +645,15 @@ async function runAi(n: number) {
     } catch (e) {
       // Limiet van Gemini: deze en de rest van de batch krijgen hun poging terug ("limiet:") en wachten de lease af
       const skipped = e instanceof AiLimit ? rows.slice(i) : [p];
-      for (const q of skipped)
-        await db.rpc("apply_ai_reading", { p_id: q.id, p_hash: q.hash, p_model: GEMINI_MODEL, p_result: null, p_proposals: null, p_error: String(e).slice(0, 300) });
+      for (const q of skipped) {
+        try {
+          const { error: e3 } = await db.rpc("apply_ai_reading", { p_id: q.id, p_hash: q.hash, p_model: GEMINI_MODEL, p_result: null, p_proposals: null, p_error: String(e).slice(0, 300) });
+          if (e3) throw new Error(e3.message);
+        } catch (e4) {
+          // De lease van een uur laat de plek dan vanzelf terugkomen
+          await log("warn", `AI-lezer: fout vastleggen mislukt voor ${q.id}: ${e4}`);
+        }
+      }
       results.push({ id: p.id, error: String(e).slice(0, 120) });
       if (e instanceof AiLimit) break;
       await log("warn", `AI-lezer ${p.id}: ${e}`);

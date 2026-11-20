@@ -157,3 +157,44 @@ test("gouden set: het inkorten houdt elke verwachte vertrektijd en prijs", () =>
 test("kaal bedrag op een eigen regel hoort bij het etiket ervoor", () => {
   assert.deepEqual(toLines("Toeristenplaats standaard (tot 2 pers)\n€ 27,00\nHome"), ["Toeristenplaats standaard (tot 2 pers) | € 27,00"]);
 });
+
+test("review: openingstijd van de bar of elektra is geen aankomsttijd", () => {
+  const text = site({ "https://a.nl/": "<p>Bar en terras open tot 22:00 uur.</p><p>Elektra beschikbaar vanaf 8 uur.</p>" });
+  assert.deepEqual(
+    fields(
+      {
+        laatste_aankomst: "22:00",
+        laatste_aankomst_citaat: "Bar en terras open tot 22:00 uur.",
+        aankomst_vanaf: "08:00",
+        aankomst_vanaf_citaat: "Elektra beschikbaar vanaf 8 uur.",
+      },
+      text,
+    ),
+    {},
+  );
+});
+
+test("review: geen vaste aankomsttijden is geen vrij vertrek", () => {
+  const text = site({ "https://a.nl/": "<p>Er zijn geen vaste aankomsttijden voor campers.</p>" });
+  assert.deepEqual(fields({ vertrekregel: "vrij", vertrek_citaat: "Er zijn geen vaste aankomsttijden voor campers." }, text), {});
+});
+
+test("review: bedrag met toeslagwoord erna of een getal zonder euro is geen nachtprijs", () => {
+  const text = site({ "https://a.nl/": "<p>Camperplaats € 12,50 per persoon per nacht.</p><p>Camper max 20 meter, hond € 5 per nacht.</p>" });
+  assert.deepEqual(fields({ nachtprijs: 12.5, nachtprijs_citaat: "Camperplaats € 12,50 per persoon per nacht." }, text), {});
+  assert.deepEqual(fields({ nachtprijs: 20, nachtprijs_citaat: "Camper max 20 meter, hond € 5 per nacht." }, text), {});
+});
+
+test("review: getal hoort bij het woord in hetzelfde zinsdeel", () => {
+  const text = site({ "https://a.nl/": "<p>Max lengte 8 m, breedte 3 m voor campers.</p><p>Maximaal 3 nachten, 2 honden toegestaan.</p>" });
+  assert.deepEqual(fields({ max_lengte_m: 8, max_lengte_citaat: "Max lengte 8 m, breedte 3 m voor campers." }, text), { max_length_m: 8 });
+  assert.deepEqual(fields({ max_lengte_m: 4, max_lengte_citaat: "Max lengte 8 m, breedte 3 m voor campers." }, text), {});
+  assert.deepEqual(fields({ max_nachten: 3, max_nachten_citaat: "Maximaal 3 nachten, 2 honden toegestaan." }, text), { max_stay_nights: 3 });
+  assert.deepEqual(fields({ max_nachten: 2, max_nachten_citaat: "Maximaal 3 nachten, 2 honden toegestaan." }, text), {});
+});
+
+test("review: de buurregel telt niet mee bij de zinscontrole", () => {
+  const text = site({ "https://a.nl/": "<p>Chalets: uitchecken voor 10 uur</p><p>Geen vaste vertrektijd voor campers</p>" });
+  const v = verifyAnswer({ vertrekregel: "vrij", vertrek_citaat: "Geen vaste vertrektijd voor campers" }, text);
+  assert.deepEqual(v.proposals.map((p) => [p.field, p.value]), [["departure", "vrij"]]);
+});
