@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { GEVALLEN } from "./golden/gevallen";
-import { amounts, condense, parseAnswer, quoteSource, textHash, times, toLines, verifyAnswer, type AiAnswer } from "../supabase/functions/pipeline/ai";
+import { amounts, cleanText, condense, parseAnswer, quoteSource, textHash, times, toLines, verifyAnswer, type AiAnswer } from "../supabase/functions/pipeline/ai";
 
 const site = (pages: Record<string, string>) => condense(Object.entries(pages).map(([url, html]) => ({ url, html })));
 const fields = (a: AiAnswer, text: string) => Object.fromEntries(verifyAnswer(a, text).proposals.map((p) => [p.field, p.value]));
@@ -197,4 +197,10 @@ test("review: de buurregel telt niet mee bij de zinscontrole", () => {
   const text = site({ "https://a.nl/": "<p>Chalets: uitchecken voor 10 uur</p><p>Geen vaste vertrektijd voor campers</p>" });
   const v = verifyAnswer({ vertrekregel: "vrij", vertrek_citaat: "Geen vaste vertrektijd voor campers" }, text);
   assert.deepEqual(v.proposals.map((p) => [p.field, p.value]), [["departure", "vrij"]]);
+});
+
+test("entiteiten: &euro; en &bull; worden tekens, ook in opgeslagen tekst (eerste live run)", () => {
+  assert.equal(cleanText("&euro; 15,00 &bull; 1 jan t/m 30 apr"), "€ 15,00 • 1 jan t/m 30 apr");
+  const text = cleanText("### https://a.nl/\nCamperplaats &euro; 15,00 per nacht &ndash; hele jaar.");
+  assert.deepEqual(fields({ nachtprijs: 15, nachtprijs_citaat: "Camperplaats € 15,00 per nacht – hele jaar." }, text), { price_eur: 15 });
 });
