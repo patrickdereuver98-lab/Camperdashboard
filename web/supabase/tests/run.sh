@@ -67,6 +67,8 @@ psql "$dr_url" -q -v ON_ERROR_STOP=1 -X <<SQL
 \i $here/drempel_stub.sql
 \set migration $migrations/20261106200200_publicatiedrempel.sql
 \i $here/drempel_rls.test.sql
+\set migration_regels $migrations/20261120200000_publicatie_op_regels.sql
+\i $here/publicatie_regels.test.sql
 SQL
 
 # Geschiedenis per plek (trigger, terugzetten, leesrecht) in een eigen database

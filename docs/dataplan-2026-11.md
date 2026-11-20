@@ -233,7 +233,7 @@ en het statusbord bijwerken in dezelfde commit.
 4. **Nieuwe kolommen** `max_height_m`, `max_weight_t`, `payment` en tabel `service_points` (2.2, 2.3). Dit is nieuw
    schema tijdens de bevriezing; het dient de kernvraag "past mijn camper". *Advies:* ja.
 
-## 7. Welke plekken tonen (besluit voor Patrick, 20 november 2026)
+## 7. Welke plekken tonen (besloten 20 november 2026: regels en noindex gebouwd, README 139)
 
 **Hoe het nu werkt.** Een plek staat online als hij twee poorten haalt (trigger `places_before_write`):
 

@@ -6,7 +6,7 @@ import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, timeToMinutes, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
-import { lastChecked } from "@/lib/place-status";
+import { isIncomplete, lastChecked } from "@/lib/place-status";
 import { NavigateButton } from "@/components/navigate";
 import { ContactLink } from "@/components/contact-link";
 import { SITE_URL, SUPABASE_URL } from "@/lib/env";
@@ -58,6 +58,9 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
     title,
     description,
     alternates: { canonical: `/plek/${place.slug}` },
+    // Grijze plek (vertrekregel onbekend): wel te vinden in zoeken en op de kaart, niet in zoekmachines tot het
+    // kernfeit bekend is; de links blijven gevolgd (dataplan november 2026 §7, besluit Patrick 20 november)
+    ...(isIncomplete(place) ? { robots: { index: false, follow: true } } : {}),
     openGraph: { ...OPEN_GRAPH, title, description, url: `/plek/${place.slug}`, images: [image] },
     twitter: { card: "summary_large_image", title, description, images: [image.url] },
   };

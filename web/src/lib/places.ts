@@ -2,7 +2,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
-import { departureKind, inDepartureGroup, isOpenOn } from "./search";
+import { departureKind, inDepartureGroup, isOpenOn, type DepartureFacts } from "./search";
 import { PRERENDER_LIMIT, rankForPrerender } from "./prerender";
 import { inBbox, type Bbox } from "./bbox";
 import { cleanDescription } from "./description";
@@ -313,15 +313,27 @@ export async function getNearby(place: Pick<Place, "id" | "lat" | "lng">, limit 
 }
 
 /** Voor de sitemap: alleen adres en datum */
-export async function getSlugs(): Promise<{ slug: string; verifiedAt?: string }[]> {
+/** Slug, controledatum en vertrekregel: de sitemap laat grijze plekken (vertrekregel onbekend) weg (dataplan §7) */
+export type SlugEntry = { slug: string; verifiedAt?: string } & DepartureFacts;
+
+export async function getSlugs(): Promise<SlugEntry[]> {
   "use cache";
   cacheTag("places");
   const r = await withFallback(
     async () =>
-      (await rest<Record<string, unknown>>("places?select=slug,verified_at&status=eq.published&order=slug")).map((r) =>
-        toCamel<{ slug: string; verifiedAt?: string }>(r),
-      ),
-    () => SNAP.places.map((p) => ({ slug: p.slug, verifiedAt: p.verifiedAt })),
+      (
+        await rest<Record<string, unknown>>(
+          "places?select=slug,verified_at,departure,checkout_until,departure_check&status=eq.published&order=slug",
+        )
+      ).map((r) => toCamel<SlugEntry>(r)),
+    () =>
+      SNAP.places.map((p) => ({
+        slug: p.slug,
+        verifiedAt: p.verifiedAt,
+        departure: p.departure,
+        checkoutUntil: p.checkoutUntil,
+        departureCheck: p.departureCheck,
+      })),
   );
   setLife(r, "hours");
   return r.value;

@@ -263,7 +263,7 @@ Constraints op `places` sinds migratie `20261120100000` (R79, dataplan november 
   1. er een website, telefoonnummer, e-mailadres of beheerder (OSM `operator`) is (besluit eigenaar 19 oktober 2026), én
   2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs; de vertrekregel telt
      dubbel, dus contact plus een vertrekregel is genoeg (besluit eigenaar 29 oktober 2026), én
-  3. `completeness` ≥ `site_settings.publish_threshold` (nu 0,45).
+  3. ~~`completeness` ≥ `site_settings.publish_threshold` (0,45)~~ vervalt met migratie `20261120200000_publicatie_op_regels` (besluit 20 november 2026, README 139): de score bepaalt alleen nog de volgorde.
   Gewichten (20 punten): vertrekregel 4, seizoen 3, prijs 2, stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1,
   honden 1, beschrijving 0,5, echte naam 0,5, douche 0,25, aantal plekken 0,25. `status_locked` slaat dit over.
 - **Gezag:** velden in `sources.beheer` worden nooit door de pipeline overschreven; websitewaarden gaan voor OSM bij
