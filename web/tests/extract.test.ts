@@ -510,3 +510,25 @@ test("review dataplan: annuleren of reserveren is geen maximaal verblijf", () =>
   assert.equal(page("<p>Annuleren kan tot max 24 uur voor aankomst.</p>").max_stay_nights, undefined);
   assert.equal(page("<p>Reserveren kan maximaal 2 nachten achter elkaar via de site.</p>").max_stay_nights, undefined);
 });
+
+// Herlezing 20 november 2026 (eerste portie van parser 46): onterecht gewiste vertrekregels
+test("herlezing: later vertrekken tegen betaling botst niet met de vertrektijd (Camping Fraai)", () => {
+  const r = page("<p>Aankomst na 15 uur, vertrek rond 12 uur.</p><p>Bij vertrek na 15 uur rekenen een halve dag extra voor de plekken.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "12:00");
+});
+
+test("herlezing: 'uw plaats verlaten' gaat over de kampeerplek (Yn e Lijte)", () => {
+  const r = page("<p>Op de dag van vertrek dient u om 12.00 uur uw plaats weer te verlaten.</p><p>Vertrek voor 10.00 uur.</p>");
+  assert.equal(r.checkout_until, "12:00");
+});
+
+test("herlezing: bij tegenspraak tussen pagina's wint de pagina over kampeerplekken (Uitzicht)", () => {
+  const pods = "<h1>Prijzen pods</h1><p>Onze pods en chalets: huur per nacht.</p><p>Uitchecken graag voor 10.30 uur.</p>";
+  const plekken = "<h1>Prijzen kampeerplekken</h1><p>Kampeerplaats voor uw camper.</p><p>Uitchecken/vertrektijd voor 11.00 uur.</p>";
+  const r = extract([plekken, pods], base) as Record<string, unknown>;
+  assert.equal(r.checkout_until, "11:00");
+  // Echte tegenspraak op één pagina blijft leeg
+  const een = page("<p>Aankomst is na 13.00 uur en vertrek is voor 12.00 uur.</p><p>Uitchecken tussen 9.00 en 11.00 uur.</p>");
+  assert.equal(een.departure, undefined);
+});
