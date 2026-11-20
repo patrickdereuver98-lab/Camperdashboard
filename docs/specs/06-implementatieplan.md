@@ -98,7 +98,7 @@ navigatie. Klaar als de acceptatiecriteria in de PRD op een iPhone-formaat slage
 | ✅ Totaal in Mijn reis eerlijk ("€ x + 2 onbekend"; 29 okt, met "+ toeslagen, niet meegeteld" eronder; e2e-test in `surcharges.spec.ts`) | Agent | UX-audit | `trip-app.tsx` | Geen totaal dat volledig lijkt bij onbekende prijzen | — |
 | ⬜ Plaatsnaam per postcode (dorp in plaats van gemeente) | Agent | UX-audit | Pipeline | Steekproef van 20 plekken klopt | — |
 | ✅ Automatische tests voor extractor en filters | Agent | Testscripts in sessie | `web/tests/` + `npm test` (node --test) | Draait in CI | — |
-| ✅ CI op GitHub (lint, typecheck, tests, offline build) | Agent | TRD | `.github/workflows/ci.yml` | Groen op elke PR | Tests |
+| ✅ CI op GitHub (lint, typecheck, tests, offline build). Herhaalbaar en sneller (20 nov): Node 22 op één plek (`web/.nvmrc`, `engines` `22.x`), `postgres:16.16` vast op digest, cache voor `.next/cache` en de Playwright-browser | Agent | TRD | `.github/workflows/ci.yml` | Groen op elke PR | Tests |
 | 🔄 Beveiligingsadviezen van Supabase nalopen | Agent | Supabase advisors | Opgeloste waarschuwingen | Geen kritieke meldingen (16 oktober: geen kritieke; 13 openbare SECURITY DEFINER-functies nog nalopen, zie `plan.md` §4b) | — |
 | ✅ Standaard-deelafbeelding voor links in WhatsApp en sociale media | Agent | Huisstijl | `web/public/og.png`, `web/src/lib/meta.ts` | Elke pagina zonder eigen foto toont `og.png` | — |
 | 🔄 Fase 0 van de review uitvoeren (limieten op rpc's, token uit statistieken, bewaartermijnen, terugval op snapshot): alles klaar behalve 0.4 (uitvoeren), 0.7 en 0.8 | Agent + Patrick | [Review oktober 2026](../review-2026-10.md) | Migraties en code | Alle punten 0.1 tot 0.8 afgevinkt | — |

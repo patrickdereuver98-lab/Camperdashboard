@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version-file: web/.nvmrc
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
@@ -35,9 +35,26 @@ jobs:
       - run: npm test
       - name: Geen bekende lekken in pakketten van de site
         run: npm audit --omit=dev --audit-level=high
+      # Buildcache van Next.js: alleen gewijzigde pagina's en modules opnieuw bouwen
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}-${{ hashFiles('web/src/**', 'web/public/**', 'web/next.config.ts') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}-
       - name: Build met de snapshot
         run: npm run build:offline
-      - run: npx playwright install --with-deps chromium
+      # Playwright-browser bewaren; de versie ligt vast in de lockfile. Systeempakketten zitten niet in de cache.
+      - name: Playwright-cache
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
@@ -63,7 +80,8 @@ jobs:
     timeout-minutes: 5
     services:
       postgres:
-        image: postgres:16
+        # Vaste versie (16.16) en digest: een verschuivende tag maakt de test niet herhaalbaar. Ophogen gaat met de hand.
+        image: postgres:16.16@sha256:3950ad7c3148ca2175ef1b6c36c9efbf78957ae8fbe8b3a5d7c35af50500382f
         env:
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
