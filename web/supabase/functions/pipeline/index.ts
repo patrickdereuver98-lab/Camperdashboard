@@ -621,48 +621,72 @@ async function gemini(key: string, prompt: string): Promise<string> {
 }
 
 /** Volgende plekken lezen; bij de limiet van Gemini stopt de ronde (de lease van een uur laat de rest wachten) */
+/** Zoveel modelaanroepen tegelijk; de sleutel haalde 40 per minuut zonder 429 (20 november 2026) */
+const AI_CONCURRENCY = 5;
+
+type AiRow = { id: string; name: string | null; kind: string | null; text: string; hash: string };
+
+/** Fout vastleggen bij de plek; mislukt dat, dan laat de lease van een uur de plek vanzelf terugkomen */
+async function aiFailed(q: AiRow, e: unknown) {
+  try {
+    const { error } = await db.rpc("apply_ai_reading", { p_id: q.id, p_hash: q.hash, p_model: GEMINI_MODEL, p_result: null, p_proposals: null, p_error: String(e).slice(0, 300) });
+    if (error) throw new Error(error.message);
+  } catch (e2) {
+    await log("warn", `AI-lezer: fout vastleggen mislukt voor ${q.id}: ${e2}`);
+  }
+}
+
+/** Eén plek lezen, controleren en vastleggen */
+async function aiReadOne(key: string, p: AiRow) {
+  // Opgeslagen vóór de reparatie van 20 november kan nog "&euro;" bevatten; het model en de controle zien dezelfde tekst
+  const text = cleanText(p.text);
+  const raw = await gemini(key, `Plek: ${p.name ?? "onbekend"} (${p.kind ?? "onbekend"}).\nTekst van de website, per pagina met het adres:\n${text}`);
+  const answer = parseAnswer(raw);
+  const verdict = verifyAnswer(answer, text);
+  const { data: applied, error } = await db.rpc("apply_ai_reading", {
+    p_id: p.id,
+    p_hash: p.hash,
+    p_model: GEMINI_MODEL,
+    p_result: { versie: AI_VERSION, antwoord: answer, afgewezen: verdict.rejected },
+    p_proposals: verdict.proposals,
+    p_closed: verdict.closed,
+  });
+  if (error) throw new Error(`apply_ai_reading: ${error.message}`);
+  return { id: p.id, proposals: (applied as { proposals?: number })?.proposals ?? 0, rejected: verdict.rejected.length };
+}
+
+/**
+ * Volgende plekken lezen, AI_CONCURRENCY tegelijk. Bij de limiet van Gemini (429) stopt de ronde: de rest krijgt zijn
+ * poging terug ("limiet:") en wacht de lease van een uur af.
+ */
 async function runAi(n: number) {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return { skipped: "GEMINI_API_KEY ontbreekt in de edge-geheimen" };
   const { data: batch, error } = await db.rpc("next_ai_batch", { p_limit: n });
   if (error) throw error;
+  const rows = (batch ?? []) as AiRow[];
   const results: Record<string, unknown>[] = [];
-  const rows = (batch ?? []) as { id: string; name: string | null; kind: string | null; text: string; hash: string }[];
-  for (const [i, p] of rows.entries()) {
-    // Opgeslagen vóór de reparatie van 20 november kan nog "&euro;" bevatten; het model en de controle zien dezelfde tekst
-    p.text = cleanText(p.text);
-    try {
-      const raw = await gemini(key, `Plek: ${p.name ?? "onbekend"} (${p.kind ?? "onbekend"}).\nTekst van de website, per pagina met het adres:\n${p.text}`);
-      const answer = parseAnswer(raw);
-      const verdict = verifyAnswer(answer, p.text);
-      const { data: applied, error: e2 } = await db.rpc("apply_ai_reading", {
-        p_id: p.id,
-        p_hash: p.hash,
-        p_model: GEMINI_MODEL,
-        p_result: { versie: AI_VERSION, antwoord: answer, afgewezen: verdict.rejected },
-        p_proposals: verdict.proposals,
-        p_closed: verdict.closed,
-      });
-      if (e2) throw new Error(`apply_ai_reading: ${e2.message}`);
-      results.push({ id: p.id, proposals: (applied as { proposals?: number })?.proposals ?? 0, rejected: verdict.rejected.length });
-    } catch (e) {
-      // Limiet van Gemini: deze en de rest van de batch krijgen hun poging terug ("limiet:") en wachten de lease af
-      const skipped = e instanceof AiLimit ? rows.slice(i) : [p];
-      for (const q of skipped) {
-        try {
-          const { error: e3 } = await db.rpc("apply_ai_reading", { p_id: q.id, p_hash: q.hash, p_model: GEMINI_MODEL, p_result: null, p_proposals: null, p_error: String(e).slice(0, 300) });
-          if (e3) throw new Error(e3.message);
-        } catch (e4) {
-          // De lease van een uur laat de plek dan vanzelf terugkomen
-          await log("warn", `AI-lezer: fout vastleggen mislukt voor ${q.id}: ${e4}`);
-        }
+  let limited: unknown = null;
+  for (let i = 0; i < rows.length; i += AI_CONCURRENCY) {
+    const group = rows.slice(i, i + AI_CONCURRENCY);
+    if (limited) {
+      for (const q of group) await aiFailed(q, limited);
+      continue;
+    }
+    const done = await Promise.allSettled(group.map((p) => aiReadOne(key, p)));
+    for (const [j, r] of done.entries()) {
+      const p = group[j];
+      if (r.status === "fulfilled") {
+        results.push(r.value);
+        continue;
       }
-      results.push({ id: p.id, error: String(e).slice(0, 120) });
-      if (e instanceof AiLimit) break;
-      await log("warn", `AI-lezer ${p.id}: ${e}`);
+      await aiFailed(p, r.reason);
+      results.push({ id: p.id, error: String(r.reason).slice(0, 120) });
+      if (r.reason instanceof AiLimit) limited = r.reason;
+      else await log("warn", `AI-lezer ${p.id}: ${r.reason}`);
     }
   }
-  return { model: GEMINI_MODEL, processed: results.length, results };
+  return { model: GEMINI_MODEL, processed: results.length, limited: !!limited, results };
 }
 
 /**
@@ -782,13 +806,13 @@ Deno.serve(async (req) => {
       if (error) throw new Error(`promote_geo_master: ${error.message}`);
       result = data;
     } else if (body.action === "ai" && body.background) {
-      EdgeRuntime.waitUntil(runAi(Math.min(10, Number(body.n) || 2)).catch((e) => log("error", `Pipeline-fout (ai): ${e}`)));
+      EdgeRuntime.waitUntil(runAi(Math.min(30, Number(body.n) || 2)).catch((e) => log("error", `Pipeline-fout (ai): ${e}`)));
       return Response.json({ started: true }, { status: 202 });
-    } else if (body.action === "ai") result = await runAi(Math.min(10, Number(body.n) || 2));
+    } else if (body.action === "ai") result = await runAi(Math.min(30, Number(body.n) || 2));
     else if (body.action === "ai_text" && body.background) {
-      EdgeRuntime.waitUntil(runAiText(Math.min(10, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (ai_text): ${e}`)));
+      EdgeRuntime.waitUntil(runAiText(Math.min(12, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (ai_text): ${e}`)));
       return Response.json({ started: true }, { status: 202 });
-    } else if (body.action === "ai_text") result = await runAiText(Math.min(10, Number(body.n) || 4));
+    } else if (body.action === "ai_text") result = await runAiText(Math.min(12, Number(body.n) || 4));
     else if (body.action === "bekendmakingen" && body.background) {
       EdgeRuntime.waitUntil(runBekendmakingen().catch((e) => log("error", `Pipeline-fout (bekendmakingen): ${e}`)));
       return Response.json({ started: true }, { status: 202 });

@@ -329,7 +329,7 @@ Geheimen: de functie gebruikt `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY` (gee
 3. Klaar: cron `ai-lezer` leest elke 10 minuten 2 plekken. Voorstellen staan in Mission Control → Triage Inbox met
    bron "ai-lezer", citaat en bronlink. Zonder sleutel doet de cron niets.
 
-Snelheid: cron `ai-lezer` leest elke 5 minuten 4 plekken (±1.150 per dag); cron `ai-tekst` haalt voor plekken zonder
+Snelheid: cron `ai-lezer` leest elke minuut 20 plekken, 5 tegelijk (±1.200 per uur); cron `ai-tekst` haalt elke minuut voor 10 plekken zonder
 opgeslagen tekst eerst de websitetekst op (alleen lezen, niets in de plek). Raakt de gratis limiet van Gemini op (429),
 dan wacht de AI-lezer een uur en telt de poging niet. Sneller kan door `"n":4` hoger te zetten (hoogstens 10). Noteer elke nieuwe
 versie in het implementatieplan en zet in de eerste regel van de stub welke versie het is.
