@@ -262,6 +262,16 @@ klaar zijn; afvinken zonder bewijs zou de spelregel "nooit verzinnen" breken. Ze
 | ✅ Pipeline v45, parser 42 (23 okt; v44 = ebcfc8d, v45 voegt de wisseltijd onder een kopje en "tussen 13.00 en voor 17.00" toe): `/?page_id=`-pagina's, kleine sites helemaal lezen, reserveren/boeken als subpagina, geen geraden adressen bij sites van één pagina, wisseltijd "aankomst/vertrek 11.00 … wisselen", vertrekvenster met toeslag, "iedere 24 uur … nieuwe nacht", aankomstvensters "vanaf 13:00 tot 18:00" en "15.00 - 17.30". Uit een steekproef van 20 plekken zonder vertrektijd | Agent | Steekproef 23 okt | Edge function `pipeline` | Tests per regel groen | — |
 | ✅ Terugdraaien | Agent | — | Vercel "Instant Rollback" naar vorige deployment; database: migratie terugdraaien met omgekeerde SQL | Procedure staat in `docs/draaiboek.md` | Vercel |
 
+## Dekking: meer plekken en vertrektijden (opdracht 20 november 2026) ⬜
+
+Plan: [`plan.md`](../../plan.md). Juistheid uit het [dataplan](../dataplan-2026-11.md) gaat voor.
+
+| Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
+|---|---|---|---|---|---|
+| ⬜ Spoor A: meer plekken (OSM-gat, provincies, Overture, jachthavens, gemeentebesluiten) | Agent | `plan.md` §4 | Kandidaten in `geo_master`, lagen in `run_pipeline.py` | Camperplaatsen ≥ 550, jachthavens ≥ 70 | Besluit 1 (`plan.md` §10) voor Overture |
+| ⬜ Spoor B: meer vertrektijden (JSON-LD, boekingssystemen, dieper lezen, betaalzuil als aanwijzing) | Agent | `plan.md` §5 | Lezer en pipeline | ≥ 1.900 online plekken met vertrektijd | Gouden set (dataplan 1.1) |
+| ⬜ Spoor C: dekking meten tegen CBS per provincie | Agent | `plan.md` §6 | Regel in de datategel | Per provincie zichtbaar | Datategel (dataplan spoor 5) |
+
 ## Mission Control (opdracht 1 november 2026) 🟡
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
