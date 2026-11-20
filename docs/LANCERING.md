@@ -17,7 +17,7 @@ Eigenaar: **Agent** bouwt, **Patrick** beslist of zet instellingen.
 | 2 | **Vercel Authentication uit** voor Production | Niemand kan de site zien, ook de API en de webhook van Resend niet | R1, README 102 |
 | 3 | **Eigen SMTP** (EU, met SPF/DKIM) en welke dienst | De ingebouwde mailer stuurt enkele mails per uur voor de hele site: inloggen en reviews lopen vast | R10, B3 |
 | 0 | **Back-up: geheimen `SUPABASE_DB_URL` en `BACKUP_PASSPHRASE` zetten** en de workflow starten (nieuw, 16 november) | Er is nog nooit een back-up gemaakt; de run van 15 november faalde | R59 |
-| 4 | **90%-eis en mailen naar eigenaren**: eis herzien per soort plek, grijze plekken verbergen bij de livegang, of eigenaren mailen (draait README 59 terug; PR #165 staat klaar, vervangt #141; verzenden staat uit) | Lanceervoorwaarde 2 wordt bij het huidige tempo niet gehaald | R16, README 110, 112 |
+| 4 | **Mailen naar eigenaren: besloten ja (20 november 2026, README 138)**, wacht nog op `outreach_key`, het Resend-domein en een publieke site (afmeldlink). **90%-eis** blijft open: eis herzien per soort plek, grijze plekken verbergen bij de livegang, of eigenaren mailen (draait README 59 terug; PR #165 staat klaar, vervangt #141; verzenden staat uit) | Lanceervoorwaarde 2 wordt bij het huidige tempo niet gehaald | R16, README 110, 112 |
 
 Nieuw uit de review van 16 november (§7 daar, met advies): beschrijving van de website op de plekpagina (R80), foto's van
 websites (R90), Archies blokkeren en uit de openbare repo (R81), weringen omzeilen in het bronnenbeleid, Dependabot-meldingen
