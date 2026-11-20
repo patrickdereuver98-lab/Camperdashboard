@@ -148,3 +148,33 @@ test("isDirectorySite kent gidsen, niet de eigen site met dezelfde letters", () 
   assert.equal(isDirectorySite(new URL("https://www.svrcampingboslust.nl")), false);
   assert.equal(isDirectorySite(new URL("https://sites.google.com/view/camping")), false);
 });
+
+// Dataplan november 2026 (spoor 1.3, review R60): vaste etiketten voor toeslagen
+test("R60: extra persoon, bezoek en logé krijgen hun eigen etiket", () => {
+  const ex = (h: string) => (extract([h], new URL("https://camping.example.nl/")) as { price_extras?: { label: string; amount: number }[] }).price_extras ?? [];
+  const a = ex("<p>Camper met twee personen: € 16,50. Extra volwassene € 2,50.</p><p>Bezoek € 3,50 per persoon.</p><p>Logé t/m 17 jaar € 8,18</p>");
+  assert.deepEqual(a.find((x) => x.label === "Extra persoon")?.amount, 2.5);
+  assert.deepEqual(a.find((x) => x.label === "Bezoek")?.amount, 3.5);
+  assert.equal(a.some((x) => x.amount === 8.18), false);
+  // Zonder prijs voor twee personen blijft een bedrag per persoon "Per persoon"
+  const b = ex("<p>Kampeerplaats € 12 per nacht. Per persoon € 4,00 per nacht.</p>");
+  assert.equal(b.find((x) => x.amount === 4)?.label, "Per persoon");
+  // Wat inbegrepen is, is geen toeslag
+  assert.equal(ex("<p>Tarief € 19.-/nacht incl. 2 personen en incl. € 3.50 toeristenbelasting</p>").some((x) => x.amount === 3.5), false);
+});
+
+test("R63: entree en gratis dagparkeren zijn geen nachtprijs", () => {
+  assert.equal(price("<p>Entree dagrecreatie: € 6 per dag.</p>"), undefined);
+  assert.equal(price("<p>Gratis parkeren voor campers overdag; overnachten € 10 per nacht.</p>"), 10);
+});
+
+test("review dataplan: een persoonsaantal elders op de site maakt een verplichte toeslag niet optioneel", () => {
+  const ex = (h: string) => (extract([h], new URL("https://camping.example.nl/")) as { price_extras?: { label: string }[] }).price_extras ?? [];
+  assert.equal(ex("<p>Camperplaats € 20 per nacht. Per persoon € 4,50 per nacht. Onze huisjes zijn geschikt voor 4 personen.</p>")[0]?.label, "Per persoon");
+});
+
+test("review dataplan: een tent eerder op de pagina verbergt de kampeerplaatsprijs niet", () => {
+  assert.equal(price("<p>Tent € 12 per nacht</p><p>Kampeerplaats € 20 per nacht</p>"), 20);
+  assert.equal(price("<p>Camper, caravan of tent, 2 personen € 22</p>"), 22);
+  assert.equal(price("<p>Gebruik zwembad inbegrepen. Camperplaats € 20</p>"), 20);
+});

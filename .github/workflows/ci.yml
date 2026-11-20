@@ -57,6 +57,18 @@ jobs:
       - run: pip install -r tools/data-collectors/requirements.txt pytest
       - run: python -m pytest -q tools/data-collectors tools/ops
 
+  # R69: de stealth-lezer ook in CI (zonder browser; de tests raken het netwerk niet)
+  stealth-lezer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - run: pip install -r tools/stealth-lezer/requirements.txt pytest
+      - run: python -m pytest -q tools/stealth-lezer
+
   # Migraties van geo_master en de promotie naar places op een lege Postgres 16 (web/supabase/tests)
   sql:
     runs-on: ubuntu-latest

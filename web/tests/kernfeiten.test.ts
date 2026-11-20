@@ -119,3 +119,12 @@ test("DATA-16: na de grens wordt het signaal afgebroken en de belofte afgewezen"
   assert.equal(await withDeadline(async (s) => ((fast = s), "klaar"), 1000, "te traag"), "klaar");
   assert.equal(fast?.aborted, false);
 });
+
+test("R63: een afgekapt citaat wordt met de hele zin gecontroleerd", () => {
+  const text = "In onze chalets en lodges is het vertrek vóór 10.00 uur. Kampeerplaatsen: vertrek vóór 12.00 uur.";
+  const a = { departure: "vast" as const, checkout: "10:00", quote: "het vertrek vóór 10.00 uur" };
+  assert.equal(checkQuote(a, text)?.confirmed, false);
+  assert.equal(verify(a, text), null);
+  // Een volledig citaat van een echte regel blijft bevestigd
+  assert.equal(checkQuote({ departure: "vast", checkout: "12:00", quote: "Kampeerplaatsen: vertrek vóór 12.00 uur" }, text)?.confirmed, true);
+});

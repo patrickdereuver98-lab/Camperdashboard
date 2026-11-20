@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { isMotorhomePlace, mapOsm, osmBool, placeName, placesQuery } from "../supabase/functions/pipeline/osm.ts";
+import { isMotorhomePlace, mapOsm, mapPoint, osmBool, placeName, placesQuery } from "../supabase/functions/pipeline/osm.ts";
 
 const el = (tags: Record<string, string>, extra: Record<string, unknown> = {}) => ({ type: "node", id: 1, lat: 52.1, lon: 5.1, tags, ...extra });
 
@@ -144,4 +144,38 @@ test("beheerder (operator) gaat mee als contact", () => {
   const a = mapOsm(el({ tourism: "caravan_site", operator: " Gemeente Leek " })) as Record<string, unknown>;
   assert.equal(a.operator, "Gemeente Leek");
   assert.equal((mapOsm(el({ tourism: "caravan_site" })) as Record<string, unknown>).operator, undefined);
+});
+
+// Dataplan november 2026, spoor 2.1 tot en met 2.3
+test("OSM: hoogte, gewicht, betaalwijze, controledatum en ruwe tags", () => {
+  const r = mapOsm({
+    type: "node", id: 1, lat: 52.1, lon: 5.1,
+    tags: { tourism: "caravan_site", name: "Camperplaats Test", maxheight: "3,5 m", maxweight: "7.5 t", "payment:coins": "yes",
+      "payment:debit_cards": "yes", "payment:credit_cards": "no", "payment:app:easypark": "yes", check_date: "2025-06-01" },
+  })!;
+  assert.equal(r.max_height_m, 3.5);
+  assert.equal(r.max_weight_t, 7.5);
+  assert.deepEqual(r.payment, ["app", "contant", "pin"]);
+  assert.equal(r._check_date, "2025-06-01");
+  assert.equal((r._tags as Record<string, string>).maxheight, "3,5 m");
+  const leeg = mapOsm({ type: "node", id: 2, lat: 52.1, lon: 5.1, tags: { tourism: "caravan_site", maxheight: "default", maxweight: "veel" } })!;
+  assert.equal(leeg.max_height_m, undefined);
+  assert.equal(leeg.max_weight_t, undefined);
+  assert.equal(leeg.payment, undefined);
+});
+
+test("OSM: los- en waterpunten als eigen punt, privé telt niet", () => {
+  const p = mapPoint({ type: "node", id: 9, lat: 52.2, lon: 5.2, tags: { amenity: "sanitary_dump_station", water_point: "yes", fee: "no", name: "Loospunt Haven" } })!;
+  assert.equal(p.type, "dump");
+  assert.equal(p.water, true);
+  assert.equal(p.fee, false);
+  assert.equal(p.name, "Loospunt Haven");
+  assert.equal(mapPoint({ type: "node", id: 10, lat: 52.2, lon: 5.2, tags: { amenity: "water_point", access: "private" } }), null);
+  assert.equal(mapPoint({ type: "node", id: 11, lat: 48, lon: 5.2, tags: { amenity: "water_point" } }), null);
+});
+
+test("OSM: een tijd met onmogelijke minuten wordt niet overgenomen", () => {
+  const r = mapOsm({ type: "node", id: 3, lat: 52.1, lon: 5.1, tags: { tourism: "caravan_site", check_out: "10:75", check_in: "13:99" } })!;
+  assert.equal(r.checkout_until, undefined);
+  assert.equal(r.checkin_from, undefined);
 });

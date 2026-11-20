@@ -586,11 +586,11 @@ def test_geojson_van_een_gemeente(tmp_path):
 
 
 def test_bronnen_json_klopt():
-    """E1, E2: voorbereide bronnen staan uit; alleen OSM en Archies draaien."""
+    """E1, E2: voorbereide bronnen staan uit; Archies is geblokkeerd (20 november 2026, R81)."""
     active, inactive = rp.load_config(rp.DEFAULT_CONFIG)
-    assert [b["bron"] for b in active] == ["osm", "archies", "pdok"]
+    assert [b["bron"] for b in active] == ["osm", "pdok"]
     assert {b["bron"]: b["status"] for b in inactive} == {
-        "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand",
+        "archies": "geblokkeerd", "gemeenten_nl": "voorbereid", "partner_1": "wacht_op_bestand",
         "partner_2": "wacht_op_bestand", "svr": "geblokkeerd"}
     tiers = {b["bron"]: b["betrouwbaarheid"] for b in active + inactive}
     assert tiers["pdok"] == 2 and tiers["gemeenten_nl"] == 2

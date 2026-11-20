@@ -111,8 +111,11 @@ test("openingstijden van de receptie na een vertrekwoord zijn geen vertrektijd",
   assert.equal(page("<p>Hoe laat moet ik vertrekken? De camping is geopend van 8.00 uur.</p>").departure, undefined);
 });
 
-test("selfservice checkin/checkout 24/7 bij camperplaatsen wordt 'vrij'", () => {
-  assert.equal(page("<p>28 ruime camperplaatsen. Selfservice checkin/checkout (24/7). Hele jaar open.</p>").departure, "vrij");
+// Was "vrij"; de review van 16 november (R56, Camperplaats Landgraaf) liet zien dat dit alleen over de zuil gaat
+test("selfservice checkin/checkout 24/7 bij camperplaatsen is toegang, geen vertrekregel", () => {
+  const r = page("<p>28 ruime camperplaatsen. Selfservice checkin/checkout (24/7). Hele jaar open.</p>");
+  assert.equal(r.departure, undefined);
+  assert.equal(r.access_24h, true);
 });
 
 test("tweede controlesteekproef: 'is' als verbinding, '12 uur' bij de camping, kopje boven de tijd", () => {
@@ -436,4 +439,96 @@ test("prijs: 'all-inclusief' vlak vóór de opsomming telt als inbegrepen (De Ca
   );
   // Zonder 'inclusief' blijft een douche-bedrag een toeslag
   assert.equal(page("<p>Camper, douche per nacht € 2,50</p>").price_eur, undefined);
+});
+
+// Dataplan november 2026 (spoor 1.3, review R63): onderwerp, verbod, doelgroep, verhuur en twee tijden
+test("R63: een vertrektijd van de bus, het sanitair of een verbod is geen vertrektijd van de plek", () => {
+  for (const t of [
+    "De bus naar het strand vertrekt om 10.15 uur.",
+    "Vertrekken vóór 7.00 uur is niet toegestaan in verband met de nachtrust.",
+    "Op de dag van vertrek wordt het sanitair om 11.00 uur schoongemaakt.",
+    "Jaarplaatsen: vertrek uiterlijk 12.00 uur.",
+    "Ferienhäuser: Abreise bis 10 Uhr.",
+  ])
+    assert.equal(page(`<p>${t}</p>`).departure, undefined, t);
+});
+
+test("R63: 'Check out 11:00 uur' met een spatie", () => {
+  const r = page("<p>Check in 13:30-20:30 uur</p><p>Check out 11:00 uur</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "11:00");
+  assert.equal(r.checkin_from, "13:30");
+});
+
+test("R63: twee verschillende vertrektijden zonder voorkeur blijven leeg, met een notitie voor beheer", () => {
+  const r = page("<p>Uitchecken voor 11:00 uur.</p><p>Vertrek uiterlijk 12:00 uur.</p>");
+  assert.equal(r.departure, undefined);
+  assert.match(String(r.times_note), /Twee vertrektijden op de site \(11:00 en 12:00\)/);
+  // Een camperwoord geeft wel de doorslag
+  const c = page("<p>Kampeerplaatsen: vertrek voor 11:00 uur. Camperplaatsen: vertrek voor 12:00 uur.</p>");
+  assert.equal(c.checkout_until, "12:00");
+});
+
+test("R57: tijden op een pagina die alleen over verhuur gaat tellen niet", () => {
+  const chalets = "<p>Tarieven verhuur chalets 2026. Onze chalets zijn geschikt voor 6 personen.</p><p>aankomsttijd vanaf 15.00 uur / vertrektijd voor 10.00 uur</p>";
+  const camping = "<p>Kampeerplaatsen: vertrek voor 11:00 uur.</p>";
+  const r = extract([camping, chalets], base) as Record<string, unknown>;
+  assert.equal(r.checkout_until, "11:00");
+  assert.equal(page(chalets).departure, undefined);
+});
+
+test("per 24 uur met een kloktijd is een vaste vertrektijd; 'aankomsttijd = vertrektijd' is per 24 uur", () => {
+  const r = page("<p>Kampeerprijzen per 24 uur of gedeelte daarvan tot 12.00 uur.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "12:00");
+  assert.equal(page("<p>We hanteren geen aankomst- en vertrektijden. (24 uurs principe, aankomsttijd = vertrektijd).</p>").departure, "per24");
+});
+
+test("later vertrekken tegen betaling in het volgende blok: de tijd ervoor is de vertrektijd", () => {
+  const r = page("<p>Vertrek na 12 uur (indien mogelijk)</p><p>€13,-</p>");
+  assert.equal(r.checkout_until, "12:00");
+});
+
+test("maximaal aantal nachten en camperlengte alleen uit een letterlijke zin", () => {
+  const r = page("<p>Algemene informatie: Max. camperlengte: 8m | Max. verblijfsduur: 2x24 uur</p>");
+  assert.equal(r.max_length_m, 8);
+  assert.equal(r.max_stay_nights, 2);
+  assert.equal(page("<p>Je mag maximaal 3 nachten blijven.</p>").max_stay_nights, 3);
+  assert.equal(page("<p>Men mag 2 achtereenvolgende dagen staan.</p>").max_stay_nights, 2);
+  assert.equal(page("<p>In het weekend minimaal 2 nachten.</p>").max_stay_nights, undefined);
+  assert.equal(page("<p>Chalets: maximaal 7 nachten.</p>").max_stay_nights, undefined);
+});
+
+test("R56: 24/7 inchecken is toegang, en een hondentarief per 24 uur is geen per-24-uurregel", () => {
+  const r = page("<p>Camperplaats. Selfservice checkin/checkout (24/7)</p>");
+  assert.equal(r.departure, undefined);
+  assert.equal(r.access_24h, true);
+  assert.equal(page("<p>Camperplaats € 18 per nacht. Elke hond € 1,- per 24 uur (max 2 honden per camper)</p>").departure, undefined);
+});
+
+test("review dataplan: annuleren of reserveren is geen maximaal verblijf", () => {
+  assert.equal(page("<p>Annuleren kan tot max 24 uur voor aankomst.</p>").max_stay_nights, undefined);
+  assert.equal(page("<p>Reserveren kan maximaal 2 nachten achter elkaar via de site.</p>").max_stay_nights, undefined);
+});
+
+// Herlezing 20 november 2026 (eerste portie van parser 46): onterecht gewiste vertrekregels
+test("herlezing: later vertrekken tegen betaling botst niet met de vertrektijd (Camping Fraai)", () => {
+  const r = page("<p>Aankomst na 15 uur, vertrek rond 12 uur.</p><p>Bij vertrek na 15 uur rekenen een halve dag extra voor de plekken.</p>");
+  assert.equal(r.departure, "vast");
+  assert.equal(r.checkout_until, "12:00");
+});
+
+test("herlezing: 'uw plaats verlaten' gaat over de kampeerplek (Yn e Lijte)", () => {
+  const r = page("<p>Op de dag van vertrek dient u om 12.00 uur uw plaats weer te verlaten.</p><p>Vertrek voor 10.00 uur.</p>");
+  assert.equal(r.checkout_until, "12:00");
+});
+
+test("herlezing: bij tegenspraak tussen pagina's wint de pagina over kampeerplekken (Uitzicht)", () => {
+  const pods = "<h1>Prijzen pods</h1><p>Onze pods en chalets: huur per nacht.</p><p>Uitchecken graag voor 10.30 uur.</p>";
+  const plekken = "<h1>Prijzen kampeerplekken</h1><p>Kampeerplaats voor uw camper.</p><p>Uitchecken/vertrektijd voor 11.00 uur.</p>";
+  const r = extract([plekken, pods], base) as Record<string, unknown>;
+  assert.equal(r.checkout_until, "11:00");
+  // Echte tegenspraak op één pagina blijft leeg
+  const een = page("<p>Aankomst is na 13.00 uur en vertrek is voor 12.00 uur.</p><p>Uitchecken tussen 9.00 en 11.00 uur.</p>");
+  assert.equal(een.departure, undefined);
 });
