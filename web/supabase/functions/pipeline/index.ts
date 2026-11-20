@@ -21,7 +21,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { decodeEntities, extract } from "./extract.ts";
-import { mapOsm, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
+import { mapOsm, mapPoint, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { runMergeMaster, type MasterDb } from "./merge_master.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { checkQuote, type QuoteAnswer } from "./quote.ts";
@@ -81,12 +81,7 @@ async function stageOsm(region: string, elements: Element[], pointElements: Elem
   const { data: run } = await db.from("ingest_runs").insert({ kind: `osm ${region}` }).select("id").single();
   try {
     const rows = elements.map(mapOsm).filter(Boolean).map((r) => ({ ...r, province }));
-    const points = pointElements.map((e) => ({
-      lat: e.lat ?? (e.center as { lat: number })?.lat,
-      lng: e.lon ?? (e.center as { lon: number })?.lon,
-      type: (e.tags as Record<string, string>)?.amenity === "sanitary_dump_station" ? "dump" : "water",
-      water: (e.tags as Record<string, string>)?.water_point === "yes",
-    }));
+    const points = pointElements.map(mapPoint).filter(Boolean) as Record<string, unknown>[];
     const staged = [...rows.map((row) => ({ kind: "place", row })), ...points.map((row) => ({ kind: "point", row }))];
     for (let i = 0; i < staged.length; i += 1000) {
       const { error } = await db.from("osm_staging").insert(staged.slice(i, i + 1000));

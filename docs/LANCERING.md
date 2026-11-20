@@ -109,13 +109,13 @@ Gaat vóór de rest van fase 1 en 2. Volgorde: eerst beheer beschermen en meten,
 | A.5 Risicogroepen foute vertrektijden en prijzen nalopen of legen (R57, R60) | ✅ | Agent | Live 18 november: 14 vertrektijden uit aankomst-, huur- of toeslagzinnen geleegd, Willemshoeve naar 11:00; 59 prijzen geleegd (gelijk aan een toeslag, camping onder € 8 zonder akkoord, € 75), 5 gecorrigeerd; alles op slot. 12 plekken onder de drempel (nu concept). Back-up `private.a5_kernfeiten_20261118`. Nog open: 32 bronzinnen met twee tijden (B.3) |
 | A.6 Beloftes op start en FAQ, standaard 11:00 weg (R66, R83) | 🔄 | Agent | PR #153; FAQ live bijgewerkt op 18 november |
 | B.1 Wislog, momentopname, `health()` per kanaal (R62, R64) | 🔄 | Agent | PR #155 (op #151, migratie `20261118200000`) |
-| B.2 Gouden set en lezer in CI (R69) | ⬜ | Agent | |
-| B.3 Extractor met context en prijsetiketten (R63, R60) | ⬜ | Agent | |
-| B.4 Herlezing in porties (R58, R62) | ⬜ | Agent | Na B.1 tot en met B.3 |
+| B.2 Gouden set en lezer in CI (R69) | ✅ | Agent | 20 november: 23 echte pagina's in `web/tests/golden/`, stealth-lezer in CI. `test_merge.ts` nog niet (heeft invoerlijsten nodig) |
+| B.3 Extractor met context en prijsetiketten (R63, R60) | ✅ | Agent | Parser 46 (20 november): gouden set van 16/23 vertrek en 11/20 prijs naar 23/23 en 20/20; uitrollen na samenvoegen |
+| B.4 Herlezing in porties (R58, R62) | ⬜ | Agent | Na samenvoegen en uitrollen van parser 46: de 1.337 plekken op parser 43 eerst, in porties van 200 |
 | B.5 Niets stil weggooien (R68, R71, R72, R73) | 🔄 | Agent | PR #156 (migratie `20261118300000`, daarna `discover` uitrollen); R72 in #150 |
 | Next.js 16.4.6 tegen twee middelzware cachelekken | 🔄 | Agent | PR #154 |
 | C.1 Mijn reis snel en offline (R65) | ⬜ | Agent | Fase 2 |
-| C.2 Back-up compleet, crons als migratie, constraints (R67, R79) | ⬜ | Agent | Fase 2 |
+| C.2 Back-up compleet, crons als migratie, constraints (R67, R79) | 🔄 | Agent | Constraints op het kernfeit in migratie `20261120100000` (na samenvoegen live); back-up en crons nog open |
 | C.3 Draaiboek, uptime-check, Dependabot (R89, R91) | ⬜ | Agent + Patrick | Fase 2 |
 | C.4 Privacy, bronnen, limieten (R75, R76, R77, R90) | ⬜ | Agent | Fase 2 |
 | D.1 Tweede steekproef van 30 plekken vóór de livegang | ⬜ | Agent | Fase 3; doel vertrekregel ≥ 90% juist, Zonder vertrektijd 100% |

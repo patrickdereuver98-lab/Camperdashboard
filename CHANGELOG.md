@@ -2,6 +2,21 @@
 
 Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat live in Supabase staat, staat erbij.
 
+## Volgende versie (in de maak, dataplan november 2026)
+
+**Data en dataketen** ([dataplan](docs/dataplan-2026-11.md))
+- Gouden set: 23 echte pagina's als regressietest voor de lezer (R69).
+- Parser 46: vaste etiketten voor toeslagen (Extra persoon, Bezoek; logé en wat inbegrepen is tellen niet), tijden
+  met context (onderwerp, verbod, doelgroep, verhuurpagina's, twee tijden blijven leeg), check in/out met spatie,
+  per 24 uur met kloktijd, maximaal aantal nachten; citaatcontrole op de hele zin (R56, R57, R60, R63).
+- OSM: ruwe tags bewaard, hoogte, gewicht, betaalwijze en controledatum, los- en waterpunten als eigen laag.
+- Constraints op het kernfeit (R79); `health()` telt wachtende voorstellen.
+- Mail aan eigenaren: camperplaatsen zonder vertrekregel eerst (verzenden blijft uit).
+- Live gedaan zonder code: Archies geblokkeerd, voorstellenwachtrij leeg, Zonder vertrektijd volledig nagekeken.
+
+**Migraties** (pas live na samenvoegen): `20261120100000_dataplan_osm_en_kernfeit`.
+**Edge functions** (na samenvoegen uitrollen): `pipeline` met parser 46.
+
 ## 0.9.2 (19 november 2026)
 
 Wat na 0.9.1 af kwam, dezelfde dag.

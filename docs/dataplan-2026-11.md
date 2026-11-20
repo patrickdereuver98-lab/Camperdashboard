@@ -5,6 +5,20 @@
 > [review van 16 november](review-2026-11-16.md) (R56 tot en met R91) en het [statusbord](LANCERING.md). Alle cijfers
 > komen uit de live database op 20 november 2026, ±07:40 UTC, en zijn alleen gelezen (SELECT).
 
+## Stand van uitvoering (20 november 2026, na akkoord van Patrick op alle vier besluiten)
+
+| Stap | Stand |
+|---|---|
+| Besluiten (§6) | Vastgelegd in README 138. Archies live geblokkeerd en uit de repo. Mail aan eigenaren besloten, maar technisch nog niet mogelijk (geen `outreach_key`, geen Resend-domein, site achter de Vercel-login) |
+| 1.1 Gouden set | ✅ 23 pagina's (5 andere waren niet bruikbaar: JavaScript of 404). Vooraf vertrek 16/23, prijs 11/20; met parser 46 alles goed |
+| 1.2 Voorstellen | ✅ Live afgehandeld: 3 vertrekregels overgenomen (Roland, Resort Eindhoven, De Bronckhorst uit een gids), 10 afgewezen (verhuur, aankomst); 2 prijzen overgenomen (De Victorie uit de steekproef, 't Deppert van de eigenaar), 33 prijsvoorstellen van parser 45 afgewezen. Zonder vertrektijd volledig nagekeken: 22 bevestigd, 6 voorwaardelijk, 2 eraf (Landgraaf, Bodelaeke). `health()` telt voorstellen ouder dan 7 dagen (na samenvoegen) |
+| 1.3 Extractor | ✅ Parser 46 (zie CHANGELOG) |
+| 1.4 Herlezing | ⬜ Na samenvoegen en uitrollen van de pipeline |
+| 1.5 Constraints | ✅ In migratie `20261120100000`, droog getest op live (0 schendingen) |
+| 2.1 tot en met 2.3 OSM | ✅ Ruwe tags, hoogte, gewicht, betaalwijze, controledatum, servicepunten; vult zich bij de volgende OSM-ronde na samenvoegen. Tonen op de site volgt als de kolommen live staan |
+| 2.4 en 2.5 Lezer | ✅ Maximaal aantal nachten, ruimere lengte, "check out" in linkteksten, één niveau hoger bij een 404 |
+| 3.1 Mail | Volgorde camperplaatsen zonder vertrekregel eerst (na samenvoegen); aanzetten wacht op de drie technische stappen |
+
 ## 1. Wat "maximaal en relevant" hier betekent
 
 **Relevant** is een gegeven als het helpt bij de vraag van de camperaar: *waar sta ik vannacht, hoe laat moet ik weg,
