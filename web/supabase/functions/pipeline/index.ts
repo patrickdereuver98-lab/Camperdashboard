@@ -16,6 +16,7 @@
 //       → geo_master naar places volgens de bronregels (promote_geo_master); zonder "dry_run": false alleen een proef
 //   { "action": "ai", "n": 2 }               → AI-lezer: volgende plekken met nieuwe tekst naar Gemini, controle in ai.ts,
 //                                              voorstellen in de Triage Inbox (alleen met GEMINI_API_KEY)
+//   { "action": "ai_text", "n": 4 }          → alleen websitetekst ophalen voor de AI-lezer (niets in places)
 //   { "action": "bekendmakingen" }           → publicaties over camperplaatsen ophalen (bekendmakingen.ts)
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key. Sommige acties mogen ook met
@@ -664,6 +665,40 @@ async function runAi(n: number) {
   return { model: GEMINI_MODEL, processed: results.length, results };
 }
 
+/**
+ * Alleen tekst ophalen voor de AI-lezer (geen extractie, niets in places): plekken waarvan nog geen tekst is opgeslagen.
+ * Zelfde paginakeuze als de scraper, met voorrang voor huisregels, FAQ en voorwaarden; PDF's niet (te traag hier).
+ */
+async function runAiText(n: number) {
+  const { data: batch, error } = await db.rpc("next_text_batch", { p_limit: n });
+  if (error) throw error;
+  const results = await Promise.all(
+    ((batch ?? []) as { id: string; website: string }[]).map(async (p) => {
+      try {
+        const seen = await withDeadline(
+          async (signal) => {
+            const { home, html, subs, picked } = await collectPages(p.website, true, signal);
+            const out: SeenPage[] = [{ url: home.href, html }];
+            subs.forEach((sub, i) => {
+              if (sub) out.push({ url: picked[i] ?? home.href, html: sub });
+            });
+            return out;
+          },
+          45_000,
+          "Site te traag (45 s)",
+        );
+        await storeText(p.id, seen, {}, "scrape");
+        await db.rpc("record_text_attempt", { p_id: p.id, p_error: null });
+        return { id: p.id, ok: true };
+      } catch (e) {
+        await db.rpc("record_text_attempt", { p_id: p.id, p_error: String(e).slice(0, 300) });
+        return { id: p.id, ok: false };
+      }
+    }),
+  );
+  return { processed: results.length, ok: results.filter((r) => r.ok).length };
+}
+
 // ── Officiële bekendmakingen (bekendmakingen.ts) ─────────────────────────────────────────────────────────────────────
 
 async function runBekendmakingen() {
@@ -750,6 +785,10 @@ Deno.serve(async (req) => {
       EdgeRuntime.waitUntil(runAi(Math.min(10, Number(body.n) || 2)).catch((e) => log("error", `Pipeline-fout (ai): ${e}`)));
       return Response.json({ started: true }, { status: 202 });
     } else if (body.action === "ai") result = await runAi(Math.min(10, Number(body.n) || 2));
+    else if (body.action === "ai_text" && body.background) {
+      EdgeRuntime.waitUntil(runAiText(Math.min(10, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (ai_text): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "ai_text") result = await runAiText(Math.min(10, Number(body.n) || 4));
     else if (body.action === "bekendmakingen" && body.background) {
       EdgeRuntime.waitUntil(runBekendmakingen().catch((e) => log("error", `Pipeline-fout (bekendmakingen): ${e}`)));
       return Response.json({ started: true }, { status: 202 });
