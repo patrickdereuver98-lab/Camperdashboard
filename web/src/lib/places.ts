@@ -18,7 +18,7 @@ const PLACE_COLUMNS =
   "tourist_tax_included,power,water,dump_station,toilet,shower,wifi,dogs,capacity,max_length_m,surface,open_all_year," +
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
   "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras," +
-  "departure_check,departure_checked_at,departure_checked_by,checkin_until,reservation_rule";
+  "departure_check,departure_checked_at,departure_checked_by,checkin_until,reservation_rule,max_height_m,max_weight_t,payment";
 
 /** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten of beschrijvingen */
 const SUMMARY_COLUMNS =
@@ -46,7 +46,7 @@ const camel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpp
 
 function toCamel<T>(row: Record<string, unknown>): T {
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(row)) if (v !== null) out[camel(k)] = typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v) && /(eur|avg|_m)$/.test(k) ? Number(v) : v;
+  for (const [k, v] of Object.entries(row)) if (v !== null) out[camel(k)] = typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v) && /(eur|avg|_m|_t)$/.test(k) ? Number(v) : v;
   return out as T;
 }
 

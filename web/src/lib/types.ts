@@ -44,6 +44,11 @@ export interface Place {
   dogs?: boolean;
   capacity?: number;
   maxLengthM?: number;
+  /** Maximale hoogte en gewicht uit OSM (maxheight, maxweight); leeg = onbekend */
+  maxHeightM?: number;
+  maxWeightT?: number;
+  /** Betaalwijzen uit OSM: contant, pin, creditcard, contactloos, app */
+  payment?: string[];
   surface?: string;
   openAllYear?: boolean;
   season?: string;
