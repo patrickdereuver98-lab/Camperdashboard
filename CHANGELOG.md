@@ -16,6 +16,10 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
 - Publiceren op regels: contact plus 2 van 4 kernfeiten (vertrekregel dubbel); de score telt alleen nog voor de
   volgorde (+46 plekken, 14 met vertrekregel). Grijze plekpagina's `noindex, follow` en niet in de sitemap (README 139).
 
+- Parser 47 (na de eerste herlezingsportie van 20 november): later vertrekken tegen betaling botst niet meer met de
+  vertrektijd, "uw plaats" telt als kampeerplek, bij tegenspraak tussen pagina's wint de pagina over kampeerplekken.
+  In de eerste portie van 117 plekken wiste parser 46 9 vertrekregels; 6 daarvan onterecht, die zijn hiermee terug.
+
 **Migraties** (pas live na samenvoegen, in deze volgorde): `20261120100000_dataplan_osm_en_kernfeit`,
 `20261120200000_publicatie_op_regels` (daarna "Regels opnieuw toepassen").
 **Edge functions** (na samenvoegen uitrollen): `pipeline` met parser 46.

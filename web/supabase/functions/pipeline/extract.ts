@@ -621,6 +621,22 @@ export function extract(pages: string[], base: URL) {
   const timeText = timePages.length === pages.length ? text : timePages.map(toText).join(" . ");
   const raw = timePages.map(toRawText).join(" . ");
   Object.assign(out, arrivalDeparture(timeText, raw.length === timeText.length ? raw : timeText));
+  // Spreken pagina's elkaar tegen ("Twee vertrektijden"), dan per pagina lezen: wint één pagina duidelijk op
+  // kampeerwoorden (prijzen-kampeerplekken tegen prijzen-pods), dan geldt haar vaste tijd (herlezing 20 november 2026)
+  if (out.departure === undefined && timePages.length > 1 && /Twee vertrektijden/.test(String(out.times_note ?? ""))) {
+    const perPage = timePages.map((p) => {
+      const t = toText(p);
+      const r = toRawText(p);
+      const count = (re: RegExp) => (t.match(new RegExp(re.source, "g")) ?? []).length;
+      return { res: arrivalDeparture(t, r.length === t.length ? r : t), score: count(PITCH_ONLY) + count(CAMPER) - 2 * count(RENTAL_STAY) };
+    });
+    const fixed = perPage.filter((x) => x.res.departure === "vast").sort((a, b) => b.score - a.score);
+    if (fixed.length && fixed[0].score > 0 && (fixed.length === 1 || fixed[0].score > fixed[1].score) &&
+        !perPage.some((x) => x !== fixed[0] && (x.res.departure === "vrij" || x.res.departure === "per24"))) {
+      for (const k of ["departure", "checkout_until", "checkin_from", "times_note", "_late"]) delete out[k];
+      Object.assign(out, fixed[0].res);
+    }
+  }
   // Later vertrekken tegen betaling: een toeslag naast de vertrektijd ("Later vertrekken tot 18:00 € 8,00")
   if (out._late) {
     const late = out._late as { until?: string; amount: number };
@@ -751,7 +767,7 @@ const CONDITIONAL_CLAUSE = /\b(?:vertrek|kom) je\b[^,]*,\s*dan\b|\b(?:vertrekt|k
 const QUESTION = /\b(kan dat|kan ik|kunnen (we|wij)|mag ik|mogen (we|wij)|ik wil|(we|wij) willen)\b/;
 const CAMPER = /camper|kampeerauto|stellplatz|motorhome|wohnmobil/;
 // Specifieker dan "camping": deze tijd gaat over de kampeerplek zelf, niet over de camping in het algemeen
-const PITCH_ONLY = /kampeerpla|kampeerplek|standpla|staanpla|kampeermiddel|camperpla|camperplek/;
+const PITCH_ONLY = /kampeerpla|kampeerplek|standpla|staanpla|kampeermiddel|camperpla|camperplek|\b(?:uw|je|jouw|jullie) (?:plaats|plek)\b/;
 const PITCH_CONTEXT = /camper|kampeerauto|kampeerplaats|kampeerplek|standplaats|staanplaats|kampeermiddel|stellplatz|motorhome|camping/;
 // Sterk: zegt letterlijk dat er geen aankomst- of vertrektijden zijn
 const FREE =
@@ -798,7 +814,7 @@ function rentalLast(window: string): boolean {
   return r >= 0 && r > last(PITCH_ONLY);
 }
 
-type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; pitch?: boolean; camper: boolean; cond: boolean };
+type TimeHit = { type: "in" | "out"; time: string; index: number; strong: boolean; pitch?: boolean; camper: boolean; cond: boolean; late?: boolean };
 
 function sentenceBounds(text: string, index: number): [number, number] {
   // Een punt na een tijd ("voor 12:00.") sluit de zin af; een decimaal ("12.00") en een opsommingsnummer ("1.") niet
@@ -988,6 +1004,8 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
       strong: PITCH_CONTEXT.test(local),
       pitch: PITCH_ONLY.test(text.slice(Math.max(s, i - 150), Math.min(e, i + 90))),
       camper: CAMPER.test(local),
+      // Uit "vertrek na 15 uur rekenen we een halve dag extra": wijkt voor een uitdrukkelijke vertrektijd (herlezing 20 november)
+      late: lateFee,
       cond:
         CONDITIONAL.test(lateFee ? local.replace(/indien (?:mogelijk|beschikbaar|er plaats is)/g, "") : local) ||
         CONDITIONAL_PRE.test(text.slice(Math.max(s, i - (fromBefore ? 110 : 60)), timeEnd)) ||
@@ -997,7 +1015,8 @@ export function arrivalDeparture(text: string, raw: string): Record<string, unkn
 
   let conflict: string[] | undefined;
   const pick = (type: "in" | "out") => {
-    const firm = hits.filter((x) => x.type === type && !x.cond);
+    const all = hits.filter((x) => x.type === type && !x.cond);
+    const firm = all.some((x) => !x.late) ? all.filter((x) => !x.late) : all;
     const tiers = [firm.filter((x) => x.camper), firm.filter((x) => x.pitch), firm.filter((x) => x.strong), firm];
     const tier = tiers.find((t) => t.length) ?? [];
     const times = [...new Set(tier.map((x) => x.time))];
