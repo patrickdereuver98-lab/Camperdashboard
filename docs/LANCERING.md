@@ -110,8 +110,8 @@ Gaat vóór de rest van fase 1 en 2. Volgorde: eerst beheer beschermen en meten,
 | A.6 Beloftes op start en FAQ, standaard 11:00 weg (R66, R83) | 🔄 | Agent | PR #153; FAQ live bijgewerkt op 18 november |
 | B.1 Wislog, momentopname, `health()` per kanaal (R62, R64) | 🔄 | Agent | PR #155 (op #151, migratie `20261118200000`) |
 | B.2 Gouden set en lezer in CI (R69) | ✅ | Agent | 20 november: 23 echte pagina's in `web/tests/golden/`, stealth-lezer in CI. `test_merge.ts` nog niet (heeft invoerlijsten nodig) |
-| B.3 Extractor met context en prijsetiketten (R63, R60) | ✅ | Agent | Parser 46 (20 november): gouden set van 16/23 vertrek en 11/20 prijs naar 23/23 en 20/20; uitrollen na samenvoegen |
-| B.4 Herlezing in porties (R58, R62) | ⬜ | Agent | Na samenvoegen en uitrollen van parser 46: de 1.337 plekken op parser 43 eerst, in porties van 200 |
+| B.3 Extractor met context en prijsetiketten (R63, R60) | ✅ | Agent | Parser 46 (20 november): gouden set van 16/23 vertrek en 11/20 prijs naar 23/23 en 20/20; live als pipeline 68 |
+| B.4 Herlezing in porties (R58, R62) | 🔄 | Agent | Parser 46 live (pipeline 68, 20 november). Eerste portie van 200 (gewone lezer, gepubliceerd, parser 43) gestart; stealth-plekken volgen via de stealth-wachtrij |
 | B.5 Niets stil weggooien (R68, R71, R72, R73) | 🔄 | Agent | PR #156 (migratie `20261118300000`, daarna `discover` uitrollen); R72 in #150 |
 | Next.js 16.4.6 tegen twee middelzware cachelekken | 🔄 | Agent | PR #154 |
 | C.1 Mijn reis snel en offline (R65) | ⬜ | Agent | Fase 2 |
