@@ -1,4 +1,5 @@
 -- Herlezing 20 november 2026 (dataplan november, spoor 1.4): een vertrekregel verdwijnt nooit stil.
+-- Hernummerd van 20261120400000 naar 20261120500000 (20 november 2026): botste met 20261120400000_ai_tekst_voor_alle_plekken uit een andere sessie.
 -- In de tweede portie wiste parser 47 25 vertrekregels op 391 plekken (6,4%): bij twee tijden op de site, of omdat een
 -- subpagina deze keer niet gelezen werd. Die zijn uit private.field_log teruggezet (back-up private.herstel_p47_20261120).
 -- Nu: zegt een lezing niets over het vertrek terwijl de plek een vertrekregel heeft, dan blijven regel, tijd en bronzin

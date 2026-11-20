@@ -6,7 +6,7 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
 
 **Herlezing** (dataplan november, spoor 1.4)
 - Een vertrekregel verdwijnt nooit stil: zegt een lezing niets over het vertrek, dan blijven regel, tijd en bronzin
-  staan en wordt het wissen een voorstel in de Triage Inbox (migratie `20261120400000_vertrek_niet_stil_wissen`). In de
+  staan en wordt het wissen een voorstel in de Triage Inbox (migratie `20261120500000_vertrek_niet_stil_wissen`). In de
   tweede herlezingsportie wiste parser 47 25 regels op 391 plekken (twee tijden, of een subpagina die niet gelezen
   werd); die zijn uit het veldlog teruggezet (back-up `private.herstel_p47_20261120`).
 

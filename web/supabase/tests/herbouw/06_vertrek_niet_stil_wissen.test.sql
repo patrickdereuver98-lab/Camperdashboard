@@ -1,4 +1,4 @@
--- Herlezing 20 november 2026 (20261120400000_vertrek_niet_stil_wissen): een vertrekregel verdwijnt nooit stil.
+-- Herlezing 20 november 2026 (20261120500000_vertrek_niet_stil_wissen): een vertrekregel verdwijnt nooit stil.
 \set ON_ERROR_STOP 1
 begin;
 
