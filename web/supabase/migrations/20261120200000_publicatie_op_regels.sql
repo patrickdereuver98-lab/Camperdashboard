@@ -8,7 +8,8 @@
 -- De gewogen score (place_completeness) telt niet meer voor publicatie, alleen voor de volgorde op de site
 -- (recommendScore). Hij hield 14 plekken met een vertrekregel verborgen omdat bijvoorbeeld een foto ontbrak.
 -- site_settings.publish_threshold blijft staan maar wordt niet meer gelezen.
--- Basis: places_before_write en admin_pipeline uit 20261106200200_publicatiedrempel (gelijk aan live op 20 november).
+-- Basis: places_before_write uit 20261106200200_publicatiedrempel en admin_pipeline zoals live op 20 november
+-- (met osm-refresh uit 20261118120000_osm_ophalen_per_deel).
 -- Live pas toepassen na samenvoegen, daarna admin_pipeline('apply-threshold') of de update onderaan.
 
 set local lock_timeout = '5s';
@@ -56,7 +57,7 @@ begin
   elsif p_action = 'scrape-all' then
     perform public.enqueue_scrape(false);
   elsif p_action = 'osm-refresh' then
-    update public.osm_regions set last_run_at = null where places_req is null;
+    update public.osm_regions set last_run_at = null where places_req is null and points_req is null;
   elsif p_action = 'apply-threshold' then
     -- Massa-update niet per rij in het auditlog zetten
     perform set_config('request.jwt.claims', '{}', true);
