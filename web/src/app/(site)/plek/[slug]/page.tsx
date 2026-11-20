@@ -185,9 +185,10 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <h1 className="font-display text-h1 font-semibold">{place.name}</h1>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-ink-2">
               <Sign name={KIND_SIGN[place.kind ?? "camperplaats"]} size={20} />
-              {/* "Soort in plaats, provincie"; het adres staat bij Praktisch en contact (review R52) */}
+              {/* "Soort in plaats, provincie"; het adres staat bij Praktisch en contact (review R52). "Kaart" alleen vanaf lg:
+                  daaronder staat Ligging al in de springlinks */}
               {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}, {place.province}
-              <a href="#ligging" className="-mx-1 -my-3 inline-block px-1 py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2">
+              <a href="#ligging" className="-mx-1 -my-3 hidden px-1 py-3 font-semibold whitespace-nowrap text-forest underline underline-offset-2 lg:inline-block">
                 Kaart
               </a>
             </p>
@@ -231,6 +232,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               <ArrivalTodayNote place={place} />
             </div>
             <DecisionDetails place={place} />
+            {/* Tablet: de zijkolom staat pas onder de beschrijving, dus prijs en contact hier al in beeld */}
+            <PriceCard place={place} tel={tel} reserveLabel={reserveLabel} className="hidden md:block lg:hidden" />
             {pulse && (
               <div className="-mt-4 rounded-lg border border-line bg-surface px-4 py-3">
                 <PlekpulsVraag question={pulse} />
@@ -363,44 +366,51 @@ function ActionRow({ place, tel, reserveLabel, shareText }: { place: Place; tel?
   );
 }
 
+/** Prijs met website, bellen en mailen. Tablet: direct onder het beslisblok; vanaf lg in de zijkolom; mobiel: actierij */
+function PriceCard({ place, tel, reserveLabel, className }: { place: Place; tel?: string; reserveLabel: string; className: string }) {
+  const price = cardPrice(place);
+  return (
+    <div className={`rounded-lg border border-line bg-surface p-5 ${className}`}>
+      <p className="font-display text-3xl font-semibold">
+        {price?.value ?? "Prijs onbekend"}
+        {/* Zelfde label als de actiebalk op mobiel: "+ toeslagen" zodra er iets bij komt */}
+        {price && (price.extras || place.touristTaxIncluded === false) ? (
+          <span className="ml-1 text-base font-semibold text-muted">+ toeslagen</span>
+        ) : price?.perNight ? (
+          <span className="ml-1 text-base font-semibold text-muted">per nacht</span>
+        ) : null}
+      </p>
+      <div className="mt-4 grid gap-2">
+        {place.website && (
+          <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex min-h-12 flex-col items-center justify-center rounded-lg bg-forest px-3 py-2 font-semibold text-on-forest hover:bg-forest-deep">
+            <span className="flex items-center gap-2">
+              <Icon name="globe" size={19} /> {reserveLabel}
+            </span>
+            {/* Waar je heen gaat, in de knop zelf: één blok om op te tikken in plaats van losse grijze tekst */}
+            <span className="text-sm font-normal opacity-85">{websiteLabel(place.website)}</span>
+          </ContactLink>
+        )}
+        {tel && (
+          <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
+            <Icon name="phone" size={19} /> {tel}
+          </ContactLink>
+        )}
+        {place.email && (
+          <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
+            <Icon name="mail" size={19} /> E-mail sturen
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: string; nearby: PlaceSummary[]; reserveLabel: string }) {
   const facts = knownFacts(place);
   const missing = facts.filter((f) => !f.known).map((f) => f.label);
-  const price = cardPrice(place);
   return (
     <>
-      <div className="hidden rounded-lg border border-line bg-surface p-5 md:block">
-        <p className="font-display text-3xl font-semibold">
-          {price?.value ?? "Prijs onbekend"}
-          {/* Zelfde label als de actiebalk op mobiel: "+ toeslagen" zodra er iets bij komt */}
-          {price && (price.extras || place.touristTaxIncluded === false) ? (
-            <span className="ml-1 text-base font-semibold text-muted">+ toeslagen</span>
-          ) : price?.perNight ? (
-            <span className="ml-1 text-base font-semibold text-muted">per nacht</span>
-          ) : null}
-        </p>
-        <div className="mt-4 grid gap-2">
-          {place.website && (
-            <ContactLink soort="website" slug={place.slug} href={place.website} target="_blank" rel="noopener noreferrer nofollow" className="flex min-h-12 flex-col items-center justify-center rounded-lg bg-forest px-3 py-2 font-semibold text-on-forest hover:bg-forest-deep">
-              <span className="flex items-center gap-2">
-                <Icon name="globe" size={19} /> {reserveLabel}
-              </span>
-              {/* Waar je heen gaat, in de knop zelf: één blok om op te tikken in plaats van losse grijze tekst */}
-              <span className="text-sm font-normal opacity-85">{websiteLabel(place.website)}</span>
-            </ContactLink>
-          )}
-          {tel && (
-            <ContactLink soort="telefoon" slug={place.slug} href={`tel:${tel.replace(/[^\d+]/g, "")}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
-              <Icon name="phone" size={19} /> {tel}
-            </ContactLink>
-          )}
-          {place.email && (
-            <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
-              <Icon name="mail" size={19} /> E-mail sturen
-            </a>
-          )}
-        </div>
-      </div>
+      <PriceCard place={place} tel={tel} reserveLabel={reserveLabel} className="hidden lg:block" />
 
       <section id="ligging" aria-labelledby="ligging-kop" className={`space-y-3 ${SECTION_OFFSET}`}>
         <h2 id="ligging-kop" className="font-display text-h2 font-semibold lg:sr-only">Ligging en route</h2>
@@ -566,7 +576,7 @@ function NightTotalLine({ place }: { place: Place }) {
 }
 
 /** Praktisch en contact: alleen wat we weten.
- *  Telefoon, website en e-mail staan vanaf md al in de prijskaart van de zijkolom; hier tonen we ze alleen op mobiel. */
+ *  Telefoon, website en e-mail staan vanaf lg al in de prijskaart ernaast; op mobiel en tablet staan ze ook hier, waar de springlink Contact heen gaat. */
 function Practical({ place, address, tel, reserveLabel }: { place: Place; address: string; tel?: string; reserveLabel: string }) {
   const rows: { label: string; value: React.ReactNode; contact?: boolean }[] = [];
   // Onbekend laten we weg; welke gegevens ontbreken staat één keer, in de kaart "x van 12 gegevens bekend"
@@ -625,11 +635,11 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   return (
     <section aria-labelledby="praktisch">
       <h2 id="praktisch" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>
-        Praktisch<span className="md:hidden"> en contact</span>
+        Praktisch<span className="lg:hidden"> en contact</span>
       </h2>
       <dl className="mt-3 divide-y divide-line rounded-lg border border-line bg-surface">
         {rows.map((r) => (
-          <div key={r.label} className={`flex justify-between gap-4 px-4 py-2.5${r.contact ? " md:hidden" : ""}`}>
+          <div key={r.label} className={`flex justify-between gap-4 px-4 py-2.5${r.contact ? " lg:hidden" : ""}`}>
             <dt className="shrink-0 text-ink-2">{r.label}</dt>
             <dd className="min-w-0 text-right font-semibold">{r.value}</dd>
           </div>
