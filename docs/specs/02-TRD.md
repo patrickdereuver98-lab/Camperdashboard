@@ -28,7 +28,7 @@
 | Database | Supabase Postgres 17, project `qkrmthrhwmmmwswmfgwc` ("vrijstaan"), regio **eu-central-1 (Frankfurt)** |
 | API | Supabase REST (PostgREST) met de publishable key in de browser; alle schrijfacties via `SECURITY DEFINER`-functies (RPC) |
 | Pushmeldingen | Supabase Edge Function `push` (Deno, `web-push`), aangeroepen door de database via `pg_net` met dezelfde `x-pipeline-key`; maakt zelf de VAPID-sleutels aan |
-| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `quote.ts` (citaatcontrole voor de zoekagenten; de AI-lezer is geschrapt op 19 oktober 2026), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
+| Data-pipeline | Supabase Edge Function `pipeline` (Deno; `index.ts`, `extract.ts`, `pages.ts` (paginakeuze), `quote.ts` (citaatcontrole voor de zoekagenten en de AI-lezer), `ai.ts` (AI-lezer: ingekorte tekst, Gemini-schema, controle per feit; README 140), `bekendmakingen.ts` (officiële bekendmakingen), `osm.ts`), deploy zonder JWT-controle maar met header `x-pipeline-key`; PDF's via `npm:unpdf`, AI-lezer via `npm:@anthropic-ai/sdk` alleen met `ANTHROPIC_API_KEY` |
 | Taken | `pg_cron` + `pg_net` in de database (zie Architectuur) |
 | Server-side data in Next.js | `web/src/lib/places.ts`: REST-calls met `'use cache'` en het eigen cacheprofiel `plekken` (5 minuten vers, `next.config.ts`), terugval op de snapshot. Na een wijziging in beheer ververst `/api/admin/revalidate` de tags `places`, `reviews`, `faq` en `settings` meteen (`revalidateTag`, alleen met een beheerderstoken) |
 
@@ -159,7 +159,7 @@ met Node (`node test.mjs ./extract.ts`) op echte zinnen.
 | Keuze | Waarom | Alternatief |
 |---|---|---|
 | Supabase in plaats van eigen server | Database, auth, cron en functies in één gratis dienst in de EU | Eigen VPS met Postgres (meer beheer) |
-| Scrapen met reguliere expressies, geen AI | Voorspelbaar, gratis, en elke waarde is herleidbaar tot een letterlijke zin | LLM-extractie (duurder, kan verzinnen) |
+| Scrapen met reguliere expressies; een LLM alleen als tweede lezer die voorstellen doet (README 140, 20 november 2026) | Voorspelbaar en gratis, elke waarde herleidbaar tot een letterlijke zin; de AI-lezer vindt wat de regels missen, maar elk feit gaat door een harde citaatcontrole en daarna langs Beheer | LLM die zelf schrijft (kan verzinnen) |
 | Overpass via `pg_net` in de database | Edge-IP's werden door Overpass geweigerd | Rechtstreeks vanuit de edge function |
 | Filteren in de browser | ~1.000 samenvattingen zijn klein genoeg; direct resultaat zonder server | Zoek-API met paginering |
 | Accounts optioneel (sinds 12 oktober 2026) | Synchroniseren en foto's uploaden zonder drempel voor wie geen account wil | Geen accounts |

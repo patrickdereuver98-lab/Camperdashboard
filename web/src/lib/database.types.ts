@@ -280,6 +280,75 @@ export type Database = {
         }
         Relationships: []
       }
+      discovery_candidates: {
+        Row: {
+          authority: string | null
+          created_at: string
+          decided_at: string | null
+          doc_type: string | null
+          external_id: string
+          id: number
+          lat: number | null
+          lng: number | null
+          nearest_m: number | null
+          nearest_place_id: string | null
+          postcode: string | null
+          published_on: string | null
+          source: string
+          status: string
+          street: string | null
+          title: string
+          town: string | null
+          url: string
+        }
+        Insert: {
+          authority?: string | null
+          created_at?: string
+          decided_at?: string | null
+          doc_type?: string | null
+          external_id: string
+          lat?: number | null
+          lng?: number | null
+          nearest_m?: number | null
+          nearest_place_id?: string | null
+          postcode?: string | null
+          published_on?: string | null
+          source: string
+          status?: string
+          street?: string | null
+          title: string
+          town?: string | null
+          url: string
+        }
+        Update: {
+          authority?: string | null
+          created_at?: string
+          decided_at?: string | null
+          doc_type?: string | null
+          external_id?: string
+          lat?: number | null
+          lng?: number | null
+          nearest_m?: number | null
+          nearest_place_id?: string | null
+          postcode?: string | null
+          published_on?: string | null
+          source?: string
+          status?: string
+          street?: string | null
+          title?: string
+          town?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_candidates_nearest_place_id_fkey"
+            columns: ["nearest_place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       duplicate_dismissals: {
         Row: {
           a: string
@@ -1216,7 +1285,10 @@ export type Database = {
           new_value: Json
           old_value: Json | null
           place_id: string
+          quote: string | null
+          reading_id: string | null
           source: string
+          source_url: string | null
           status: string
           submission_id: string | null
           user_id: string | null
@@ -1234,7 +1306,10 @@ export type Database = {
           new_value: Json
           old_value?: Json | null
           place_id: string
+          quote?: string | null
+          reading_id?: string | null
           source?: string
+          source_url?: string | null
           status?: string
           submission_id?: string | null
           user_id?: string | null
@@ -1252,7 +1327,10 @@ export type Database = {
           new_value?: Json
           old_value?: Json | null
           place_id?: string
+          quote?: string | null
+          reading_id?: string | null
           source?: string
+          source_url?: string | null
           status?: string
           submission_id?: string | null
           user_id?: string | null

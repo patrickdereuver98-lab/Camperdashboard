@@ -320,8 +320,17 @@ Met de Supabase CLI doet een script dat in één keer (alleen commits die op `ma
 SUPABASE_ACCESS_TOKEN=… web/scripts/deploy-pipeline.sh origin/main
 ```
 
-Geheimen: de functie gebruikt alleen `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY` (geeft Supabase zelf mee) en
-`internal_secrets.pipeline_key` in de database. Er hoeft niets in `supabase secrets` te staan. Noteer elke nieuwe
+Geheimen: de functie gebruikt `SUPABASE_URL` en `SUPABASE_SERVICE_ROLE_KEY` (geeft Supabase zelf mee) en
+`internal_secrets.pipeline_key` in de database. Alleen voor de AI-lezer (README 140) is één geheim nodig:
+
+1. Kopieer `GEMINI_API_KEY` uit Vercel (Settings → Environment Variables), of maak een sleutel in Google AI Studio.
+2. Supabase → project vrijstaan → Edge Functions → Secrets → Add new secret: naam `GEMINI_API_KEY`, de sleutel als
+   waarde. Optioneel `GEMINI_MODEL` (standaard `gemini-2.5-flash`; aanpassen als Google dat model uitfaseert).
+3. Klaar: cron `ai-lezer` leest elke 10 minuten 2 plekken. Voorstellen staan in Mission Control → Triage Inbox met
+   bron "ai-lezer", citaat en bronlink. Zonder sleutel doet de cron niets.
+
+Snelheid: ±290 plekken per dag past in de gratis limiet. Met een betaalde sleutel kan het sneller: zet in de cron
+`"n":2` hoger (hoogstens 10). Noteer elke nieuwe
 versie in het implementatieplan en zet in de eerste regel van de stub welke versie het is.
 
 Controle na het uitrollen (schrijft niets): `select private.call_pipeline('{"action":"promote"}'::jsonb);` en daarna
@@ -352,6 +361,13 @@ bronregels voldoet in `places` (`promote`). Met de hand starten is standaard een
    elke nieuwe OSM-plek); bestaande plekken worden alleen gekoppeld en niet aangepast.
 
 ## Meer plekken vinden
+
+**Officiële bekendmakingen (sinds README 140).** Elke maandag haalt de pipeline de publicaties van gemeenten over
+camperplaatsen op (vergunningen en besluiten, met adres en vaak coördinaten). Mission Control → Kandidaten toont de
+publicaties zonder bekende plek binnen 300 m. Bekijk de link en de kaart; staat de plek er echt, voeg hem dan toe via
+Beheer → Plekken en zet de kandidaat op "Toegevoegd". Een aanvraag is nog geen plek. Met de hand starten:
+`select private.call_pipeline('{"action":"bekendmakingen","background":true}'::jsonb);`
+
 
 - **Websites zoeken** (automatisch, cron `discover`, eigen edge function `discover`): voor plekken zonder website
   probeert de functie adressen uit de

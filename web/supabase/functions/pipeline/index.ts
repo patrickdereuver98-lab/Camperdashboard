@@ -14,6 +14,9 @@
 //       → lijsten uit tools/data-collectors ontdubbelen en in geo_master zetten (merge_master.ts); eerste lijst wint
 //   { "action": "promote", "dry_run": false, "n": 500 }
 //       → geo_master naar places volgens de bronregels (promote_geo_master); zonder "dry_run": false alleen een proef
+//   { "action": "ai", "n": 2 }               → AI-lezer: volgende plekken met nieuwe tekst naar Gemini, controle in ai.ts,
+//                                              voorstellen in de Triage Inbox (alleen met GEMINI_API_KEY)
+//   { "action": "bekendmakingen" }           → publicaties over camperplaatsen ophalen (bekendmakingen.ts)
 //
 // Beveiliging: header `x-pipeline-key` moet gelijk zijn aan internal_secrets.pipeline_key. Sommige acties mogen ook met
 // een GitHub-OIDC-token (header `x-github-oidc`) van precies één workflow op main: stealth_* van stealth-lezer.yml,
@@ -25,6 +28,8 @@ import { mapOsm, mapPoint, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { runMergeMaster, type MasterDb } from "./merge_master.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { checkQuote, type QuoteAnswer } from "./quote.ts";
+import { AI_VERSION, condense, parseAnswer, SCHEMA, SYSTEM, textHash, verifyAnswer, type SeenPage } from "./ai.ts";
+import { MAX_PAGES, pageUrl, parsePage } from "./bekendmakingen.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 import { OIDC_AUDIENCE, OIDC_ISSUER, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan, workflowClaimsOk, workflowForAction } from "./stealth.ts";
 import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, pdfMax, FOCUS_PDFS, rankLinks, sitemapsFromRobots, gone, pdfOutcome, withDeadline } from "./pages.ts";
@@ -391,14 +396,21 @@ async function verifyFinding(f: Finding) {
 
 async function scrapeOne(place: { id: string; website: string; focus?: boolean | null }, signal?: AbortSignal) {
   // Zonder vertrekregel: huisregels, FAQ, reglement en voorwaarden eerst, en meer PDF's (B1, B2)
-  const { home, html, subs, pdfs, failed, links } = await collectPages(place.website, !!place.focus, signal);
+  const { home, html, subs, pdfs, failed, links, picked } = await collectPages(place.website, !!place.focus, signal);
   const pages = [html];
-  for (const sub of subs) if (sub) pages.push(sub);
-  return extractAll(pages, home, () => loadPdfs(pdfs.map((href) => () => fetchPdf(new URL(href), signal))), failed.length, links);
+  // Per pagina het adres, voor de AI-lezer (citaat met bronpagina); `subs` loopt gelijk op met `picked`
+  const seen: SeenPage[] = [{ url: home.href, html }];
+  subs.forEach((sub, i) => {
+    if (!sub) return;
+    pages.push(sub);
+    seen.push({ url: picked[i] ?? home.href, html: sub });
+  });
+  const data = await extractAll(pages, home, () => loadPdfs(pdfs.map((href) => () => fetchPdf(new URL(href), signal))), failed.length, links, seen);
+  return { data, seen };
 }
 
 /** Uitlezen zoals de scraper dat doet, ook voor pagina's die de stealth-lezer aanlevert */
-async function extractAll(pages: string[], home: URL, pdfs: () => Promise<PdfResult>, failed: number, links: number) {
+async function extractAll(pages: string[], home: URL, pdfs: () => Promise<PdfResult>, failed: number, links: number, seen?: SeenPage[]) {
   let data = extract(pages, home) as Record<string, unknown> & { fields?: string[] };
   // Geen vertrektijd op de pagina's? Dan de PDF's (reglement, tarieven) erbij; dat kost meer rekentijd. Een PDF die
   // mislukt telt als haperende pagina (R21)
@@ -407,6 +419,7 @@ async function extractAll(pages: string[], home: URL, pdfs: () => Promise<PdfRes
     failed += extra.failed;
     if (extra.texts.length) {
       pages.push(...extra.texts);
+      seen?.push(...extra.texts.map((html) => ({ url: home.href, html })));
       data = extract(pages, home) as typeof data;
     }
   }
@@ -455,6 +468,9 @@ async function stealthApply(body: Record<string, unknown>) {
   const home = homeUrl(body.home);
   const pages = stealthPages(body.pages);
   if (!pages.length) throw new Error("Geen pagina's");
+  // Adres per pagina (lezer.py stuurt `urls` gelijk met `pages`); ontbreekt het, dan de startpagina
+  const urls = Array.isArray(body.urls) ? (body.urls as unknown[]).map((u) => (typeof u === "string" && /^https?:\/\//.test(u) ? u : null)) : [];
+  const seen: SeenPage[] = pages.map((html, i) => ({ url: urls[i] ?? home.href, html }));
   const pdfs = Array.isArray(body.pdfs) ? (body.pdfs as unknown[]).filter((x): x is string => typeof x === "string").slice(0, FOCUS_PDFS) : [];
   const data = await extractAll(
     pages,
@@ -462,11 +478,13 @@ async function stealthApply(body: Record<string, unknown>) {
     () => loadPdfs(pdfs.map((x) => () => pdfHtml(b64(x)))),
     Number(body.failed) || 0,
     Number(body.links) || 0,
+    seen,
   );
   if (!stealthMayWipe(pages.length, data.fields?.length ?? 0)) data._pages_failed ??= 1;
   const meta = { robots_disallows: body.robots_disallows === true, pages: pages.length, proxy: body.proxy === true };
   const { error } = await db.rpc("apply_stealth", { p_id: id, p_data: data, p_error: null, p_meta: meta });
   if (error) throw new Error(`apply_stealth: ${error.message}`);
+  await storeText(id, seen, data, "stealth");
   return { id, ok: true, fields: data.fields ?? [] };
 }
 
@@ -533,9 +551,10 @@ async function runScrape(n: number) {
       try {
         // Eén trage of dode site mag de batch niet ophouden (pg_net wacht op de traagste aanroep). Na 45 s stopt ook het
         // ophalen zelf (AbortSignal), zodat er geen verzoeken naar die site blijven doorlopen (DATA-16)
-        const data = await withDeadline((signal) => scrapeOne(p, signal), 45_000, "Site te traag (45 s)");
+        const { data, seen } = await withDeadline((signal) => scrapeOne(p, signal), 45_000, "Site te traag (45 s)");
         const { error } = await db.rpc("apply_scrape", { p_id: p.id, p_data: data });
         if (error) throw new Error(`apply_scrape: ${error.message}`);
+        await storeText(p.id, seen, data, "scrape");
         return { id: p.id, ok: true, fields: data.fields };
       } catch (e) {
         const { error } = await db.rpc("apply_scrape", { p_id: p.id, p_data: {}, p_error: String(e).slice(0, 300) });
@@ -546,6 +565,113 @@ async function runScrape(n: number) {
     }),
   );
   return { processed: results.length, results };
+}
+
+// ── AI-lezer (ai.ts) ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Ingekorte tekst van een gelukte lezing bewaren voor de AI-lezer. Een haperende site niet: dan zou de AI-lezer een
+ * halve site lezen. Mislukt het opslaan, dan alleen een waarschuwing: de lezing zelf is al vastgelegd.
+ */
+async function storeText(id: string, seen: SeenPage[], data: Record<string, unknown>, source: "scrape" | "stealth") {
+  if (data._pages_failed) return;
+  try {
+    const text = condense(seen);
+    if (text.length < 40) return;
+    const { error } = await db.rpc("store_page_text", { p_id: id, p_text: text, p_hash: await textHash(text), p_source: source });
+    if (error) throw new Error(error.message);
+  } catch (e) {
+    await log("warn", `store_page_text ${id}: ${e}`);
+  }
+}
+
+const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
+
+class AiLimit extends Error {}
+
+/** Eén aanroep van Gemini met het vaste schema; geeft de ruwe JSON-tekst */
+async function gemini(key: string, prompt: string): Promise<string> {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 2048,
+        responseMimeType: "application/json",
+        responseSchema: SCHEMA,
+        // 2.5 Flash denkt standaard mee en dat kost uitvoertokens; voor uitlezen is dat niet nodig
+        ...(GEMINI_MODEL.startsWith("gemini-2.5-flash") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+      },
+    }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (res.status === 429) throw new AiLimit("limiet: Gemini 429");
+  if (!res.ok) throw new Error(`Gemini antwoordde ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const out = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+  return out.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+}
+
+/** Volgende plekken lezen; bij de limiet van Gemini stopt de ronde (de lease van een uur laat de rest wachten) */
+async function runAi(n: number) {
+  const key = Deno.env.get("GEMINI_API_KEY");
+  if (!key) return { skipped: "GEMINI_API_KEY ontbreekt in de edge-geheimen" };
+  const { data: batch, error } = await db.rpc("next_ai_batch", { p_limit: n });
+  if (error) throw error;
+  const results: Record<string, unknown>[] = [];
+  const rows = (batch ?? []) as { id: string; name: string | null; kind: string | null; text: string; hash: string }[];
+  for (const [i, p] of rows.entries()) {
+    try {
+      const raw = await gemini(key, `Plek: ${p.name ?? "onbekend"} (${p.kind ?? "onbekend"}).\nTekst van de website, per pagina met het adres:\n${p.text}`);
+      const answer = parseAnswer(raw);
+      const verdict = verifyAnswer(answer, p.text);
+      const { data: applied, error: e2 } = await db.rpc("apply_ai_reading", {
+        p_id: p.id,
+        p_hash: p.hash,
+        p_model: GEMINI_MODEL,
+        p_result: { versie: AI_VERSION, antwoord: answer, afgewezen: verdict.rejected },
+        p_proposals: verdict.proposals,
+        p_closed: verdict.closed,
+      });
+      if (e2) throw new Error(`apply_ai_reading: ${e2.message}`);
+      results.push({ id: p.id, proposals: (applied as { proposals?: number })?.proposals ?? 0, rejected: verdict.rejected.length });
+    } catch (e) {
+      // Limiet van Gemini: deze en de rest van de batch krijgen hun poging terug ("limiet:") en wachten de lease af
+      const skipped = e instanceof AiLimit ? rows.slice(i) : [p];
+      for (const q of skipped)
+        await db.rpc("apply_ai_reading", { p_id: q.id, p_hash: q.hash, p_model: GEMINI_MODEL, p_result: null, p_proposals: null, p_error: String(e).slice(0, 300) });
+      results.push({ id: p.id, error: String(e).slice(0, 120) });
+      if (e instanceof AiLimit) break;
+      await log("warn", `AI-lezer ${p.id}: ${e}`);
+    }
+  }
+  return { model: GEMINI_MODEL, processed: results.length, results };
+}
+
+// ── Officiële bekendmakingen (bekendmakingen.ts) ─────────────────────────────────────────────────────────────────────
+
+async function runBekendmakingen() {
+  let start = 1;
+  let total = 0;
+  const stored = { nieuw: 0, bekend: 0 };
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const res = await fetch(pageUrl(start), { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) throw new Error(`Bekendmakingen: HTTP ${res.status} bij ${start}`);
+    const { items, next, total: t } = parsePage(await res.text());
+    total = t;
+    if (items.length) {
+      const { data, error } = await db.rpc("store_discovery_candidates", { p_items: items });
+      if (error) throw new Error(`store_discovery_candidates: ${error.message}`);
+      stored.nieuw += (data as typeof stored).nieuw ?? 0;
+      stored.bekend += (data as typeof stored).bekend ?? 0;
+    }
+    if (!next || next <= start) break;
+    start = next;
+  }
+  if (stored.nieuw) await log("info", `Bekendmakingen: ${stored.nieuw} nieuwe kandidaten, ${stored.bekend} bij een bekende plek`, { totaal: total });
+  return { total, ...stored };
 }
 
 Deno.serve(async (req) => {
@@ -606,7 +732,15 @@ Deno.serve(async (req) => {
       });
       if (error) throw new Error(`promote_geo_master: ${error.message}`);
       result = data;
-    } else if (body.action === "enqueue") {
+    } else if (body.action === "ai" && body.background) {
+      EdgeRuntime.waitUntil(runAi(Math.min(10, Number(body.n) || 2)).catch((e) => log("error", `Pipeline-fout (ai): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "ai") result = await runAi(Math.min(10, Number(body.n) || 2));
+    else if (body.action === "bekendmakingen" && body.background) {
+      EdgeRuntime.waitUntil(runBekendmakingen().catch((e) => log("error", `Pipeline-fout (bekendmakingen): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "bekendmakingen") result = await runBekendmakingen();
+    else if (body.action === "enqueue") {
       const { data, error } = await db.rpc("enqueue_scrape", { p_only_missing: body.all !== true });
       if (error) throw error;
       result = data;

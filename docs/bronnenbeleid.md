@@ -100,6 +100,20 @@ Risico, bewust geaccepteerd door de eigenaar: sites kunnen ons blokkeren, een kl
 voorwaarden van sites (Google, Meta, directories) verbieden dit vaak, wat tot een claim kan leiden. VrijStaan
 verschijnt dan als bron van het verkeer, ook al gebruikt de lezer een browser-user-agent.
 
+## 3b. AI-lezer (besluit Patrick, 20 november 2026, README 140)
+
+Een taalmodel (Gemini) leest dezelfde tekst als de lezer een tweede keer. Het is geen nieuwe bron: het leest alleen wat
+de pipeline of de stealth-lezer van de eigen site al ophaalde, en de regels van §1 en §3a gelden ongewijzigd.
+
+- Naar het model gaat alleen de ingekorte tekst van de site (regels over vertrek, aankomst, prijs, maten, verblijf),
+  zonder persoonsgegevens van bezoekers.
+- Het model schrijft niets. Elk feit heeft een letterlijk citaat van minstens 15 tekens op één regel, met het getal of
+  de tijd erin; `pipeline/ai.ts` controleert dat, en ook het onderwerp (geen verhuur, receptie of toeslag). Wat
+  overblijft, is een voorstel in de Triage Inbox. Beheer beslist.
+- Per 24 uur telt alleen als de eigen extractor het in dezelfde zin ook leest; vrij vertrek zonder die bevestiging
+  alleen bij een letterlijke zin als "geen vaste vertrektijd".
+- Een door een mens bevestigde vertrekregel krijgt geen AI-voorstel; een afgewezen voorstel komt niet terug.
+
 ## 4. Werken als sessie
 
 Gebruik de MCP-server **vrijstaan-bronnen** (edge function `bronnen-mcp`) of, zonder MCP, dezelfde functies via de
@@ -124,6 +138,7 @@ Het register staat in `bron.sources`. Startstand (18 oktober 2026):
 |---|---|---|---|
 | OpenStreetMap, PDOK | 1 | toegestaan | Open data |
 | Gemeenten (APV, eigen pagina's over camperplaatsen) | 1 | toegestaan | Bevestigd door de eigenaar op 20 november 2026 (dataplan november, spoor 3.2): de maximale verblijfsduur uit een APV of gemeentepagina telt als feit, met letterlijk citaat |
+| Officiële bekendmakingen (repository.overheid.nl, SRU) | 1 | toegestaan | Sinds 20 november 2026 (README 140): titel, adres, coördinaten, datum en link van gemeentelijke publicaties over camperplaatsen, als kandidaat voor Beheer (`discovery_candidates`); een aanvraag is nog geen plek |
 | Archie's Campings | 3 | geblokkeerd | Geblokkeerd op 20 november 2026 (R81): geen schriftelijke toestemming. Bestand uit de repository, `geo_bronnen` op geblokkeerd |
 | Eigen site van de plek, eigenaar | 2 | toegestaan | Eigen site alleen als het domein klopt |
 | Campercontact, park4night, ACSI/Eurocampings, ANWB, Camping.info | 3 | toegestaan | `robots.txt` wordt bij het eerste gebruik gecontroleerd en vastgelegd |

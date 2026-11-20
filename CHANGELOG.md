@@ -16,6 +16,12 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
 - Publiceren op regels: contact plus 2 van 4 kernfeiten (vertrekregel dubbel); de score telt alleen nog voor de
   volgorde (+46 plekken, 14 met vertrekregel). Grijze plekpagina's `noindex, follow` en niet in de sitemap (README 139).
 
+- AI-lezer (README 140): Gemini leest de ingekorte websitetekst een tweede keer; elk feit moet een letterlijk citaat
+  hebben en gaat als voorstel (met citaat en bronpagina) naar de Triage Inbox. Nooit rechtstreeks in de plek.
+- Kandidaten uit officiële bekendmakingen: vergunningen en besluiten van gemeenten over camperplaatsen, met afstand
+  tot de dichtstbijzijnde bekende plek, in Mission Control → Kandidaten.
+- Herlees-rem: de scrape-taken gaan uit als de nieuwste parser bij meer dan 5% van de gelezen plekken een kernfeit wist.
+
 - Parser 47 (na de eerste herlezingsportie van 20 november): later vertrekken tegen betaling botst niet meer met de
   vertrektijd, "uw plaats" telt als kampeerplek, bij tegenspraak tussen pagina's wint de pagina over kampeerplekken.
   In de eerste portie van 117 plekken wiste parser 46 9 vertrekregels; 6 daarvan onterecht, die zijn hiermee terug.
