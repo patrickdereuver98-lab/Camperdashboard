@@ -31,3 +31,20 @@ test("extract zet aanwijzingen met underscore, buiten fields, en leidt geen vert
   assert.equal(r.departure, undefined);
   assert.ok(!r.fields.some((f) => f.startsWith("_")));
 });
+
+test("review: alleen op hostnaam, en een link naar de leverancier zelf telt niet", () => {
+  assert.deepEqual(bookingSystems(`<a href="https://x.nl/recreatex-info">info</a><a href="https://mynewbook.cloud.example.org/">x</a>`), []);
+  assert.deepEqual(bookingSystems(`<a href="https://www.bookingexperts.nl/">Powered by Booking Experts</a>`), []);
+  assert.deepEqual(bookingSystems(`<a href="https://camping-zon.bookingexperts.nl/nl/zoeken">Boek nu</a>`), ["booking_experts"]);
+});
+
+test("review: alle attributen van een tag tellen, niet alleen het laatste", () => {
+  assert.deepEqual(bookingSystems(`<iframe src="https://api.tommybookingsupport.com/w" data-src="/leeg"></iframe>`), ["tommy"]);
+});
+
+test("review: 'geen betaalzuil' en 'buiten werking' zijn geen aanwijzing; i-marina alleen als los woord", () => {
+  assert.deepEqual(paymentHints("", "Er is geen betaalzuil aanwezig."), []);
+  assert.deepEqual(paymentHints("", "De betaalautomaat is tijdelijk buiten werking."), []);
+  assert.deepEqual(paymentHints(`<a href="https://delphi-marina.nl">x</a>`, ""), []);
+  assert.deepEqual(paymentHints("", "Geen betaalzuil bij de ingang; betalen bij de betaalautomaat op de steiger."), ["betaalautomaat"]);
+});

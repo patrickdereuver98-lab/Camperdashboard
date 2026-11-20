@@ -235,11 +235,16 @@ def clean_website(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
     text = value.strip()
-    if not text or " " in text:
-        return None
+    if not text or " " in text or "@" in text:
+        return None  # e-mailadres, mailto: of user@host: geen website
     if not re.match(r"^https?://", text, re.I):
+        if ":" in text.split("/")[0]:
+            return None  # ander schema (mailto:, tel:) of een poort zonder schema
         text = "https://" + text
-    host = urlparse(text).hostname or ""
+    parsed = urlparse(text)
+    if parsed.username or parsed.password:
+        return None
+    host = parsed.hostname or ""
     return text if re.fullmatch(r"[a-z0-9.-]+\.[a-z]{2,}", host.lower()) else None
 
 

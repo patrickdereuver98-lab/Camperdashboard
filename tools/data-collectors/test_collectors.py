@@ -940,3 +940,18 @@ def test_overture_jachthaven_krijgt_geen_website():
     fac = {r["naam"]: r["faciliteiten"] for r in res.records}
     assert "website" not in fac["Jachthaven Proef"]
     assert fac["Camping Proef"]["website"] == "https://camping.example.nl"
+
+
+def test_clean_website_maakt_geen_url_van_een_mailadres():
+    """Review 20 november: nooit data verzinnen, ook geen website uit een e-mailadres."""
+    for v in ("info@camping.nl", "mailto:info@camping.nl", "https://user@camping.nl", "tel:0612345678"):
+        assert pdok.clean_website(v) is None, v
+    assert pdok.clean_website("camping.nl/") == "https://camping.nl/"
+
+
+def test_overture_rij_zonder_landcode_buiten_nederland_valt_af():
+    data = (
+        "id,name,confidence,cat,basic_category,cc,src,lic,x,y,website\n"
+        "44444444-0000-0000-0000-000000000004,Camping Buitenland,0.9,campground,campground,,meta,CDLA-Permissive-2.0,2.3,48.8,\n"
+    ).encode()
+    assert overture.parse_overture_csv(data).records == []

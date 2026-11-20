@@ -8,16 +8,48 @@
 -- 3. geo_eerder_verwijderd blokkeerde ook een kandidaat met website op een plek die wegging omdat OSM geen website had.
 --    Nu dezelfde uitzondering als de trigger weiger_verwijderde_plek: 316 van de 466 ontbrekende OSM-plekken gingen weg
 --    om die reden (meting 20 november 2026).
+-- Na de review (20 november): de proefroute geldt alleen voor Overture en houdt alle inhoudelijke controles; een
+-- website telt niet als een geblokkeerde bron meedoet; een nieuwe plek neemt de OSM-sleutel over van de plek die
+-- zonder website wegging; de proefvlag vervalt als er een volledige bronbasis bij komt; de vertrekregel moet van de
+-- eigen site of van Beheer komen.
 -- Basis: de live definities op 20 november 2026.
 
+-- Website van een kandidaat, alleen als geen enkele bron van de kandidaat geblokkeerd is: merge_master voegt de
+-- faciliteiten van alle leden samen, dus anders kan de website van een geblokkeerde bron komen (review 20 november).
 create or replace function private.geo_website(m public.geo_master) returns text
- language sql immutable set search_path to ''
+ language sql stable set search_path to ''
 as $$
-  select case when m.faciliteiten->>'website' ~* '^https?://[a-z0-9.-]+\.[a-z]{2,}(/|:|$)'
-                   and length(m.faciliteiten->>'website') <= 300
-              then m.faciliteiten->>'website' end;
+  select case when s.site ~* '^https?://[a-z0-9.-]+\.[a-z]{2,}(/|:|\?|#|$)' and length(s.site) <= 300
+                   and not exists (select 1 from unnest(m.bron_ids) id
+                                     join public.geo_bronnen b on b.bron = split_part(id, ':', 1)
+                                    where b.status <> 'toegestaan')
+              then s.site end
+    from (select btrim(m.faciliteiten->>'website') as site) s;
 $$;
 revoke all on function private.geo_website(public.geo_master) from public, anon, authenticated;
+
+-- De OSM-plek die wegging omdat OSM geen website had, op dezelfde plek als de kandidaat (zelfde regel als
+-- geo_eerder_verwijderd). Een nieuwe plek neemt zijn osm_type en osm_id over, zodat een latere OSM-ronde die plek
+-- bijwerkt in plaats van er een tweede naast te zetten (review 20 november, dubbel-risico).
+create or replace function private.geo_verwijderd_zonder_site(m public.geo_master)
+ returns table (osm_type text, osm_id bigint)
+ language sql stable security definer set search_path to ''
+as $$
+  select v.osm_type, v.osm_id
+    from private.verwijderde_plekken v
+    cross join lateral (select (v.gegevens ->> 'lat')::float8 as lat, (v.gegevens ->> 'lng')::float8 as lng) g
+   where v.reden = 'geen website' and v.osm_id is not null
+     and g.lat between m.lat - 0.0018 and m.lat + 0.0018
+     and g.lng between m.lon - 0.003 and m.lon + 0.003
+     and (private.geo_afstand_m(m.lat, m.lon, g.lat, g.lng) <= 60
+          or (private.geo_afstand_m(m.lat, m.lon, g.lat, g.lng) <= 150
+              and not private.geo_nummers_botsen(v.name, m.naam)
+              and extensions.similarity(private.geo_naam_kern(v.name), private.geo_naam_kern(m.naam)) >= 0.3))
+     and not exists (select 1 from public.places p where p.osm_type = v.osm_type and p.osm_id = v.osm_id)
+   order by private.geo_afstand_m(m.lat, m.lon, g.lat, g.lng)
+   limit 1;
+$$;
+revoke all on function private.geo_verwijderd_zonder_site(public.geo_master) from public, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION private.geo_eerder_verwijderd(m geo_master)
  RETURNS boolean
@@ -28,9 +60,10 @@ AS $function$
   select exists (
     select 1
       from private.verwijderde_plekken v
+      cross join (select private.geo_website(m) is not null as heeft_site) s
       cross join lateral (select (v.gegevens ->> 'lat')::float8 as lat, (v.gegevens ->> 'lng')::float8 as lng) g
      where v.removed_at > now() - interval '6 months'  -- R68: blokkade vervalt na zes maanden
-       and not (v.reden = 'geen website' and private.geo_website(m) is not null)
+       and not (v.reden = 'geen website' and s.heeft_site)
        and g.lat between m.lat - 0.0018 and m.lat + 0.0018
        and g.lng between m.lon - 0.003 and m.lon + 0.003
        and (private.geo_afstand_m(m.lat, m.lon, g.lat, g.lng) <= 60
@@ -50,7 +83,8 @@ declare
   bezwaar text;
   match_id uuid;
   v_kind text; v_town text; v_province text; v_slug text; base text; n int; new_id uuid;
-  f jsonb; v_len numeric; v_cap int; v_prijs numeric; v_site text; v_proef boolean;
+  f jsonb; v_len numeric; v_cap int; v_prijs numeric; v_site text; v_proef boolean; m2 public.geo_master;
+  v_osm record;
   c_nieuw int := 0; c_gekoppeld int := 0; c_alleen_gekoppeld int := 0; c_geweigerd int := 0; c_bekeken int := 0;
   redenen jsonb := '{}';
   redenen_gekoppeld jsonb := '{}';
@@ -65,9 +99,21 @@ begin
     c_bekeken := c_bekeken + 1;
     bezwaar := private.geo_promotie_bezwaar(m);
     v_site := private.geo_website(m);
-    -- plan.md A3: één bron uit tier 3 (Overture) mag een concept worden als hij een website heeft. Online gaat het pas
-    -- als de eigen site (tier 2) een vertrekregel noemt (places_before_write, sources.geo_master.proef).
-    v_proef := coalesce(bezwaar = 'één bron uit tier 3–5: een tweede toegestane bron is nodig' and v_site is not null, false);
+    -- plan.md A3: een kandidaat uit Overture (tier 3) zonder tweede bron mag een concept worden als hij een website
+    -- heeft. Online gaat het pas als de eigen site (tier 2) een vertrekregel noemt (places_before_write,
+    -- sources.geo_master.proef). Alleen de bronregel vervalt: de andere controles van geo_promotie_bezwaar (Nederland,
+    -- naam, wildkamperen) draaien opnieuw op een kopie met één sterke bron, zodat de bronregel als enige wegvalt.
+    v_proef := false;
+    if bezwaar is not null and v_site is not null
+       and 'overture' = any (select split_part(id, ':', 1) from unnest(m.bron_ids) id) then
+      m2 := m;
+      m2.bron_ids := array['pdok:_proefcontrole'];
+      if private.geo_promotie_bezwaar(m2) is null then
+        v_proef := true;
+      else
+        bezwaar := private.geo_promotie_bezwaar(m2);
+      end if;
+    end if;
     match_id := private.geo_bestaande_plek(m);
 
     -- Bestaat de plek al: koppelen, ook als de master zelf niet door de bronregels komt (A3). Places blijft gelijk.
@@ -83,6 +129,12 @@ begin
         update public.geo_master
            set place_id = match_id, promotie = 'gekoppeld', promotie_reden = bezwaar, gepromoveerd_op = now()
          where master_id = m.master_id;
+        -- Een proefplek die nu een volledige bronbasis heeft, telt voortaan als gewone plek
+        if bezwaar is null and not v_proef then
+          update public.places
+             set sources = jsonb_set(sources, '{geo_master}', (sources->'geo_master') - 'proef')
+           where id = match_id and sources->'geo_master' ? 'proef';
+        end if;
       end if;
       continue;
     end if;
@@ -142,6 +194,12 @@ begin
                                        || case when v_proef then jsonb_build_object('proef', true) else '{}'::jsonb end))
     returning id into new_id;
 
+    -- Was hier een OSM-plek die wegging omdat OSM geen website had: neem zijn OSM-sleutel over (geen tweede plek later)
+    select * into v_osm from private.geo_verwijderd_zonder_site(m);
+    if v_osm.osm_id is not null and v_site is not null then
+      update public.places set osm_type = v_osm.osm_type, osm_id = v_osm.osm_id where id = new_id;
+    end if;
+
     update public.geo_master
        set place_id = new_id, promotie = 'nieuw', promotie_reden = null, gepromoveerd_op = now()
      where master_id = m.master_id;
@@ -176,7 +234,10 @@ begin
   if not new.status_locked then
     new.status := case when public.place_meets_must_haves(new)
                             -- plan.md A3: een plek uit één tier-3-bron gaat pas online als de eigen site de vertrekregel noemt
-                            and not (coalesce((new.sources->'geo_master'->>'proef')::boolean, false) and new.departure is null)
+                            and not (coalesce((new.sources->'geo_master'->>'proef')::boolean, false)
+                                     and not (new.departure is not null
+                                              and (coalesce(new.sources->'website_fields' ? 'departure', false)
+                                                   or coalesce(new.sources->'beheer' ? 'departure', false))))
                        then 'published' else 'draft' end;
   end if;
   return new;

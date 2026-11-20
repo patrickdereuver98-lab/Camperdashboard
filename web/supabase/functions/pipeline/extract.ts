@@ -683,25 +683,46 @@ export function extract(pages: string[], base: URL) {
  * naam van het systeem, geen gegevens eruit. Een gewone link naar een boekingssite telt niet: het moet een script,
  * iframe of formulier van het systeem zijn, of een link naar de eigen boekingspagina van de camping bij dat systeem.
  */
-const BOOKING_SYSTEMS: [string, RegExp][] = [
-  ["tommy", /tommybookingsupport\.com|tommy-booking/i],
-  ["booking_experts", /bookingexperts\.(?:nl|com|de)/i],
-  ["camping_care", /(?:app|api|widget|booking)\.camping\.care|starfish\.care/i],
-  ["recranet", /recranet\.(?:com|nl)/i],
-  ["itenso", /itenso\.(?:nl|com)/i],
-  ["campez", /campez\.(?:nl|com|de)/i],
-  ["bookinglayer", /bookinglayer\.(?:com|io)/i],
-  ["mews", /(?:app|api)\.mews\.(?:com|li)|mews\.com\/distributor/i],
-  ["newbook", /newbook\.cloud/i],
-  ["maxxton", /maxxton\.(?:net|com)/i],
-  ["recreatex", /recreatex/i],
+const BOOKING_SYSTEMS: [string, string[]][] = [
+  ["tommy", ["tommybookingsupport.com"]],
+  ["booking_experts", ["bookingexperts.nl", "bookingexperts.com", "bookingexperts.de"]],
+  ["camping_care", ["camping.care", "starfish.care"]],
+  ["recranet", ["recranet.com", "recranet.nl"]],
+  ["itenso", ["itenso.nl", "itenso.com"]],
+  ["campez", ["campez.nl", "campez.com", "campez.de"]],
+  ["bookinglayer", ["bookinglayer.com", "bookinglayer.io"]],
+  ["mews", ["mews.com", "mews.li"]],
+  ["newbook", ["newbook.cloud"]],
+  ["maxxton", ["maxxton.net", "maxxton.com"]],
+  ["recreatex", ["recreatex.be", "recreatex.nl"]],
 ];
-const BOOKING_ATTR = /<(?:script|iframe|form|link|a)\b[^>]*\b(?:src|href|action|data-src)=["']([^"']+)["']/gi;
+const BOOKING_TAG = /<(script|iframe|form|link|a)\b([^>]*)>/gi;
+const URL_ATTR = /\b(?:src|href|action|data-src)\s*=\s*["']([^"']+)["']/gi;
+
+function hostOf(u: string): string | undefined {
+  try {
+    return new URL(u, "https://x.invalid/").hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
 
 export function bookingSystems(html: string): string[] {
   const found = new Set<string>();
-  for (const m of html.matchAll(BOOKING_ATTR)) {
-    for (const [name, re] of BOOKING_SYSTEMS) if (re.test(m[1])) found.add(name);
+  for (const tag of html.matchAll(BOOKING_TAG)) {
+    const isLink = tag[1].toLowerCase() === "a";
+    for (const attr of tag[2].matchAll(URL_ATTR)) {
+      const host = hostOf(attr[1]);
+      if (!host) continue;
+      for (const [name, domains] of BOOKING_SYSTEMS) {
+        const d: string | undefined = domains.find((x: string) => host === x || host.endsWith(`.${x}`));
+        if (!d) continue;
+        // Een gewone link alleen als hij naar de eigen boekingsomgeving van de camping wijst (klant.bookingexperts.nl),
+        // niet naar de site van de leverancier zelf ("powered by", www.bookingexperts.nl)
+        if (isLink && (host === d || host === `www.${d}`)) continue;
+        found.add(name);
+      }
+    }
   }
   return [...found].sort();
 }
@@ -711,15 +732,18 @@ export function bookingSystems(html: string): string[] {
  * en gemeentelijke camperplaatsen betekent dat vaak "per 24 uur", maar niet altijd: daarom alleen een aanwijzing.
  */
 const PAYMENT_HINTS: [string, RegExp][] = [
-  ["aanuit", /aanuit\.net|\baan-?uit app\b/i],
-  ["i_marina", /i-?marina\.(?:eu|nl|com)|\bi-marina\b/i],
-  ["bluewater", /bluewaterapp|blue ?water app/i],
+  ["aanuit", /(?<![\w-])aanuit\.net\b|\baan-?uit app\b/i],
+  ["i_marina", /(?<![\w-])i-?marina(?:\.(?:eu|nl|com)\b|\b)/i],
+  ["bluewater", /\bbluewaterapp\b|\bblue ?water app\b/i],
   ["betaalautomaat", /\b(?:betaalautomaat|betaalzuil|betaalpaal|parkeerautomaat|camperzuil)\b/i],
 ];
+// "Geen betaalautomaat", "de betaalzuil is buiten werking": dan is het geen aanwijzing
+const PAYMENT_NEG = /\b(?:geen|niet|zonder)\s+(?:\w+\s+){0,2}(?:betaalautomaat|betaalzuil|betaalpaal|parkeerautomaat|camperzuil)\b|\b(?:betaalautomaat|betaalzuil|betaalpaal|parkeerautomaat|camperzuil)\b[^.]{0,40}\b(?:buiten werking|defect|verwijderd)\b/gi;
 
 export function paymentHints(html: string, text: string): string[] {
   const hay = `${html.match(/(?:src|href)=["'][^"']+["']/gi)?.join(" ") ?? ""} ${text}`;
-  return PAYMENT_HINTS.filter(([, re]) => re.test(hay)).map(([name]) => name);
+  const positive = hay.replace(PAYMENT_NEG, " ");
+  return PAYMENT_HINTS.filter(([, re]) => re.test(positive)).map(([name]) => name);
 }
 
 /**

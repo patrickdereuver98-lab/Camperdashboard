@@ -67,8 +67,18 @@ def export(out: Path = DEFAULT_OUT) -> int:
     con = duckdb.connect()
     con.execute("INSTALL httpfs; LOAD httpfs; INSTALL spatial; LOAD spatial; SET s3_region='us-west-2';")
     out.parent.mkdir(parents=True, exist_ok=True)
-    con.execute(f"COPY ({QUERY}) TO '{out.as_posix()}' (FORMAT CSV, HEADER)")
-    return con.execute(f"SELECT count(*) FROM read_csv('{out.as_posix()}')").fetchone()[0]
+    # Eerst naar een tijdelijk bestand: een afgebroken of lege export laat geen half bestand achter. Zonder bestand
+    # meldt run_pipeline de bron als "wacht op bestand" in plaats van de hele run te stoppen.
+    tmp = out.with_suffix(".tmp.csv")
+    try:
+        con.execute(f"COPY ({QUERY}) TO '{tmp.as_posix()}' (FORMAT CSV, HEADER)")
+        n = con.execute(f"SELECT count(*) FROM read_csv('{tmp.as_posix()}')").fetchone()[0]
+        if n == 0:
+            raise SystemExit("Overture-export leverde 0 rijen; geen bestand geschreven")
+        tmp.replace(out)
+        return n
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 # ── Inlezen ──────────────────────────────────────────────────────────────────
@@ -88,7 +98,9 @@ def parse_overture_csv(data: bytes, bron: str = "overture") -> ParseResult:
             result.skip(f"confidence onder {MIN_CONFIDENCE}")
             continue
         cc = (row.get("cc") or "").strip().upper()
-        if cc and cc != "NL":
+        lat, lon = parse_float(row.get("y")), parse_float(row.get("x"))
+        buiten_bbox = lat is None or lon is None or not (BBOX["ymin"] <= lat <= BBOX["ymax"] and BBOX["xmin"] <= lon <= BBOX["xmax"])
+        if (cc and cc != "NL") or buiten_bbox:
             result.skip("buiten Nederland (landcode)")
             continue
         ref = (row.get("id") or "").strip()
