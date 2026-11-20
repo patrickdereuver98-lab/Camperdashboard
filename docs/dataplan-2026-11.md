@@ -232,3 +232,34 @@ en het statusbord bijwerken in dezelfde commit.
 3. **Archies** (R81). *Advies:* blokkeren tot er toestemming is.
 4. **Nieuwe kolommen** `max_height_m`, `max_weight_t`, `payment` en tabel `service_points` (2.2, 2.3). Dit is nieuw
    schema tijdens de bevriezing; het dient de kernvraag "past mijn camper". *Advies:* ja.
+
+## 7. Welke plekken tonen (besluit voor Patrick, 20 november 2026)
+
+**Hoe het nu werkt.** Een plek staat online als hij twee poorten haalt (trigger `places_before_write`):
+
+1. *Harde eisen* (`place_meets_must_haves`): een contact (website, telefoon, e-mail of beheerder) en minstens 2 punten
+   uit vertrekregel (telt 2), seizoen, stroom en prijs.
+2. *Score* (`place_completeness`) van minstens 0,45: een weging van 14 velden (vertrekregel 4, seizoen 3, prijs 2, stroom
+   2, contact 2, foto 1,5, water, lozen, toilet en honden elk 1, enzovoort, gedeeld door 20).
+
+**Stand.** 2.168 online: 1.499 met vertrekregel, 669 grijs (zonder). Grijs per soort: camping 446 (waarvan 236 ook
+zonder prijs), camperplaats 143, boerderij 58, jachthaven 22. Bij camperplaatsen is de helft grijs. 936 concepten:
+46 halen de harde eisen maar niet de score, en daarvan hebben er **14 een vertrekregel**. Die zijn verborgen, terwijl de
+PRD zegt dat een plek met vertrekregel "volledig" is. 21 concepten hebben geen enkel contact.
+
+**Advies.**
+
+- *Grijze plekken blijven tonen.* Verbergen halveert de camperplaatsen (281 naar 138), juist het aanbod waar de
+  doelgroep 's avonds naar zoekt. Een grijze plek met "vertrektijd onbekend" en een oproep is eerlijk. Een plek die
+  ontbreekt, vindt de camperaar gewoon bij de concurrent.
+- *De score is geen goede poort.* Hij beloont foto, water en toilet, en houdt daardoor 14 plekken met het kernfeit
+  verborgen. Voorstel: de score alleen gebruiken voor de volgorde, en publiceren op regels:
+  - **volledig** (gewoon tonen): vertrekregel bekend en contact;
+  - **onvolledig** (grijs, lager in de lijst, niet op de drie vertrekpagina's): geen vertrekregel, wel contact en minstens
+    2 van prijs, seizoen en stroom;
+  - **verborgen**: de rest.
+  Effect: 46 plekken erbij (15 camperplaatsen, 14 met vertrekregel), er gaat er geen af.
+- *Grijze plekpagina's niet laten indexeren* (`noindex, follow`) tot de vertrekregel bekend is. Een dunne pagina zonder
+  het kernfeit helpt de vindbaarheid niet en kan haar schaden. In zoeken en op de kaart blijven ze wel staan.
+- *Campings zonder vertrekregel én zonder prijs* (236) zijn de zwakste groep. Die tonen we wel, maar zij gaan als eerste
+  in de mail aan eigenaren en in Doe mee. Lukt het daar niet binnen 3 maanden na de livegang, dan kijken we opnieuw.
