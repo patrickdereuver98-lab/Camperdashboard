@@ -28,7 +28,7 @@ import { mapOsm, mapPoint, placesQuery, pointsQuery, REGIONS } from "./osm.ts";
 import { runMergeMaster, type MasterDb } from "./merge_master.ts";
 import { addressFrom, reverseUrl } from "./pdok.ts";
 import { checkQuote, type QuoteAnswer } from "./quote.ts";
-import { AI_VERSION, condense, parseAnswer, SCHEMA, SYSTEM, textHash, verifyAnswer, type SeenPage } from "./ai.ts";
+import { AI_VERSION, cleanText, condense, parseAnswer, SCHEMA, SYSTEM, textHash, verifyAnswer, type SeenPage } from "./ai.ts";
 import { MAX_PAGES, pageUrl, parsePage } from "./bekendmakingen.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 import { OIDC_AUDIENCE, OIDC_ISSUER, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan, workflowClaimsOk, workflowForAction } from "./stealth.ts";
@@ -628,6 +628,8 @@ async function runAi(n: number) {
   const results: Record<string, unknown>[] = [];
   const rows = (batch ?? []) as { id: string; name: string | null; kind: string | null; text: string; hash: string }[];
   for (const [i, p] of rows.entries()) {
+    // Opgeslagen vóór de reparatie van 20 november kan nog "&euro;" bevatten; het model en de controle zien dezelfde tekst
+    p.text = cleanText(p.text);
     try {
       const raw = await gemini(key, `Plek: ${p.name ?? "onbekend"} (${p.kind ?? "onbekend"}).\nTekst van de website, per pagina met het adres:\n${p.text}`);
       const answer = parseAnswer(raw);

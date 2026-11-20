@@ -33,6 +33,16 @@ const PLAIN_FREE = /geen (vaste )?(vertrek|uitcheck|check-?out)|vertrek(ken)? wa
 const DEPARTURE_WORD = /vertrek|uitcheck|check-?out|weggaan|verlaten|vrij (in en uit|komen en gaan)|komen en gaan/;
 
 /** Een gelezen pagina; `url` null bij een PDF waarvan het adres niet bekend is */
+// Entiteiten die decodeEntities (extract.ts) niet kent; de gewone lezer vangt alleen &euro; zelf af. Zonder dit stond
+// "&euro; 15,00" in de tekst voor het model en viel elke prijs weg (eerste live run, 20 november 2026)
+const MORE_ENTITIES: Record<string, string> = {
+  euro: "€", bull: "•", ndash: "–", mdash: "—", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“", hellip: "…",
+  sup2: "²", sup3: "³", plusmn: "±", copy: "©", reg: "®", middot: "·", deg: "°", frac12: "½", times: "×",
+};
+
+/** Alle HTML-entiteiten weg, ook in tekst die al is opgeslagen */
+export const cleanText = (s: string) => decodeEntities(s.replace(/&([a-z0-9]+);/gi, (m, n) => MORE_ENTITIES[n.toLowerCase()] ?? m));
+
 export type SeenPage = { url: string | null; html: string };
 
 // Regels die iets zeggen over vertrek, aankomst, prijs, maten, verblijfsduur of open/dicht. De rest (menu's, sfeertekst,
@@ -43,7 +53,7 @@ const NOISE = /cookie|privacy|nieuwsbrief|inloggen|winkelwagen|©|copyright|alle
 
 /** HTML of platte tekst (PDF) naar losse regels: blokken worden regels, lange regels worden zinnen */
 export function toLines(html: string): string[] {
-  const text = decodeEntities(
+  const text = cleanText(
     html
       .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<noscript[\s\S]*?<\/noscript>|<svg[\s\S]*?<\/svg>/gi, " ")
       .replace(/<(?:br|hr)\s*\/?>|<\/(?:p|div|li|tr|h[1-6]|section|article|table|ul|ol|dd|dt|header|footer)>/gi, "\n")
