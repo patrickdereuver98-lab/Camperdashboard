@@ -2,6 +2,15 @@
 
 Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat live in Supabase staat, staat erbij.
 
+## Volgende versie (in de maak)
+
+**Data** (README 140, PR #176)
+- AI-lezer (README 140): Gemini leest de ingekorte websitetekst een tweede keer; elk feit moet een letterlijk citaat
+  hebben en gaat als voorstel (met citaat en bronpagina) naar de Triage Inbox. Nooit rechtstreeks in de plek.
+- Kandidaten uit officiële bekendmakingen: vergunningen en besluiten van gemeenten over camperplaatsen, met afstand
+  tot de dichtstbijzijnde bekende plek, in Mission Control → Kandidaten.
+- Herlees-rem: de scrape-taken gaan uit als de nieuwste parser bij meer dan 5% van de gelezen plekken een kernfeit wist.
+
 ## 0.9.3 (20 november 2026)
 
 Dataplan november ([dataplan](docs/dataplan-2026-11.md)), PR #170 en #172.
