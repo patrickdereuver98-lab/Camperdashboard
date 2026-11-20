@@ -4,6 +4,7 @@
 > het [implementatieplan](specs/06-implementatieplan.md) en de [open punten](specs/README.md) blijven het archief.
 > Bron van de werkpakketten: [review november](review-2026-11.md) §4 en [review 16 november](review-2026-11-16.md) §6.
 > Bijgewerkt: 18 november 2026 (PR's #150 tot en met #156), live database gecontroleerd op 16 november.
+> Dataplan van 20 november 2026 (stand van de data en vijf sporen tot de livegang): [`dataplan-2026-11.md`](dataplan-2026-11.md).
 
 Tekens: ✅ klaar in code (zie kolom Live), 🔄 bezig of deels, ⬜ nog niet begonnen.
 Eigenaar: **Agent** bouwt, **Patrick** beslist of zet instellingen.
