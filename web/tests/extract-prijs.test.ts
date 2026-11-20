@@ -167,3 +167,14 @@ test("R63: entree en gratis dagparkeren zijn geen nachtprijs", () => {
   assert.equal(price("<p>Entree dagrecreatie: € 6 per dag.</p>"), undefined);
   assert.equal(price("<p>Gratis parkeren voor campers overdag; overnachten € 10 per nacht.</p>"), 10);
 });
+
+test("review dataplan: een persoonsaantal elders op de site maakt een verplichte toeslag niet optioneel", () => {
+  const ex = (h: string) => (extract([h], new URL("https://camping.example.nl/")) as { price_extras?: { label: string }[] }).price_extras ?? [];
+  assert.equal(ex("<p>Camperplaats € 20 per nacht. Per persoon € 4,50 per nacht. Onze huisjes zijn geschikt voor 4 personen.</p>")[0]?.label, "Per persoon");
+});
+
+test("review dataplan: een tent eerder op de pagina verbergt de kampeerplaatsprijs niet", () => {
+  assert.equal(price("<p>Tent € 12 per nacht</p><p>Kampeerplaats € 20 per nacht</p>"), 20);
+  assert.equal(price("<p>Camper, caravan of tent, 2 personen € 22</p>"), 22);
+  assert.equal(price("<p>Gebruik zwembad inbegrepen. Camperplaats € 20</p>"), 20);
+});

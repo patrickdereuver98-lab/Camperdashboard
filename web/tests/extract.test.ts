@@ -505,3 +505,8 @@ test("R56: 24/7 inchecken is toegang, en een hondentarief per 24 uur is geen per
   assert.equal(r.access_24h, true);
   assert.equal(page("<p>Camperplaats € 18 per nacht. Elke hond € 1,- per 24 uur (max 2 honden per camper)</p>").departure, undefined);
 });
+
+test("review dataplan: annuleren of reserveren is geen maximaal verblijf", () => {
+  assert.equal(page("<p>Annuleren kan tot max 24 uur voor aankomst.</p>").max_stay_nights, undefined);
+  assert.equal(page("<p>Reserveren kan maximaal 2 nachten achter elkaar via de site.</p>").max_stay_nights, undefined);
+});

@@ -4,10 +4,14 @@
 -- Spoor 2.3: los- en waterpunten als eigen laag (public.service_points) in plaats van weggooien na 150 m.
 -- Spoor 2.4: de lezer levert max_stay_nights; apply_scrape neemt het over.
 -- Spoor 1.5: constraints op het kernfeit (R79), eerst NOT VALID en dan VALIDATE (live 0 schendingen op 20 november).
+--   Bewust géén harde koppeling vast↔tijd: Beheer en de inbox schrijven regel en tijd in twee stappen (review
+--   database, 20 november). health() telt zulke plekken in plaats daarvan (vast_zonder_tijd).
 -- Spoor 1.2: health() telt voorstellen die langer dan 7 dagen wachten.
 -- Spoor 3.1: mail aan eigenaren kiest camperplaatsen zonder vertrekregel eerst.
 -- Basis: apply_scrape uit 20261118200000_wislog_en_kanalen, ingest_osm uit 20261118300000_niets_weggooien,
 -- ingest_osm_points uit de nulmigratie, outreach_next uit 20261119200000_outreach. Alleen de gemarkeerde delen zijn nieuw.
+
+set local lock_timeout = '5s';
 
 -- ── Nieuwe velden ────────────────────────────────────────────────────────────────────────────────────────────────
 alter table public.places add column if not exists max_height_m numeric(3,1);
@@ -23,27 +27,12 @@ alter table public.places add constraint places_tijden_geldig check (
   (checkout_until is null or checkout_until ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')
   and (checkin_from is null or checkin_from ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')
   and (checkin_until is null or checkin_until ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')) not valid;
--- Eerst schoonmaken, dan pas weigeren: zonder vaste regel geen tijd (één rare rij mag een hele OSM-ronde niet stoppen).
--- De trigger draait na places_before_write (alfabetisch), de check daarna.
-create or replace function private.places_vast_tijd() returns trigger
- language plpgsql set search_path to ''
-as $$
-begin
-  if new.departure is distinct from 'vast' then new.checkout_until := null; end if;
-  return new;
-end $$;
-drop trigger if exists places_vast_tijd on public.places;
-create trigger places_vast_tijd before insert or update of departure, checkout_until on public.places
-  for each row execute function private.places_vast_tijd();
-alter table public.places drop constraint if exists places_vast_met_tijd;
-alter table public.places add constraint places_vast_met_tijd check (
-  (departure is not distinct from 'vast') = (checkout_until is not null)) not valid;
 alter table public.places drop constraint if exists places_in_nederland;
 alter table public.places add constraint places_in_nederland check (lat between 50.7 and 53.7 and lng between 3.2 and 7.3) not valid;
 alter table public.places drop constraint if exists places_bereik;
 alter table public.places add constraint places_bereik check (
   (max_stay_nights is null or max_stay_nights between 1 and 60)
-  and (max_length_m is null or max_length_m between 3 and 25)
+  and (max_length_m is null or max_length_m between 3 and 30)
   and (max_height_m is null or max_height_m between 1.5 and 6)
   and (max_weight_t is null or max_weight_t between 1 and 60)
   and (payment is null or payment <@ array['contant', 'pin', 'creditcard', 'contactloos', 'app']::text[])) not valid;
@@ -52,7 +41,6 @@ alter table public.places add constraint places_json_vorm check (
   (price_extras is null or jsonb_typeof(price_extras) = 'array')
   and (sources is null or jsonb_typeof(sources) = 'object')) not valid;
 alter table public.places validate constraint places_tijden_geldig;
-alter table public.places validate constraint places_vast_met_tijd;
 alter table public.places validate constraint places_in_nederland;
 alter table public.places validate constraint places_bereik;
 alter table public.places validate constraint places_json_vorm;
@@ -114,7 +102,8 @@ begin
             opening_hours = excluded.opening_hours, lat = excluded.lat, lng = excluded.lng, updated_at = now();
       insert into private.osm_tags (osm_type, osm_id, tags, updated_at)
       values (r->>'osm_type', (r->>'osm_id')::bigint, coalesce(r->'_tags', '{}'::jsonb), now())
-      on conflict (osm_type, osm_id) do update set tags = excluded.tags, updated_at = now();
+      on conflict (osm_type, osm_id) do update set tags = excluded.tags, updated_at = now()
+        where private.osm_tags.tags is distinct from excluded.tags;
     end if;
     update public.places p
        set dump_station = case when r->>'type' = 'dump' then coalesce(p.dump_station, true) else p.dump_station end,
@@ -148,9 +137,10 @@ CREATE OR REPLACE FUNCTION public.ingest_osm(p_rows jsonb)
 AS $function$
 declare
   r jsonb; town public.nl_towns; ins int := 0; upd int := 0; v_slug text; base text; n int;
-  existing uuid; v_name text; generic boolean; v_town text; v_payment text[];
+  existing uuid; v_name text; generic boolean; v_town text; v_payment text[]; skipped int := 0;
 begin
   for r in select * from jsonb_array_elements(p_rows) loop
+   begin
     town := public.nearest_town((r->>'lat')::float8, (r->>'lng')::float8);
     v_town := coalesce(nullif(r->>'town', ''), town.name);
     v_name := nullif(trim(r->>'name'), '');
@@ -163,10 +153,21 @@ begin
                       then array(select x from jsonb_array_elements_text(r->'payment') x
                                   where x = any (array['contant', 'pin', 'creditcard', 'contactloos', 'app']) order by x) end;
     if v_payment = '{}' then v_payment := null; end if;
+    -- Ongeldige waarden weg vóór het schrijven: één rare OSM-tag ("check_out=10:75") mag geen hele ronde stoppen
+    -- (review database, 20 november). Een rij die toch faalt, wordt overgeslagen en gelogd.
+    r := r - (select coalesce(array_agg(k), '{}') from unnest(array['checkout_until', 'checkin_from']) k
+               where r ? k and r->>k !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$');
+    if r->>'departure' = 'vast' and not r ? 'checkout_until' then r := r - 'departure'; end if;
+    if r ? 'departure' and r->>'departure' not in ('vast', 'vrij', 'per24') then r := r - 'departure' - 'checkout_until'; end if;
+    if (r->>'max_stay_nights')::numeric not between 1 and 60 then r := r - 'max_stay_nights'; end if;
+    if (r->>'max_length_m')::numeric not between 3 and 30 then r := r - 'max_length_m'; end if;
+    if (r->>'max_height_m')::numeric not between 1.5 and 6 then r := r - 'max_height_m'; end if;
+    if (r->>'max_weight_t')::numeric not between 1 and 60 then r := r - 'max_weight_t'; end if;
     if r ? '_tags' then
       insert into private.osm_tags (osm_type, osm_id, tags, check_date, updated_at)
       values (r->>'osm_type', (r->>'osm_id')::bigint, r->'_tags', r->>'_check_date', now())
-      on conflict (osm_type, osm_id) do update set tags = excluded.tags, check_date = excluded.check_date, updated_at = now();
+      on conflict (osm_type, osm_id) do update set tags = excluded.tags, check_date = excluded.check_date, updated_at = now()
+        where (private.osm_tags.tags, private.osm_tags.check_date) is distinct from (excluded.tags, excluded.check_date);
     end if;
 
     select id into existing from public.places where osm_type = r->>'osm_type' and osm_id = (r->>'osm_id')::bigint;
@@ -241,7 +242,8 @@ begin
                             else coalesce(r->>'checkin_from', p.checkin_from) end,
         times_note = case when p.sources->'beheer' ? 'departure' or p.sources->'website_fields' ? 'times_note' then p.times_note
                           when r ? 'departure' or r ? 'checkin_from' then 'Volgens OpenStreetMap' else p.times_note end,
-        max_stay_nights = case when p.sources->'beheer' ? 'max_stay_nights' then p.max_stay_nights else coalesce((r->>'max_stay_nights')::int, p.max_stay_nights) end,
+        max_stay_nights = case when p.sources->'beheer' ? 'max_stay_nights' or p.sources->'website_fields' ? 'max_stay_nights' then p.max_stay_nights
+                               else coalesce((r->>'max_stay_nights')::int, p.max_stay_nights) end,
         access_24h = case when p.sources->'beheer' ? 'access_24h' or p.sources->'website_fields' ? 'access_24h' then p.access_24h
                           else coalesce((r->>'access_24h')::boolean, p.access_24h) end,
         sources = p.sources || jsonb_build_object('osm', now())
@@ -249,8 +251,13 @@ begin
       where p.id = existing;
       upd := upd + 1;
     end if;
+   exception when check_violation or invalid_text_representation or numeric_value_out_of_range then
+    skipped := skipped + 1;
+    insert into public.app_logs (level, source, message, context)
+    values ('warn', 'ingest_osm', left('OSM-rij overgeslagen: ' || sqlerrm, 500), jsonb_build_object('osm_type', r->>'osm_type', 'osm_id', r->>'osm_id'));
+   end;
   end loop;
-  return jsonb_build_object('inserted', ins, 'updated', upd);
+  return jsonb_build_object('inserted', ins, 'updated', upd, 'skipped', skipped);
 end $function$;
 revoke all on function public.ingest_osm(jsonb) from public, anon, authenticated;
 grant execute on function public.ingest_osm(jsonb) to service_role;
@@ -393,7 +400,8 @@ as $$
                           and old_value is not null and old_value <> 'null'::jsonb),
     -- Nieuw (dataplan november 2026): wachtende voorstellen en de oudste daarvan
     'updates_pending', (select count(*) from public.updates_queue where status = 'pending'),
-    'updates_pending_7d', (select count(*) from public.updates_queue where status = 'pending' and created_at < now() - interval '7 days')
+    'updates_pending_7d', (select count(*) from public.updates_queue where status = 'pending' and created_at < now() - interval '7 days'),
+    'vast_zonder_tijd', (select count(*) from public.places where (departure = 'vast') <> (checkout_until is not null))
   )
   from (select count(*) filter (where status = 'published') as published,
                count(*) filter (where status = 'published' and departure is not null) as with_departure,
@@ -512,3 +520,7 @@ begin
 end $$;
 revoke all on function public.outreach_next(text, integer) from public;
 grant execute on function public.outreach_next(text, integer) to anon, authenticated;
+
+-- Servicepunten die bij geen enkele OSM-ronde meer langskomen (weggehaald of buiten gebruik), na 30 dagen weg; de
+-- provincies worden elke 7 dagen opgehaald (review database, 20 november)
+select cron.schedule('servicepunten-opruimen', '41 3 * * *', $$delete from public.service_points where updated_at < now() - interval '30 days'$$);

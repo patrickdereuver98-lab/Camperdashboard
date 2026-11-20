@@ -255,7 +255,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 
 ## Datavalidatie en bedrijfsregels
 
-Constraints op `places` sinds migratie `20261120100000` (R79, dataplan november 2026): tijden als `HH:MM` binnen de dag (`places_tijden_geldig`), een vaste regel altijd met tijd en anders zonder (`places_vast_met_tijd`; trigger `places_vast_tijd` maakt de tijd eerst leeg als de regel niet vast is), coördinaten binnen Nederland (`places_in_nederland`), bereiken voor nachten, lengte, hoogte, gewicht en betaalwijze (`places_bereik`), en `price_extras` als lijst en `sources` als object (`places_json_vorm`).
+Constraints op `places` sinds migratie `20261120100000` (R79, dataplan november 2026): tijden als `HH:MM` binnen de dag (`places_tijden_geldig`), coördinaten binnen Nederland (`places_in_nederland`), bereiken voor nachten, lengte, hoogte, gewicht en betaalwijze (`places_bereik`), en `price_extras` als lijst en `sources` als object (`places_json_vorm`). Een vaste regel zonder tijd (of andersom) is bewust geen constraint: Beheer en de inbox schrijven regel en tijd in twee stappen. `health()` telt zulke plekken (`vast_zonder_tijd`). `ingest_osm` maakt ongeldige OSM-waarden eerst schoon en slaat een rij die toch faalt over (logregel in `app_logs`), zodat één tag geen hele ronde stopt.
 
 - CHECK-constraints zoals in de tabellen hierboven (kind, surface, departure, status, scores, lengtes, e-mailformaat).
 - `checkout_until`, `checkin_from` en `checkin_until` in `uu:mm`; `reservation_rule` alleen `verplicht`, `mogelijk` of `niet_nodig`.

@@ -282,7 +282,7 @@ export function nightPrices(text: string): NightPrice[] {
       // vroeg aankomen, laat vertrekken, afwezige nachten
       "vroege aankomst|eerder aankomen|later dan|verlate", "afwezig",
       // entree en dagrecreatie (review R63)
-      "\\bentree|dagrecreatie|dagkaart|dagbezoek|zwembad",
+      "\\bentree\\b",
     ].join("|"),
   );
   // Een prijs per persoon in een tarieventabel ("Volwassenen p.p.p.n. € 7,50", "Personen vanaf 13 jaar € 5,00 per nacht",
@@ -338,7 +338,9 @@ export function nightPrices(text: string): NightPrice[] {
       // nachtprijs voor een camper: het laatste voertuig- of tentwoord ervoor beslist (gouden set, sproakstee)
       const win = text.slice(Math.max(0, m.index! - 150), m.index!);
       const lastAt = (re: RegExp) => Math.max(-1, ...[...win.matchAll(new RegExp(re.source, "g"))].map((x) => x.index!));
-      if (!VEHICLE.test(m[0]) && lastAt(TENT) > lastAt(VEHICLE)) continue;
+      const ownBlock = win.slice(win.lastIndexOf(" . ") + 1) + m[0];
+      const PLACE_WORD = new RegExp(`${VEHICLE.source}|kampeerpla|standpla|staanpla|camperpla`);
+      if (!PLACE_WORD.test(ownBlock) && lastAt(TENT) > lastAt(PLACE_WORD)) continue;
       // De zin vóór het bedrag: "extra campinggast per nacht € 5" is een toeslag, geen nachtprijs
       const before = text.slice(Math.max(0, m.index! - 50), m.index!);
       const sentence = before.slice(before.lastIndexOf(".") + 1);
@@ -366,6 +368,9 @@ export function nightPrices(text: string): NightPrice[] {
       if (!own && /priv[eé]-?\s?sanitair/.test(scope)) continue;
       // "… de kosten bedragen € 13,00 per nacht en worden berekend bovenop de kampeertarieven"
       if (/^[^€]{0,30}\b(?:bovenop|boven op)\b/.test(after)) continue;
+      // Dagrecreatie, dagkaart of zwembad vlak vóór het bedrag ("Entree dagrecreatie: € 6 per dag"), niet verderop in de zin
+      const nearAmount = text.slice(Math.max(0, m.index! - 30), m.index! + m[0].length);
+      if (/dagrecreatie|dagkaart|dagbezoek|zwembad/.test(nearAmount.slice(nearAmount.lastIndexOf(". ") + 1))) continue;
       // "Gratis parkeren overdag; overnachten € 10 per nacht": alleen het deel na de puntkomma telt
       if (NOT_NIGHT.test(scope.slice(scope.lastIndexOf(";") + 1)) || PER_PERSON.test(label) || /^\W*(?:per )?(?:persoon|personen|volwassenen?)\b/.test(label.trim())) continue;
       // De dagprijs naast een weekprijs ("€ 35,00 per week en € 7,00 per dag") is huur van iets, geen nachtprijs
@@ -679,7 +684,8 @@ export function maxStay(text: string): number | undefined {
     for (const m of text.matchAll(re)) {
       const [s, e] = sentenceBounds(text, m.index!);
       const sentence = text.slice(s, e);
-      if (/minim|arrangement|boeking|weekend|feestdag/.test(sentence) || (RENTAL_STAY.test(sentence) && !CAMPER.test(sentence) && !PITCH_ONLY.test(sentence))) continue;
+      if (/minim|arrangement|boeking|weekend|feestdag|annul|reserver|vooraf|betal|korting|groep/.test(sentence) ||
+          !/verblijf|staan|overnacht|blijven|camper|stellplatz|nachten achter elkaar/.test(sentence) || (RENTAL_STAY.test(sentence) && !CAMPER.test(sentence) && !PITCH_ONLY.test(sentence))) continue;
       const v = Number(m[1]);
       const nights = n === 2 ? v / 24 : v;
       if (Number.isInteger(nights) && nights >= 1 && nights <= 14) return nights;
@@ -1236,8 +1242,20 @@ export function reservationRule(text: string): "verplicht" | "mogelijk" | "niet_
   return found(RES_POSSIBLE) ? "mogelijk" : undefined;
 }
 
+// Alleen naast een plek- of prijswoord ("Camper met twee personen", "Toeristenplaats (tot 2 pers)", "2 personen,
+// kampeermiddel"), niet "huisjes voor 4 personen" (review dataplan november 2026)
 const INCLUDES_PERSONS =
-  /(?:incl\.?|inclusief|tot|voor|met|max\.?|maximaal)\s*(?:[2-6]|twee|drie|vier)\s*(?:personen|volwassenen|pers\b)|(?:[2-6]|twee) (?:personen|volwassenen) (?:inbegrepen|inclusief|incl)|(?:camper|caravan|kampeermiddel|plaats|plek)[^.€]{0,25}(?:[2-6]|twee) (?:personen|volwassenen)|(?:[2-6]|twee) (?:personen|volwassenen)[,:]? (?:met |en )?(?:kampeermiddel|camper|caravan)|(?:[2-6]|twee) (?:personen|volwassenen) (?:bij|in) de prijs/;
+  /(?:camper|caravan|kampeermiddel|kampeerplaats|camperplaats|toeristenplaats|standplaats|staanplaats|\bplaats|\bplek|tarief|prijs)[^.€]{0,40}?(?:[2-6]|twee)\s*(?:personen|volwassenen|pers\b)|(?:[2-6]|twee) (?:personen|volwassenen)[,:]? (?:met |en )?(?:kampeermiddel|camper|caravan)|(?:[2-6]|twee) (?:personen|volwassenen) (?:inbegrepen|bij de prijs|in de prijs)/g;
+
+function includesPersons(text: string): boolean {
+  for (const m of text.matchAll(INCLUDES_PERSONS)) {
+    const [s, e] = sentenceBounds(text, m.index!);
+    const sentence = text.slice(s, e);
+    if (RENTAL_STAY.test(sentence) && !CAMPER.test(sentence) && !PITCH_ONLY.test(sentence)) continue;
+    return true;
+  }
+  return false;
+}
 
 export function priceExtras(text: string): Extra[] {
   const out: Extra[] = [];
@@ -1277,7 +1295,10 @@ export function priceExtras(text: string): Extra[] {
       else if (/per (keer|beurt)/.test(label)) unit = "per keer";
     }
     if (unit === "skip") continue;
-    const kind = EXTRA_KINDS.find((k) => k.re.test(label)) ?? (unit?.startsWith("per persoon") ? EXTRA_KINDS.find((k) => k.label === "Per persoon") : undefined);
+    let kind = EXTRA_KINDS.find((k) => k.re.test(label)) ?? (unit?.startsWith("per persoon") ? EXTRA_KINDS.find((k) => k.label === "Per persoon") : undefined);
+    // "Extra personen. per persoon per nacht | € 5,50": het woord "extra" staat net vóór de zinsgrens
+    if (kind?.label === "Per persoon" && /extra (?:persoon|personen|volwassenen?)\W*$/.test(before.slice(0, cut + 1).slice(-30)))
+      kind = EXTRA_KINDS.find((k) => k.label === "Extra persoon");
     if (!kind || seen.has(kind.label)) continue;
     if (amount < kind.min || amount > kind.max) continue;
     // Toeristenbelasting en "per persoon" zonder eenheid zijn vrijwel altijd per persoon per nacht, maar dat zeggen
@@ -1288,7 +1309,7 @@ export function priceExtras(text: string): Extra[] {
   }
   // Noemt de site een prijs voor twee personen ("camper met twee personen € 16,50", "tot 2 pers"), dan is een bedrag per
   // persoon een extra persoon bovenop die prijs, geen verplichte toeslag (review R60, Mijn reis telde het mee)
-  if (INCLUDES_PERSONS.test(text))
+  if (includesPersons(text))
     for (const x of out)
       if (x.label === "Per persoon" && !out.some((y) => y.label === "Extra persoon")) x.label = "Extra persoon";
   const order = EXTRA_KINDS.map((k) => k.label);

@@ -148,7 +148,7 @@ function times(t: Tags): Record<string, unknown> {
   const clock = (v?: string, last = false) => {
     const all = [...(v ?? "").matchAll(/(\d{1,2}):(\d{2})/g)];
     const m = last ? all[all.length - 1] : all[0];
-    return m && Number(m[1]) < 24 ? `${m[1].padStart(2, "0")}:${m[2]}` : undefined;
+    return m && Number(m[1]) < 24 && Number(m[2]) <= 59 ? `${m[1].padStart(2, "0")}:${m[2]}` : undefined;
   };
   // "-18:00" of "06:00-10:00": vertrekken kan uiterlijk tot de laatste tijd
   const out_ = clock(t.check_out, true);

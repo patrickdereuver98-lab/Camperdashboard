@@ -173,3 +173,9 @@ test("OSM: los- en waterpunten als eigen punt, privé telt niet", () => {
   assert.equal(mapPoint({ type: "node", id: 10, lat: 52.2, lon: 5.2, tags: { amenity: "water_point", access: "private" } }), null);
   assert.equal(mapPoint({ type: "node", id: 11, lat: 48, lon: 5.2, tags: { amenity: "water_point" } }), null);
 });
+
+test("OSM: een tijd met onmogelijke minuten wordt niet overgenomen", () => {
+  const r = mapOsm({ type: "node", id: 3, lat: 52.1, lon: 5.1, tags: { tourism: "caravan_site", check_out: "10:75", check_in: "13:99" } })!;
+  assert.equal(r.checkout_until, undefined);
+  assert.equal(r.checkin_from, undefined);
+});
