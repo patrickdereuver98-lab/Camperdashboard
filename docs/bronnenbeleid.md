@@ -123,6 +123,8 @@ Het register staat in `bron.sources`. Startstand (18 oktober 2026):
 | Bron | Tier | Status | Opmerking |
 |---|---|---|---|
 | OpenStreetMap, PDOK | 1 | toegestaan | Open data |
+| Gemeenten (APV, eigen pagina's over camperplaatsen) | 1 | toegestaan | Bevestigd door de eigenaar op 20 november 2026 (dataplan november, spoor 3.2): de maximale verblijfsduur uit een APV of gemeentepagina telt als feit, met letterlijk citaat |
+| Archie's Campings | 3 | geblokkeerd | Geblokkeerd op 20 november 2026 (R81): geen schriftelijke toestemming. Bestand uit de repository, `geo_bronnen` op geblokkeerd |
 | Eigen site van de plek, eigenaar | 2 | toegestaan | Eigen site alleen als het domein klopt |
 | Campercontact, park4night, ACSI/Eurocampings, ANWB, Camping.info | 3 | toegestaan | `robots.txt` wordt bij het eerste gebruik gecontroleerd en vastgelegd |
 | Reddit | 4 | toegestaan | Geen gebruikersnamen |

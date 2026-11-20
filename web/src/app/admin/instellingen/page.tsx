@@ -76,15 +76,15 @@ export default function SettingsPage() {
             </label>
           </Card>
           <Card className="space-y-3">
-            <h2 className="font-display text-lg font-semibold">Publicatiedrempel</h2>
+            <h2 className="font-display text-lg font-semibold">Wanneer staat een plek online</h2>
             <p className="text-sm text-muted">
-              Een plek gaat automatisch online als de harde eisen kloppen (website of telefoon, en minstens twee van vertrekregel, openingsperiode, stroom en prijs) en de gewogen score minstens deze drempel haalt. Gewichten (20 punten): vertrekregel 4, openingsperiode 3, prijs, stroom en contact 2, foto 1,5, water, lozen, toilet en honden 1, beschrijving en echte naam 0,5, douche en aantal plekken 0,25. Plekken die je handmatig hebt vastgezet blijven zoals ze zijn.
+              Een plek gaat vanzelf online als er een contact is (website, telefoon, e-mail of beheerder) en minstens twee
+              punten uit vertrekregel (telt dubbel), openingsperiode, stroom en prijs. Met een vertrekregel staat hij er
+              gewoon; zonder vertrekregel staat hij er grijs, met de vraag om de vertrektijd door te geven, en zoekmachines
+              slaan hem over tot de vertrektijd bekend is. De score telt alleen nog voor de volgorde in de lijst. Plekken
+              die je handmatig hebt vastgezet blijven zoals ze zijn.
             </p>
-            <label className="flex items-center gap-3">
-              <input type="range" min={0.3} max={1} step={0.01} value={s.publish_threshold} onChange={(e) => setS({ ...s, publish_threshold: Number(e.target.value) })} className="flex-1 accent-[var(--forest)]" />
-              <span className="w-14 text-right font-display text-xl font-semibold tabular-nums">{Math.round(s.publish_threshold * 100)}%</span>
-            </label>
-            <p className="text-sm text-muted">Na opslaan: klik op &quot;Drempel toepassen&quot; hieronder om bestaande plekken bij te werken.</p>
+            <p className="text-sm text-muted">Na een wijziging in de regels: klik op &quot;Regels opnieuw toepassen&quot; hieronder.</p>
           </Card>
           <Card className="space-y-3">
             <h2 className="font-display text-lg font-semibold">Foto&apos;s van websites</h2>
@@ -108,7 +108,7 @@ export default function SettingsPage() {
           De pipeline draait automatisch: OpenStreetMap wordt per provincie wekelijks ververst, nieuwe websites worden elk half uur ingepland en continu gelezen. Gebruik deze knoppen alleen als je niet wilt wachten.
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
-          <button className={secondary} onClick={() => action("apply-threshold", "Drempel nu op alle plekken toepassen?")}>Drempel toepassen</button>
+          <button className={secondary} onClick={() => action("apply-threshold", "De regels opnieuw op alle plekken toepassen?")}>Regels opnieuw toepassen</button>
           <button className={secondary} onClick={() => action("scrape-missing", "Websites van nieuwe plekken inplannen?")}>Nieuwe websites lezen</button>
           <button className={secondary} onClick={() => action("scrape-all", "Alle websites opnieuw lezen? Dit duurt enkele uren.")}>Alle websites opnieuw lezen</button>
           <button className={secondary} onClick={() => action("osm-refresh", "Alle provincies opnieuw uit OpenStreetMap halen?")}>OpenStreetMap verversen</button>

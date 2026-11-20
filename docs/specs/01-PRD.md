@@ -78,6 +78,10 @@ Besluit 18 oktober 2026:
 - **Onvolledig:** de plek haalt de huidige drempel (contact plus 2 van 4 kernfeiten, waarbij de vertrekregel dubbel telt (besluit 29 oktober 2026); contact is website, telefoon, e-mail of beheerder uit OSM), maar de vertrekregel is
   onbekend. Zo'n plek blijft zichtbaar, grijs en met de vraag om de vertrektijd door te geven.
 - Plekken onder de drempel blijven verborgen en worden aangevuld door de scraper en de zoekagenten.
+- **Publiceren op regels (besluit 20 november 2026, dataplan november §7):** alleen het contact en de 2 van 4
+  kernfeiten tellen; de gewogen score telt niet meer voor publicatie, alleen voor de volgorde in de lijst. Een
+  onvolledige (grijze) plekpagina staat op `noindex, follow` en niet in de sitemap tot de vertrekregel bekend is; in
+  zoeken en op de kaart blijft hij staan.
 
 ## Databronnen
 

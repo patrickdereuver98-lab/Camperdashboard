@@ -4,6 +4,7 @@
 > het [implementatieplan](specs/06-implementatieplan.md) en de [open punten](specs/README.md) blijven het archief.
 > Bron van de werkpakketten: [review november](review-2026-11.md) §4 en [review 16 november](review-2026-11-16.md) §6.
 > Bijgewerkt: 18 november 2026 (PR's #150 tot en met #156), live database gecontroleerd op 16 november.
+> Dataplan van 20 november 2026 (stand van de data en vijf sporen tot de livegang): [`dataplan-2026-11.md`](dataplan-2026-11.md).
 
 Tekens: ✅ klaar in code (zie kolom Live), 🔄 bezig of deels, ⬜ nog niet begonnen.
 Eigenaar: **Agent** bouwt, **Patrick** beslist of zet instellingen.
@@ -16,7 +17,7 @@ Eigenaar: **Agent** bouwt, **Patrick** beslist of zet instellingen.
 | 2 | **Vercel Authentication uit** voor Production | Niemand kan de site zien, ook de API en de webhook van Resend niet | R1, README 102 |
 | 3 | **Eigen SMTP** (EU, met SPF/DKIM) en welke dienst | De ingebouwde mailer stuurt enkele mails per uur voor de hele site: inloggen en reviews lopen vast | R10, B3 |
 | 0 | **Back-up: geheimen `SUPABASE_DB_URL` en `BACKUP_PASSPHRASE` zetten** en de workflow starten (nieuw, 16 november) | Er is nog nooit een back-up gemaakt; de run van 15 november faalde | R59 |
-| 4 | **90%-eis en mailen naar eigenaren**: eis herzien per soort plek, grijze plekken verbergen bij de livegang, of eigenaren mailen (draait README 59 terug; PR #165 staat klaar, vervangt #141; verzenden staat uit) | Lanceervoorwaarde 2 wordt bij het huidige tempo niet gehaald | R16, README 110, 112 |
+| 4 | **Mailen naar eigenaren: besloten ja (20 november 2026, README 138)**, wacht nog op `outreach_key`, het Resend-domein en een publieke site (afmeldlink). **90%-eis** blijft open: eis herzien per soort plek, grijze plekken verbergen bij de livegang, of eigenaren mailen (draait README 59 terug; PR #165 staat klaar, vervangt #141; verzenden staat uit) | Lanceervoorwaarde 2 wordt bij het huidige tempo niet gehaald | R16, README 110, 112 |
 
 Nieuw uit de review van 16 november (§7 daar, met advies): beschrijving van de website op de plekpagina (R80), foto's van
 websites (R90), Archies blokkeren en uit de openbare repo (R81), weringen omzeilen in het bronnenbeleid, Dependabot-meldingen
@@ -108,13 +109,13 @@ Gaat vóór de rest van fase 1 en 2. Volgorde: eerst beheer beschermen en meten,
 | A.5 Risicogroepen foute vertrektijden en prijzen nalopen of legen (R57, R60) | ✅ | Agent | Live 18 november: 14 vertrektijden uit aankomst-, huur- of toeslagzinnen geleegd, Willemshoeve naar 11:00; 59 prijzen geleegd (gelijk aan een toeslag, camping onder € 8 zonder akkoord, € 75), 5 gecorrigeerd; alles op slot. 12 plekken onder de drempel (nu concept). Back-up `private.a5_kernfeiten_20261118`. Nog open: 32 bronzinnen met twee tijden (B.3) |
 | A.6 Beloftes op start en FAQ, standaard 11:00 weg (R66, R83) | 🔄 | Agent | PR #153; FAQ live bijgewerkt op 18 november |
 | B.1 Wislog, momentopname, `health()` per kanaal (R62, R64) | 🔄 | Agent | PR #155 (op #151, migratie `20261118200000`) |
-| B.2 Gouden set en lezer in CI (R69) | ⬜ | Agent | |
-| B.3 Extractor met context en prijsetiketten (R63, R60) | ⬜ | Agent | |
-| B.4 Herlezing in porties (R58, R62) | ⬜ | Agent | Na B.1 tot en met B.3 |
+| B.2 Gouden set en lezer in CI (R69) | ✅ | Agent | 20 november: 23 echte pagina's in `web/tests/golden/`, stealth-lezer in CI. `test_merge.ts` nog niet (heeft invoerlijsten nodig) |
+| B.3 Extractor met context en prijsetiketten (R63, R60) | ✅ | Agent | Parser 46 (20 november): gouden set van 16/23 vertrek en 11/20 prijs naar 23/23 en 20/20; uitrollen na samenvoegen |
+| B.4 Herlezing in porties (R58, R62) | ⬜ | Agent | Na samenvoegen en uitrollen van parser 46: de 1.337 plekken op parser 43 eerst, in porties van 200 |
 | B.5 Niets stil weggooien (R68, R71, R72, R73) | 🔄 | Agent | PR #156 (migratie `20261118300000`, daarna `discover` uitrollen); R72 in #150 |
 | Next.js 16.4.6 tegen twee middelzware cachelekken | 🔄 | Agent | PR #154 |
 | C.1 Mijn reis snel en offline (R65) | ⬜ | Agent | Fase 2 |
-| C.2 Back-up compleet, crons als migratie, constraints (R67, R79) | ⬜ | Agent | Fase 2 |
+| C.2 Back-up compleet, crons als migratie, constraints (R67, R79) | 🔄 | Agent | Constraints op het kernfeit in migratie `20261120100000` (na samenvoegen live); back-up en crons nog open |
 | C.3 Draaiboek, uptime-check, Dependabot (R89, R91) | ⬜ | Agent + Patrick | Fase 2 |
 | C.4 Privacy, bronnen, limieten (R75, R76, R77, R90) | ⬜ | Agent | Fase 2 |
 | D.1 Tweede steekproef van 30 plekken vóór de livegang | ⬜ | Agent | Fase 3; doel vertrekregel ≥ 90% juist, Zonder vertrektijd 100% |

@@ -6,7 +6,7 @@ import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, timeToMinutes, websiteLabel } from "@/lib/format";
 import { knownFacts } from "@/lib/place-facts";
-import { lastChecked } from "@/lib/place-status";
+import { isIncomplete, lastChecked } from "@/lib/place-status";
 import { NavigateButton } from "@/components/navigate";
 import { ContactLink } from "@/components/contact-link";
 import { SITE_URL, SUPABASE_URL } from "@/lib/env";
@@ -58,6 +58,9 @@ export async function generateMetadata({ params }: PageProps<"/plek/[slug]">): P
     title,
     description,
     alternates: { canonical: `/plek/${place.slug}` },
+    // Grijze plek (vertrekregel onbekend): wel te vinden in zoeken en op de kaart, niet in zoekmachines tot het
+    // kernfeit bekend is; de links blijven gevolgd (dataplan november 2026 §7, besluit Patrick 20 november)
+    ...(isIncomplete(place) ? { robots: { index: false, follow: true } } : {}),
     openGraph: { ...OPEN_GRAPH, title, description, url: `/plek/${place.slug}`, images: [image] },
     twitter: { card: "summary_large_image", title, description, images: [image.url] },
   };
@@ -575,6 +578,14 @@ function NightTotalLine({ place }: { place: Place }) {
   );
 }
 
+const PAYMENT_WORD: Record<string, string> = { contant: "contant", pin: "pinnen", creditcard: "creditcard", contactloos: "contactloos", app: "met een app" };
+/** ["contant", "pin"] → "Contant of pinnen" */
+function PAYMENT_TEXT(list: string[]): string {
+  const words = list.map((w) => PAYMENT_WORD[w] ?? w);
+  const text = words.length > 1 ? `${words.slice(0, -1).join(", ")} of ${words.at(-1)}` : words[0];
+  return text[0].toUpperCase() + text.slice(1);
+}
+
 /** Praktisch en contact: alleen wat we weten.
  *  Telefoon, website en e-mail staan vanaf lg al in de prijskaart ernaast; op mobiel en tablet staan ze ook hier, waar de springlink Contact heen gaat. */
 function Practical({ place, address, tel, reserveLabel }: { place: Place; address: string; tel?: string; reserveLabel: string }) {
@@ -584,6 +595,11 @@ function Practical({ place, address, tel, reserveLabel }: { place: Place; addres
   add("Aantal plekken", place.capacity ? String(place.capacity) : undefined);
   add("Ondergrond", place.surface ? place.surface[0].toUpperCase() + place.surface.slice(1) : undefined);
   add("Maximaal verblijf", place.maxStayNights ? pluralize(place.maxStayNights, "nacht", "nachten") : undefined);
+  // Past mijn camper en hoe betaal ik (OSM, dataplan november 2026); onbekend laten we weg
+  const unit = (n: number, u: string) => `${String(n).replace(".", ",")} ${u}`;
+  add("Maximale hoogte", place.maxHeightM ? unit(place.maxHeightM, "m") : undefined);
+  add("Maximaal gewicht", place.maxWeightT ? unit(place.maxWeightT, "ton") : undefined);
+  add("Betalen", place.payment?.length ? PAYMENT_TEXT(place.payment) : undefined);
   const fullAddress = address ? `${address}, ${place.province}` : `${place.town}, ${place.province}`;
   rows.push({
     label: "Adres",

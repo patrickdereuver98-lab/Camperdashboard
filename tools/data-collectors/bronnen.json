@@ -14,7 +14,8 @@
     "type": "file_gpx",
     "pad": "aanlevering/archies_nl.gpx",
     "betrouwbaarheid": 3,
-    "status": "actief"
+    "status": "geblokkeerd",
+    "notitie": "Geblokkeerd door de eigenaar op 20 november 2026 (review R81, dataplan november): geen schriftelijke toestemming van Archie's. Bestand uit de repository gehaald. Pas weer aanzetten met toestemming op papier."
   },
   {
     "bron_id": "pdok",

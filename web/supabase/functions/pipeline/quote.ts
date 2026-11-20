@@ -22,8 +22,12 @@ const norm = (s: string) => s.toLowerCase().replace(/[\s ]+/g, " ").replace(/[鈥
 export function checkQuote(a: QuoteAnswer, text: string): QuoteCheck | null {
   if (a.departure === "onbekend" || !a.quote || a.quote.length < 12) return null;
   const q = norm(a.quote);
-  if (!norm(text).includes(q)) return null;
-  const found = sentenceDeparture(a.quote);
+  const page = norm(text);
+  const at = page.indexOf(q);
+  if (at < 0) return null;
+  // De extractor leest de hele zin waarin het citaat staat, niet alleen het citaat: "het vertrek v贸贸r 10.00 uur" uit "In
+  // onze chalets en lodges is het vertrek v贸贸r 10.00 uur" gaat over de chalets (review R63)
+  const found = sentenceDeparture(wholeSentence(page, at, at + q.length));
   if (a.departure === "vast") {
     const m = /^(\d{1,2}):(\d{2})$/.exec(a.checkout ?? "");
     if (!m) return null;
@@ -41,6 +45,21 @@ export function checkQuote(a: QuoteAnswer, text: string): QuoteCheck | null {
   const free = /geen (vaste )?(aankomst|vertrek|uitcheck|check-?out)|wanneer (je|u) (wilt|wil)|elk (gewenst )?(moment|tijdstip)|vrije? (aankomst|vertrek)|keine (festen )?(an|ab)|jederzeit|any ?time|24 uur|24 stunden|24 hours/;
   if (!free.test(q) && !found.departure) return null;
   return { fields: { departure: a.departure, times_note: a.quote.slice(0, 290) }, confirmed: found.departure === a.departure };
+}
+
+/** De hele zin rond [from, to) in genormaliseerde tekst; een decimaal ("10.00") is geen zinseinde */
+export function wholeSentence(page: string, from: number, to: number): string {
+  const end = /(?<!\d)[.!?](?!\d)|\s\|\s|\n/g;
+  let s = 0;
+  let e = page.length;
+  for (const m of page.matchAll(end)) {
+    if (m.index! < from) s = m.index! + m[0].length;
+    else if (m.index! >= to) {
+      e = m.index!;
+      break;
+    }
+  }
+  return page.slice(s, e).trim();
 }
 
 /** Alleen een bevestigd citaat: de velden voor de database, of null */

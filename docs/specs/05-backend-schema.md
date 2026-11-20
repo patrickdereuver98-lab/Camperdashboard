@@ -76,7 +76,10 @@
 | `surface` | text | | | `verhard`, `gras`, `gemengd`, `grind` |
 | `open_all_year`, `season` | boolean, text | | | seizoen als "1 april – 31 oktober" |
 | `reservation` | boolean | | | |
-| `max_stay_nights` | integer | | | |
+| `max_stay_nights` | integer | | | Uit OSM `maxstay` of letterlijk van de website (parser 46, dataplan november 2026) |
+| `max_height_m` | numeric(3,1) | | | Maximale hoogte uit OSM `maxheight` (migratie `20261120100000`) |
+| `max_weight_t` | numeric(4,1) | | | Maximaal gewicht uit OSM `maxweight` |
+| `payment` | text[] | | | Betaalwijzen uit OSM `payment:*`: contant, pin, creditcard, contactloos, app |
 | `departure` | text | | | `vrij`, `per24`, `vast`; `null` = onbekend |
 | `departure_check` | text | | | menselijke controle: `bevestigd`, `voorwaardelijk`, `afgewezen`; `null` = nog niet gecontroleerd. `null` en `bevestigd` staan allebei op Zonder vertrektijd zonder zichtbaar verschil (een bron is genoeg, besluit 18 oktober 2026); `bevestigd` sorteert alleen eerder bij gelijke stand; `voorwaardelijk` en `afgewezen` staan bij Overige. Wordt automatisch leeg als `departure`, `checkout_until` of `times_note` verandert, en na een jaar (cron `departure-recheck`) |
 | `departure_checked_at`, `departure_checked_by` | timestamptz, text | | | wanneer en door wie (`beheer`, `eigenaar`); te zetten via RPC `check_departure` (alleen beheer) |
@@ -146,6 +149,8 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 | `route_cache` | key*, distance_m*, duration_s*, geometry, provider*, created_at* | |
 | `osm_regions` | code*, name*, last_run_at, places_req, points_req, places_done_at, attempt* | attempt `0`; plekken en servicepunten na elkaar, hooguit één verzoek tegelijk; `places_done_at` bewaart een gelukt plekkendeel (`20261118120000`) |
 | `osm_staging` | id*, kind* (`place`, `point`), row*, created_at*, processed_at | index op onverwerkte rijen |
+| `service_points` | id*, osm_type*, osm_id*, type* (`dump`, `water`), water, name, fee, opening_hours, lat*, lng*, updated_at* | Los- en waterpunten uit OSM, ook als ze niet bij een plek liggen; iedereen mag lezen (open data). Migratie `20261120100000` |
+| `private.osm_tags` | osm_type*, osm_id*, tags*, check_date, updated_at* | Ruwe OSM-tags per object, zodat een nieuw veld geen nieuwe ophaalronde nodig heeft; alleen de keten. Migratie `20261120100000` |
 | `geo_master` | master_id* (pk, bron_id van het anker), geohash* (9 tekens), naam, namen*, lat*, lon*, bron_ids* (≥ 1), faciliteiten* (jsonb-object), conflicten* (jsonb-object), match_score* (0–1), aangemaakt_op*, bijgewerkt_op* | Migratie `20261030120000_geo_master.sql`. Alleen `service_role` (RLS aan, geen policies). GIN-index op bron_ids, index op geohash. Gevuld door pipeline-actie `merge_master` (`merge_master.ts`, [tools/data-collectors](../../tools/data-collectors/README.md)): binnen 100 m (haversine) en score ≥ 0,75 (0,8 × naam via Levenshtein + 0,2 × nabijheid) samen; faciliteit alleen als alle bronnen het eens zijn, anders in conflicten. Schrijft niet in `places`. Promotie (migratie `20261031090000_promote_geo_master.sql`): place_id (→ places, `SET NULL`), promotie (`nieuw`, `gekoppeld`, `geweigerd`), promotie_reden (bij `gekoppeld` gevuld = alleen gekoppeld, niet door de bronregels), gepromoveerd_op |
 | `geo_bronnen` | bron* (pk, a-z 0-9 _, gelijk aan het voorvoegsel van bron_id), naam*, tier* (1–5), status* (`toegestaan`, `te_beoordelen`, `geblokkeerd`; standaard te beoordelen), soort (soort plek voor de hele bron), notitie, beoordeeld_op, aangemaakt_op* | Alleen `service_role`. Alleen een mens zet een bron op toegestaan (HANDLEIDING, Dataketen). Tier 1–2 is genoeg voor promotie, tier 3–5 vraagt twee toegestane bronnen; geblokkeerd telt nooit. `pdok` en `gemeenten_nl`: tier 2, toegestaan (migraties `20261031220000_geo_bronnen_pdok.sql` en `20261031230000_pdok_toegestaan.sql`) |
 | `private.scrape_queue` | place_id*, attempts*, last_error, next_attempt_at*, done_at | |
@@ -250,13 +255,15 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 
 ## Datavalidatie en bedrijfsregels
 
+Constraints op `places` sinds migratie `20261120100000` (R79, dataplan november 2026): tijden als `HH:MM` binnen de dag (`places_tijden_geldig`), coördinaten binnen Nederland (`places_in_nederland`), bereiken voor nachten, lengte, hoogte, gewicht en betaalwijze (`places_bereik`), en `price_extras` als lijst en `sources` als object (`places_json_vorm`). Een vaste regel zonder tijd (of andersom) is bewust geen constraint: Beheer en de inbox schrijven regel en tijd in twee stappen. `health()` telt zulke plekken (`vast_zonder_tijd`). `ingest_osm` maakt ongeldige OSM-waarden eerst schoon en slaat een rij die toch faalt over (logregel in `app_logs`), zodat één tag geen hele ronde stopt.
+
 - CHECK-constraints zoals in de tabellen hierboven (kind, surface, departure, status, scores, lengtes, e-mailformaat).
 - `checkout_until`, `checkin_from` en `checkin_until` in `uu:mm`; `reservation_rule` alleen `verplicht`, `mogelijk` of `niet_nodig`.
 - **Publicatie** (trigger `places_before_write`): een plek wordt `published` als
   1. er een website, telefoonnummer, e-mailadres of beheerder (OSM `operator`) is (besluit eigenaar 19 oktober 2026), én
   2. minstens 2 van 4 beslisfeiten bekend zijn: vertrekregel, openingsperiode, stroom, prijs; de vertrekregel telt
      dubbel, dus contact plus een vertrekregel is genoeg (besluit eigenaar 29 oktober 2026), én
-  3. `completeness` ≥ `site_settings.publish_threshold` (nu 0,45).
+  3. ~~`completeness` ≥ `site_settings.publish_threshold` (0,45)~~ vervalt met migratie `20261120200000_publicatie_op_regels` (besluit 20 november 2026, README 139): de score bepaalt alleen nog de volgorde.
   Gewichten (20 punten): vertrekregel 4, seizoen 3, prijs 2, stroom 2, contact 2, foto 1,5, water 1, lozen 1, toilet 1,
   honden 1, beschrijving 0,5, echte naam 0,5, douche 0,25, aantal plekken 0,25. `status_locked` slaat dit over.
 - **Gezag:** velden in `sources.beheer` worden nooit door de pipeline overschreven; websitewaarden gaan voor OSM bij

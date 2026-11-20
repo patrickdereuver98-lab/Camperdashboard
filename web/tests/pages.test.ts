@@ -155,3 +155,10 @@ test("kernfeit-focus (B2): 4 PDF's in plaats van 2", () => {
   assert.equal(pdfLinks(html, home, pdfMax(true)).length, 4);
   assert.equal(pdfMax(false), 2);
 });
+
+test("verhuisde diepe pagina: één niveau hoger proberen, nooit de hoofdpagina (dataplan november 2026)", () => {
+  const c = homeCandidates("https://www.logerenbijdeboswachter.nl/kamperen/dasselaar");
+  assert.equal(c[1], "https://www.logerenbijdeboswachter.nl/kamperen/");
+  assert.ok(!c.includes("https://www.logerenbijdeboswachter.nl/"));
+  assert.ok(rankLinks([{ url: "https://camping-dewei.nl/info-1", text: "Check out en check in" }], home).length === 1);
+});

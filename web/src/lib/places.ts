@@ -2,7 +2,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import snapshot from "@/data/snapshot.json";
 import { OFFLINE_BUILD, SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 import { distanceKm } from "./geo";
-import { departureKind, inDepartureGroup, isOpenOn } from "./search";
+import { departureKind, inDepartureGroup, isOpenOn, type DepartureFacts } from "./search";
 import { PRERENDER_LIMIT, rankForPrerender } from "./prerender";
 import { inBbox, type Bbox } from "./bbox";
 import { cleanDescription } from "./description";
@@ -18,7 +18,7 @@ const PLACE_COLUMNS =
   "tourist_tax_included,power,water,dump_station,toilet,shower,wifi,dogs,capacity,max_length_m,surface,open_all_year," +
   "season,reservation,max_stay_nights,website,phone,email,image_url,image_credit,photos,rating_avg,rating_count," +
   "completeness,verified_at,updated_at,departure,checkout_until,checkin_from,access_hours,access_24h,times_note,price_extras," +
-  "departure_check,departure_checked_at,departure_checked_by,checkin_until,reservation_rule";
+  "departure_check,departure_checked_at,departure_checked_by,checkin_until,reservation_rule,max_height_m,max_weight_t,payment";
 
 /** Kolommen voor kaarten, zoeken en de kaart: geen foto-lijsten of beschrijvingen */
 const SUMMARY_COLUMNS =
@@ -46,7 +46,7 @@ const camel = (s: string) => s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpp
 
 function toCamel<T>(row: Record<string, unknown>): T {
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(row)) if (v !== null) out[camel(k)] = typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v) && /(eur|avg|_m)$/.test(k) ? Number(v) : v;
+  for (const [k, v] of Object.entries(row)) if (v !== null) out[camel(k)] = typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v) && /(eur|avg|_m|_t)$/.test(k) ? Number(v) : v;
   return out as T;
 }
 
@@ -313,15 +313,27 @@ export async function getNearby(place: Pick<Place, "id" | "lat" | "lng">, limit 
 }
 
 /** Voor de sitemap: alleen adres en datum */
-export async function getSlugs(): Promise<{ slug: string; verifiedAt?: string }[]> {
+/** Slug, controledatum en vertrekregel: de sitemap laat grijze plekken (vertrekregel onbekend) weg (dataplan §7) */
+export type SlugEntry = { slug: string; verifiedAt?: string } & DepartureFacts;
+
+export async function getSlugs(): Promise<SlugEntry[]> {
   "use cache";
   cacheTag("places");
   const r = await withFallback(
     async () =>
-      (await rest<Record<string, unknown>>("places?select=slug,verified_at&status=eq.published&order=slug")).map((r) =>
-        toCamel<{ slug: string; verifiedAt?: string }>(r),
-      ),
-    () => SNAP.places.map((p) => ({ slug: p.slug, verifiedAt: p.verifiedAt })),
+      (
+        await rest<Record<string, unknown>>(
+          "places?select=slug,verified_at,departure,checkout_until,departure_check&status=eq.published&order=slug",
+        )
+      ).map((r) => toCamel<SlugEntry>(r)),
+    () =>
+      SNAP.places.map((p) => ({
+        slug: p.slug,
+        verifiedAt: p.verifiedAt,
+        departure: p.departure,
+        checkoutUntil: p.checkoutUntil,
+        departureCheck: p.departureCheck,
+      })),
   );
   setLife(r, "hours");
   return r.value;

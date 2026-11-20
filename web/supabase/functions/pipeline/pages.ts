@@ -8,7 +8,7 @@ export type Link = { url: string; text: string };
 export const SUBPAGES: { re: RegExp; max: number }[] = [
   // Sterk: hier staat de vertrektijd bijna altijd
   {
-    re: /aankomst|vertrek|check-?in|check-?out|inchecken|uitchecken|huisregel|huishoudelijk|reglement|anreise|abreise|platzordnung|hausordnung|house-?rules/i,
+    re: /aankomst|vertrek|check[- ]?in|check[- ]?out|inchecken|uitchecken|huisregel|huishoudelijk|reglement|verblijfsduur|anreise|abreise|platzordnung|hausordnung|house-?rules/i,
     max: 3,
   },
   // Algemeen: vaak, maar niet altijd
@@ -29,7 +29,7 @@ export const MAX_SUBPAGES = 10;
  */
 export const FOCUS_SUBPAGES: { re: RegExp; max: number }[] = [
   {
-    re: /aankomst|vertrek|check-?in|check-?out|inchecken|uitchecken|huisregel|huishoudelijk|reglement|voorwaarden|anreise|abreise|platzordnung|hausordnung|house-?rules|terms/i,
+    re: /aankomst|vertrek|check[- ]?in|check[- ]?out|inchecken|uitchecken|huisregel|huishoudelijk|reglement|verblijfsduur|voorwaarden|anreise|abreise|platzordnung|hausordnung|house-?rules|terms/i,
     max: 4,
   },
   { re: /regels|praktisch|praktische|faq|veelgestelde|vragen/i, max: 3 },
@@ -226,8 +226,11 @@ export function decodeHtml(bytes: Uint8Array, contentType: string): string {
 export function homeCandidates(website: string): string[] {
   const u = new URL(website);
   const out = [u.href];
-  const depth = u.pathname.split("/").filter(Boolean).length;
+  const parts = u.pathname.split("/").filter(Boolean);
+  const depth = parts.length;
   if (depth === 1) out.push(u.origin + "/");
+  // Dieper adres: één niveau hoger ("/camperplaatsen/maastricht" → "/camperplaatsen"), niet de hoofdpagina (review §4.4)
+  if (depth >= 2) out.push(`${u.origin}/${parts.slice(0, -1).join("/")}/`);
   const other = new URL(u.href);
   other.hostname = u.hostname.startsWith("www.") ? u.hostname.slice(4) : `www.${u.hostname}`;
   out.push(other.href);

@@ -148,7 +148,7 @@ function times(t: Tags): Record<string, unknown> {
   const clock = (v?: string, last = false) => {
     const all = [...(v ?? "").matchAll(/(\d{1,2}):(\d{2})/g)];
     const m = last ? all[all.length - 1] : all[0];
-    return m && Number(m[1]) < 24 ? `${m[1].padStart(2, "0")}:${m[2]}` : undefined;
+    return m && Number(m[1]) < 24 && Number(m[2]) <= 59 ? `${m[1].padStart(2, "0")}:${m[2]}` : undefined;
   };
   // "-18:00" of "06:00-10:00": vertrekken kan uiterlijk tot de laatste tijd
   const out_ = clock(t.check_out, true);
@@ -204,6 +204,44 @@ function image(t: Tags): { image_url?: string; image_credit?: string } {
   return {};
 }
 
+/** "3.5", "3,5 m", "3.40 m" → meters; "default", "none" of onzin → leeg */
+function meters(v?: string, min = 1.5, max = 6): number | undefined {
+  const m = /^\s*(\d{1,2}(?:[.,]\d{1,2})?)\s*(?:m|meter)?\s*$/i.exec(v ?? "");
+  const n = m ? Number(m[1].replace(",", ".")) : NaN;
+  return Number.isFinite(n) && n >= min && n <= max ? n : undefined;
+}
+
+/** "3.5", "7.5 t", "12 t" → ton */
+function tonnes(v?: string): number | undefined {
+  const m = /^\s*(\d{1,2}(?:[.,]\d{1,2})?)\s*(?:t|ton|tonnes?)?\s*$/i.exec(v ?? "");
+  const n = m ? Number(m[1].replace(",", ".")) : NaN;
+  return Number.isFinite(n) && n >= 1 && n <= 60 ? n : undefined;
+}
+
+// Betaalwijze (dataplan november 2026, spoor 2.2): alleen "yes" telt; vaste woorden die de site toont
+const PAYMENT: [RegExp, string][] = [
+  [/^payment:(cash|coins|notes)$/, "contant"],
+  [/^payment:(debit_cards|maestro|girocard|v_pay|bancontact)$/, "pin"],
+  [/^payment:(credit_cards|visa|mastercard|american_express)$/, "creditcard"],
+  [/^payment:contactless$/, "contactloos"],
+  [/^payment:app(:.+)?$|^payment:(mobile_phone|sms)$/, "app"],
+];
+
+export function payment(t: Tags): string[] | undefined {
+  const out = new Set<string>();
+  for (const [k, v] of Object.entries(t)) {
+    if (!/^yes$/i.test(v.trim())) continue;
+    for (const [re, word] of PAYMENT) if (re.test(k)) out.add(word);
+  }
+  return out.size ? [...out].sort() : undefined;
+}
+
+/** Datum waarop iemand de plek in OSM heeft nagekeken (check_date, survey:date): "2024-05-12" of "2024-05" */
+export function osmCheckDate(t: Tags): string | undefined {
+  const v = (t.check_date ?? t["survey:date"] ?? "").trim();
+  return /^\d{4}-\d{2}(-\d{2})?$/.test(v) ? v : undefined;
+}
+
 export function mapOsm(e: Record<string, unknown>) {
   const t = (e.tags ?? {}) as Tags;
   const lat = (e.lat ?? (e.center as { lat?: number })?.lat) as number | undefined;
@@ -240,6 +278,10 @@ export function mapOsm(e: Record<string, unknown>) {
     dogs: osmBool(t.dog, "dog"),
     capacity: Number.isFinite(capacity) && capacity > 0 && capacity < 2000 ? Math.round(capacity) : undefined,
     max_length_m: Number.isFinite(maxlength) && maxlength > 3 && maxlength < 25 ? maxlength : undefined,
+    // Past mijn camper (dataplan november 2026, spoor 2.2)
+    max_height_m: meters(t.maxheight),
+    max_weight_t: tonnes(t.maxweight),
+    payment: payment(t),
     surface: surface(t.surface),
     reservation: osmBool(t.reservation, "reservation"),
     website: url(t.website ?? t["contact:website"] ?? t.url),
@@ -250,6 +292,36 @@ export function mapOsm(e: Record<string, unknown>) {
     ...season(t.opening_hours),
     ...times(t),
     ...image(t),
+  };
+  for (const k of Object.keys(row)) if (row[k] === undefined || row[k] === "") delete row[k];
+  // De ruwe tags gaan mee (dataplan november 2026, spoor 2.1): een later veld is dan een query, geen nieuwe ophaalronde.
+  // ingest_osm bewaart ze in private.osm_tags, niet in places (die gaat in bulk naar de site)
+  row._tags = t;
+  const checked = osmCheckDate(t);
+  if (checked) row._check_date = checked;
+  return row;
+}
+
+/** Een los- of waterpunt uit OSM, als eigen punt (dataplan november 2026, spoor 2.3) */
+export function mapPoint(e: Record<string, unknown>) {
+  const t = (e.tags ?? {}) as Tags;
+  const lat = (e.lat ?? (e.center as { lat?: number })?.lat) as number | undefined;
+  const lng = (e.lon ?? (e.center as { lon?: number })?.lon) as number | undefined;
+  if (lat == null || lng == null || lat < 50.7 || lat > 53.7 || lng < 3.2 || lng > 7.3) return null;
+  if (/^(private|no)$/i.test(t.access ?? "") || osmBool(t.disused) === true) return null;
+  const dump = t.amenity === "sanitary_dump_station";
+  const row: Record<string, unknown> = {
+    osm_type: e.type,
+    osm_id: e.id,
+    lat,
+    lng,
+    type: dump ? "dump" : "water",
+    // Bij een loospunt staat er vaak ook water ("water_point=yes")
+    water: dump ? osmBool(t.water_point) === true : true,
+    name: t.name?.trim() || undefined,
+    fee: osmBool(t.fee, "fee"),
+    opening_hours: t.opening_hours?.trim() || undefined,
+    _tags: t,
   };
   for (const k of Object.keys(row)) if (row[k] === undefined || row[k] === "") delete row[k];
   return row;

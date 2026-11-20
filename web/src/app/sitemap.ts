@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/env";
 import { getLastUpdate, getSlugs, getSummaries } from "@/lib/places";
+import { isIncomplete } from "@/lib/place-status";
 import { PROVINCES } from "@/lib/types";
 import { areaPath, areasIn, departurePath, DEPARTURE_SEO, indexable, inGroup, lastModifiedOf, provinceSlug, type SeoDeparture } from "@/lib/seo-pages";
 
@@ -38,6 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...TEXT.map((path) => ({ url: `${SITE_URL}${path}` })),
     ...landing.map((path) => ({ url: `${SITE_URL}${path}`, lastModified })),
     // Jongste van wijziging, websitecontrole en vertrekcontrole (lastModifiedOf); zonder datum geen `lastmod`
-    ...places.map((p) => ({ url: `${SITE_URL}/plek/${p.slug}`, lastModified: lastModifiedOf(p) })),
+    // Grijze plekken (vertrekregel onbekend) staan op noindex en horen hier niet (dataplan november 2026 §7)
+    ...places.filter((p) => !isIncomplete(p)).map((p) => ({ url: `${SITE_URL}/plek/${p.slug}`, lastModified: lastModifiedOf(p) })),
   ];
 }
