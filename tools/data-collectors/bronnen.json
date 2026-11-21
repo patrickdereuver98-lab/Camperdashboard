@@ -44,11 +44,32 @@
         "velden": {
           "gemeente": "gemeente"
         }
+      },
+      {
+        "id": "zeeland",
+        "naam": "Provincie Zeeland: Verblijfsrecreatie Zeeland (recreatie:ext_rec_vblreczld, indicatief)",
+        "bron": "https://data.overheid.nl/dataset/53845-verblijfsrecreatiezeeland",
+        "licentie": "CC0 1.0",
+        "url": "https://opengeodata.zeeland.nl/geoserver/recreatie/wfs",
+        "typename": "recreatie:ext_rec_vblreczld",
+        "srs": "EPSG:4326",
+        "filter": {
+          "aanboddata": [
+            "Camping",
+            "Camping < 40 plaatsen",
+            "camperplaats"
+          ]
+        },
+        "velden": {
+          "naam": "aanbodd_10",
+          "soort": "aanboddata",
+          "website": "aanbodd_12"
+        }
       }
     ],
     "betrouwbaarheid": 2,
     "status": "actief",
-    "notitie": "Tier 2 (besluit eigenaar 31 oktober 2026), actief en in geo_bronnen toegestaan. Per dataset een laag: {id, url, typename (WFS 2.0) of zonder typename een GeoJSON- of OGC API Features-adres, srs, params, filter, gemeente, velden}. Zie pdok.py. Laag zuid_holland (1 november 2026): 74 kampeerplekken (camping, minicamping, camperplaatsen, natuurkampeerterrein) zonder naam; ze voegen alleen samen binnen 25 m. Staat na OSM en Archies, zodat bij samenvoegen hun naam voorgaat."
+    "notitie": "Tier 2 (besluit eigenaar 31 oktober 2026), actief en in geo_bronnen toegestaan. Per dataset een laag: {id, url, typename (WFS 2.0) of zonder typename een GeoJSON- of OGC API Features-adres, srs, params, filter, gemeente, velden}. Zie pdok.py. Laag zuid_holland (1 november 2026): 74 kampeerplekken (camping, minicamping, camperplaatsen, natuurkampeerterrein) zonder naam; ze voegen alleen samen binnen 25 m. Staat na OSM en Archies, zodat bij samenvoegen hun naam voorgaat. Laag zeeland (20 november 2026, plan A2): 551 vlakken in de bron; het filter houdt de soorten Camping, Camping < 40 plaatsen en camperplaats over (geen Vakantiewoningen op park, Appartementen of Gemengd bedrijf: geen kampeerplaatsen voor campers). Naam, soort en website komen uit de bron (kolomnamen zijn afgekorte shapefile-namen: aanbodd_10 = naam, aanboddata = soort, aanbodd_12 = website); capaciteit en eigenaar zijn niet gekoppeld omdat de betekenis van de kolommen niet gedocumenteerd is. De dataset noemt zichzelf indicatief: zonder bereikbare website of zonder tweede bron gaat zo'n kandidaat naar Beheer (plan.md A2). Overijssel (dataset 85370-recreatieterreinen-verblijfsrecreatie, CC0): geen openbare WFS/WMS-laag gevonden (services.geodataoverijssel.nl heeft 443 lagen, geen verblijfsrecreatie; 20 november 2026); pas een laag toevoegen als de provincie een adres geeft, of als bestand in aanlevering/gemeenten/."
   },
   {
     "bron_id": "gemeenten_nl",
@@ -85,5 +106,16 @@
     "betrouwbaarheid": 4,
     "status": "geblokkeerd",
     "notitie": "Geblokkeerd: geen bestand en geen toestemming (README 74). Niet aanzetten zonder schriftelijke toestemming."
+  },
+  {
+    "bron_id": "overture",
+    "naam": "Overture Maps Places (Nederland: campground, rv_park, marina)",
+    "type": "file_overture",
+    "pad": "aanlevering/overture_nl.csv",
+    "betrouwbaarheid": 3,
+    "status": "actief",
+    "licentie": "CDLA-Permissive-2.0 (records van Foursquare: Apache-2.0)",
+    "bron": "https://docs.overturemaps.org/guides/places/",
+    "notitie": "Tier 3, verzamelbron: een aanwijzing, geen bewijs. Een kandidaat telt pas na bevestiging door de eigen site van de plek (naam, adres en camper of kampeer) of door een tweede toegestane bron; Overture alleen wordt hoogstens een concept, en alleen met website (migratie 20261121110000: sources.geo_master.proef); online pas als de eigen site de vertrekregel noemt. Jachthavens krijgen geen website mee en koppelen alleen (plan.md A4). Bestand maken met overture.py (DuckDB, release 2026-11-18.0, confidence >= 0,7); het bestand staat niet in git. In geo_bronnen tier 3, toegestaan (zelfde migratie)."
   }
 ]

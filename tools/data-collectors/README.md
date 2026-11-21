@@ -8,6 +8,7 @@ Partnerdata en open data samenvoegen tot één masterlijst (`geo_master` in Supa
 | 2 | `parse_statics.py` | Aangeleverde KML/KMZ, GPX en CSV omzetten naar de standaardvorm |
 | 2b | `map_api_data.py` | Ruwe API-respons (GeoJSON, Overpass of een lijst objecten) omzetten naar de standaardvorm |
 | 2c | `pdok.py` | PDOK en gemeentelijke open data (WFS 2.0, OGC API Features of GeoJSON) ophalen per laag en omzetten |
+| 2d | `overture.py` | Overture Places Nederland (tier 3) met DuckDB exporteren naar `aanlevering/overture_nl.csv` en inlezen |
 | 3 | `web/supabase/functions/pipeline/merge_master.ts` | Lijsten ontdubbelen en in stukken van 500 upserten (pipeline-actie `merge_master`) |
 | 4 | `promote_geo_master` (migratie `20261030162002`) | `geo_master` → `places` volgens de bronregels (pipeline-actie `promote`) |
 | alles | `run_pipeline.py` + `bronnen.json` | De hele keten in één run; wekelijks via de workflow `data_pipeline.yml` |
@@ -81,6 +82,46 @@ Bron `pdok` (type `api_wfs`, tier 2) in `bronnen.json` heeft een lijst `lagen`, 
 - Datasets zoeken: `python tools/data-collectors/zoek_ckan.py camperplaatsen camping verblijfsrecreatie`.
 - `pdok` staat al op `actief` en in `geo_bronnen` op `toegestaan` (31 oktober 2026). Zonder lagen slaat de run de bron
   over met een waarschuwing; een laag toevoegen is genoeg.
+
+### Provinciale lagen (A2, 20 november 2026)
+
+- `zuid_holland`: zie hierboven (RD, 74 plekken).
+- `zeeland`: dataset [verblijfsrecreatiezeeland](https://data.overheid.nl/dataset/53845-verblijfsrecreatiezeeland), CC0.
+  WFS `https://opengeodata.zeeland.nl/geoserver/recreatie/wfs`, typeName `recreatie:ext_rec_vblreczld`, vlakken in
+  EPSG:4326 (551 objecten). De kolomnamen zijn afgekort: `aanbodd_10` = naam, `aanboddata` = soort, `aanbodd_12` =
+  website. Filter: alleen `Camping`, `Camping < 40 plaatsen` en `camperplaats`; `Vakantiewoningen op park`,
+  `Appartementen` en `Gemengd bedrijf` vallen af (geen kampeerplaatsen voor campers). Capaciteit en eigenaar koppelen
+  we niet, want de betekenis van de overige kolommen staat nergens. Naam, `soort` en `website` komen als feit in
+  `faciliteiten`; een website zonder domein blijft leeg, `www.x.nl` krijgt `https://` ervoor.
+- De provincie noemt de data **indicatief**: een Zeeuwse kandidaat zonder bereikbare website of zonder tweede bron
+  gaat naar Beheer, niet rechtstreeks naar de kaart (plan.md A2). Zuid-Holland en Zeeland zijn tier 1 (overheid) in de
+  zin van plan.md; in `geo_bronnen` staat `pdok` op tier 2.
+- Overijssel (dataset `85370-recreatieterreinen-verblijfsrecreatie`, CC0): de metadata verwijst alleen naar het
+  geoportaal; `services.geodataoverijssel.nl` (WFS en WMS, 443 lagen) heeft geen laag verblijfsrecreatie. Daarom nog
+  geen laag. Een laag toevoegen zodra de provincie een adres geeft, of het bestand in `aanlevering/gemeenten/` zetten.
+
+## Overture Places (A3, tier 3)
+
+Bron `overture` (type `file_overture`, status `voorbereid`). Overture is een **verzamelbron**: een aanwijzing, geen
+bewijs. Licentie CDLA-Permissive-2.0 (records van Foursquare: Apache-2.0).
+
+```bash
+pip install duckdb
+python tools/data-collectors/overture.py        # schrijft aanlevering/overture_nl.csv (staat niet in git)
+```
+
+Zonder het pakket: voer `overture.QUERY` uit met de DuckDB-CLI (`INSTALL httpfs; INSTALL spatial;`) en schrijf met
+`COPY (...) TO 'aanlevering/overture_nl.csv' (FORMAT CSV, HEADER)`. De query leest release 2026-11-18.0
+(`s3://overturemaps-us-west-2/release/2026-11-18.0/theme=places/type=place/`): landcode NL, bbox, categorie
+`campground`, `rv_park` of `marina`, confidence >= 0,7. `parse_overture_csv` past dezelfde regels nog eens toe en
+neemt alleen feiten over: naam, coördinaten, `soort` (de Overture-categorie) en `website`; geen beschrijvingen.
+bron_id: `overture:<Overture-id>`.
+
+Promotie: tier 3 telt als zwakke bron. `private.geo_promotie_bezwaar` eist bij alleen tier 3–5 twee verschillende
+toegestane bronnen, dus Overture alleen promoveert nooit; samen met OSM (tier 4) of een provincie (tier 1–2) wel.
+De kandidaat telt pas echt na bevestiging door de eigen site (naam, adres en "camper" of "kampeer" op de site van de
+plek; plan.md A3). Aanzetten kan pas als er in `geo_bronnen` een rij `overture` met tier 3 en status `toegestaan`
+staat en `status` in `bronnen.json` op `actief` gaat.
 
 ## Partnerexports
 

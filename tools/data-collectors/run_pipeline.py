@@ -3,6 +3,7 @@
 1. Elke bron uit `bronnen.json` (in volgorde van voorrang) wordt een lijst in de standaardvorm:
    - type "api": ophalen met api_client.py (retries, backoff) en omzetten met map_api_data.py;
    - type "bestanden": alle KML/KMZ/GPX/CSV in de opgegeven map, via parse_statics.py;
+   - type "file_overture": de export van overture.py (tier 3, verzamelbron; alleen een aanwijzing);
    - type "api_wfs": PDOK en gemeentelijke open data (WFS 2.0, OGC API Features of GeoJSON), per laag, via pdok.py.
 2. Lukt één bron niet, dan stopt de run vóór het samenvoegen: merge_master hoort álle lijsten tegelijk te krijgen
    (een ontbrekende lijst laat zijn oude masters staan en verwart de vaste ids).
@@ -33,6 +34,7 @@ import requests
 from api_client import DATA_DIR, ApiClient, ApiError, RetryableHTTPError, write_json
 from map_api_data import map_raw
 from parse_statics import CSV_VELDEN, PARSERS, ParseResult, dedupe_ids, parse_file
+import overture
 import pdok
 
 log = logging.getLogger("run_pipeline")
@@ -68,7 +70,7 @@ def resolve_secrets(value: Any, env: dict[str, str]) -> Any:
 
 
 FILE_TYPES = {"file_csv": (".csv", ".tsv", ".txt"), "file_gpx": (".gpx",), "file_kml": (".kml", ".kmz"),
-              "file_geojson": (".geojson", ".json")}
+              "file_geojson": (".geojson", ".json"), "file_overture": (".csv",)}
 # Gesloten databanken: nooit in bulk overnemen (Databankenwet, bronnenbeleid §1). Ook niet als iemand ze toevoegt.
 VERBODEN = {"campercontact", "park4night", "nkc", "acsi", "anwb", "promobil", "camperstop"}
 API_TYPES = ("api", "api_overpass", "api_wfs")
@@ -212,6 +214,8 @@ def collect_files(b: dict[str, Any]) -> ParseResult:
         f = inside(b["pad"], b["bron"])
         if not f.is_file():
             raise MissingFile(f"bron {b['bron']}: bestand {b['pad']} ontbreekt")
+        if b["type"] == "file_overture":
+            return overture.parse_overture_csv(f.read_bytes(), b["bron"])
         return parse_file(f, b["bron"], b.get("alle_velden", False), b.get("velden"))
     folder = inside(b["map"], b["bron"]) if b["map"] not in (".", "") else HERE
     files = sorted(p for p in folder.glob("*") if p.suffix.lower() in PARSERS)

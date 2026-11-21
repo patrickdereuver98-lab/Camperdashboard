@@ -1,187 +1,199 @@
-# VrijStaan: plan naar een nieuwe base version (23 oktober 2026)
+# VrijStaan: plan voor meer plekken en meer vertrektijden (20 november 2026)
 
-Er loopt veel tegelijk: elf agentsessies en dertien open PR's. Dit plan brengt alles in kaart, legt de volgorde vast
-waarin we het samenvoegen, en beschrijft wat er daarna komt: een beschrijving van de nieuwe base version, voor- en
-nadelen, een review van de site vanuit de gebruiker en een designronde met Claude Design.
+> Opdracht Patrick (20 november 2026): "Er moet een optie zijn om meer data te vergaren en meer vertrektijden, meer
+> plaatsen te vinden. Er zijn meer camperplaatsen en campings dan wij hebben nu in Nederland." Alles komt van het
+> openbare internet.
 
-Het vorige plan (16 oktober) staat in [`docs/archief/plan-2026-10-16.md`](docs/archief/plan-2026-10-16.md). De
-besluiten voor Patrick (§3) en de polishronde (§4 tot en met §6, codes K, P, S, N, E, C, D) blijven daar geldig tot
-ze in deze ronde zijn afgevinkt.
+Dit plan gaat over **dekking**: plekken die we nog niet kennen, en vertrektijden die we nog niet hebben. Het
+[dataplan van 20 november](docs/dataplan-2026-11.md) gaat over **juistheid** en blijft voorgaan: een nieuwe bron
+mag de juistheid van het kernfeit niet omlaag halen. Waar beide plannen hetzelfde werk noemen, staat hier een
+verwijzing in plaats van een tweede taak.
 
-Stand 23 oktober: §2 stap 1 tot en met 9 klaar, alles in PR #54.
+Het vorige `plan.md` (basisversie, 23 oktober) staat nu in
+[`docs/archief/plan-2026-10-23.md`](docs/archief/plan-2026-10-23.md). Verwijzingen als "`plan.md` P13, K1–K3, E5, §4b"
+in de specs gaan over dat archiefstuk.
 
-**Marketing (2 november 2026):** het plan voor het nieuwe marketing- en contentdashboard staat in
-[`docs/marketing/plan.md`](docs/marketing/plan.md).
+**Hoe dit plan tot stand kwam.** Twee onafhankelijke onderzoeken naar bronnen en aantallen, op dezelfde vraag:
+
+- een onderzoek door Gemini, aangeleverd door Patrick;
+- een onderzoek in deze sessie, met eigen metingen: taginfo voor OSM in Nederland, Overture-release 2026-11-18.0 via
+  DuckDB, de WFS-dienst van Zeeland en een steekproef van 145 sites uit onze eigen database.
+
+Daarnaast zijn de live cijfers uit de database gelezen, alleen met SELECT. Patrick vroeg om het onderzoek met Fable te
+doen, maar Fable gaf in deze sessie de foutmelding "requires usage credits". Het onderzoek is daarom op Opus gedaan
+(zie README 141).
+
+**Hoe je de cijfers leest.** Waar de twee onderzoeken verschillen, geldt het gemeten cijfer. Een cijfer zonder meting
+is een hypothese en staat zo in de tabel (§3).
 
 Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 
+## Stand van uitvoering (20 november 2026, opdracht Patrick: "maak alles waarvan je denkt dat het helpt")
+
+| Taak | Stand |
+|---|---|
+| A1 OSM-gat | ✅ Gemeten: alle 466 ontbrekende objecten zijn bewust opgeruimd. 316 omdat OSM geen website had, 150 omdat de site ook met stealth onleesbaar was. De query zelf mist niets: parkeren en jachthavens met `motorhome=yes/designated` zaten er al in. Gebouwd: een plek die zonder website wegging, mag terug als een andere bron een website heeft (migratie `20261121110000`). `leisure=marina` wordt nu jachthaven |
+| A2 Provincies | ✅ Zeeland (CC0, WFS `recreatie:ext_rec_vblreczld`): 462 kandidaten, 120 zonder plek binnen 150 m, 418 met website. Overijssel: geen openbare laag gevonden. Zuid-Holland stond er al. Utrecht en de rest: ⬜ |
+| A3 Overture | ✅ Gebouwd: `overture.py` (export per week in de workflow), tier 3 in `geo_bronnen`, proefroute (alleen Overture; alle inhoudelijke controles blijven; concept met website, online pas met een vertrekregel van de eigen site of Beheer; geen website als een geblokkeerde bron meedoet; een nieuwe plek neemt de OSM-sleutel over van de plek die zonder website wegging), jachthavens koppelen alleen. Elk kwartaal de release in `overture.py` bijwerken (Overture ruimt oude releases op; dan meldt de keten "wacht op bestand"). Voorbeeldexport: 4.364 kandidaten (confidence ≥ 0,7), 2.159 zonder plek binnen 150 m. Live na samenvoegen |
+| A4 Jachthavens | ⬜ |
+| A5 Gemeentebesluiten | ✅ Door een andere sessie gebouwd (README 140, PR #176): officiële bekendmakingen via de SRU-API, elke maandag, als kandidaten in `discovery_candidates` (Mission Control → Kandidaten). Eerste ronde: 758 publicaties, 502 zonder bekende plek binnen 300 m. Een AI-lezer (Gemini) doet daarnaast voorstellen met citaat |
+| B1 JSON-LD en OSM `check_out` | ✅ Bestond al (lezer en `osm.ts`) |
+| B2 Boekingssystemen | 🔄 B2.2 gebouwd: de lezer bewaart de module in `sources.booking` (migratie `20261121100000`). B2.1 onderzoek per systeem: ⬜ |
+| B3 Dieper lezen | Grotendeels al gebouwd (sitemap, focuspagina's, pdf's, vaste paden). Uitbreiden pas met de gouden set |
+| B4 Betaalzuil | ✅ Aanwijzing in `sources.payment_hint`. Tonen in Beheer: ⬜ |
+| B5 Mail aan eigenaren | 👤 Wacht op Resend-domein, `outreach_key` en een site zonder Vercel-login |
+
+Na samenvoegen, in deze volgorde: migraties `20261121100000` en `20261121110000`, `pipeline` uitrollen, dan de
+Dataketen-workflow met de hand draaien als proef (`proef` aan), en daarna echt.
+
 ---
 
-## 1. Stand van zaken
+## 1. De kern in vijf punten
 
-Alle open PR's zijn gebouwd vanaf `acceptatie` (e7b068e). Elk mergt los zonder botsing, maar onderling botsen ze, vooral
-op de plekpagina (`web/src/app/(site)/plek/[slug]/page.tsx`, zeven PR's), `place-ui.tsx` en de specs. `main` loopt 33
-commits achter op `acceptatie`.
+1. **Het gat is echt, maar kleiner bij campings dan bij camperplaatsen.** Het CBS telt 2.682 kampeerterreinen. Wij
+   hebben 2.723 campings plus boerderijen in de database, maar daar zitten ook concepten en dubbelingen tussen. Bij
+   camperplaatsen is het gat groot: wij hebben er 364, terwijl schattingen uitkomen op 500 tot 1.800. Bij jachthavens
+   met camperplekken hebben we er 45, tegenover een schatting van 50 tot 250.
+2. **OpenStreetMap is bijna leeg gehaald.** Er komen hoogstens 50 tot 150 plekken bij. De nieuwe plekken komen uit
+   Overture Places (±1.015 kandidaten, waarvan 764 met een website), uit provinciale open data (Zeeland alleen al 94)
+   en uit gemeentebesluiten over camperplaatsen.
+3. **Meer vertrektijden komen vooral uit dieper lezen van de eigen site.** Denk aan reserveren, tarieven,
+   huisregels, voorwaarden en pdf's. Vaste gegevens leveren weinig op: `checkoutTime` in JSON-LD staat op ±1–2% van de
+   sites.
+4. **Het boekingssysteem van een camping is een nieuwe en serieuze route.** Tommy Booking Support draait op ±20% van
+   de sites in onze steekproef. Wat een camping op zijn eigen site toont, mag de lezer lezen (tier 2). Bulk ophalen
+   bij de leverancier doen we alleen met een afspraak.
+5. **Gemeenten zijn de bron voor camperplaatsen.** Het aanwijzingsbesluit en de APV noemen de plek, het aantal campers
+   en de maximale verblijfsduur. Gemeenten zijn al tier 1 (README 138).
 
-### 1a. Open PR's
+## 2. Waar we staan (live, 20 november 2026)
 
-| PR | Inhoud | Sessie | Wat nog nodig is | Botst met |
+| | Online | Concept | Verborgen |
+|---|---|---|---|
+| Camping | 1.663 | 731 | 24 |
+| Camperplaats | 296 | 64 | 4 |
+| Boerderij | 218 | 84 | 3 |
+| Jachthaven | 36 | 8 | 1 |
+| Parkeerplaats | 0 | 3 | 1 |
+| **Totaal** | **2.213** | **891** | **33** |
+
+- **Vertrektijd.** 1.476 van de 2.213 online plekken hebben er een. 737 missen hem; bij 638 daarvan staat een
+  e-mailadres van de plek.
+- **OSM in staging.** De laatste OSM-rondes leverden 3.558 unieke objecten op (`osm_staging`). 466 daarvan staan niet
+  in `places`:
+  - 311 campings, 71 camperplaatsen, 41 boerderijen, 11 parkeerplaatsen en 7 jachthavens;
+  - 149 hebben een website, 47 hebben geen naam;
+  - een deel is bewust opgeruimd (121 als "onbereikbaar" in `geo_master`).
+- **Tweede bronnen.** `geo_master` heeft 1.630 kandidaten met "één bron uit tier 3–5" geweigerd, waarvan 1.355 van
+  Archies (geblokkeerd, README 138). Er staan dus geen nieuwe open bronnen klaar die nog gepromoveerd moeten worden.
+
+## 3. Wat de twee onderzoeken zeggen, en wat we aannemen
+
+| Vraag | Onderzoek in deze sessie (gemeten) | Gemini (niet gemeten) | Wat we aannemen |
+|---|---|---|---|
+| Aantal kampeerterreinen | CBS 82062NED: **2.682** (september 2026, vanaf 4 standplaatsen); KvK SBI 5530: 2.360 | 1.350–1.550 ("vanaf ±10 standplaatsen") | **2.682** als meetlat. Het Gemini-cijfer past niet bij de CBS-tabel |
+| Camperplaatsen | Geen officiële telling. Campercontact noemde 1.755 in 2019; OSM `caravan_site` 503 | 1.300–1.650 | **500–1.800**, lage zekerheid. Het gat zit hier |
+| Boerderij- en minicampings | SVR ±2.000 in Nederland en buitenland samen; geen ledental VeKaBo | 1.200–1.500 | Onbekend; zit in de 2.682 van het CBS |
+| Jachthavens met camperplek | CBS 84133NED: 400 particuliere havens, 23% verhuurt plaatsen (±90) | 150–250 | **50–150** |
+| Extra uit andere OSM-tags | taginfo: parkeren met `motorhome` ±58, `camp_site=basic` 10 | +400 tot +900 | **+50 tot +150**. Gemini schat te hoog |
+| Wikidata | 17 campings (SPARQL) | 300–600 | Niet de moeite |
+| Overture Places | 4.668 `campground` + 346 `rv_park`; ±1.015 meer dan 300 m van een plek van ons, 764 met website | 3.500–5.000 relevant | **±1.015 kandidaten, veel ruis**; per plek nakijken |
+| Provinciale open data | Zeeland (CC0): 551 objecten, 94 niet bij ons; Overijssel, Zuid-Holland en Utrecht bestaan | Genoemd, niet geteld | Hoge waarde, tier 1 |
+| `checkoutTime` in JSON-LD | 2 van 145 sites (±1–2%) | 10–20% | **±1–2%**. Goedkoop, weinig opbrengst |
+| Vertrektijd in de tekst bij dieper lezen | 28 van 144 sites, met de homepage en ≤ 3 pagina's voor reserveren of tarieven | +150 tot +250 | Grootste route |
+| Boekingssystemen | Tommy ±20% (29/144), Booking Experts 4, Camping.care 2, Recranet 2. De API van Booking Experts werkt alleen met een sleutel | Booking Experts en Camping.care hebben "publieke JSON-endpoints met check-out" | **Eerst nagaan per systeem** (taak B2.1). Gemini noemt Tommy niet, terwijl dat het grootste systeem in de steekproef is |
+| Gemeentebesluiten | Niet onderzocht | SRU-API Officiële Bekendmakingen (1.942 treffers op "camperplaats") en APV via lokaleregelgeving.overheid.nl | Goed idee, tier 1, eerst een proef (A5) |
+| Betaalzuilen (Aanuit.net, i-Marina) | Niet onderzocht | Aanwijzing voor afrekenen per 24 uur | Alleen als **aanwijzing** voor Beheer, nooit vanzelf `24h` (§7) |
+| Google Places | Alleen `place_id` mag je blijvend opslaan | Zelfde | Niet als bron |
+| KvK | Open set heeft geen naam en geen volledig adres; selecties uit het Handelsregister zijn betaald | Betaald, AVG-beperkt | Niet |
+
+**Gemini noemt ook dingen die niet bestaan.** Het rapport heeft het over een "besluit 6.4" met tabellen `url_cache`
+en `discovery_candidates`. Het dataplan heeft vier besluiten (§6). Bij het schrijven van dit plan bestonden die tabellen niet; later op 20 november
+maakte een andere sessie `discovery_candidates` voor de officiële bekendmakingen (README 140). Kandidaten uit
+Overture en provincies gaan via `geo_master`. De tabel `service_points` bestond al.
+
+## 4. Spoor A: meer plekken
+
+Elke nieuwe plek komt binnen als kandidaat in `geo_master`. Pas met een bron die telt (bronnenbeleid §2) wordt het een
+concept, en hij gaat pas online volgens de publicatieregels van README 139. Er komt geen nieuwe publicatieroute.
+
+| # | Werk | Levert op | Bron en tier | Omvang |
 |---|---|---|---|---|
-| #53 | Eigenaar vult zijn plek aan | Iets mee doen | CI groen, wacht op review | #48, #46 |
-| #52 | Laatste aankomst en reserveren (pipeline en migratie) | Site progress | Migratie staat al live als `20261022092015` en `..092604`; bestandsnaam in de PR is `20261022100000` | #51, #47, #46 |
-| #51 | Totaalprijs per nacht voor 2 personen | Site progress | Review | #52, #49, #47, #46 |
-| #50 | Eerste 20 plekken op de server (B4), vertrektijd met één klik overnemen | Mobile UI redesign | CI groen op 3aa663d, wacht op test | geen |
-| #49 | WCAG 2.1 AA afronden (P13), 38 bestanden | onbekend | Review; raakt bijna alles | #51, #47 |
-| #48 | Reviews alleen met account of code per mail | Skills PRD assessment | Migratie `reviews_met_account` niet live; sessie wacht op toestemming voor SQL | #53, #47, #46, #37 |
-| #47 | SEO-pagina's per provincie, plaats, eiland en vertrekgroep | onbekend | Review | #52, #51, #49, #48, #46, #37 |
-| #46 | Onvolledige plekken grijs, "mogelijk verouderd" na 12 maanden | onbekend | Review | #53, #52, #51, #48, #47, #37 |
-| #45 | Stand tien punten, N+1-fix Beheer → Foto's | 10 punten evaluatie | Gericht op `main` en 33 commits achter; migratie `user_trust_lijst` niet live | geen |
-| #44 | Implementatieplan: contactregel en OSM-ronde (één regel) | afgerond | Mergen | geen |
-| #37 | PRD bijgewerkt na vragenronde, ook `CLAUDE.md` | Skills PRD assessment | Review | #48, #47, #46 (docs) |
-| #43 | Dependabot: drie kleine updates | | Mergen als CI groen is | geen |
-| #40 | Dataplan Fase 0: bronnenlaag, bronnenbeleid, MCP-server (2.935 regels) | | Voorstel: buiten deze base houden, apart beoordelen | geen |
-| #28 | TypeScript 5.9 naar 7.0 | | Voorstel: niet in deze base; later apart | |
+| A1 | **De 466 OSM-objecten die nooit in `places` landden** per reden indelen. Uitkomst: 316 weg omdat OSM geen website had, 150 omdat de site onleesbaar was. Een plek die zonder website wegging, mag terug als een andere bron (Overture, provincie) een website levert. De query had parkeren en jachthavens met `motorhome` al | Tot +316 plekken, als een andere bron de website heeft | OSM, tier 1 | S |
+| A2 | **Provinciale open data**: Zeeland (CC0), Overijssel (CC0), Zuid-Holland (staat al in `bronnen.json`) en Utrecht als laag in `run_pipeline.py`. Met `zoek_ckan.py` op data.overheid.nl zoeken naar de andere acht provincies | Zeeland +94 (gemeten); alle vier samen naar schatting tot +250 | Overheid, tier 1. De datasets noemen zichzelf "indicatief": een kandidaat zonder bereikbare website of zonder tweede bron gaat naar Beheer | S tot M |
+| A3 | **Overture Places** (`campground`, `rv_park`, `marina`, alleen confidence ≥ 0,7) als kandidatenlaag in `geo_master`. Koppelen op afstand en domein. Een kandidaat telt pas als de eigen site hem bevestigt: de lezer haalt naam, adres en "camper" of "kampeer" van de eigen site. Eerst de 764 met website | +300 tot +700 plekken (schatting, veel ruis: stacaravanparken, gesloten, dubbel) | CDLA-Permissive-2.0 en Apache-2.0. Overture is een verzamelbron en krijgt **tier 3**: aanwijzing, geen bewijs. Eigen site tier 2 bevestigt | M |
+| A4 | **Jachthavens**: OSM `leisure=marina` met website (1.198 objecten) door de lezer halen op "camper", "kampeerauto", "passanten" en "havenreglement". Alleen met een citaat over campers wordt het een kandidaat | +20 tot +60 jachthavens, vaak met `24h` of `vrij` | OSM tier 1 voor de plek, eigen site tier 2 voor het feit | M |
+| A5 | **Gemeentelijke camperplaatsen.** Proef met de SRU-API van Officiële Bekendmakingen ("aanwijzingsbesluit" en "camperplaats") en met APV-artikelen op lokaleregelgeving.overheid.nl. Per besluit: gemeente, locatie, aantal campers, maximale verblijfsduur (`max_stay_nights`) en een letterlijk citaat. Eerst 30 besluiten met de hand nakijken, dan pas automatisch | +100 tot +250 camperplaatsen (schatting Gemini, nog niet gemeten) plus de verblijfsregel | Overheid, tier 1 (README 138) | M |
 
-### 1b. Sessies
+**Ontdubbelen** geldt voor elke laag: `merge_master.ts` met naam, afstand en domein. Een kandidaat binnen 150 m van
+een bestaande plek met een gelijk domein is dezelfde plek en voegt alleen feiten toe. Bij twijfel beslist Beheer, en
+nooit maakt het systeem vanzelf een tweede plek.
 
-| Sessie | Branch | Staat | Voorstel |
+## 5. Spoor B: meer vertrektijden
+
+| # | Werk | Levert op | Omvang |
 |---|---|---|---|
-| Iets mee doen | `claude/eigenaar-aanvullen` | wacht op merge #53 | stoppen na opname |
-| Site progress | `claude/externe-bronnen` (#51, #52) | wacht op toestemming SQL | stoppen na opname |
-| Mobile UI redesign en foto's | `claude/mobile-ui-photos-ux-axxlae` (#50) | wacht op test | stoppen na opname |
-| Skills PRD assessment | `claude/prd-bijwerken` (#37, #48) | wacht op toestemming SQL | stoppen na opname |
-| 10 punten evaluatie | `claude/duizend-gebruikers` (#45) | wacht op SQL en geheimen 👤 | stoppen na opname |
-| Camperdashboard implementation plan | `claude/launch-hardening` | wacht op `NEXT_PUBLIC_SUPABASE_URL` 👤 | vraag beantwoorden, dan stoppen |
-| Feature review en plan | `feature/kernbelofte-acceptatie` | vraagt om B9, al besloten | archiveren |
-| Local host setup | `claude/local-host-setup-3xwg5y` | PR #6 al gemerged | archiveren |
-| Tool plan, audit en feedback | `claude/brave-wright-odz441` | sessielimiet, werk gemerged | archiveren |
-| Repository redesign | `redesign/nextjs` | vraagt om besluiten die al genomen zijn | archiveren |
-| Claude code integration | `claude/everything-claude-code` | PR #30 gemerged | archiveren |
+| B1 | **JSON-LD en OSM.** De lezer leest `checkoutTime` en `checkinTime` uit JSON-LD van het type `Campground` of `LodgingBusiness`. De OSM-ingest leest `check_out` (75 objecten). Allebei met citaat, bron tier 2 of tier 1 | +30 tot +75 vertrektijden | S |
+| B2 | **Boekingssystemen.** (1) *Onderzoek eerst*: per systeem (Tommy, Booking Experts, Camping.care/Starfish, Recranet) bij 5 echte campings nagaan wat de openbare widget op de eigen site toont: vertrektijd, tarief, toeslagen. Geen sleutels, geen inlog. (2) *Herkennen*: de lezer legt per plek vast welk systeem de site gebruikt (`website_fields.boekingssysteem`), op scriptnaam of iframe. (3) *Lezen*: alleen bij een systeem waar stap 1 een vaste plek voor de vertrektijd vond, en alleen de widget van die ene camping. Valt onder tier 2. (4) Bulk bij de leverancier ophalen alleen met een schriftelijke afspraak 👤 | Bij ±20% van de sites mogelijk een vaste bron voor vertrektijd en prijs (onzeker tot stap 1 klaar is) | M |
+| B3 | **Dieper lezen.** Uitbreiding van dataplan 2.5: `sitemap.xml` gebruiken om pagina's te kiezen, linkteksten en paden wegen (reserveren, tarieven, prijzen, huisregels, reglement, voorwaarden, FAQ, aankomst en vertrek) en pdf's lezen. Eerst de 737 online plekken zonder vertrektijd, dan de 891 concepten. Elke parserwijziging eerst langs de gouden set (dataplan 1.1) | +300 tot +600 vertrektijden (schatting op basis van 28 uit 144) | M |
+| B4 | **Betaalzuil of app als aanwijzing.** Noemt de site Aanuit.net, i-Marina of een betaalautomaat, dan zet de lezer een aanwijzing in Beheer: "mogelijk per 24 uur". Nooit vanzelf `24h`; daarvoor is een citaat over de verblijfsregel nodig | Snellere afhandeling van camperplaatsen en jachthavens in Beheer | S |
+| B5 | **Eigenaren mailen**: dataplan 3.1 (README 135 en 138). Wacht op `outreach_key`, het Resend-domein en een site zonder Vercel-login 👤 | De enige route naar 85% of meer | S om aan te zetten |
 
-Archiveren en oude branches verwijderen gebeurt pas na akkoord van Patrick.
+## 6. Spoor C: meten of het werkt
 
-### 1c. Gaten die we eerst nalopen
+- **Dekking per provincie en soort.** Wij tegenover het CBS (82062NED per provincie) voor campings, en tegenover OSM
+  plus Overture plus provincie voor camperplaatsen. Komt als regel in de datategel (dataplan spoor 5), zodat zichtbaar
+  is waar het gat zit.
+- **Per nieuwe laag**: kandidaten, bevestigd door de eigen site, gepromoveerd, online, dubbel en afgewezen. Een laag
+  waar meer dan 30% van de bevestigde plekken achteraf dubbel of gesloten blijkt, stopt tot hij is bijgesteld.
+- **Steekproef.** Van elke nieuwe laag 30 plekken met de hand nakijken voordat de rest promoveert.
 
-| # | Wat | Aanpak |
+## 7. Spelregels voor dit plan
+
+- Er gaan geen nieuwe bronnen boven de regels van het [bronnenbeleid](docs/bronnenbeleid.md). Overture is tier 3
+  (§4, A3); provincies en gemeenten zijn tier 1.
+- **De vertrekregel volgt alleen uit een citaat.** "Maximaal 3 × 24 uur" in een APV is een maximale verblijfsduur
+  (`max_stay_nights = 3`). Het zegt niets over hoe laat je weg moet. Zonder een citaat over de vertrektijd blijft de
+  vertrekregel leeg; we leiden geen `vrij` of `24h` af. Gemini adviseert hier `vrij`. Dat nemen we niet over: het is
+  een afgeleid feit, en nooit verzinnen gaat voor.
+- Niet gebruiken: Google Places als bron, KvK, Wikidata, OpenTripMap, en directories in bulk (Campercontact,
+  park4night, ACSI, ANWB, SVR, Natuurkampeerterreinen). Directories blijven losse aanwijzingen, zoals nu.
+- Elke nieuwe laag krijgt een test in `tools/data-collectors/test_collectors.py` of `web/tests/`, een regel in
+  `bronnen.json` met licentie en URL, en een vermelding van de bron op de pagina Bronnen van de site (ODbL, CDLA, CC0).
+
+## 8. Volgorde
+
+De bevriezing begint op 19 december (dataplan §4). Spoor A levert nieuwe concepten op. Die gaan pas online als ze de
+regels van README 139 halen.
+
+| Week | Spoor A | Spoor B | Spoor C |
+|---|---|---|---|
+| 23 tot en met 29 november | A1 OSM-gat, A2 Zeeland | B1 JSON-LD en OSM `check_out`, B2.1 onderzoek boekingssystemen | Dekkingsregel in de datategel |
+| 30 november tot en met 6 december | A2 overige provincies, A3 Overture: eerste 100 met de hand | B3 dieper lezen (na gouden set) | Steekproef A1 en A2 |
+| 7 tot en met 13 december | A3 de rest van de 764, A4 jachthavens | B2.2 herkennen, B4 aanwijzing | Steekproef A3 |
+| 14 tot en met 18 december | A5 proef met 30 gemeentebesluiten | B2.3 alleen als B2.1 een vaste plek vond | Tussenstand naar Patrick |
+| Januari | A5 automatisch, A3 zonder website | B5 zodra de mail aan kan | Maandelijkse steekproef |
+
+## 9. Doelen voor 1 februari 2027
+
+| Maat | 20 november | Doel |
 |---|---|---|
-| G1 | Drie migraties met dezelfde versie `20261022100000` (#52, #48, #45) | #52 hernoemen naar de live versies; #48 en #45 een eigen, latere tijd |
-| G2 | `20261019070000_contact_beheerder.sql` staat in `acceptatie`, maar niet in de live migratielijst | In de database nagaan of de functie al live is (dan via SQL gezet); anders live zetten |
-| G3 | #45 is gericht op `main` | De fix en migratie overnemen in deze ronde; de plantekst gaat op in dit plan |
-| G4 | #47 en #49 passen het oude `plan.md` aan | Hun wijzigingen verwerken in `docs/archief/plan-2026-10-16.md` of in dit plan |
+| Camperplaatsen in de database (alle statussen) | 364 | ≥ 550 |
+| Jachthavens met camperplek | 45 | ≥ 70 |
+| Campings en boerderijen tegenover het CBS (2.682) | geen meting (dubbel en concept niet uitgesplitst) | Gemeten per provincie; elke provincie ≥ 85% |
+| Online plekken met vertrektijd | 1.476 | ≥ 1.900 (zonder mail aan eigenaren) |
+| Juistheid vertrekregel (steekproef) | 75% | ≥ 90% (doel van het dataplan, gaat voor) |
+| Nieuwe plekken die achteraf dubbel of gesloten zijn | — | ≤ 10% per laag |
 
-### 1d. Alleen Patrick 👤
+## 10. Besluiten voor Patrick 👤
 
-Al eerder gevraagd, nog steeds open:
-
-- Supabase SQL-editor: `web/supabase/retention.sql`, `delete_my_account` en `drop table private.probe, private.probe2;` (B5).
-- GitHub: geheimen `SUPABASE_DB_URL`, `BACKUP_PASSPHRASE` en variabele `SITE_URL` (B10).
-- Vercel: de waarde van `NEXT_PUBLIC_SUPABASE_URL` doorgeven (inloggen werkt niet).
-- Beheeraccount (B6), bedrijfsgegevens (B8), mailprovider (B7), domein, branch protection (E5).
-
----
-
-## 2. Samenvoegen tot de nieuwe base version
-
-Werkbranch `claude/ecstatic-edison-64e02x`, vanaf `acceptatie`. Volgorde: klein en docs eerst, dan de keten op de
-plekpagina, WCAG als laatste omdat die bijna alles raakt. Na elke stap `cd web && npm run check && npm test`.
-
-| Stap | PR's | Let op | Status |
-|---|---|---|---|
-| 1 | #44, #43, #37 | Alleen docs en kleine updates | ✅ |
-| 2 | #50 | Zoeken met de eerste 20 plekken op de server | ✅ |
-| 3 | #52, dan #51, dan #46 | Migratie #52 hernoemen (G1); plekpagina en `place-ui.tsx` samenvoegen: aankomst, totaalprijs en status naast elkaar | ✅ |
-| 4 | #53, dan #48 | `departure-radios.tsx` uit beide; migratie #48 hernummeren (G1) | ✅ |
-| 5 | #47 | SEO-pagina's op de nieuwe plekpagina | ✅ |
-| 6 | #49 | WCAG over alles heen; a11y-e2e opnieuw | ✅ plus twee fixes na het samenvoegen: tikdoelen van de SEO-links, `connection()` in `zoeken/search.tsx` |
-| 7 | #45 | Alleen de N+1-fix en de migratie (G3) | ✅ |
-| 8 | Controle | `npm run check && VRIJSTAAN_OFFLINE=1 npm run build`, unit-tests, Playwright (met a11y) | ✅ 226 unit-tests, 192 Playwright-tests |
-| 9 | Live zetten | Migraties #48 en #45 en G2 in Supabase; edge function `pipeline` als #52 een nieuwere versie heeft dan live | ✅ `user_trust_lijst` live, G2 stond al live, pipeline v43 live. #48 pas na de deploy van `main` |
-| 10 | Opruimen | Eén PR naar `acceptatie` die #44 tot en met #53 vervangt; in elke oude PR een regel "opgenomen in …"; sessies laten stoppen | ✅ #54 en #55 gemerged, #37 en #43 tot en met #53 gesloten, sessies gearchiveerd |
-| 11 | Base version 👤 | Patrick test de Vercel-preview; `acceptatie` naar `main`; tag `v0.2-basis` | ✅ `main` 848536a (23 oktober), reviewmigratie live |
-
-Bij botsingen in de docs houden we beide kanten. Bij een inhoudelijke keuze in de code (twee PR's willen iets anders op
-dezelfde plek) stoppen we en vraagt de agent het aan Patrick. De specs worden bijgewerkt in dezelfde commits
-(implementatieplan, schema, app flow, open punten in `docs/specs/README.md`).
-
----
-
-## 3. Na de merge: rapport over de base version
-
-Komt in dit bestand (§5) en als pagina om te delen.
-
-- **Wat de base version is**: functies per scherm, aantal plekken live, wat in Supabase draait (migraties, edge functions,
-  cron), wat nog op Patrick wacht.
-- **Voor- en nadelen**: wat sterk is en wat zwak is, eerlijk en met cijfers waar die er zijn.
-- **Review vanuit de gebruiker**: de site doorlopen op iPhone-formaat (Playwright, lokale build), als camperaar uit de doelgroep (40+ volgens de PRD in #37):
-  zoeken, filteren, plek openen, vertrektijd en prijs lezen, bewaren, reis plannen, offline. Daarnaast de eigenaar die
-  zijn plek aanvult en iemand die meedoet. Per stap: wat werkt, wat stoort, met screenshot en prioriteit.
-
-## 4. Meedenken met Claude Design
-
-Na het rapport een designverkenning met Claude Design van de drie hoofdschermen: start, zoeken en plekpagina. Binnen de
-vaste stijlgids (`docs/stijlgids.md`, skill `vrijstaan-stijl`: zandpapier, bosgroen, avondzon, meerblauw, Geist).
-Input: de bevindingen uit de gebruikersreview. Twee of drie varianten; Patrick kiest, daarna wordt de keuze een taak in
-het implementatieplan.
-
-## 5. Base version: rapport en designronde
-
-- Rapport (wat erin zit, cijfers, sterk en zwak, gebruikersreview): https://claude.ai/artifact/2Nos9bWU62qykbAC2hKzvr
-- Designcanvas met varianten: https://claude.ai/artifact/Mu311sSaEa3nn85Uh9LHjc
-- Gebouwd uit de designronde: plekpagina B, zoeklijst A en de tekst van start A (implementatieplan, Mijlpaal 5).
-- Nog open voor Patrick 👤: `web/supabase/retention.sql` uitvoeren (database groeit ~19 MB per dag; de Supabase-tool van
-  de agents laat `delete` niet door), de oude `submit_review` droppen (README nummer 55), beheeraccount, mailprovider,
-  back-upgeheimen.
-- Herscrape met parser 43 klaar (23 oktober, 3.242 websites): +132 vertrektijden, 203 laatste aankomsttijden, 919 reserveringsregels; 15 verdwenen vertrektijden hersteld uit de baseline. Volgende: ronde 2 (forums, reviews, gidsen) voor de plekken zonder vertrektijd.
-- Scrape-taken samengevoegd tot één (migratie `20261023210000_scrape_een_taak.sql`): een tiende van de logregels.
-- Later, als de aankomsttijden gevuld zijn: zoeklijst B ("Hier kun je nog aankomen") en start B.
-- Ronde 2 proef (23 oktober): 0 van 8 steekproefplekken kreeg via zoeken of een tweede leesronde een vertrektijd; de tijd staat meestal nergens. Voorstel in `docs/specs/README.md` nummer 59.
-- Pipeline v48 live (24 oktober): lege startpagina wist niets meer; van de 18 teruggevallen plekken zijn er 7 weer gepubliceerd (prijs teruggezet uit de baseline), 11 blijven concept.
-- Kapotte websites (24 oktober): 7 nieuwe adressen gevonden, 5 plekken kregen daardoor een vertrektijd en staan online. 11 sites hebben een certificaatfout (niet omzeild), de rest blijft zonder adres.
-
----
-
-## 6. Naar beta (24 oktober 2026)
-
-**Beta = gesloten beta:** de site draait op het Vercel-adres van `main`, zonder eigen domein en zonder verplicht account;
-testers komen uit een paar Facebookgroepen en fora. Reviews staan uit tot er eigen mail is; vertrektijd doorgeven,
-eigenaar aanvullen, bewaren, reis en offline werken zonder account. Doel van de beta: laten zien dat de kernbelofte
-(hoe laat moet ik weg) klopt, en leren welke tijden ontbreken of fout zijn.
-
-### 6a. Stand base version (live cijfers)
-
-| | Nu | Beta-doel |
-|---|---|---|
-| Gepubliceerde plekken | 2.095 (1.509 concept) | zo houden |
-| Met vertrektijd | 1.362 (65%), waarvan 1.331 vaste tijd | ≥ 70% van de camperplaatsen |
-| Camperplaatsen met vertrektijd | 137 van 295 (46%) | ≥ 60% of eerlijk "onbekend" met invulroute |
-| Met nachtprijs | 1.221 (58%) | 70% (PRD-release: 90%) |
-| Met laatste aankomst / reserveerregel | 189 / 741 | zo laten groeien |
-| Met contactgegevens | 1.990 (95%) | zo houden |
-| Door beheer bevestigd | 0 | 0 mag in beta, wel de route klaar |
-| Reviews / gebruikers | 0 / 0 | n.v.t. in beta |
-| Database | 198 MB van 500 MB, cron-logboek 156 MB | < 150 MB, groei < 2 MB per dag |
-
-### 6b. Wat de base version is
-Sterk: vertrektijd centraal op kaart en plekpagina; prijs met toeslagen; geen tracking; snel en offline; eerlijk
-"onbekend"; 249 unit-tests en 192 Playwright-tests groen; scraper met controle tegen een baseline (geen verlies meer).
-Zwak: een derde van de camperplaatsen zonder tijd; geen beheeraccount en geen eigen mail (inzendingen en reviews
-bereiken niemand); bedrijfsgegevens staan nog als "[… nog invullen]" op de juridische pagina's; geen eigen domein;
-veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
-
-### 6c. Verbeterplan en wie wat doet
-
-| # | Wat | Wie | Status |
-|---|---|---|---|
-| B1 | PR #56 en #57 (design, scraper v47/v48, eigenaarsroute, bronnenlaag) naar `acceptatie` en `main` | Agent | 🔄 |
-| B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 24 okt: logboek opgeruimd (gewone `delete` in blokken + `vacuum full`), database 202 MB → 51 MB, groei ~2 MB per dag. De dagelijkse functie `private.apply_retention()` met cron `retention` staat nog niet live: de Supabase-tool vraagt bij `create function` met `delete` om een bevestiging die niet komt (zie `web/supabase/retention.sql`) |
-| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ✅ 24 okt: 1.395 plekken aangepast, 2.256 klopten al |
-| B4 | Beheer-inzendingen afhandelen | Agent | 🔄 25 okt: uitnodiging voor de eigenaar staat klaar (`private.admin_invites`); inzendingen komen binnen zodra hij één keer inlogt |
-| B5 | Dode websites: nog ~100 plekken zonder adres; foutlijst voor Beheer | Agent | 🔄 25 okt: 228 concepten zijn één beslisfeit van publicatie verwijderd (README 66); patronen uitgeput, besluit over de harde eis bij Patrick |
-| B6 | Ronde 2: aanwijzingen zonder controle (8) en twijfelgevallen (18+14) handmatig afwerken voor zover mogelijk | Agent | ⬜ |
-| B7 | Prijzen: scraper v49 en v50 (patronen "N personen inclusief" en "all-inclusief"); prijsdekking 59% | Agent | 🔄 +9 prijzen bij ~1.700 herlezen plekken; 70% is zo niet haalbaar, doel beta 60% met "prijs onbekend" eerlijk zichtbaar |
-| B8 | Juridische pagina's: geen "[nog invullen]" meer | Agent | ✅ 25 okt: eerlijke hobbyproject-zin; naam en adres voor livegang blijven nodig (README 63) |
-| B9 | Alleen Patrick: naam en contactadres, domein, mailprovider, OAuth-sleutels, back-upgeheimen | Patrick | 👤 (niet nodig voor de gesloten beta, wel voor livegang) |
-
-Volgorde: B1 → B2 → B3 → B5 → B6 → B7 → B8 → B4.
-
-Open PR's per 25 oktober: alleen #60 (stealth-lezer, besluit eigenaar in open punt 62; uitrol door de sessie "Scraper evaluation"). #28 (TypeScript 7) gesloten tot `typescript-eslint` TS 7 ondersteunt.
+1. **Overture Places als kandidatenbron, tier 3** (A3). Een plek telt pas na bevestiging door de eigen site.
+   *Advies:* ja. De licentie is ruim en het is de grootste bron van nieuwe plekken.
+2. **Nieuwe kolom of veld voor het boekingssysteem** (`website_fields.boekingssysteem`, B2.2). Dat valt in jsonb, dus
+   er is geen nieuw schema nodig. *Advies:* ja.
+3. **Contact met Tommy Booking Support of Qenner** over een koppeling, zoals Campercontact die heeft (B2.4).
+   *Advies:* pas na B2.1, als blijkt dat de widget de vertrektijd vast toont.
+4. **Natuurkampeerterreinen en SVR vragen** om toestemming hun lijst als aanwijzing te gebruiken, met een link terug.
+   *Advies:* ja, het kost alleen een mail. Tot er een ja is, verandert er niets.
+5. **Mail aan eigenaren** technisch afmaken: Resend-domein, `outreach_key`, site zonder Vercel-login (README 135 en
+   138). Dit blijft de grootste hefboom voor vertrektijden.

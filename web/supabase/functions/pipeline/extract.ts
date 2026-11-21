@@ -679,9 +679,87 @@ export function extract(pages: string[], base: URL) {
     if (latest.note && !note.includes(latest.note)) out.times_note = (note ? `${note} · ${latest.note}` : latest.note).slice(0, 420);
   }
 
+  // ── Boekingssysteem en betaalwijze ter plekke (plan.md B2.2 en B4) ───────
+  // Geen feit voor de plekpagina, wel een aanwijzing: welke boekingsmodule de site gebruikt (daar staan tijden en
+  // tarieven vaak in een vaste vorm) en of er met een zuil of app per 24 uur wordt afgerekend. Beheer beslist; de
+  // vertrekregel volgt hier nooit uit.
+  const booking = bookingSystems(html);
+  if (booking.length) out._booking = booking;
+  const payment = paymentHints(html, text);
+  if (payment.length) out._payment = payment;
+
   for (const k of Object.keys(out)) if (out[k] === undefined || out[k] === null || out[k] === "") delete out[k];
-  out.fields = Object.keys(out).filter((k) => !["photos", "image_credit", "price_note", "times_note"].includes(k));
+  out.fields = Object.keys(out).filter((k) => !k.startsWith("_") && !["photos", "image_credit", "price_note", "times_note"].includes(k));
   return out as Record<string, unknown> & { fields: string[] };
+}
+
+/**
+ * Boekingsmodules die Nederlandse campings en camperplaatsen gebruiken, herkend aan het script, de iframe of het
+ * domein waar de site naar verwijst (plan.md B2.2; steekproef 20 november 2026: Tommy op ±20% van de sites). Alleen de
+ * naam van het systeem, geen gegevens eruit. Een gewone link naar een boekingssite telt niet: het moet een script,
+ * iframe of formulier van het systeem zijn, of een link naar de eigen boekingspagina van de camping bij dat systeem.
+ */
+const BOOKING_SYSTEMS: [string, string[]][] = [
+  ["tommy", ["tommybookingsupport.com"]],
+  ["booking_experts", ["bookingexperts.nl", "bookingexperts.com", "bookingexperts.de"]],
+  ["camping_care", ["camping.care", "starfish.care"]],
+  ["recranet", ["recranet.com", "recranet.nl"]],
+  ["itenso", ["itenso.nl", "itenso.com"]],
+  ["campez", ["campez.nl", "campez.com", "campez.de"]],
+  ["bookinglayer", ["bookinglayer.com", "bookinglayer.io"]],
+  ["mews", ["mews.com", "mews.li"]],
+  ["newbook", ["newbook.cloud"]],
+  ["maxxton", ["maxxton.net", "maxxton.com"]],
+  ["recreatex", ["recreatex.be", "recreatex.nl"]],
+];
+const BOOKING_TAG = /<(script|iframe|form|link|a)\b([^>]*)>/gi;
+const URL_ATTR = /\b(?:src|href|action|data-src)\s*=\s*["']([^"']+)["']/gi;
+
+function hostOf(u: string): string | undefined {
+  try {
+    return new URL(u, "https://x.invalid/").hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
+export function bookingSystems(html: string): string[] {
+  const found = new Set<string>();
+  for (const tag of html.matchAll(BOOKING_TAG)) {
+    const isLink = tag[1].toLowerCase() === "a";
+    for (const attr of tag[2].matchAll(URL_ATTR)) {
+      const host = hostOf(attr[1]);
+      if (!host) continue;
+      for (const [name, domains] of BOOKING_SYSTEMS) {
+        const d: string | undefined = domains.find((x: string) => host === x || host.endsWith(`.${x}`));
+        if (!d) continue;
+        // Een gewone link alleen als hij naar de eigen boekingsomgeving van de camping wijst (klant.bookingexperts.nl),
+        // niet naar de site van de leverancier zelf ("powered by", www.bookingexperts.nl)
+        if (isLink && (host === d || host === `www.${d}`)) continue;
+        found.add(name);
+      }
+    }
+  }
+  return [...found].sort();
+}
+
+/**
+ * Afrekenen met een zuil of app (plan.md B4): Aanuit.net, i-Marina, Blue Water of een betaalautomaat. Bij jachthavens
+ * en gemeentelijke camperplaatsen betekent dat vaak "per 24 uur", maar niet altijd: daarom alleen een aanwijzing.
+ */
+const PAYMENT_HINTS: [string, RegExp][] = [
+  ["aanuit", /(?<![\w-])aanuit\.net\b|\baan-?uit app\b/i],
+  ["i_marina", /(?<![\w-])i-?marina(?:\.(?:eu|nl|com)\b|\b)/i],
+  ["bluewater", /\bbluewaterapp\b|\bblue ?water app\b/i],
+  ["betaalautomaat", /\b(?:betaalautomaat|betaalzuil|betaalpaal|parkeerautomaat|camperzuil)\b/i],
+];
+// "Geen betaalautomaat", "de betaalzuil is buiten werking": dan is het geen aanwijzing
+const PAYMENT_NEG = /\b(?:geen|niet|zonder)\s+(?:\w+\s+){0,2}(?:betaalautomaat|betaalzuil|betaalpaal|parkeerautomaat|camperzuil)\b|\b(?:betaalautomaat|betaalzuil|betaalpaal|parkeerautomaat|camperzuil)\b[^.]{0,40}\b(?:buiten werking|defect|verwijderd)\b/gi;
+
+export function paymentHints(html: string, text: string): string[] {
+  const hay = `${html.match(/(?:src|href)=["'][^"']+["']/gi)?.join(" ") ?? ""} ${text}`;
+  const positive = hay.replace(PAYMENT_NEG, " ");
+  return PAYMENT_HINTS.filter(([, re]) => re.test(positive)).map(([name]) => name);
 }
 
 /**

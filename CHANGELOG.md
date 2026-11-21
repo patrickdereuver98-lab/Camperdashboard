@@ -37,9 +37,23 @@ Dataplan november ([dataplan](docs/dataplan-2026-11.md)), PR #170 en #172.
   vertrektijd, "uw plaats" telt als kampeerplek, bij tegenspraak tussen pagina's wint de pagina over kampeerplekken.
   In de eerste portie van 117 plekken wiste parser 46 9 vertrekregels; 6 daarvan onterecht, die zijn hiermee terug.
 
+
+**Meer plekken en vertrektijden** ([plan.md](plan.md), 20 november 2026)
+- Lezer herkent de boekingsmodule (Tommy, Booking Experts, Camping.care en anderen) en afrekenen met een zuil of app
+  (Aanuit.net, i-Marina, betaalautomaat). Bewaard als aanwijzing in `sources.booking` en `sources.payment_hint`, nooit
+  als vertrekregel.
+- OSM: `leisure=marina` met campers wordt jachthaven, ook zonder "haven" in de naam.
+- Tweede bronnen: laag Zeeland (CC0, 462 kandidaten, 120 zonder plek binnen 150 m) en Overture Places (tier 3, export
+  per week in de workflow). Een kandidaat krijgt zijn website mee. Een kandidaat uit één tier-3-bron met website wordt
+  een concept en gaat pas online als de eigen site de vertrekregel noemt. Jachthavens uit Overture koppelen alleen.
+- Een plek die wegging omdat OSM geen website had, mag terugkomen als een andere bron er een heeft (316 plekken).
+
 **Migraties** (live gezet op 20 november 2026, in deze volgorde): `20261120100000_dataplan_osm_en_kernfeit`,
 `20261120200000_publicatie_op_regels`, daarna de regels opnieuw toegepast (2.169 naar 2.214 gepubliceerd).
-**Edge functions**: `pipeline` versie 69 (parser 47, stub op `89fbb17`); versie 68 (parser 46) was kort live.
+Nog niet live (na samenvoegen, in deze volgorde): `20261121100000_boekingssysteem_en_betaalwijze`,
+`20261121110000_kandidaten_met_website`.
+**Edge functions**: `pipeline` versie 69 (parser 47, stub op `89fbb17`); versie 68 (parser 46) was kort live. Na
+samenvoegen opnieuw uitrollen (herkenning boekingsmodule en betaalzuil).
 
 ## 0.9.2 (19 november 2026)
 
