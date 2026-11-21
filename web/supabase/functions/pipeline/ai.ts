@@ -249,7 +249,7 @@ const WORDS: Record<string, number> = { een: 1, twee: 2, drie: 3, vier: 4, vijf:
  */
 // Steekproef van 70 voorstellen (21 november 2026): deze woorden maakten een tijd, maat of duur tot een uitzondering
 // ("aankomst na 11.00 alleen bij topdrukte", "uitchecken tot 10:00 op doordeweekse dagen", "max. 5 dagen laagseizoen")
-const CONDITION = /\b(alleen (bij|op|in|tijdens|voor)|topdrukte|bij drukte|doordeweek\w*|in het weekend|weekenddagen|in de winter|winterperiode|in de zomer|hoogseizoen|laagseizoen|als we de plek\w* nodig|indien|wanneer de plek)/;
+const CONDITION = /\b(alleen (bij|op|in|tijdens|voor)|topdrukte|bij drukte|in drukke (tijden|periodes?)|drukke dagen|doordeweek\w*|in het weekend|weekenddagen|in de winter|winterperiode|in de zomer|hoogseizoen|laagseizoen|als we de plek\w* nodig|indien|wanneer de plek)/;
 // Trekkersplekken voor wandelaars en fietsers: geen tarief of regel voor campers
 const HIKERS = /\b(trekkers?(veld|plaats|tarief|hut)?|wandelaars?|fietsers?)\b/;
 // "Langer dan 6 meter: toeslag" of een tariefregel is geen maximum ("Camper groter dan 6 meter | 5,50"); "langer dan 8
@@ -277,6 +277,8 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     else if (RENTAL.test(norm(q)) && !PITCH.test(norm(q))) fail("vertrek", "citaat gaat over verhuur of een voorziening");
     else if (rule === "vrij" && !DEPARTURE_WORD.test(norm(q))) fail("vertrek", "citaat gaat niet over vertrekken");
     else if (CONDITION.test(norm(q))) fail("vertrek", "regel geldt alleen onder een voorwaarde");
+    // "Vertrek vóór 17:00 uur i.p.v. 11:00 uur" is een betaalde late vertrektijd, geen regel
+    else if (/i\.\s?p\.\s?v\.?|in plaats van|laat vertrek|later vertrek|late check-?out/.test(norm(q))) fail("vertrek", "citaat gaat over later vertrekken");
     else if (HIKERS.test(norm(q)) && !PITCH.test(norm(q))) fail("vertrek", "citaat gaat over trekkers");
     else {
       const check = checkQuote({ departure: rule as QuoteAnswer["departure"], checkout, quote: q }, forCheck(text));
