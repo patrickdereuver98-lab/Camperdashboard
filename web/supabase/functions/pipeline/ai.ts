@@ -247,6 +247,19 @@ const WORDS: Record<string, number> = { een: 1, twee: 2, drie: 3, vier: 4, vijf:
  * Controleer elk feit van het model tegen de tekst. Wat niet letterlijk te onderbouwen is, valt weg (met reden). Wat
  * overblijft is een voorstel, geen feit: Beheer beslist in de Triage Inbox.
  */
+// Steekproef van 70 voorstellen (21 november 2026): deze woorden maakten een tijd, maat of duur tot een uitzondering
+// ("aankomst na 11.00 alleen bij topdrukte", "uitchecken tot 10:00 op doordeweekse dagen", "max. 5 dagen laagseizoen")
+const CONDITION = /\b(alleen (bij|op|in|tijdens|voor)|topdrukte|bij drukte|doordeweek\w*|in het weekend|weekenddagen|in de winter|winterperiode|in de zomer|hoogseizoen|laagseizoen|als we de plek\w* nodig|indien|wanneer de plek)/;
+// Trekkersplekken voor wandelaars en fietsers: geen tarief of regel voor campers
+const HIKERS = /\b(trekkers?(veld|plaats|tarief|hut)?|wandelaars?|fietsers?)\b/;
+// "Langer dan 6 meter: toeslag" of een tariefregel is geen maximum ("Camper groter dan 6 meter | 5,50"); "langer dan 8
+// meter niet toegestaan" wel. Langer/groter dan telt dus alleen met een verbod erbij.
+const LENGTH_NOT_MAX = /extra kosten|toeslag|moeilijk|beperkt|draaicirkel|€|euro|per nacht|enkele plaatsen/;
+const lengthIsMax = (q: string) =>
+  !LENGTH_NOT_MAX.test(q) && (!/langer dan|groter dan/.test(q) || /\b(niet|geen)\b/.test(q));
+// Gesloten alleen bij taal die blijvend is; "momenteel gesloten, vanaf maart weer open" is een winterstop
+const CLOSED_FOR_GOOD = /definitief|tot nader order|onbepaalde tijd|opgeheven|gestopt|bestaat niet meer|niet meer (open|mogelijk|beschikbaar)/;
+
 export function verifyAnswer(a: AiAnswer, text: string): Verdict {
   const proposals: Proposal[] = [];
   const rejected: string[] = [];
@@ -263,6 +276,8 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     else if (rule === "vast" && !checkout) fail("vertrek", "vaste regel zonder geldige tijd");
     else if (RENTAL.test(norm(q)) && !PITCH.test(norm(q))) fail("vertrek", "citaat gaat over verhuur of een voorziening");
     else if (rule === "vrij" && !DEPARTURE_WORD.test(norm(q))) fail("vertrek", "citaat gaat niet over vertrekken");
+    else if (CONDITION.test(norm(q))) fail("vertrek", "regel geldt alleen onder een voorwaarde");
+    else if (HIKERS.test(norm(q)) && !PITCH.test(norm(q))) fail("vertrek", "citaat gaat over trekkers");
     else {
       const check = checkQuote({ departure: rule as QuoteAnswer["departure"], checkout, quote: q }, forCheck(text));
       if (!check) fail("vertrek", "citaat onderbouwt de regel of tijd niet");
@@ -289,6 +304,10 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     const hour = Number(t.slice(0, 2));
     if (hour < lo || hour > hi) return fail(field, "tijd buiten het gebruikelijke bereik");
     if (!key.test(q)) return fail(field, "citaat gaat niet over aankomst");
+    if (CONDITION.test(q)) return fail(field, "tijd geldt alleen onder een voorwaarde");
+    if (HIKERS.test(q) && !PITCH.test(q)) return fail(field, "citaat gaat over trekkers");
+    // "Verwacht je dat je aankomst later is dan 16.00 uur? Neem contact op" is geen uiterste tijd
+    if (field === "checkin_until" && /later (is )?dan|na \d{1,2}[:.]?\d{0,2}\s*(uur)?\s*(\?|bel|neem|graag)/.test(q)) return fail(field, "geen uiterste aankomsttijd");
     if (RENTAL.test(q) && !PITCH.test(q)) return fail(field, "citaat gaat over verhuur of een voorziening");
     proposals.push({ field, value: t, quote: String(quote), url, confirmed: false });
   };
@@ -304,13 +323,15 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     const raw = String(a.nachtprijs_citaat ?? "");
     const q = norm(raw);
     const at = amountIndex(q, price);
-    if (!Number.isFinite(price) || price <= 0 || price > 75) fail("prijs", "bedrag buiten 0 tot 75 euro");
+    if (!Number.isFinite(price) || price < 4 || price > 75) fail("prijs", "bedrag buiten 4 tot 75 euro");
     else if (url === undefined) fail("prijs", "citaat niet letterlijk in de tekst");
     else if (at < 0) fail("prijs", "bedrag staat niet in het citaat");
     else if (!/€|euro|eur\b|,-/.test(q)) fail("prijs", "citaat noemt geen bedrag in euro");
     else if (EXTRA.test(q.slice(Math.max(0, at - 40), at)) || EXTRA_AFTER.test(q.slice(at, at + 40))) fail("prijs", "bedrag is een toeslag");
     else if (RENTAL.test(q) && !PITCH.test(q)) fail("prijs", "citaat gaat over verhuur");
     else if (/\b(per week|per maand|per seizoen|jaarplaats|seizoensplaats)\b/.test(q)) fail("prijs", "geen prijs per nacht");
+    else if (HIKERS.test(q) && !PITCH.test(q)) fail("prijs", "tarief voor trekkers");
+    else if (/korte overnachting|dagtarief|dagbezoek|overdag/.test(q)) fail("prijs", "geen gewone nachtprijs");
     else proposals.push({ field: "price_eur", value: Math.round(price * 100) / 100, quote: raw, url, confirmed: false });
   }
 
@@ -325,6 +346,7 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     // Getal en lengtewoord in hetzelfde zinsdeel: "max lengte 8 m, breedte 3 m" geeft 8, nooit 3
     else if (!clauses(q).some((c) => numbersIn(c).some((n) => same(n, len)) && LENGTH.test(c) && !/hoogte|hoog\b|breedte|breed\b|afstand|km\b/.test(c)))
       fail("lengte", "citaat gaat niet over de lengte");
+    else if (!lengthIsMax(q)) fail("lengte", "geen maximum (toeslag, tarief of maar enkele plaatsen)");
     else proposals.push({ field: "max_length_m", value: len, quote: String(a.max_lengte_citaat), url, confirmed: false });
   }
 
@@ -342,6 +364,7 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     else if (!said.includes(n)) fail("nachten", "aantal staat niet in het citaat");
     else if (!/nacht|dagen|etmaal|x\s?24|24 uur|verblijf|blijven|staan/.test(q) || !/max|hooguit|ten hoogste|niet langer|maximum|tot\b|mag/.test(q))
       fail("nachten", "citaat noemt geen maximum");
+    else if (CONDITION.test(q) || (HIKERS.test(q) && !PITCH.test(q))) fail("nachten", "maximum geldt alleen onder een voorwaarde of voor trekkers");
     else proposals.push({ field: "max_stay_nights", value: n, quote: String(a.max_nachten_citaat), url, confirmed: false });
   }
 
@@ -351,7 +374,7 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     const url = quoteSource(a.gesloten_citaat, text);
     const q = norm(String(a.gesloten_citaat ?? ""));
     if (url === undefined) fail("gesloten", "citaat niet letterlijk in de tekst");
-    else if (!/gesloten|opgeheven|gestopt|bestaat niet meer|niet meer (open|mogelijk|beschikbaar)|definitief dicht/.test(q)) fail("gesloten", "citaat zegt niet dat de plek dicht is");
+    else if (!CLOSED_FOR_GOOD.test(q)) fail("gesloten", "geen blijvende sluiting (winterstop of tijdelijk)");
     else if (/seizoen|winter|tijdelijk|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|feestdag|\bvan\b.*\btot\b|tot en met|t\/m|receptie|zwembad|restaurant|winkel|sanitair/.test(q))
       fail("gesloten", "citaat gaat over een seizoen, dag of voorziening");
     else closed = { quote: String(a.gesloten_citaat), url };
