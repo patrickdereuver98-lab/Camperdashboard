@@ -30,6 +30,15 @@ export interface GoogleCandidate {
   location?: { latitude?: number; longitude?: number };
   rating?: number;
   userRatingCount?: number;
+  reviews?: GoogleReview[];
+}
+
+/** Een review zoals de job hem opvraagt: bewust zonder naam of profiel van de schrijver */
+export interface GoogleReview {
+  name?: string;
+  rating?: number;
+  text?: { text?: string; languageCode?: string };
+  publishTime?: string;
 }
 
 /** Hoe ver Google en wij mogen verschillen voor dezelfde plek */
@@ -89,13 +98,16 @@ export async function fetchGoogleCandidates(
   place: { name: string; town: string; lat: number; lng: number },
   apiKey: string,
   doFetch: typeof fetch = fetch,
+  withReviews = false,
 ): Promise<GoogleCandidate[]> {
   const res = await doFetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.rating,places.userRatingCount",
+      "X-Goog-FieldMask":
+        "places.id,places.displayName,places.location,places.rating,places.userRatingCount" +
+        (withReviews ? ",places.reviews.name,places.reviews.rating,places.reviews.text,places.reviews.publishTime" : ""),
     },
     body: JSON.stringify({
       textQuery: `${place.name} ${place.town}`,

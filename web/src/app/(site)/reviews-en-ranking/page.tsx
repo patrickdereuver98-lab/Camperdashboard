@@ -67,7 +67,8 @@ export default function ReviewsRankingPage() {
           Bij sommige plekken staat ook het cijfer van Google Maps, op een schaal van 1 tot 5. Dat is een ander cijfer van andere
           mensen dan het cijfer van VrijStaan, en we rekenen ze nooit door elkaar. We halen het bij Google op en bewaren het met de datum van de check. Na 30 dagen
           halen we het opnieuw op, en is het ouder dan 30 dagen, dan tonen we het niet. Alleen het cijfer en het aantal reviews tonen we, geen teksten of
-          namen. Zoeken we een plek bij Google en twijfelen we of het dezelfde plek is, dan tonen we niets. Jouw bezoek aan
+          namen. De reviewteksten die Google meegeeft, bewaren we zonder naam van de schrijver en gebruiken we alleen intern om onze
+          eigen gegevens te controleren, bijvoorbeeld een vertrektijd of een gesloten plek. We tonen ze niet. Zoeken we een plek bij Google en twijfelen we of het dezelfde plek is, dan tonen we niets. Jouw bezoek aan
           VrijStaan gaat niet via Google: onze server vraagt het cijfer op, jouw browser praat niet met Google.
         </p>
       </Section>
