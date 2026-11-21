@@ -66,7 +66,7 @@ type Update = {
 };
 
 const FIELD_LABEL: Record<string, string> = { verified_at: "bevestigt gegevens" };
-const SOURCE_TONE: Record<string, "green" | "yellow" | "neutral" | "road"> = { eigenaar: "green", "mail (onbevestigd)": "yellow", "ai-lezer": "road" };
+const SOURCE_TONE: Record<string, "green" | "yellow" | "neutral" | "road"> = { eigenaar: "green", "mail (onbevestigd)": "yellow", "ai-lezer": "road", "google-review": "road" };
 
 function scoreTone(s: number | null) {
   return s === null ? "neutral" : s >= 70 ? "green" : s >= 40 ? "yellow" : "red";
@@ -133,7 +133,8 @@ function TriageInbox() {
           {rows.length} open. Accepteer zet de waarde in de plek met het merkteken van beheer; het AI-advies is alleen een hulpmiddel.
           Bron &quot;mail (onbevestigd)&quot; komt van een ander adres dan dat van de plek: controleer het eerst bij de eigenaar.
           Bron &quot;ai-lezer&quot; is een tweede lezing van de website: het citaat staat letterlijk op de bronpagina, maar kijk
-          of het over campers gaat.
+          of het over campers gaat. Bron &quot;google-review&quot; komt uit reviews van Google: minstens twee verschillende
+          reviews zeggen hetzelfde, maar het is een bezoeker en geen eigenaar. Controleer het bij twijfel op de website.
         </p>
         <button className={secondary} onClick={evaluateAll} disabled={busy !== null || !updates.some((r) => r.ai_score === null)}>
           {busy === "alle" ? "Bezig…" : "AI-check voor alles zonder score"}

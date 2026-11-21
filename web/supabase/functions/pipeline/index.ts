@@ -31,6 +31,7 @@ import { addressFrom, reverseUrl } from "./pdok.ts";
 import { checkQuote, type QuoteAnswer } from "./quote.ts";
 import { AI_VERSION, cleanText, condense, parseAnswer, SCHEMA, SYSTEM, textHash, verifyAnswer, type SeenPage } from "./ai.ts";
 import { MAX_PAGES, pageUrl, parsePage } from "./bekendmakingen.ts";
+import { checkReview, corroborate, isRelevant, REVIEW_SYSTEM, REVIEW_VERSION, reviewPage, type ReviewRow, type ReviewVerdict } from "./review-lezer.ts";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 import { OIDC_AUDIENCE, OIDC_ISSUER, stealthDeeper, stealthMayWipe, stealthPages, stealthPlan, workflowClaimsOk, workflowForAction } from "./stealth.ts";
 import { addExtraPages, decodeHtml, emptySite, deeperLinks, homeCandidates, sameSite, extractLinks, needsSitemap, onePage, parseSitemap, pdfLinks, pdfMax, FOCUS_PDFS, rankLinks, sitemapsFromRobots, gone, pdfOutcome, withDeadline } from "./pages.ts";
@@ -592,12 +593,12 @@ const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
 class AiLimit extends Error {}
 
 /** Eén aanroep van Gemini met het vaste schema; geeft de ruwe JSON-tekst */
-async function gemini(key: string, prompt: string): Promise<string> {
+async function gemini(key: string, prompt: string, system: string = SYSTEM): Promise<string> {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM }] },
+      systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0,
@@ -687,6 +688,65 @@ async function runAi(n: number) {
     }
   }
   return { model: GEMINI_MODEL, processed: results.length, limited: !!limited, results };
+}
+
+
+/**
+ * Review-lezer (README 141, bronnenbeleid §3c): reviews van Google die nog niet gelezen zijn. Elke relevante review gaat
+ * apart naar het model en door de controles van de AI-lezer; een voorstel komt er pas als twee reviews hetzelfde zeggen.
+ */
+type ReviewBatchRow = { place_id: string; name: string | null; kind: string | null; google_place_id: string | null; reviews: ReviewRow[] };
+
+async function reviewReadOne(key: string, p: ReviewBatchRow) {
+  const gid = p.google_place_id ?? "onbekend";
+  const verdicts: ReviewVerdict[] = [];
+  const results: Record<string, unknown> = {};
+  let i = 0;
+  for (const r of p.reviews) {
+    i++;
+    if (!isRelevant(r)) {
+      results[r.ref] = { versie: REVIEW_VERSION, overgeslagen: true };
+      continue;
+    }
+    const page = reviewPage(gid, i, r.body as string);
+    const raw = await gemini(key, `Plek: ${p.name ?? "onbekend"} (${p.kind ?? "onbekend"}).\nReview van een bezoeker:\n${r.body}`, REVIEW_SYSTEM);
+    const v = checkReview(r.ref, raw, page);
+    // Het adres van de pagina bevat het nummer van de review; voor Beheer is de verwijzing naar de plek genoeg
+    verdicts.push(v);
+    results[r.ref] = { versie: REVIEW_VERSION, antwoord: v.answer, afgewezen: v.rejected };
+  }
+  const { proposals, conflicts } = corroborate(verdicts);
+  const { data, error } = await db.rpc("apply_review_reading", {
+    p_id: p.place_id,
+    p_refs: p.reviews.map((r) => r.ref),
+    p_results: results,
+    p_proposals: proposals,
+  });
+  if (error) throw new Error(`apply_review_reading: ${error.message}`);
+  return { id: p.place_id, reviews: p.reviews.length, read: verdicts.length, proposals: (data as { proposals?: number })?.proposals ?? 0, conflicts };
+}
+
+async function runReviews(n: number) {
+  const key = Deno.env.get("GEMINI_API_KEY");
+  if (!key) return { skipped: "GEMINI_API_KEY ontbreekt in de edge-geheimen" };
+  const { data: batch, error } = await db.rpc("next_review_batch", { p_limit: n });
+  if (error) throw error;
+  const rows = (batch ?? []) as ReviewBatchRow[];
+  const results: Record<string, unknown>[] = [];
+  let limited = false;
+  for (let i = 0; i < rows.length && !limited; i += AI_CONCURRENCY) {
+    const done = await Promise.allSettled(rows.slice(i, i + AI_CONCURRENCY).map((p) => reviewReadOne(key, p)));
+    for (const [j, r] of done.entries()) {
+      if (r.status === "fulfilled") results.push(r.value);
+      else {
+        // Niets vastgelegd: de reviews blijven ongelezen en komen terug
+        if (r.reason instanceof AiLimit) limited = true;
+        else await log("warn", `Review-lezer ${rows[i + j].place_id}: ${r.reason}`);
+        results.push({ id: rows[i + j].place_id, error: String(r.reason).slice(0, 120) });
+      }
+    }
+  }
+  return { model: GEMINI_MODEL, processed: results.length, limited, results };
 }
 
 /**
@@ -813,6 +873,10 @@ Deno.serve(async (req) => {
       EdgeRuntime.waitUntil(runAiText(Math.min(12, Number(body.n) || 4)).catch((e) => log("error", `Pipeline-fout (ai_text): ${e}`)));
       return Response.json({ started: true }, { status: 202 });
     } else if (body.action === "ai_text") result = await runAiText(Math.min(12, Number(body.n) || 4));
+    else if (body.action === "reviews" && body.background) {
+      EdgeRuntime.waitUntil(runReviews(Math.min(20, Number(body.n) || 3)).catch((e) => log("error", `Pipeline-fout (reviews): ${e}`)));
+      return Response.json({ started: true }, { status: 202 });
+    } else if (body.action === "reviews") result = await runReviews(Math.min(20, Number(body.n) || 3));
     else if (body.action === "bekendmakingen" && body.background) {
       EdgeRuntime.waitUntil(runBekendmakingen().catch((e) => log("error", `Pipeline-fout (bekendmakingen): ${e}`)));
       return Response.json({ started: true }, { status: 202 });

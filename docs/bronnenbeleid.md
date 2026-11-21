@@ -126,6 +126,13 @@ om onze eigen gegevens ermee te scannen en te vergelijken (vertrektijd, prijs, g
 - **Alleen intern:** de tabel staat in het private schema, zonder leesrechten voor bezoekers en ingelogde gebruikers.
   De reviewteksten komen nooit op de site. Een feit dat eruit voortkomt, volgt de gewone regels van §2: tier 5, twee
   losse vermeldingen met een eigen citaat en datum, en beheer beslist (Triage Inbox).
+- **Analyse (review-lezer, `pipeline/review-lezer.ts`):** Gemini leest elke review die over vertrek, prijs, maten of
+  sluiting gaat apart en levert per feit een letterlijk citaat van minstens 15 tekens. Dezelfde controles als de
+  AI-lezer (§3b) gelden: citaat letterlijk in de review, getal of tijd in het citaat, onderwerp camperplaats. Daarna
+  geldt tier 5 (§2): alleen als minstens twee verschillende reviews dezelfde waarde onderbouwen komt er een voorstel in
+  de Triage Inbox (bron `google-review`); zegt een andere review iets anders over hetzelfde veld, dan geen voorstel.
+  Een door een mens bevestigde vertrekregel krijgt geen voorstel, een afgewezen voorstel komt niet terug. Beheer beslist.
+  Het model schrijft nooit zelf in `places`. Reviews worden niet herschreven of op de site getoond.
 - **Op verzoek wissen:** vraagt Google, een schrijver of een eigenaar om verwijdering, dan verwijdert beheer de rij(en)
   uit `private.place_google_reviews`.
 - **Risico, bewust geaccepteerd door de eigenaar:** de voorwaarden van Google Maps Platform noemen een bewaartermijn van
