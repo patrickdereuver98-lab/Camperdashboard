@@ -24,6 +24,8 @@ import { CARD_CELL, CARD_GRID } from "@/lib/card-grid";
 import { PlaceMap } from "@/components/place-map";
 import { pickFacilities } from "@/lib/facility-update";
 import { Legend } from "@/components/legend";
+import { getGoogleRating } from "@/lib/google-rating-live";
+import { CheckVoorVertrek, GoogleScore } from "./ervaringen";
 import { Gallery, OutdatedNote, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 import { OwnerUpdate } from "./owner-update";
 import { ownerValues } from "@/lib/owner-update";
@@ -94,7 +96,12 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     if (target) permanentRedirect(`/plek/${target}`);
     notFound();
   }
-  const [reviews, nearby, visitors] = await Promise.all([getReviews(place.id), getNearby(place, 6), getDepartureVisitors(place.id)]);
+  const [reviews, nearby, visitors, google] = await Promise.all([
+    getReviews(place.id),
+    getNearby(place, 6),
+    getDepartureVisitors(place.id),
+    getGoogleRating(place),
+  ]);
 
   // Al gesorteerd en gefilterd in places.ts: de beste foto van de plek zelf staat vooraan
   const photos = place.photos;
@@ -279,6 +286,10 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                 <h2 id="reviews" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>Ervaringen</h2>
                 <WriteReview placeId={place.id} placeName={place.name} slug={place.slug} />
               </div>
+              <div className="mt-4 space-y-4">
+                <CheckVoorVertrek place={place} />
+                {google && <GoogleScore google={google} />}
+              </div>
               {reviews.length > 0 ? (
                 <div className="mt-4 space-y-6">
                   <ScoreBadge avg={place.ratingAvg} count={place.ratingCount} size="lg" />
@@ -286,7 +297,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                   <ReviewList reviews={reviews} />
                 </div>
               ) : (
-                <p className="mt-1 text-ink-2">Nog geen ervaringen van camperaars. Ben je hier geweest? Dan help je anderen met een review.</p>
+                <p className="mt-4 text-ink-2">Nog geen ervaringen van camperaars. Ben je hier geweest? Dan help je anderen met een review.</p>
               )}
             </section>
 

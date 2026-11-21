@@ -15,7 +15,7 @@ export default function ReviewsRankingPage() {
     <ProsePage
       title="Reviews en ranking"
       intro="Hoe reviews op VrijStaan komen, wat we wel en niet controleren, en waarom de ene plek boven de andere staat."
-      updated="22 oktober 2026"
+      updated="21 november 2026"
     >
       <Section title="Wie een review kan schrijven">
         <p>
@@ -59,6 +59,23 @@ export default function ReviewsRankingPage() {
           Het cijfer van een plek is het gemiddelde van alle goedgekeurde reviews, afgerond op één decimaal. De cijfers voor
           ligging, rust, voorzieningen en prijs/kwaliteit zijn het gemiddelde van de reviews die dat onderdeel invulden.
           Eigenaren kunnen reviews niet laten verwijderen of verbergen en kunnen niet betalen voor een ander cijfer.
+        </p>
+      </Section>
+
+      <Section title="Het cijfer van Google">
+        <p>
+          Bij sommige plekken staat ook het cijfer van Google Maps, op een schaal van 1 tot 5. Dat is een ander cijfer van andere
+          mensen dan het cijfer van VrijStaan, en we rekenen ze nooit door elkaar. We halen het op bij Google op het moment dat je
+          de plek opent en bewaren het niet in onze database. Alleen het cijfer en het aantal reviews tonen we, geen teksten of
+          namen. Zoeken we een plek bij Google en twijfelen we of het dezelfde plek is, dan tonen we niets. Jouw bezoek aan
+          VrijStaan gaat niet via Google: onze server vraagt het cijfer op, jouw browser praat niet met Google.
+        </p>
+      </Section>
+
+      <Section title="Check voor vertrek">
+        <p>
+          Boven de ervaringen staan drie regels met wat we van de plek weten: vertrektijd, prijs en reserveren, aankomst of
+          honden. Ze komen uit onze plekgegevens, niet uit een taalmodel. Kennen we iets niet, dan staat dat erbij.
         </p>
       </Section>
 
