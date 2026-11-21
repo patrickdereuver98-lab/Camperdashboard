@@ -41,3 +41,9 @@ jobs:
           LIMIT: ${{ inputs.limit || '250' }}
           DRY: ${{ inputs.dry && '--dry' || '' }}
         run: node scripts/google-ratings.mjs --limit "$LIMIT" $DRY
+      - name: Analyse in de samenvatting
+        if: ${{ always() && !inputs.dry }}
+        working-directory: web
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/google-analyse.mjs >> "$GITHUB_STEP_SUMMARY"
