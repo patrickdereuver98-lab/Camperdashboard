@@ -204,3 +204,33 @@ test("entiteiten: &euro; en &bull; worden tekens, ook in opgeslagen tekst (eerst
   const text = cleanText("### https://a.nl/\nCamperplaats &euro; 15,00 per nacht &ndash; hele jaar.");
   assert.deepEqual(fields({ nachtprijs: 15, nachtprijs_citaat: "Camperplaats € 15,00 per nacht – hele jaar." }, text), { price_eur: 15 });
 });
+
+test("steekproef 21 november: voorwaarden, trekkers, lengtetoeslag, winterstop en toeristenbelasting vallen weg", () => {
+  const text = site({
+    "https://a.nl/": [
+      "<p>aankomst na 11.00 uur en 14:00 uur ( alleen bij topdrukte )</p>",
+      "<p>Uitchecken kan tot 10:00 uur op doordeweekse dagen.</p>",
+      "<p>Camperplaats per dag max. 5 dagen laagseizoen</p>",
+      "<p>Trekkers tarief (fietsers of wandelaars): €10 per persoon p.n.</p>",
+      "<p>Houd rekening met extra kosten wanneer uw combinatie langer dan 10 meter is.</p>",
+      "<p>Je betaalt €1,60 voor 2 personen per nacht.</p>",
+      "<p>Verwacht je dat je aankomst later is dan 16.00 uur? Neem dan contact op.</p>",
+      "<p>Op dit moment is onze camping gesloten, vanaf 15 maart weer open.</p>",
+      "<p>Brugse Heide is tot nader order gesloten.</p>",
+    ].join(""),
+  });
+  assert.deepEqual(fields({ aankomst_vanaf: "11:00", aankomst_vanaf_citaat: "aankomst na 11.00 uur en 14:00 uur ( alleen bij topdrukte )" }, text), {});
+  assert.deepEqual(fields({ vertrekregel: "vast", vertrektijd: "10:00", vertrek_citaat: "Uitchecken kan tot 10:00 uur op doordeweekse dagen." }, text), {});
+  assert.deepEqual(fields({ max_nachten: 5, max_nachten_citaat: "Camperplaats per dag max. 5 dagen laagseizoen" }, text), {});
+  assert.deepEqual(fields({ nachtprijs: 10, nachtprijs_citaat: "Trekkers tarief (fietsers of wandelaars): €10 per persoon p.n." }, text), {});
+  assert.deepEqual(fields({ max_lengte_m: 10, max_lengte_citaat: "Houd rekening met extra kosten wanneer uw combinatie langer dan 10 meter is." }, text), {});
+  assert.deepEqual(fields({ nachtprijs: 1.6, nachtprijs_citaat: "Je betaalt €1,60 voor 2 personen per nacht." }, text), {});
+  assert.deepEqual(fields({ laatste_aankomst: "16:00", laatste_aankomst_citaat: "Verwacht je dat je aankomst later is dan 16.00 uur? Neem dan contact op." }, text), {});
+  assert.equal(verifyAnswer({ gesloten: true, gesloten_citaat: "Op dit moment is onze camping gesloten, vanaf 15 maart weer open." }, text).closed, null);
+  assert.ok(verifyAnswer({ gesloten: true, gesloten_citaat: "Brugse Heide is tot nader order gesloten." }, text).closed);
+});
+
+test("langer dan … niet toegestaan is wél een maximum", () => {
+  const text = site({ "https://a.nl/": "<p>Caravans of campers groter dan 8 meter zijn niet toegestaan bij ons.</p>" });
+  assert.deepEqual(fields({ max_lengte_m: 8, max_lengte_citaat: "Caravans of campers groter dan 8 meter zijn niet toegestaan bij ons." }, text), { max_length_m: 8 });
+});
