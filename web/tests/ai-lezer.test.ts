@@ -234,3 +234,9 @@ test("langer dan … niet toegestaan is wél een maximum", () => {
   const text = site({ "https://a.nl/": "<p>Caravans of campers groter dan 8 meter zijn niet toegestaan bij ons.</p>" });
   assert.deepEqual(fields({ max_lengte_m: 8, max_lengte_citaat: "Caravans of campers groter dan 8 meter zijn niet toegestaan bij ons." }, text), { max_length_m: 8 });
 });
+
+test("tweede steekproef: drukke tijden en later vertrekken zijn geen vertrekregel", () => {
+  const text = site({ "https://a.nl/": "<p>In drukke tijden verwachten wij dat u voor 12:00 uur uw kampeerplaats heeft vrijgemaakt.</p><p>Laat vertrek: vertrek vóór 17:00 uur i.p.v. 11:00 uur</p>" });
+  assert.deepEqual(fields({ vertrekregel: "vast", vertrektijd: "12:00", vertrek_citaat: "In drukke tijden verwachten wij dat u voor 12:00 uur uw kampeerplaats heeft vrijgemaakt." }, text), {});
+  assert.deepEqual(fields({ vertrekregel: "vast", vertrektijd: "17:00", vertrek_citaat: "Laat vertrek: vertrek vóór 17:00 uur i.p.v. 11:00 uur" }, text), {});
+});
