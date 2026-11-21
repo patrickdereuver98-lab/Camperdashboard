@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { getDepartureVisitors, getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
+import { getDepartureVisitors, getGoogleRating, getNearby, getPlace, getRedirect, getReviews, getTopPlaceSlugs } from "@/lib/places";
 import { departureKind } from "@/lib/search";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { cardPrice, RESERVATION_TEXT, reservationRuleOf, eur, extraLabel, formatDate, pluralize, scoreLabel, timeToMinutes, websiteLabel } from "@/lib/format";
@@ -24,7 +24,6 @@ import { CARD_CELL, CARD_GRID } from "@/lib/card-grid";
 import { PlaceMap } from "@/components/place-map";
 import { pickFacilities } from "@/lib/facility-update";
 import { Legend } from "@/components/legend";
-import { getGoogleRating } from "@/lib/google-rating-live";
 import { CheckVoorVertrek, GoogleScore } from "./ervaringen";
 import { Gallery, OutdatedNote, ReportProblem, ReviewList, ReviewSummary, RouteCard, ShareButton, TrackView, WriteReview } from "./client";
 import { OwnerUpdate } from "./owner-update";
@@ -100,7 +99,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
     getReviews(place.id),
     getNearby(place, 6),
     getDepartureVisitors(place.id),
-    getGoogleRating(place),
+    getGoogleRating(place.id),
   ]);
 
   // Al gesorteerd en gefilterd in places.ts: de beste foto van de plek zelf staat vooraan

@@ -14,7 +14,7 @@ nooit data verzinnen, onbekend blijft leeg.
 | Feiten (vertrekregel, tijden, prijs, voorzieningen, coördinaten) | Overnemen als claim met bron, datum en letterlijk citaat | Hele pagina's, beschrijvingen of foto's kopiëren |
 | Directories (Campercontact, park4night, ACSI, ANWB e.d.) | Losse pagina's lezen als aanwijzing en tweede mening | Lijsten in bulk overnemen (Databankenwet); hun teksten of foto's gebruiken |
 | Fora en reviews | Openbare pagina's lezen; het feit met datum en een postnummer of review-id als `mention_ref` | Reviewteksten (buiten het korte citaat), gebruikersnamen of profielen opslaan |
-| Google | Openbare Google Maps-pagina's lezen met de stealth-lezer (§3a) voor feiten; de Places API (sleutel `GOOGLE_PLACES_API_KEY`, W4.4) alleen voor het cijfer en het aantal, live en zonder opslag (README 141) | Reviewteksten, namen of profielen van reviewers opslaan; het cijfer bewaren of met ons eigen cijfer mengen |
+| Google | Openbare Google Maps-pagina's lezen met de stealth-lezer (§3a) voor feiten; de Places API (sleutel `GOOGLE_PLACES_API_KEY` als GitHub-secret, W4.4) alleen voor `place_id` (onbeperkt bewaard), cijfer, aantal en bedrijfsstatus in `place_google`, met datum van de check en na 30 dagen vernieuwd of niet meer getoond (README 141) | Reviewteksten, namen of profielen van reviewers opslaan; het cijfer met ons eigen cijfer mengen |
 | Facebook, Instagram en andere pagina's achter een inlog | Openbare pagina's die zonder inlog te zien zijn (stealth-lezer); groepen alleen met toestemming van de beheerders | Inloggen, accounts aanmaken of inlogmuren omzeilen; groepen leegtrekken |
 | Beveiliging van sites | De stealth-lezer (§3a) mag alle botbeveiliging omzeilen: Cloudflare, captcha's, 403, `robots.txt`, browser-vermomming en wisselende proxy's | Inlog- en betaalmuren omzeilen; een site overbelasten; doorgaan als de eigenaar vraagt te stoppen |
 | Eigenaren | Bevestiging via de site (link op de plekpagina, Doe mee). Sinds 2 november 2026 ook een automatische mail vanuit VrijStaan naar het openbare adres van de plek, met afmeldlink (README 135) | Bellen. Mailen aan privéadressen (gmail e.d.), twee keer dezelfde eigenaar mailen, doorgaan na afmelden, een bounce of een klacht |
@@ -145,7 +145,7 @@ Het register staat in `bron.sources`. Startstand (18 oktober 2026):
 | Reddit | 4 | toegestaan | Geen gebruikersnamen |
 | Zoover | 5 | toegestaan | Alleen afgeleide feiten |
 | Facebook, Instagram | 4 | alleen openbaar, stealth | Alleen pagina's zonder inlog; groepen alleen met toestemming van de beheerders |
-| Google Maps | 5 | alleen openbaar, stealth | Feiten van openbare pagina's; geen reviewteksten of namen. Places API: sinds 21 november 2026 (README 141) het cijfer en het aantal reviews, live opgehaald door de server (`lib/google-rating-live.ts`), 30 dagen in de servercache en nooit in de database; alleen een plek binnen 250 m met dezelfde eigennaam; met link naar Google Maps |
+| Google Maps | 5 | alleen openbaar, stealth | Feiten van openbare pagina's; geen reviewteksten of namen. Places API: sinds 21 november 2026 (README 141) het cijfer en het aantal reviews, opgehaald door een dagelijkse job (`scripts/google-ratings.mjs`, workflow `google-cijfers`), bewaard in `place_google` met datum en na 30 dagen vernieuwd; alleen een plek binnen 250 m met dezelfde eigennaam; met link naar Google Maps |
 
 Nieuwe domeinen registreert de server automatisch bij het eerste gebruik (`auto_registered`); de coördinator loopt
 die wekelijks na.

@@ -105,6 +105,8 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 
 ### Overige tabellen
 
+**`place_google`** (README 141, migratie `20261121100000`): per plek `google_place_id` (onbeperkt bewaard), `rating` (1 tot 5), `rating_count`, `business_status` en `checked_at`. Geen reviewteksten of namen. Alleen de job `scripts/google-ratings.mjs` schrijft (rol postgres); bezoekers en ingelogde gebruikers mogen lezen. De site toont cijfer en aantal alleen als `checked_at` jonger is dan 30 dagen; plekken met een oudere check komen in de dagelijkse job weer aan bod. Gescheiden van `places`, omdat een update van `places` `updated_at` en het logboek raakt.
+
 | Tabel | Velden (verplicht met *) | Standaarden en indexen |
 |---|---|---|
 | `profiles` | id* (= auth.users.id), display_name (≤ 80), avatar_url (https), created_at*, updated_at* | alleen eigen rij lezen/wijzigen |

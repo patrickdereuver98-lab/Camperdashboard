@@ -1,6 +1,6 @@
 import { checkVoorVertrek, type CheckFacts } from "@/lib/check-voor-vertrek";
 import { scoreLabel } from "@/lib/format";
-import type { GoogleRating } from "@/lib/google-rating";
+import { googleMapsUrl, type GoogleRating } from "@/lib/google-rating";
 import { Icon } from "@/components/icons";
 
 /**
@@ -29,7 +29,7 @@ export function CheckVoorVertrek({ place }: { place: CheckFacts }) {
 
 /**
  * Het cijfer van Google, naast ons eigen cijfer en nooit erdoor gemengd: andere schaal (1 tot 5), andere mensen.
- * Live opgehaald en niet bewaard; Google staat er als bron bij, met link naar de plek op Google Maps.
+ * Maximaal 30 dagen oud (oudere cijfers tonen we niet); Google staat er als bron bij, met link naar de plek op Google Maps.
  */
 export function GoogleScore({ google }: { google: GoogleRating }) {
   const text = `${scoreLabel(google.rating)} van 5 uit ${google.count} ${google.count === 1 ? "review" : "reviews"}`;
@@ -39,11 +39,9 @@ export function GoogleScore({ google }: { google: GoogleRating }) {
       <span>
         <span className="font-semibold text-ink">{text}</span> op Google Maps
       </span>
-      {google.url && (
-        <a href={google.url} target="_blank" rel="noopener noreferrer" className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
-          Bekijk op Google Maps
-        </a>
-      )}
+      <a href={googleMapsUrl(google.placeId)} target="_blank" rel="noopener noreferrer" className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
+        Bekijk op Google Maps
+      </a>
     </p>
   );
 }
