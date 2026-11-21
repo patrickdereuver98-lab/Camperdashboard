@@ -145,7 +145,7 @@ Het register staat in `bron.sources`. Startstand (18 oktober 2026):
 | Reddit | 4 | toegestaan | Geen gebruikersnamen |
 | Zoover | 5 | toegestaan | Alleen afgeleide feiten |
 | Facebook, Instagram | 4 | alleen openbaar, stealth | Alleen pagina's zonder inlog; groepen alleen met toestemming van de beheerders |
-| Google Maps | 5 | alleen openbaar, stealth | Feiten van openbare pagina's; geen reviewteksten of namen. Places API: sinds 21 november 2026 (README 141) het cijfer en het aantal reviews, live opgehaald door de server (`lib/google-rating-live.ts`), zeven dagen in de servercache en nooit in de database; alleen een plek binnen 250 m met dezelfde eigennaam; met link naar Google Maps |
+| Google Maps | 5 | alleen openbaar, stealth | Feiten van openbare pagina's; geen reviewteksten of namen. Places API: sinds 21 november 2026 (README 141) het cijfer en het aantal reviews, live opgehaald door de server (`lib/google-rating-live.ts`), 30 dagen in de servercache en nooit in de database; alleen een plek binnen 250 m met dezelfde eigennaam; met link naar Google Maps |
 
 Nieuwe domeinen registreert de server automatisch bij het eerste gebruik (`auto_registered`); de coördinator loopt
 die wekelijks na.
