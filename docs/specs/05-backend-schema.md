@@ -107,6 +107,12 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 
 **`place_google`** (README 141, migratie `20261121100000`): per plek `google_place_id` (onbeperkt bewaard), `rating` (1 tot 5), `rating_count`, `business_status` en `checked_at`. Geen reviewteksten of namen. Alleen de job `scripts/google-ratings.mjs` schrijft (rol postgres); bezoekers en ingelogde gebruikers mogen lezen. De site toont cijfer en aantal alleen als `checked_at` jonger is dan 30 dagen; plekken met een oudere check komen in de dagelijkse job weer aan bod. Gescheiden van `places`, omdat een update van `places` `updated_at` en het logboek raakt.
 
+**`place_google` (aanvulling 22 november)**: extra kolommen `primary_type`, `types`, `reviews_sampled`, `reviews_recent` (laatste 12 maanden) en `newest_review_at`, voor `lib/google-quality.ts`. `business_status` wordt nu gevuld (OPERATIONAL, CLOSED_TEMPORARILY, CLOSED_PERMANENTLY).
+
+**`updates_queue`** krijgt bron `google-api` en **`discovery_candidates`** bron `google` (migratie `20261122120000`); functies `public.google_aanvullen(dry_run, limit)`, `public.google_kandidaten(dry_run)` (alleen Nederlandse adressen) en `public.google_kandidaten_naar_plekken(dry_run, limit)` (migratie `20261122130000`: concepten met `status_locked`, `sources.google`, in de scrapewachtrij), alleen voor `service_role`.
+
+**`private.place_google_details`** (migratie `20261122110000`): per plek alle overige velden van Google als `jsonb` (zonder reviews en namen), alleen intern. **`private.google_found`**: plekken die Google kent bij het zoeken op camperplaats en camping (`google_place_id`, naam, coördinaten, type, status, cijfer, adres, website, `matched_place_id` en afstand), met de match tegen al onze plekken; alleen intern, een aanwijzing voor Beheer.
+
 **`private.place_google_reviews`** (bronnenbeleid §3c, migratie `20261121110000`): per plek de reviews die de Places API teruggeeft (hoogstens vijf per ophaalronde): `review_ref`, `rating`, `body`, `language`, `published_at`, `fetched_at`. Geen naam van de schrijver. Alleen intern: private schema, RLS aan, geen leesrechten voor bezoekers en ingelogde gebruikers; de job schrijft. Cascade bij verwijderen van de plek. Kolommen `analysed_at` en `ai_result` (review-lezer, migratie `20261121120000`). Voorstellen uit reviews komen in `updates_queue` met bron `google-review`; RPC's `next_review_batch` en `apply_review_reading` zijn alleen voor `service_role`.
 
 | Tabel | Velden (verplicht met *) | Standaarden en indexen |

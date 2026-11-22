@@ -66,7 +66,7 @@ type Update = {
 };
 
 const FIELD_LABEL: Record<string, string> = { verified_at: "bevestigt gegevens" };
-const SOURCE_TONE: Record<string, "green" | "yellow" | "neutral" | "road"> = { eigenaar: "green", "mail (onbevestigd)": "yellow", "ai-lezer": "road", "google-review": "road" };
+const SOURCE_TONE: Record<string, "green" | "yellow" | "neutral" | "road"> = { eigenaar: "green", "mail (onbevestigd)": "yellow", "ai-lezer": "road", "google-review": "road", "google-api": "road" };
 
 function scoreTone(s: number | null) {
   return s === null ? "neutral" : s >= 70 ? "green" : s >= 40 ? "yellow" : "red";
@@ -135,6 +135,8 @@ function TriageInbox() {
           Bron &quot;ai-lezer&quot; is een tweede lezing van de website: het citaat staat letterlijk op de bronpagina, maar kijk
           of het over campers gaat. Bron &quot;google-review&quot; komt uit reviews van Google: minstens twee verschillende
           reviews zeggen hetzelfde, maar het is een bezoeker en geen eigenaar. Controleer het bij twijfel op de website.
+          Bron &quot;google-api&quot; komt uit de velden van Google Maps (website, telefoon, honden, toilet): wij wisten het niet,
+          of bij honden zegt Google iets anders. Het is geen eigenaar: controleer het bij twijfel op de website van de plek.
         </p>
         <button className={secondary} onClick={evaluateAll} disabled={busy !== null || !updates.some((r) => r.ai_score === null)}>
           {busy === "alle" ? "Bezig…" : "AI-check voor alles zonder score"}

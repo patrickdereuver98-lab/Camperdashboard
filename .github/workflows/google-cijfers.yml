@@ -1,7 +1,8 @@
 # Google-cijfers (README 141): haalt cijfer en aantal reviews van Google Maps op voor plekken zonder check of met een
 # check ouder dan 30 dagen, en bewaart ze in public.place_google. Dagelijks een beperkt aantal, zodat de kosten
 # voorspelbaar blijven. Eerste ronde voor alle plekken: Actions, "Google-cijfers", Run workflow, limiet 3000.
-# Secrets: GOOGLE_PLACES_API_KEY en SUPABASE_DB_URL (die laatste gebruiken de andere workflows al).
+# Secret: GOOGLE_PLACES_API_KEY. SUPABASE_DB_URL is optioneel: zonder bewaart de job een bestand (artifact) dat je
+# met scripts/google-ingest.mjs inlaadt, en dan staat er geen analyse in de samenvatting.
 name: Google-cijfers
 
 on:
@@ -16,6 +17,21 @@ on:
         description: "Proefrun: alleen Google bellen, niets schrijven"
         type: boolean
         default: false
+      mode:
+        description: "cijfers (standaard) of ontdekken (zoeken naar camperplaatsen en campings)"
+        type: choice
+        options: [cijfers, ontdekken]
+        default: cijfers
+      again:
+        description: "Cijfers: ook plekken die korter dan 30 dagen geleden gecheckt zijn (nieuwe velden ophalen)"
+        type: boolean
+        default: false
+      bbox:
+        description: "Ontdekken: zuid,west,noord,oost (leeg = heel Nederland)"
+        default: ""
+      max_calls:
+        description: "Ontdekken: hoogstens zoveel aanroepen"
+        default: "600"
 
 permissions:
   contents: read
@@ -37,12 +53,32 @@ jobs:
         working-directory: web
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          # Optioneel: met dit secret schrijft de job rechtstreeks naar de database; zonder bewaart hij een bestand
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           LIMIT: ${{ inputs.limit || '250' }}
           DRY: ${{ inputs.dry && '--dry' || '' }}
-        run: node scripts/google-ratings.mjs --limit "$LIMIT" $DRY
-      - name: Analyse in de samenvatting
+          AGAIN: ${{ inputs.again && '--again' || '' }}
+          MODE: ${{ inputs.mode || 'cijfers' }}
+          BBOX: ${{ inputs.bbox }}
+          MAX_CALLS: ${{ inputs.max_calls || '600' }}
+        run: |
+          R="node --no-warnings --import ./tests/register.mjs"
+          if [ "$MODE" = "ontdekken" ]; then
+            B=""; [ -n "$BBOX" ] && B="--bbox $BBOX"
+            $R scripts/google-discover.mjs --max-calls "$MAX_CALLS" $B --out "$RUNNER_TEMP/google-resultaat.json" $DRY
+          else
+            $R scripts/google-ratings.mjs --limit "$LIMIT" $AGAIN --out "$RUNNER_TEMP/google-resultaat.json" $DRY
+          fi
+      - name: Resultaat bewaren (zonder databasetoegang, laad in met scripts/google-ingest.mjs)
         if: ${{ always() && !inputs.dry }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: google-resultaat
+          path: ${{ runner.temp }}/google-resultaat.json
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Analyse in de samenvatting
+        if: ${{ always() && !inputs.dry && env.SUPABASE_DB_URL != '' }}
         working-directory: web
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
