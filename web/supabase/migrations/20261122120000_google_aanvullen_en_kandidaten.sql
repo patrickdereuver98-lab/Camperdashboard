@@ -80,6 +80,7 @@ begin
    where g.matched_place_id is null and g.business_status is not distinct from 'OPERATIONAL'
      and g.primary_type in ('campground', 'rv_park', 'camping_cabin')
      and g.lat between 50.7 and 53.7 and g.lng between 3.2 and 7.3
+     and g.address ~ '\d{4}\s?[A-Z]{2}' -- Nederlandse postcode (België en Duitsland vallen af)
      and not exists (select 1 from public.discovery_candidates c where c.source = 'google' and c.external_id = g.google_place_id);
   if not p_dry_run then
     insert into public.discovery_candidates (source, external_id, title, url, doc_type, street, postcode, town, lat, lng, nearest_place_id, nearest_m, status)
@@ -101,6 +102,7 @@ begin
      where g.matched_place_id is null and g.business_status is not distinct from 'OPERATIONAL'
        and g.primary_type in ('campground', 'rv_park', 'camping_cabin')
        and g.lat between 50.7 and 53.7 and g.lng between 3.2 and 7.3
+       and g.address ~ '\d{4}\s?[A-Z]{2}'
      on conflict (source, external_id) do nothing;
   end if;
   return jsonb_build_object('dry_run', p_dry_run, 'kandidaten', n, 'met_website', n_site);

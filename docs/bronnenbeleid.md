@@ -154,6 +154,11 @@ om onze eigen gegevens ermee te scannen en te vergelijken (vertrektijd, prijs, g
   (`discovery_candidates`, bron `google`, `public.google_kandidaten()`), met de website als die er is, zodat de scraper en de
   AI-lezer ze kunnen lezen. Een plek alleen bij Google wordt geen plek: §2 vraagt een tweede bron, bijvoorbeeld de eigen
   website van de plek. Beheer beslist.
+- **Kandidaten tot concept (`public.google_kandidaten_naar_plekken()`, 22 november 2026):** alleen kandidaten met een
+  Nederlands adres (postcode met twee letters) en een eigen website: niet van een directory, netwerk of sociaal netwerk,
+  niet dezelfde website als een bestaande plek, niet binnen 6 maanden eerder opgeruimd, geen wildkamperen. Het concept krijgt
+  `status = 'draft'` en `status_locked`, met `sources.google` voor de herkomst. De website van de plek is de tweede bron voor
+  bestaan; publiceren doet Beheer.
 - **Op verzoek wissen:** vraagt Google, een schrijver of een eigenaar om verwijdering, dan verwijdert beheer de rij(en)
   uit `private.place_google_reviews`.
 - **Risico, bewust geaccepteerd door de eigenaar:** de voorwaarden van Google Maps Platform noemen een bewaartermijn van

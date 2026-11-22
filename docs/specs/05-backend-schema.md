@@ -109,7 +109,7 @@ Indexen: `slug` (uniek), `(osm_type, osm_id)` (uniek), `status`, `province`, tri
 
 **`place_google` (aanvulling 22 november)**: extra kolommen `primary_type`, `types`, `reviews_sampled`, `reviews_recent` (laatste 12 maanden) en `newest_review_at`, voor `lib/google-quality.ts`. `business_status` wordt nu gevuld (OPERATIONAL, CLOSED_TEMPORARILY, CLOSED_PERMANENTLY).
 
-**`updates_queue`** krijgt bron `google-api` en **`discovery_candidates`** bron `google` (migratie `20261122120000`); functies `public.google_aanvullen(dry_run, limit)` en `public.google_kandidaten(dry_run)`, alleen voor `service_role`.
+**`updates_queue`** krijgt bron `google-api` en **`discovery_candidates`** bron `google` (migratie `20261122120000`); functies `public.google_aanvullen(dry_run, limit)`, `public.google_kandidaten(dry_run)` (alleen Nederlandse adressen) en `public.google_kandidaten_naar_plekken(dry_run, limit)` (migratie `20261122130000`: concepten met `status_locked`, `sources.google`, in de scrapewachtrij), alleen voor `service_role`.
 
 **`private.place_google_details`** (migratie `20261122110000`): per plek alle overige velden van Google als `jsonb` (zonder reviews en namen), alleen intern. **`private.google_found`**: plekken die Google kent bij het zoeken op camperplaats en camping (`google_place_id`, naam, coördinaten, type, status, cijfer, adres, website, `matched_place_id` en afstand), met de match tegen al onze plekken; alleen intern, een aanwijzing voor Beheer.
 
