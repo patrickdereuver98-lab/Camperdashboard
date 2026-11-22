@@ -148,6 +148,12 @@ om onze eigen gegevens ermee te scannen en te vergelijken (vertrektijd, prijs, g
   eigennaam). Wat Google kent en wij niet staat in `private.google_found` als aanwijzing voor Beheer. Het wordt geen plek
   zonder controle op de eigen website of een andere bron van tier 1 of 2. Een straat of gebied bij Google (type `route`,
   `locality`) telt nooit.
+- **Aanvullen en kandidaten (besluit Patrick, 22 november 2026):** wat Google weet gaat als voorstel naar de Triage Inbox
+  (bron `google-api`, `public.google_aanvullen()`): website, telefoon en toilet alleen als wij het niet weten, honden ook als
+  Google iets anders zegt. Plekken die Google kent en wij niet (kampeertype, in bedrijf) worden kandidaten voor Beheer
+  (`discovery_candidates`, bron `google`, `public.google_kandidaten()`), met de website als die er is, zodat de scraper en de
+  AI-lezer ze kunnen lezen. Een plek alleen bij Google wordt geen plek: §2 vraagt een tweede bron, bijvoorbeeld de eigen
+  website van de plek. Beheer beslist.
 - **Op verzoek wissen:** vraagt Google, een schrijver of een eigenaar om verwijdering, dan verwijdert beheer de rij(en)
   uit `private.place_google_reviews`.
 - **Risico, bewust geaccepteerd door de eigenaar:** de voorwaarden van Google Maps Platform noemen een bewaartermijn van
