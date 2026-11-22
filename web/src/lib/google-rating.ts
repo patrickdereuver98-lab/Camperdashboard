@@ -44,7 +44,7 @@ export interface GoogleReview {
 /** Hoe ver Google en wij mogen verschillen voor dezelfde plek */
 export const MAX_MATCH_METERS = 250;
 
-export const PLACE_ID = /^[A-Za-z0-9_-]{10,300}$/;
+export const PLACE_ID = /^[A-Za-z0-9_-]{10,200}$/;
 
 const GENERIC = new Set(["de", "het", "een", "en", "van", "aan", "bij", "camper", "campers", "camperplaats", "camperplaatsen", "camping", "parking", "parkeerplaats", "stellplatz", "plaats", "plek", "jachthaven", "haven"]);
 

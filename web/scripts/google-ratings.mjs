@@ -1,93 +1,106 @@
-// Haalt cijfer, aantal en de reviews (zonder naam van de schrijver) van Google Maps op (README 141). Cijfer en aantal gaan
-// naar public.place_google, de reviews naar private.place_google_reviews (alleen intern, bronnenbeleid §3c).
-//   node scripts/google-ratings.mjs [--limit 250] [--dry]
-// Pakt de plekken zonder check of met een check ouder dan 30 dagen; nieuwste achteraan. Eerste ronde: --limit 3000.
-// Nodig: GOOGLE_PLACES_API_KEY en SUPABASE_DB_URL (psql). Reviews nooit op de site.
+// Haalt cijfer, aantal en de reviews (zonder naam van de schrijver) van Google Maps op (README 141).
+//   node --no-warnings --import ./tests/register.mjs scripts/google-ratings.mjs [--limit 250] [--dry] [--out resultaat.json]
+// Plekken zonder check of met een check ouder dan 30 dagen, oudste eerst. Eerste ronde: --limit 3000.
+// Twee manieren om te bewaren:
+//   - SUPABASE_DB_URL gezet: rechtstreeks naar de database (psql): place_google en private.place_google_reviews.
+//   - zonder: alleen lezen met de openbare sleutel en het resultaat in --out (bestand); laad het daarna in met
+//     scripts/google-ingest.mjs. Zo hoeft er geen databasetoegang in GitHub te staan.
+// Nodig: GOOGLE_PLACES_API_KEY. Reviews komen nooit op de site (bronnenbeleid §3c).
 import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { fetchGoogleCandidates, matchGooglePlace, ratingOf, PLACE_ID } from "../src/lib/google-rating.ts";
+import { forgetSql, saveSql } from "./google-sql.mjs";
 
 const args = process.argv.slice(2);
+const flag = (n) => args[args.indexOf(n) + 1];
 const dry = args.includes("--dry");
-const limit = Math.min(Math.max(Number(args[args.indexOf("--limit") + 1]) || 250, 1), 5000);
+const limit = Math.min(Math.max(Number(flag("--limit")) || 250, 1), 5000);
+const outFile = args.includes("--out") ? flag("--out") : null;
 const key = process.env.GOOGLE_PLACES_API_KEY;
 const db = process.env.SUPABASE_DB_URL;
-if (!key || !db) {
-  console.error("GOOGLE_PLACES_API_KEY en SUPABASE_DB_URL zijn nodig.");
+// Dezelfde openbare gegevens als in de website (lib/env.ts)
+const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://qkrmthrhwmmmwswmfgwc.supabase.co";
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "sb_publishable_EGEUx5L3Df4w18_DgmtbHw_6RUoglht";
+if (!key || (!db && !outFile)) {
+  console.error("GOOGLE_PLACES_API_KEY en SUPABASE_DB_URL (of --out bestand) zijn nodig.");
   process.exit(2);
 }
 
 const psql = (sql) => execFileSync("psql", [db, "-X", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).trim();
 
-const rows = JSON.parse(
-  psql(`select coalesce(json_agg(r), '[]') from (
-    select p.id, p.name, p.town, p.lat, p.lng, g.google_place_id
-      from public.places p left join public.place_google g on g.place_id = p.id
-     where p.status = 'published' and p.merged_into is null
-       and (g.checked_at is null or g.checked_at < now() - interval '30 days')
-     order by g.checked_at nulls first, p.id
-     limit ${limit}) r`),
-);
-console.log(`${rows.length} plekken te checken${dry ? " (proefrun, niets wordt geschreven)" : ""}`);
-
-const UUID = /^[0-9a-f-]{36}$/;
-const num = (n) => (Number.isFinite(n) ? n : "null");
-// Tekst via base64, zodat er niets in de SQL kan ontsnappen
-const b64 = (t) => `convert_from(decode('${Buffer.from(String(t ?? ""), "utf8").toString("base64")}', 'base64'), 'UTF8')`;
-function saveReview(placeId, r) {
-  if (!r?.name || !/^places\/[A-Za-z0-9_-]+\/reviews\/[A-Za-z0-9_-]+$/.test(r.name)) return;
-  const rating = Number.isInteger(r.rating) && r.rating >= 1 && r.rating <= 5 ? r.rating : "null";
-  const lang = /^[A-Za-z-]{2,12}$/.test(r.text?.languageCode ?? "") ? `'${r.text.languageCode}'` : "null";
-  const when = Number.isFinite(Date.parse(r.publishTime)) ? `'${new Date(r.publishTime).toISOString()}'` : "null";
-  psql(`insert into private.place_google_reviews (place_id, review_ref, rating, body, language, published_at)
-        values ('${placeId}', '${r.name}', ${rating}, ${b64(r.text?.text)}, ${lang}, ${when})
-        on conflict (place_id, review_ref) do update set rating = excluded.rating, body = excluded.body, fetched_at = now()`);
+async function rest(path) {
+  const out = [];
+  for (let offset = 0; ; offset += 1000) {
+    const res = await fetch(`${URL_}/rest/v1/${path}&limit=1000&offset=${offset}`, { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } });
+    if (!res.ok) throw new Error(`Supabase ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const rows = await res.json();
+    out.push(...rows);
+    if (rows.length < 1000) return out;
+  }
 }
 
+async function due() {
+  if (db) {
+    return JSON.parse(
+      psql(`select coalesce(json_agg(r), '[]') from (
+        select p.id, p.name, p.town, p.lat, p.lng, g.google_place_id
+          from public.places p left join public.place_google g on g.place_id = p.id
+         where p.status = 'published' and p.merged_into is null
+           and (g.checked_at is null or g.checked_at < now() - interval '30 days')
+         order by g.checked_at nulls first, p.id limit ${limit}) r`),
+    );
+  }
+  const places = await rest("places?select=id,name,town,lat,lng&status=eq.published&merged_into=is.null&order=id");
+  const seen = new Map((await rest("place_google?select=place_id,google_place_id,checked_at&order=place_id")).map((g) => [g.place_id, g]));
+  const cutoff = Date.now() - 30 * 86400_000;
+  return places
+    .map((p) => ({ ...p, google_place_id: seen.get(p.id)?.google_place_id ?? null, checked: seen.has(p.id) ? Date.parse(seen.get(p.id).checked_at) : 0 }))
+    .filter((p) => p.checked < cutoff)
+    .sort((a, b) => a.checked - b.checked)
+    .slice(0, limit);
+}
+
+const rows = await due();
+console.log(`${rows.length} plekken te checken${dry ? " (proefrun, niets wordt bewaard)" : ""}`);
+
+const results = [];
 let found = 0, none = 0, failed = 0, streak = 0;
+const REVIEW_FIELDS = "reviews.name,reviews.rating,reviews.text,reviews.publishTime";
+const reviewsOf = (list) =>
+  (list ?? []).map((v) => ({ name: v.name, rating: v.rating, text: v.text?.text ?? "", language: v.text?.languageCode, publishTime: v.publishTime }));
 
 for (const p of rows) {
-  if (!UUID.test(p.id)) continue;
   try {
-    let id = null, rating = null, count = null, status = null, reviews = [];
+    let result = null;
     if (p.google_place_id && PLACE_ID.test(p.google_place_id)) {
-      // Bekende place_id: één goedkope aanroep voor cijfer, aantal en status
       const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(p.google_place_id)}`, {
-        headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": "id,rating,userRatingCount,businessStatus,reviews.name,reviews.rating,reviews.text,reviews.publishTime" },
+        headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": `id,rating,userRatingCount,businessStatus,${REVIEW_FIELDS}` },
         signal: AbortSignal.timeout(8000),
       });
       if (res.status === 404) {
-        // Verlopen place_id: wissen, de volgende ronde zoekt opnieuw
-        if (!dry) psql(`delete from public.place_google where place_id = '${p.id}'`);
+        results.push({ place_id: p.id, forget: true });
+        if (db && !dry) psql(forgetSql(p.id));
         none++;
         continue;
       }
       if (!res.ok) throw new Error(`Google ${res.status}`);
       const j = await res.json();
-      id = p.google_place_id;
-      const r = ratingOf({ id, rating: j.rating, userRatingCount: j.userRatingCount });
-      rating = r?.rating ?? null;
-      count = r?.count ?? null;
-      status = j.businessStatus ?? null;
-      reviews = j.reviews ?? [];
+      const r = ratingOf({ id: p.google_place_id, rating: j.rating, userRatingCount: j.userRatingCount });
+      result = { google_place_id: p.google_place_id, rating: r?.rating ?? null, rating_count: r?.count ?? null, business_status: j.businessStatus ?? null, reviews: reviewsOf(j.reviews) };
     } else {
-      const c = matchGooglePlace(p, await fetchGoogleCandidates(p, key, fetch, true));
+      const cands = await fetchGoogleCandidates(p, key, fetch, true);
+      const c = matchGooglePlace(p, cands);
       if (c) {
-        id = c.id;
         const r = ratingOf(c);
-        rating = r?.rating ?? null;
-        count = r?.count ?? null;
-        reviews = c.reviews ?? [];
+        result = { google_place_id: c.id, rating: r?.rating ?? null, rating_count: r?.count ?? null, business_status: null, reviews: reviewsOf(c.reviews) };
       }
     }
     streak = 0;
-    id ? found++ : none++;
+    result ? found++ : none++;
     if (dry) continue;
-    for (const r of reviews) saveReview(p.id, r);
-    const st = ["OPERATIONAL", "CLOSED_TEMPORARILY", "CLOSED_PERMANENTLY"].includes(status) ? `'${status}'` : "null";
-    psql(`insert into public.place_google (place_id, google_place_id, rating, rating_count, business_status, checked_at)
-          values ('${p.id}', ${id ? `'${id}'` : "null"}, ${num(rating)}, ${num(count)}, ${st}, now())
-          on conflict (place_id) do update set google_place_id = excluded.google_place_id, rating = excluded.rating,
-            rating_count = excluded.rating_count, business_status = excluded.business_status, checked_at = excluded.checked_at`);
+    const at = new Date().toISOString();
+    results.push({ place_id: p.id, name: p.name, checked_at: at, result });
+    if (db) psql(saveSql(p.id, result, at));
   } catch (err) {
     failed++;
     streak++;
@@ -100,5 +113,6 @@ for (const p of rows) {
   }
   await new Promise((r) => setTimeout(r, 120));
 }
-console.log(`klaar: ${found} gevonden, ${none} zonder match of cijfer, ${failed} mislukt`);
+if (outFile && !dry) writeFileSync(outFile, JSON.stringify(results));
+console.log(`klaar: ${found} gevonden, ${none} zonder match of cijfer, ${failed} mislukt${outFile && !dry ? `; ${results.length} resultaten in ${outFile}` : ""}`);
 process.exit(failed && streak >= 3 ? 1 : 0);

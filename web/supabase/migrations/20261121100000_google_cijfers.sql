@@ -5,7 +5,7 @@
 -- De place_id mag onbeperkt bewaard worden; cijfer en aantal tonen we alleen als checked_at jonger is dan 30 dagen.
 create table if not exists public.place_google (
   place_id        uuid primary key references public.places (id) on delete cascade,
-  google_place_id text check (google_place_id ~ '^[A-Za-z0-9_-]{10,300}$'),
+  google_place_id text check (google_place_id ~ '^[A-Za-z0-9_-]{10,200}$'),
   rating          numeric(2,1) check (rating between 1 and 5),
   rating_count    integer check (rating_count >= 0),
   business_status text check (business_status in ('OPERATIONAL', 'CLOSED_TEMPORARILY', 'CLOSED_PERMANENTLY')),
