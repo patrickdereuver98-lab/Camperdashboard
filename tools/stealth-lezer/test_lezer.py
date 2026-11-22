@@ -175,6 +175,23 @@ def test_alles_in_orde_geeft_geen_failed():
     assert pipe.applied["failed"] == 0
 
 
+def test_adressen_lopen_gelijk_op_met_paginas():
+    """AI-lezer (README 140): bij elk citaat de juiste pagina, dus `urls` hoort bij `pages`; een mislukte pagina valt
+    uit allebei."""
+    from lezer import read_place
+
+    home = "https://camping.nl/"
+    pages = {
+        home: _Page(200, "<p>Welkom</p>", home),
+        "https://camping.nl/weg": _Page(503),
+        "https://camping.nl/tarieven": _Page(200, "<p>€ 20,00</p>", "https://camping.nl/tarieven"),
+    }
+    pipe = _Pipe(["https://camping.nl/weg", "https://camping.nl/tarieven"])
+    read_place(_reader(pages, lambda url: (404, "text/plain", b"")), pipe, {"id": "p3", "website": home})
+    assert pipe.applied["urls"] == [home, "https://camping.nl/tarieven"]
+    assert len(pipe.applied["urls"]) == len(pipe.applied["pages"])
+
+
 def _pins(requirements: str) -> dict[str, str]:
     """Exacte pins (`naam==versie`, ook met extras) uit een requirements-bestand; commentaar telt niet mee."""
     pins = {}

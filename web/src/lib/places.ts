@@ -9,6 +9,7 @@ import { cleanDescription } from "./description";
 import { rankPhotos } from "./photos";
 import { fetchWithRetry, SNAPSHOT_LIFE, SupabaseError, withFallbackSource, type Sourced } from "./fallback";
 import { isFromPriceNote } from "./price-check";
+import { isFresh, type GoogleRating } from "./google-rating";
 import type { Photo, Place, PlaceSummary, Review, Town } from "./types";
 
 // ── Supabase REST ───────────────────────────────────────────────────────────
@@ -370,6 +371,30 @@ export async function getReviews(placeId: string): Promise<Review[]> {
   );
   setLife(r, "plekken");
   return r.value;
+}
+
+/**
+ * Google-cijfer uit `place_google` (gevuld door scripts/google-ratings.mjs, README 141). Alleen als de check jonger is dan
+ * 30 dagen en Google echt een cijfer gaf. Een storing of een ontbrekende tabel geeft gewoon geen cijfer, nooit een foutpagina.
+ */
+export async function getGoogleRating(placeId: string): Promise<GoogleRating | undefined> {
+  "use cache";
+  cacheTag("places", `google-${placeId}`);
+  cacheLife("hours");
+  if (OFFLINE_BUILD) return undefined;
+  try {
+    const row = (
+      await rest<{ google_place_id?: string; rating?: string | number; rating_count?: number; checked_at?: string }>(
+        `place_google?select=google_place_id,rating,rating_count,checked_at&place_id=eq.${placeId}`,
+        { all: false },
+      )
+    )[0];
+    if (!row?.google_place_id || row.rating == null || !row.rating_count || !isFresh(row.checked_at)) return undefined;
+    return { rating: Number(row.rating), count: row.rating_count, placeId: row.google_place_id };
+  } catch (err) {
+    console.error("[vrijstaan] Google-cijfer niet gelezen:", (err as Error).message);
+    return undefined;
+  }
 }
 
 export async function getTowns(): Promise<Town[]> {

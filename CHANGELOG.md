@@ -2,6 +2,21 @@
 
 Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat live in Supabase staat, staat erbij.
 
+## Volgende versie (in de maak)
+
+**Herlezing** (dataplan november, spoor 1.4)
+- Een vertrekregel verdwijnt nooit stil: zegt een lezing niets over het vertrek, dan blijven regel, tijd en bronzin
+  staan en wordt het wissen een voorstel in de Triage Inbox (migratie `20261120400000_vertrek_niet_stil_wissen`). In de
+  tweede herlezingsportie wiste parser 47 25 regels op 391 plekken (twee tijden, of een subpagina die niet gelezen
+  werd); die zijn uit het veldlog teruggezet (back-up `private.herstel_p47_20261120`).
+
+**Data** (README 140, PR #176)
+- AI-lezer (README 140): Gemini leest de ingekorte websitetekst een tweede keer; elk feit moet een letterlijk citaat
+  hebben en gaat als voorstel (met citaat en bronpagina) naar de Triage Inbox. Nooit rechtstreeks in de plek.
+- Kandidaten uit officiële bekendmakingen: vergunningen en besluiten van gemeenten over camperplaatsen, met afstand
+  tot de dichtstbijzijnde bekende plek, in Mission Control → Kandidaten.
+- Herlees-rem: de scrape-taken gaan uit als de nieuwste parser bij meer dan 5% van de gelezen plekken een kernfeit wist.
+
 ## 0.9.3 (20 november 2026)
 
 Dataplan november ([dataplan](docs/dataplan-2026-11.md)), PR #170 en #172.

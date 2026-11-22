@@ -6,11 +6,11 @@ import { errorMessage } from "@/lib/supabase-browser";
 import { groupUpdates } from "@/lib/update-triage";
 import { Badge, Empty, ErrorNote, PageTitle, Segmented, danger, db, primary, secondary, useQuery, when } from "../ui";
 
-type Tab = "inbox" | "logs" | "updates";
+type Tab = "inbox" | "kandidaten" | "logs" | "updates";
 
 /**
- * Mission Control: Triage Inbox (updates van gebruikers met AI-advies), Logboeken (API's, cron, scrapers) en de
- * update-radar (Dependabot). Marketing staat apart op /admin/marketing. Alleen voor rol admin: de database (RLS, has_admin_role) geeft anderen lege lijsten.
+ * Mission Control: Triage Inbox (updates van gebruikers en de AI-lezer met AI-advies), Kandidaten (mogelijke nieuwe
+ * plekken uit officiële bekendmakingen), Logboeken (API's, cron, scrapers) en de update-radar (Dependabot). Marketing staat apart op /admin/marketing. Alleen voor rol admin: de database (RLS, has_admin_role) geeft anderen lege lijsten.
  */
 export default function MissionControl() {
   const [tab, setTab] = useState<Tab>("inbox");
@@ -27,11 +27,13 @@ export default function MissionControl() {
         onChange={setTab}
         options={[
           { value: "inbox", label: "Triage Inbox" },
+          { value: "kandidaten", label: "Kandidaten" },
           { value: "logs", label: "Logboeken" },
           { value: "updates", label: "Updates" },
         ]}
       />
       {tab === "inbox" && <TriageInbox />}
+      {tab === "kandidaten" && <Candidates />}
       {tab === "logs" && <SystemLogs />}
       {tab === "updates" && <SystemUpdates />}
     </div>
@@ -54,6 +56,9 @@ type Update = {
   source: string;
   submission_id: string | null;
   owner_reply_id: string | null;
+  reading_id: string | null;
+  quote: string | null;
+  source_url: string | null;
   ai_score: number | null;
   ai_advice: string | null;
   created_at: string;
@@ -61,7 +66,7 @@ type Update = {
 };
 
 const FIELD_LABEL: Record<string, string> = { verified_at: "bevestigt gegevens" };
-const SOURCE_TONE: Record<string, "green" | "yellow" | "neutral" | "road"> = { eigenaar: "green", "mail (onbevestigd)": "yellow" };
+const SOURCE_TONE: Record<string, "green" | "yellow" | "neutral" | "road"> = { eigenaar: "green", "mail (onbevestigd)": "yellow", "ai-lezer": "road", "google-review": "road" };
 
 function scoreTone(s: number | null) {
   return s === null ? "neutral" : s >= 70 ? "green" : s >= 40 ? "yellow" : "red";
@@ -72,7 +77,7 @@ function TriageInbox() {
     () =>
       db()
         .from("updates_queue")
-        .select("id, field_changed, old_value, new_value, source, submission_id, owner_reply_id, ai_score, ai_advice, created_at, places(name, slug)")
+        .select("id, field_changed, old_value, new_value, source, submission_id, owner_reply_id, reading_id, quote, source_url, ai_score, ai_advice, created_at, places(name, slug)")
         .eq("status", "pending")
         .order("created_at")
         .limit(200),
@@ -127,6 +132,9 @@ function TriageInbox() {
         <p className="mr-auto text-sm text-ink-2">
           {rows.length} open. Accepteer zet de waarde in de plek met het merkteken van beheer; het AI-advies is alleen een hulpmiddel.
           Bron &quot;mail (onbevestigd)&quot; komt van een ander adres dan dat van de plek: controleer het eerst bij de eigenaar.
+          Bron &quot;ai-lezer&quot; is een tweede lezing van de website: het citaat staat letterlijk op de bronpagina, maar kijk
+          of het over campers gaat. Bron &quot;google-review&quot; komt uit reviews van Google: minstens twee verschillende
+          reviews zeggen hetzelfde, maar het is een bezoeker en geen eigenaar. Controleer het bij twijfel op de website.
         </p>
         <button className={secondary} onClick={evaluateAll} disabled={busy !== null || !updates.some((r) => r.ai_score === null)}>
           {busy === "alle" ? "Bezig…" : "AI-check voor alles zonder score"}
@@ -156,7 +164,10 @@ function TriageInbox() {
                   <td className={td}><Badge tone={SOURCE_TONE[r.source] ?? "neutral"}>{r.source}</Badge></td>
                   <td className={`${td} font-mono`}>{r.fields.map((f) => FIELD_LABEL[f.field_changed] ?? f.field_changed).join(" + ")}</td>
                   <td className={`${td} text-muted`}>{r.fields.map((f) => show(f.old_value)).join(", ")}</td>
-                  <td className={`${td} font-semibold`}>{r.fields.map((f) => show(f.new_value)).join(", ")}</td>
+                  <td className={`${td} max-w-sm`}>
+                    <span className="font-semibold">{r.fields.map((f) => show(f.new_value)).join(", ")}</span>
+                    <Evidence rows={r.fields} />
+                  </td>
                   <td className={td}><Badge tone={scoreTone(r.ai_score)}>{r.ai_score ?? "–"}</Badge></td>
                   <td className={`${td} max-w-xs text-ink-2`}>{r.ai_advice ?? ""}</td>
                   <td className={`${td} whitespace-nowrap text-muted`}>{when(r.created_at)}</td>
@@ -165,6 +176,164 @@ function TriageInbox() {
                       <button className={`${secondary} h-9 px-3`} disabled={busy !== null} onClick={() => run(r.id, () => evaluate(r.id))}>AI</button>
                       <button className={`${primary} h-9 px-3`} disabled={busy !== null} onClick={() => run(r.id, () => db().rpc("admin_apply_update", { p_id: r.id }))}>Accepteer</button>
                       <button className={`${danger} h-9 px-3`} disabled={busy !== null} onClick={() => run(r.id, () => db().rpc("admin_reject_update", { p_id: r.id }))}>Wijs af</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Citaat en bronpagina bij een voorstel van de AI-lezer (één keer per citaat) */
+function Evidence({ rows }: { rows: Update[] }) {
+  const seen = new Set<string>();
+  const items = rows.filter((f) => f.quote && !seen.has(f.quote) && seen.add(f.quote));
+  if (!items.length) return null;
+  return (
+    <>
+      {items.map((f) => (
+        <p key={f.id} className="mt-1 text-xs text-ink-2">
+          &ldquo;{f.quote}&rdquo;{" "}
+          {f.source_url && /^https?:\/\//.test(f.source_url) && (
+            <a href={f.source_url} target="_blank" rel="noopener noreferrer" className="text-forest underline">
+              bron
+            </a>
+          )}
+        </p>
+      ))}
+    </>
+  );
+}
+
+// ── Kandidaten uit officiële bekendmakingen ──────────────────────────────────────────────────────────────────────────
+type Candidate = {
+  id: number;
+  title: string;
+  url: string;
+  authority: string | null;
+  doc_type: string | null;
+  street: string | null;
+  postcode: string | null;
+  town: string | null;
+  published_on: string | null;
+  lat: number | null;
+  lng: number | null;
+  nearest_m: number | null;
+  status: string;
+  places: { name: string; slug: string } | null;
+};
+
+const CANDIDATE_STATUS: { value: string; label: string }[] = [
+  { value: "toegevoegd", label: "Toegevoegd" },
+  { value: "bekend", label: "Al bekend" },
+  { value: "geen_plek", label: "Geen plek" },
+];
+
+/**
+ * Publicaties van gemeenten over camperplaatsen (vergunningen, besluiten), opgehaald door de pipeline (actie
+ * "bekendmakingen"). "Nieuw" = geen bekende plek binnen 300 m. Een plek toevoegen gaat via Beheer → Plekken; hier
+ * alleen bijhouden wat bekeken is.
+ */
+function Candidates() {
+  const [filter, setFilter] = useState<"nieuw" | "bekend">("nieuw");
+  const { data, error, loading, reload } = useQuery(
+    () =>
+      db()
+        .from("discovery_candidates")
+        .select("id, title, url, authority, doc_type, street, postcode, town, published_on, lat, lng, nearest_m, status, places:nearest_place_id(name, slug)")
+        .eq("status", filter)
+        .order("published_on", { ascending: false, nullsFirst: false })
+        .limit(300),
+    [filter],
+  );
+  const rows = (data ?? []) as unknown as Candidate[];
+  const [busy, setBusy] = useState<number | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function decide(id: number, status: string) {
+    setBusy(id);
+    setErr(null);
+    const { error } = await db().from("discovery_candidates").update({ status, decided_at: new Date().toISOString() }).eq("id", id);
+    if (error) setErr(errorMessage(error));
+    setBusy(null);
+    reload();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="mr-auto text-sm text-ink-2">
+          Vergunningen en besluiten van gemeenten waarin een camperplaats wordt genoemd. Een aanvraag is nog geen plek: kijk of
+          hij er echt is (website, kaart) voordat je hem toevoegt.
+        </p>
+        <Segmented
+          label="Toon"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "nieuw", label: "Nieuw" },
+            { value: "bekend", label: "Bij bekende plek" },
+          ]}
+        />
+        <button className={secondary} onClick={reload}>Vernieuwen</button>
+      </div>
+      <ErrorNote message={error ?? err} />
+      {loading && !rows.length ? (
+        <p className="text-muted">Laden…</p>
+      ) : !rows.length ? (
+        <Empty>{filter === "nieuw" ? "Geen nieuwe kandidaten." : "Geen kandidaten bij bekende plekken."}</Empty>
+      ) : (
+        <div className={wrap}>
+          <table className={table}>
+            <thead className="border-b border-line">
+              <tr>
+                <th className={th}>Publicatie</th><th className={th}>Gemeente</th><th className={th}>Adres</th><th className={th}>Datum</th>
+                <th className={th}>Dichtstbij</th><th className={th}><span className="sr-only">Acties</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => (
+                <tr key={c.id} className="border-b border-line last:border-0">
+                  <td className={`${td} max-w-md`}>
+                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-forest underline">{c.title}</a>
+                    {c.doc_type && <p className="mt-0.5 text-xs text-muted">{c.doc_type}</p>}
+                  </td>
+                  <td className={td}>{c.authority ?? "?"}</td>
+                  <td className={td}>
+                    {[c.street, c.postcode, c.town].filter(Boolean).join(", ") || "onbekend"}
+                    {c.lat !== null && c.lng !== null && (
+                      <a
+                        href={`https://www.openstreetmap.org/?mlat=${c.lat}&mlon=${c.lng}#map=17/${c.lat}/${c.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-1 text-forest underline"
+                      >
+                        kaart
+                      </a>
+                    )}
+                  </td>
+                  <td className={`${td} whitespace-nowrap text-muted`}>{c.published_on ?? ""}</td>
+                  <td className={td}>
+                    {c.places ? (
+                      <>
+                        <Link href={`/plek/${c.places.slug}`} target="_blank" className="text-forest underline">{c.places.name}</Link>
+                        {c.nearest_m !== null && <span className="text-muted"> ({c.nearest_m < 1000 ? `${c.nearest_m} m` : `${(c.nearest_m / 1000).toFixed(1)} km`})</span>}
+                      </>
+                    ) : (
+                      "–"
+                    )}
+                  </td>
+                  <td className={`${td} whitespace-nowrap`}>
+                    <div className="flex gap-1.5">
+                      {CANDIDATE_STATUS.filter((s) => s.value !== c.status).map((s) => (
+                        <button key={s.value} className={`${s.value === "toegevoegd" ? primary : secondary} h-9 px-3`} disabled={busy !== null} onClick={() => decide(c.id, s.value)}>
+                          {s.label}
+                        </button>
+                      ))}
                     </div>
                   </td>
                 </tr>

@@ -250,7 +250,8 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
         if xmls:
             plan = pipe.call("stealth_plan", home=home, html=html, sitemaps=xmls, focus=focus)
 
-    pages, failed, seen = [html], 0, [home]
+    # page_urls loopt gelijk op met pages: de AI-lezer noemt bij elk citaat de pagina (pipeline/ai.ts)
+    pages, page_urls, failed, seen = [html], [home], 0, [home]
 
     def read_all(urls: list[str]):
         nonlocal failed
@@ -265,6 +266,7 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
                 continue
             if h:
                 pages.append(h)
+                page_urls.append(u)
 
     read_all(plan.get("picked", []))
     deeper = pipe.call("stealth_deeper", home=home, pages=pages, seen=seen, focus=focus)
@@ -289,6 +291,7 @@ def read_place(reader: Reader, pipe: Pipeline, place: dict) -> dict:
         id=place["id"],
         home=home,
         pages=pages,
+        urls=page_urls,
         pdfs=pdfs,
         failed=failed,
         links=plan.get("links", 0),

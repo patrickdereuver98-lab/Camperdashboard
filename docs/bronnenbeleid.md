@@ -1,6 +1,6 @@
 # Bronnenbeleid: hoe VrijStaan gegevens verzamelt
 
-> Vastgesteld 18 oktober 2026 (dataplan Fase 0, taak W0.2), bijgewerkt 25 oktober 2026 (stealth-lezer, §3a: beveiliging omzeilen mag). Geldt voor elke sessie, agent en workflow die gegevens
+> Vastgesteld 18 oktober 2026 (dataplan Fase 0, taak W0.2), bijgewerkt 25 oktober 2026 (stealth-lezer, §3a: beveiliging omzeilen mag) en 21 november 2026 (§3c: Google-reviews via de Places API). Geldt voor elke sessie, agent en workflow die gegevens
 > over plekken ophaalt. Bij twijfel: niet doen en het op het [samenwerkingsbord](samenwerking.md) zetten.
 
 We verzamelen **feiten** uit openbare bronnen en bewaren bij elk feit de bron, de datum en een letterlijk citaat.
@@ -14,7 +14,7 @@ nooit data verzinnen, onbekend blijft leeg.
 | Feiten (vertrekregel, tijden, prijs, voorzieningen, coördinaten) | Overnemen als claim met bron, datum en letterlijk citaat | Hele pagina's, beschrijvingen of foto's kopiëren |
 | Directories (Campercontact, park4night, ACSI, ANWB e.d.) | Losse pagina's lezen als aanwijzing en tweede mening | Lijsten in bulk overnemen (Databankenwet); hun teksten of foto's gebruiken |
 | Fora en reviews | Openbare pagina's lezen; het feit met datum en een postnummer of review-id als `mention_ref` | Reviewteksten (buiten het korte citaat), gebruikersnamen of profielen opslaan |
-| Google | Openbare Google Maps-pagina's lezen met de stealth-lezer (§3a) voor feiten; de Places API als Patrick een sleutel instelt (W4.4) | Reviewteksten, namen of profielen van reviewers opslaan |
+| Google | Openbare Google Maps-pagina's lezen met de stealth-lezer (§3a) voor feiten; de reviews die de Places API teruggeeft, intern (§3c); de Places API (sleutel `GOOGLE_PLACES_API_KEY` als GitHub-secret, W4.4) alleen voor `place_id` (onbeperkt bewaard), cijfer, aantal en bedrijfsstatus in `place_google`, met datum van de check en na 30 dagen vernieuwd of niet meer getoond (README 141) | Namen of profielen van reviewers opslaan; Google-reviews op de site tonen; het cijfer met ons eigen cijfer mengen |
 | Facebook, Instagram en andere pagina's achter een inlog | Openbare pagina's die zonder inlog te zien zijn (stealth-lezer); groepen alleen met toestemming van de beheerders | Inloggen, accounts aanmaken of inlogmuren omzeilen; groepen leegtrekken |
 | Beveiliging van sites | De stealth-lezer (§3a) mag alle botbeveiliging omzeilen: Cloudflare, captcha's, 403, `robots.txt`, browser-vermomming en wisselende proxy's | Inlog- en betaalmuren omzeilen; een site overbelasten; doorgaan als de eigenaar vraagt te stoppen |
 | Eigenaren | Bevestiging via de site (link op de plekpagina, Doe mee). Sinds 2 november 2026 ook een automatische mail vanuit VrijStaan naar het openbare adres van de plek, met afmeldlink (README 135) | Bellen. Mailen aan privéadressen (gmail e.d.), twee keer dezelfde eigenaar mailen, doorgaan na afmelden, een bounce of een klacht |
@@ -86,7 +86,7 @@ Wat blijft, omdat het een wettelijke grens is of andere sites schaadt (niet aan 
   afgeschermd systeem binnendringen is computervredebreuk (art. 138ab Sr).
 - **Geen databank in bulk overnemen** (Databankenwet): van een directory lezen we losse pagina's voor losse feiten,
   we kopiëren hun lijst niet. Teksten en foto's van anderen nemen we niet over.
-- **Geen persoonsgegevens opslaan** (AVG): geen namen, profielen of reviewteksten buiten het korte citaat.
+- **Geen persoonsgegevens opslaan** (AVG): geen namen, profielen of reviewteksten buiten het korte citaat. Uitzondering: Google-reviews via de Places API (§3c).
 - **Niemand overbelasten:** hoogstens één verzoek per 5 seconden per host en 7 pagina's per site per ronde. Bij 429
   of een trage site gaan we langzamer, niet sneller.
 - **Stoppen als een eigenaar of site daarom vraagt** (mail, klacht, juridische brief): de bron gaat op geblokkeerd
@@ -99,6 +99,46 @@ Wat blijft, omdat het een wettelijke grens is of andere sites schaadt (niet aan 
 Risico, bewust geaccepteerd door de eigenaar: sites kunnen ons blokkeren, een klacht of sommatie sturen, en de
 voorwaarden van sites (Google, Meta, directories) verbieden dit vaak, wat tot een claim kan leiden. VrijStaan
 verschijnt dan als bron van het verkeer, ook al gebruikt de lezer een browser-user-agent.
+
+## 3b. AI-lezer (besluit Patrick, 20 november 2026, README 140)
+
+Een taalmodel (Gemini) leest dezelfde tekst als de lezer een tweede keer. Het is geen nieuwe bron: het leest alleen wat
+de pipeline of de stealth-lezer van de eigen site al ophaalde, en de regels van §1 en §3a gelden ongewijzigd.
+
+- Naar het model gaat alleen de ingekorte tekst van de site (regels over vertrek, aankomst, prijs, maten, verblijf),
+  zonder persoonsgegevens van bezoekers.
+- Het model schrijft niets. Elk feit heeft een letterlijk citaat van minstens 15 tekens op één regel, met het getal of
+  de tijd erin; `pipeline/ai.ts` controleert dat, en ook het onderwerp (geen verhuur, receptie of toeslag). Wat
+  overblijft, is een voorstel in de Triage Inbox. Beheer beslist.
+- Per 24 uur telt alleen als de eigen extractor het in dezelfde zin ook leest; vrij vertrek zonder die bevestiging
+  alleen bij een letterlijke zin als "geen vaste vertrektijd".
+- Een door een mens bevestigde vertrekregel krijgt geen AI-voorstel; een afgewezen voorstel komt niet terug.
+
+## 3c. Google-reviews via de Places API (besluit Patrick, 21 november 2026, README 141)
+
+De eigenaar heeft besloten dat we de reviews die de Places API per plek teruggeeft (hoogstens vijf) ophalen en bewaren,
+om onze eigen gegevens ermee te scannen en te vergelijken (vertrektijd, prijs, gesloten of verhuisd).
+
+- **Wat we bewaren:** de review-verwijzing van Google, het cijfer van 1 tot 5, de tekst, de taal en de datum, in
+  `private.place_google_reviews`. De job `scripts/google-ratings.mjs` (workflow `google-cijfers`) schrijft.
+- **Wat we niet bewaren:** de naam of het profiel van de schrijver. We vragen die velden niet op (veldmasker zonder
+  `authorAttribution`).
+- **Alleen intern:** de tabel staat in het private schema, zonder leesrechten voor bezoekers en ingelogde gebruikers.
+  De reviewteksten komen nooit op de site. Een feit dat eruit voortkomt, volgt de gewone regels van §2: tier 5, twee
+  losse vermeldingen met een eigen citaat en datum, en beheer beslist (Triage Inbox).
+- **Analyse (review-lezer, `pipeline/review-lezer.ts`):** Gemini leest elke review die over vertrek, prijs, maten of
+  sluiting gaat apart en levert per feit een letterlijk citaat van minstens 15 tekens. Dezelfde controles als de
+  AI-lezer (§3b) gelden: citaat letterlijk in de review, getal of tijd in het citaat, onderwerp camperplaats. Daarna
+  geldt tier 5 (§2): alleen als minstens twee verschillende reviews dezelfde waarde onderbouwen komt er een voorstel in
+  de Triage Inbox (bron `google-review`); zegt een andere review iets anders over hetzelfde veld, dan geen voorstel.
+  Een door een mens bevestigde vertrekregel krijgt geen voorstel, een afgewezen voorstel komt niet terug. Beheer beslist.
+  Het model schrijft nooit zelf in `places`. Reviews worden niet herschreven of op de site getoond.
+- **Op verzoek wissen:** vraagt Google, een schrijver of een eigenaar om verwijdering, dan verwijdert beheer de rij(en)
+  uit `private.place_google_reviews`.
+- **Risico, bewust geaccepteerd door de eigenaar:** de voorwaarden van Google Maps Platform noemen een bewaartermijn van
+  30 dagen voor inhoud (alleen de `place_id` is uitgezonderd) en verbieden afgeleide inhoud. Google kan de sleutel
+  intrekken of een claim sturen. Reviewteksten kunnen persoonsgegevens bevatten (AVG). Het cijfer en het aantal
+  (`public.place_google`) tonen we alleen als de check jonger is dan 30 dagen.
 
 ## 4. Werken als sessie
 
@@ -124,13 +164,14 @@ Het register staat in `bron.sources`. Startstand (18 oktober 2026):
 |---|---|---|---|
 | OpenStreetMap, PDOK | 1 | toegestaan | Open data |
 | Gemeenten (APV, eigen pagina's over camperplaatsen) | 1 | toegestaan | Bevestigd door de eigenaar op 20 november 2026 (dataplan november, spoor 3.2): de maximale verblijfsduur uit een APV of gemeentepagina telt als feit, met letterlijk citaat |
+| Officiële bekendmakingen (repository.overheid.nl, SRU) | 1 | toegestaan | Sinds 20 november 2026 (README 140): titel, adres, coördinaten, datum en link van gemeentelijke publicaties over camperplaatsen, als kandidaat voor Beheer (`discovery_candidates`); een aanvraag is nog geen plek |
 | Archie's Campings | 3 | geblokkeerd | Geblokkeerd op 20 november 2026 (R81): geen schriftelijke toestemming. Bestand uit de repository, `geo_bronnen` op geblokkeerd |
 | Eigen site van de plek, eigenaar | 2 | toegestaan | Eigen site alleen als het domein klopt |
 | Campercontact, park4night, ACSI/Eurocampings, ANWB, Camping.info | 3 | toegestaan | `robots.txt` wordt bij het eerste gebruik gecontroleerd en vastgelegd |
 | Reddit | 4 | toegestaan | Geen gebruikersnamen |
 | Zoover | 5 | toegestaan | Alleen afgeleide feiten |
 | Facebook, Instagram | 4 | alleen openbaar, stealth | Alleen pagina's zonder inlog; groepen alleen met toestemming van de beheerders |
-| Google Maps | 5 | alleen openbaar, stealth | Feiten van openbare pagina's; geen reviewteksten of namen. Places API blijft mogelijk |
+| Google Maps | 5 | alleen openbaar, stealth | Feiten van openbare pagina's; geen reviewteksten of namen. Places API: sinds 21 november 2026 (README 141) het cijfer en het aantal reviews, opgehaald door een dagelijkse job (`scripts/google-ratings.mjs`, workflow `google-cijfers`), bewaard in `place_google` met datum en na 30 dagen vernieuwd; alleen een plek binnen 250 m met dezelfde eigennaam; met link naar Google Maps |
 
 Nieuwe domeinen registreert de server automatisch bij het eerste gebruik (`auto_registered`); de coördinator loopt
 die wekelijks na.

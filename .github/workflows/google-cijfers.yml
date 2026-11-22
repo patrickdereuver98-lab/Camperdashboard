@@ -1,0 +1,49 @@
+# Google-cijfers (README 141): haalt cijfer en aantal reviews van Google Maps op voor plekken zonder check of met een
+# check ouder dan 30 dagen, en bewaart ze in public.place_google. Dagelijks een beperkt aantal, zodat de kosten
+# voorspelbaar blijven. Eerste ronde voor alle plekken: Actions, "Google-cijfers", Run workflow, limiet 3000.
+# Secrets: GOOGLE_PLACES_API_KEY en SUPABASE_DB_URL (die laatste gebruiken de andere workflows al).
+name: Google-cijfers
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Aantal plekken (eerste ronde: 3000)"
+        default: "250"
+      dry:
+        description: "Proefrun: alleen Google bellen, niets schrijven"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-cijfers
+  cancel-in-progress: false
+
+jobs:
+  ratings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Cijfers ophalen
+        working-directory: web
+        env:
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          LIMIT: ${{ inputs.limit || '250' }}
+          DRY: ${{ inputs.dry && '--dry' || '' }}
+        run: node scripts/google-ratings.mjs --limit "$LIMIT" $DRY
+      - name: Analyse in de samenvatting
+        if: ${{ always() && !inputs.dry }}
+        working-directory: web
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/google-analyse.mjs >> "$GITHUB_STEP_SUMMARY"
