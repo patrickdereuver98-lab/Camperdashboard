@@ -4,14 +4,17 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { forgetSql, saveSql } from "./google-sql.mjs";
+import { forgetSql, foundSql, saveSql } from "./google-sql.mjs";
 
 const file = process.argv[2];
 if (!file) {
   console.error("Gebruik: node scripts/google-ingest.mjs resultaat.json");
   process.exit(2);
 }
-const items = JSON.parse(readFileSync(file, "utf8"));
+const data = JSON.parse(readFileSync(file, "utf8"));
+// Resultaat van google-discover.mjs: plekken die Google kent
+const discover = !Array.isArray(data) && data.kind === "discover";
+const items = discover ? data.found : data;
 const here = dirname(fileURLToPath(import.meta.url));
 const run = (sql) =>
   process.env.SUPABASE_DB_URL
@@ -20,7 +23,10 @@ const run = (sql) =>
 
 let n = 0;
 for (let i = 0; i < items.length; i += 25) {
-  const sql = items.slice(i, i + 25).map((it) => (it.forget ? forgetSql(it.place_id) : saveSql(it.place_id, it.result, it.checked_at))).join("");
+  const sql = items
+    .slice(i, i + 25)
+    .map((it) => (discover ? foundSql(it) : it.forget ? forgetSql(it.place_id) : saveSql(it.place_id, it.result, it.checked_at)))
+    .join("");
   if (sql) run(sql);
   n += Math.min(25, items.length - i);
 }

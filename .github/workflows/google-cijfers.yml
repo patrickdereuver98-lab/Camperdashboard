@@ -17,6 +17,21 @@ on:
         description: "Proefrun: alleen Google bellen, niets schrijven"
         type: boolean
         default: false
+      mode:
+        description: "cijfers (standaard) of ontdekken (zoeken naar camperplaatsen en campings)"
+        type: choice
+        options: [cijfers, ontdekken]
+        default: cijfers
+      again:
+        description: "Cijfers: ook plekken die korter dan 30 dagen geleden gecheckt zijn (nieuwe velden ophalen)"
+        type: boolean
+        default: false
+      bbox:
+        description: "Ontdekken: zuid,west,noord,oost (leeg = heel Nederland)"
+        default: ""
+      max_calls:
+        description: "Ontdekken: hoogstens zoveel aanroepen"
+        default: "600"
 
 permissions:
   contents: read
@@ -42,7 +57,18 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           LIMIT: ${{ inputs.limit || '250' }}
           DRY: ${{ inputs.dry && '--dry' || '' }}
-        run: node --no-warnings --import ./tests/register.mjs scripts/google-ratings.mjs --limit "$LIMIT" --out "$RUNNER_TEMP/google-resultaat.json" $DRY
+          AGAIN: ${{ inputs.again && '--again' || '' }}
+          MODE: ${{ inputs.mode || 'cijfers' }}
+          BBOX: ${{ inputs.bbox }}
+          MAX_CALLS: ${{ inputs.max_calls || '600' }}
+        run: |
+          R="node --no-warnings --import ./tests/register.mjs"
+          if [ "$MODE" = "ontdekken" ]; then
+            B=""; [ -n "$BBOX" ] && B="--bbox $BBOX"
+            $R scripts/google-discover.mjs --max-calls "$MAX_CALLS" $B --out "$RUNNER_TEMP/google-resultaat.json" $DRY
+          else
+            $R scripts/google-ratings.mjs --limit "$LIMIT" $AGAIN --out "$RUNNER_TEMP/google-resultaat.json" $DRY
+          fi
       - name: Resultaat bewaren (zonder databasetoegang, laad in met scripts/google-ingest.mjs)
         if: ${{ always() && !inputs.dry }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

@@ -8,10 +8,17 @@ const gid = "ChIJ-test_place_id_1";
 const answer = (o: Record<string, unknown>) => JSON.stringify({ vertrekregel: "onbekend", ...o });
 const verdict = (ref: string, body: string, o: Record<string, unknown>) => checkReview(ref, answer(o), reviewPage(gid, 1, body));
 
+const recent = new Date(Date.now() - 30 * 86400_000).toISOString();
 test("relevantie: alleen reviews over vertrek, prijs, maten of sluiting", () => {
-  assert.equal(isRelevant({ ref: "a", rating: 5, body: "Mooie rustige plek aan het water, heerlijk gestaan.", published_at: null }), false);
-  assert.equal(isRelevant({ ref: "a", rating: 4, body: "Het kost € 15 per nacht en vertrekken kan tot 12:00 uur.", published_at: null }), true);
-  assert.equal(isRelevant({ ref: "a", rating: 4, body: null, published_at: null }), false);
+  assert.equal(isRelevant({ ref: "a", rating: 5, body: "Mooie rustige plek aan het water, heerlijk gestaan.", published_at: recent }), false);
+  assert.equal(isRelevant({ ref: "a", rating: 4, body: "Het kost € 15 per nacht en vertrekken kan tot 12:00 uur.", published_at: recent }), true);
+  assert.equal(isRelevant({ ref: "a", rating: 4, body: null, published_at: recent }), false);
+});
+
+test("leeftijd: reviews ouder dan 24 maanden of zonder datum tellen niet (bronnenbeleid 2)", () => {
+  const body = "Het kost € 15 per nacht en vertrekken kan tot 12:00 uur.";
+  assert.equal(isRelevant({ ref: "a", rating: 4, body, published_at: "2017-07-01T00:00:00Z" }), false);
+  assert.equal(isRelevant({ ref: "a", rating: 4, body, published_at: null }), false);
 });
 
 test("citaat dat niet in de review staat valt weg", () => {

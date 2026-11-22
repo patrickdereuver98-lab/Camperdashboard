@@ -18,7 +18,14 @@ export type ReviewRow = { ref: string; rating: number | null; body: string | nul
 // Alleen reviews die iets over vertrek, prijs, maten, verblijf of sluiting zeggen gaan naar het model: dat scheelt kosten
 const RELEVANT = /vertrek|uitcheck|check[- ]?out|moesten (we )?(er )?(voor|om|uiterlijk)|weg (voor|om|uiterlijk)|€|euro|\bprijs|per nacht|nachtprijs|24 uur|max(?:imaal|imum)?\b.{0,20}(nacht|dagen|meter|lang)|gesloten|opgeheven|incheck|aankomst|aankomen|slagboom|lengte/i;
 
-export const isRelevant = (r: ReviewRow) => !!r.body && r.body.length >= 20 && RELEVANT.test(r.body);
+/** Bronnenbeleid §2: alleen vermeldingen van de laatste 24 maanden tellen. Zonder datum telt een review niet mee. */
+export const MAX_AGE_MONTHS = 24;
+export function isRecent(r: ReviewRow, now = Date.now()): boolean {
+  const t = r.published_at ? Date.parse(r.published_at) : NaN;
+  return Number.isFinite(t) && now - t <= MAX_AGE_MONTHS * 30.44 * 86400_000;
+}
+
+export const isRelevant = (r: ReviewRow, now = Date.now()) => !!r.body && r.body.length >= 20 && isRecent(r, now) && RELEVANT.test(r.body);
 
 export const REVIEW_SYSTEM = `Je leest één review van een bezoeker van een camperplaats, camping of jachthaven in Nederland.
 Je haalt alleen feiten eruit die de bezoeker LETTERLIJK noemt als regel of tarief van de plek. Niets afleiden, niets aanvullen.
