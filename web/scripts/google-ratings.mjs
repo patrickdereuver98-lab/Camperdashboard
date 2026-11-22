@@ -58,7 +58,8 @@ async function due() {
   return places
     .map((p) => ({ ...p, google_place_id: seen.get(p.id)?.google_place_id ?? null, checked: seen.has(p.id) ? Date.parse(seen.get(p.id).checked_at) : 0 }))
     .filter((p) => p.checked < cutoff)
-    .sort((a, b) => a.checked - b.checked)
+    // Met --again eerst de plekken die al een check hebben (oudste eerst), daarna de nieuwe; zonder: de nieuwe eerst
+    .sort((a, b) => (again ? (a.checked || Infinity) - (b.checked || Infinity) : a.checked - b.checked))
     .slice(0, limit);
 }
 

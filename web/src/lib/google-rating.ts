@@ -70,6 +70,10 @@ function sameName(ours: string, theirs: string): boolean {
   return a.some((x) => b.some((y) => x === y || (x.length >= 5 && y.includes(x)) || (y.length >= 5 && x.includes(y))));
 }
 
+/** Typen die een straat, gebied of adres aanduiden en geen plek: zo'n resultaat is nooit onze camperplaats */
+const PLACE_LIKE = /^(establishment|point_of_interest|campground|rv_park|camping_cabin|lodging|farm|parking|marina|tourist_attraction)$/;
+export const isPlaceLike = (types?: string[]) => !types || types.length === 0 || types.some((t) => PLACE_LIKE.test(t));
+
 /** De beste kandidaat die dichtbij ligt én dezelfde eigennaam heeft, ook zonder cijfer; anders niets */
 export function matchGooglePlace(place: { name: string; lat: number; lng: number }, candidates: GoogleCandidate[]): (GoogleCandidate & { id: string }) | undefined {
   let best: { meters: number; c: GoogleCandidate & { id: string } } | undefined;
@@ -77,6 +81,7 @@ export function matchGooglePlace(place: { name: string; lat: number; lng: number
     const { latitude, longitude } = c.location ?? {};
     if (typeof latitude !== "number" || typeof longitude !== "number") continue;
     if (!c.id || !PLACE_ID.test(c.id)) continue;
+    if (!isPlaceLike(c.types)) continue;
     if (!c.displayName?.text || !sameName(place.name, c.displayName.text)) continue;
     const meters = distanceKm({ lat: place.lat, lng: place.lng }, { lat: latitude, lng: longitude }) * 1000;
     if (meters > MAX_MATCH_METERS) continue;

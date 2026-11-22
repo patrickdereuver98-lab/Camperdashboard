@@ -1,7 +1,7 @@
 // Google-cijfer (open punt 141): alleen een dichtbijgelegen plek met dezelfde eigennaam telt.
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { googleMapsUrl, gridCells, isFresh, matchGooglePlace, matchKnown, nameTokens, pickGoogleRating, splitCandidate, type GoogleCandidate } from "../src/lib/google-rating.ts";
+import { googleMapsUrl, gridCells, isPlaceLike, isFresh, matchGooglePlace, matchKnown, nameTokens, pickGoogleRating, splitCandidate, type GoogleCandidate } from "../src/lib/google-rating.ts";
 import { assessGoogle, reviewStats } from "../src/lib/google-quality.ts";
 import { checkVoorVertrek } from "../src/lib/check-voor-vertrek.ts";
 
@@ -109,4 +109,12 @@ test("ontdekken: rooster en vergelijken met onze plekken", () => {
   // dichtbij maar een andere naam: tot 250 m dezelfde plek, daarboven niet
   assert.equal(matchKnown({ name: "Heel andere naam", lat: 52.0015, lng: 5.0 }, ours)?.id, "a");
   assert.equal(matchKnown({ name: "Heel andere naam", lat: 52.006, lng: 5.0 }, ours), undefined);
+});
+
+test("een straat of gebied bij Google is nooit een plek (route, locality)", () => {
+  assert.equal(isPlaceLike(["route"]), false);
+  assert.equal(isPlaceLike(["locality", "political"]), false);
+  assert.equal(isPlaceLike(["campground", "lodging", "point_of_interest", "establishment"]), true);
+  assert.equal(isPlaceLike(undefined), true);
+  assert.equal(matchGooglePlace(place, [{ ...cand({}), types: ["route"] }]), undefined);
 });
