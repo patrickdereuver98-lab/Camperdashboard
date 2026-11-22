@@ -9,6 +9,8 @@ import { matchKnown } from "../src/lib/google-rating.ts";
 import { forgetSql, foundSql, saveSql } from "./google-sql.mjs";
 
 const file = process.argv[2];
+// --from N: begin bij resultaat N (bijvoorbeeld na een onderbreking; opnieuw inladen is veilig, het zijn upserts)
+const from = process.argv.includes("--from") ? Math.max(0, Number(process.argv[process.argv.indexOf("--from") + 1]) || 0) : 0;
 if (!file) {
   console.error("Gebruik: node scripts/google-ingest.mjs resultaat.json");
   process.exit(2);
@@ -50,13 +52,14 @@ if (discover) {
 }
 
 let n = 0;
-for (let i = 0; i < items.length; i += 10) {
+for (let i = from; i < items.length; i += 10) {
   const sql = items
     .slice(i, i + 10)
     .map((it) => (discover ? foundSql(it) : it.forget ? forgetSql(it.place_id) : saveSql(it.place_id, it.result, it.checked_at)))
     .join("");
   if (sql) run(sql);
   n += Math.min(10, items.length - i);
+  if (n % 200 < 10) console.log(`${i + 10} van ${items.length}`);
 }
 rmSync(dir, { recursive: true, force: true });
 console.log(`${n} resultaten geladen`);
