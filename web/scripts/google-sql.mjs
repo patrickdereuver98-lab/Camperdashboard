@@ -28,6 +28,13 @@ export function saveSql(placeId, r, checkedAt = new Date().toISOString()) {
       rating_count = excluded.rating_count, business_status = excluded.business_status, checked_at = excluded.checked_at,
       primary_type = excluded.primary_type, types = excluded.types, reviews_sampled = excluded.reviews_sampled,
       reviews_recent = excluded.reviews_recent, newest_review_at = excluded.newest_review_at;\n`;
+  // Reviewstatistiek over alle reviews die we ooit bewaarden, niet alleen de vijf van deze ronde: Google geeft de meest
+  // relevante, en elke ronde komen er andere bij. Staat ná het bewaren van de reviews hieronder.
+  const statsSql = `update public.place_google g set
+      reviews_sampled = s.n, reviews_recent = s.recent, newest_review_at = s.newest
+    from (select count(*)::smallint n, count(*) filter (where published_at > now() - interval '12 months')::smallint recent, max(published_at) newest
+            from private.place_google_reviews where place_id = '${placeId}') s
+    where g.place_id = '${placeId}';\n`;
   if (r?.details && typeof r.details === "object") {
     sql += `insert into private.place_google_details (place_id, details, fetched_at)
       values ('${placeId}', convert_from(decode('${Buffer.from(JSON.stringify(r.details), "utf8").toString("base64")}', 'base64'), 'UTF8')::jsonb, ${when})
@@ -42,6 +49,7 @@ export function saveSql(placeId, r, checkedAt = new Date().toISOString()) {
       values ('${placeId}', '${v.name}', ${rt}, ${b64(v.text)}, ${lang}, ${pub})
       on conflict (place_id, review_ref) do update set rating = excluded.rating, body = excluded.body, fetched_at = now();\n`;
   }
+  sql += statsSql;
   return sql;
 }
 

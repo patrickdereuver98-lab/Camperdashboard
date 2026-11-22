@@ -56,10 +56,14 @@ export function assessGoogle(g: GoogleFacts, now = Date.now()): GoogleAssessment
   if (otherMain) reasons.push(`hoofdfunctie bij Google is ${primary}, niet kamperen`);
   else if (!campLike && primary) reasons.push(`type bij Google is ${primary}`);
   if (count < 3) reasons.push("minder dan 3 reviews");
-  if (newest !== undefined && newest > 24) reasons.push("nieuwste review ouder dan 2 jaar");
+  if (newest !== undefined && newest > 24) reasons.push(count < 30 ? "nieuwste review ouder dan 2 jaar" : "steekproef van reviews is oud, maar de plek heeft er veel");
 
-  // Laag: een andere hoofdfunctie, bijna geen reviews, of alleen oude reviews
-  if (otherMain || count < 3 || (newest !== undefined && newest > 24)) return { confidence: "laag", show: false, reasons };
+  // Google geeft per aanroep de "meest relevante" reviews, niet de nieuwste. Bij veel reviews zegt een oude steekproef weinig
+  // over de plek, dus daar is oud een voorbehoud; bij weinig reviews is het een reden om het cijfer niet te tonen.
+  const staleSample = newest !== undefined && newest > 24;
+  const veryOld = staleSample && count < 30;
+  // Laag: een andere hoofdfunctie, bijna geen reviews, of weinig reviews die allemaal oud zijn
+  if (otherMain || count < 3 || veryOld) return { confidence: "laag", show: false, reasons };
 
   const recentShare = g.reviewsSampled ? (g.reviewsRecent ?? 0) / g.reviewsSampled : undefined;
   const sure = campLike && count >= 10 && (newest === undefined || newest <= 12) && (recentShare === undefined || recentShare >= 0.4);
@@ -69,6 +73,7 @@ export function assessGoogle(g: GoogleFacts, now = Date.now()): GoogleAssessment
   if (newest !== undefined && newest > 12) reasons.push("nieuwste review ouder dan een jaar");
   if (recentShare !== undefined && recentShare < 0.4) reasons.push("weinig recente reviews");
   const note = count < 10 ? "Weinig reviews" : newest !== undefined && newest > 12 ? "Vooral oudere reviews" : undefined;
+
   return { confidence: "middel", show: true, reasons, note };
 }
 

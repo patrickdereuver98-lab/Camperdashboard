@@ -118,3 +118,9 @@ test("een straat of gebied bij Google is nooit een plek (route, locality)", () =
   assert.equal(isPlaceLike(undefined), true);
   assert.equal(matchGooglePlace(place, [{ ...cand({}), types: ["route"] }]), undefined);
 });
+
+test("kwaliteit: veel reviews met een oude steekproef is een voorbehoud, geen reden om te verbergen", () => {
+  const a = assessGoogle({ rating: 4.6, count: 1168, primaryType: "campground", reviewsSampled: 10, reviewsRecent: 4, newestReviewAt: ago(30) }, NOW);
+  assert.equal(a.show, true);
+  assert.equal(a.note, "Vooral oudere reviews");
+});
