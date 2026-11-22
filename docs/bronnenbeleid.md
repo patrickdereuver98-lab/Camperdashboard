@@ -133,6 +133,21 @@ om onze eigen gegevens ermee te scannen en te vergelijken (vertrektijd, prijs, g
   de Triage Inbox (bron `google-review`); zegt een andere review iets anders over hetzelfde veld, dan geen voorstel.
   Een door een mens bevestigde vertrekregel krijgt geen voorstel, een afgewezen voorstel komt niet terug. Beheer beslist.
   Het model schrijft nooit zelf in `places`. Reviews worden niet herschreven of op de site getoond.
+- **Alle velden (besluit Patrick, 22 november 2026):** naast cijfer en reviews halen we alle velden op die de Places API
+  geeft (adres, website, telefoon, openingstijden, type, bedrijfsstatus, voorzieningen zoals honden, toilet, betaalopties en
+  parkeren), alleen intern in `private.place_google_details`, zonder foto's, zonder namen van schrijvers en zonder de
+  samenvattingen die Google zelf met een model schrijft. Op de site komen alleen cijfer, aantal en een voorbehoud
+  (`lib/google-quality.ts`). Wat Google zegt over een plek is een aanwijzing voor Beheer en een vergelijking met onze
+  gegevens, geen feit: het gaat nooit zonder controle in `places`.
+- **Kwaliteit van het cijfer (`lib/google-quality.ts`):** het cijfer staat alleen op de site als Google de plek als
+  kampeerplek ziet (type `campground` of `rv_park`) en niet vooral als hotel, manege of restaurant, bij minstens 3 reviews
+  en een nieuwste review van minder dan 2 jaar oud. Weinig reviews of vooral oudere reviews krijgen een voorbehoud onder het
+  cijfer. Reviews voor de review-lezer tellen alleen als ze van de laatste 24 maanden zijn (§2).
+- **Ontdekken (`scripts/google-discover.mjs`):** zoeken op "camperplaats" en "camping" per cel van ongeveer 13 bij 14 km en
+  vergelijken met al onze plekken (ook concepten en verborgen plekken; binnen 250 m, of binnen 1 km met dezelfde
+  eigennaam). Wat Google kent en wij niet staat in `private.google_found` als aanwijzing voor Beheer. Het wordt geen plek
+  zonder controle op de eigen website of een andere bron van tier 1 of 2. Een straat of gebied bij Google (type `route`,
+  `locality`) telt nooit.
 - **Op verzoek wissen:** vraagt Google, een schrijver of een eigenaar om verwijdering, dan verwijdert beheer de rij(en)
   uit `private.place_google_reviews`.
 - **Risico, bewust geaccepteerd door de eigenaar:** de voorwaarden van Google Maps Platform noemen een bewaartermijn van
