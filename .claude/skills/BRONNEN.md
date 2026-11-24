@@ -128,3 +128,5 @@ weinig kritiek geeft.
   CLAUDE.md gelden; gebruik `orch-*` voor een volledige functie en de rest alleen op verzoek.
 - Niet samengevoegd of verwijderd: elk bestand komt van een bron die we bijhouden, en verwijderen geeft bij een update
   weer dubbel werk. De hub regelt de keuze.
+
+- **24 november 2026:** Fable is niet beschikbaar voor ons. `opus-orchestrator` is aangepast: Opus (high, xhigh of max bij lastig werk) stuurt en reviewt, Sonnet (medium) voert uit.

@@ -35,7 +35,7 @@ Werkwijze:
   - Uitvoerwerk (build-fouten, refactor, e2e, tests, performance) op Sonnet, effort medium. Controlelijsten (seo,
     a11y, silent-failure-hunter, pr-test-analyzer) op Sonnet, effort low.
   - `planner` en `architect` alleen bij grote verbouwingen over meerdere delen van de app.
-  - Fable alleen als Opus echt vastloopt (twee keer de prijs). Kijk naar kosten per afgeronde taak, niet per
+  - Fable hebben we niet. Loopt Opus vast, zet het effort dan op max (of xhigh) in plaats van van model te wisselen. Kijk naar kosten per afgeronde taak, niet per
     aanroep. Model en effort per agent staan in de kop van `.claude/agents/*.md`.
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.
 - Edge functions uitrollen, migraties toepassen (`apply_migration`) en SQL uitvoeren (`execute_sql`) in Supabase mag

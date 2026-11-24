@@ -53,7 +53,7 @@ twee workers in dezelfde bestanden.
 | 11 | Documenten bijwerken | hoofdsessie, in dezelfde commit | status in `06-implementatieplan.md`, schema, flow |
 | 12 | Push en PR | hoofdsessie | concept-PR naar `acceptatie`; migratie pas live na samenvoegen |
 
-Fable alleen als Opus echt vastloopt (twee keer de prijs). De modellen en het effort per agent staan in de kop van
+Fable hebben we niet: loopt Opus vast, zet het effort op max of xhigh. De modellen en het effort per agent staan in de kop van
 `.claude/agents/*.md`; wijkt een skill daarvan af (bijvoorbeeld `opus-orchestrator`), dan gaan de agentkoppen en
 `CLAUDE.md` voor.
 
