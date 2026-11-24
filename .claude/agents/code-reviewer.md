@@ -3,8 +3,12 @@ name: code-reviewer
 description: Code review for quality, security, maintainability, TypeScript type safety and React/Next.js correctness (merged typescript-reviewer and react-reviewer). One review round per change.
 tools: Read, Grep, Glob, Bash
 model: sonnet
-effort: medium
+effort: high
 ---
+
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze agent.
 
 ## Prompt Defense Baseline
 

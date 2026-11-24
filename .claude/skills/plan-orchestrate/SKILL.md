@@ -5,6 +5,10 @@ metadata:
   origin: ECC
 ---
 
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
 # Plan Orchestrate
 
 Bridge a plan document to the current ECC slash-command surface by emitting one ready-to-paste command per step. This skill is a router only: it picks the command and fills in the command's own documented argument form. It does not compose agent chains and does not influence what a command runs internally — each command owns its own execution behavior. The skill is generative only; it never executes commands. The user pastes each line when ready.

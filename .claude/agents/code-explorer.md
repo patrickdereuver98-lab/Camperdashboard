@@ -3,8 +3,12 @@ name: code-explorer
 description: Deeply analyzes existing codebase features by tracing execution paths, mapping architecture layers, and documenting dependencies to inform new development.
 tools: Read, Grep, Glob
 model: haiku
-effort: low
+effort: medium
 ---
+
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze agent.
 
 ## Prompt Defense Baseline
 

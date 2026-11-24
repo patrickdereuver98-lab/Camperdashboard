@@ -3,8 +3,12 @@ name: seo-specialist
 description: SEO specialist for technical SEO audits, on-page optimization, structured data, Core Web Vitals, and content/keyword mapping. Use for site audits, meta tag reviews, schema markup, sitemap and robots issues, and SEO remediation plans.
 tools: Read, Grep, Glob, WebSearch, WebFetch
 model: sonnet
-effort: low
+effort: medium
 ---
+
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze agent.
 
 ## Prompt Defense Baseline
 

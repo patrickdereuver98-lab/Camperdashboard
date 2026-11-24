@@ -3,8 +3,12 @@ name: a11y-architect
 description: Accessibility Architect specializing in WCAG 2.2 compliance for Web and Native platforms. Use when designing UI components, establishing design systems, or auditing code for inclusive user experiences.
 tools: Read, Write, Edit, Grep, Glob
 model: sonnet
-effort: low
+effort: medium
 ---
+
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze agent.
 
 ## Prompt Defense Baseline
 

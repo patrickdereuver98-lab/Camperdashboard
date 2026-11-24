@@ -25,17 +25,19 @@ Werkwijze:
   herkomst in `.claude/skills/BRONNEN.md`). Gebruik ze als team (plannen, bouwen, reviewen); bij een conflict gaan
   deze instructies en `docs/specs/` voor.
 - Orchestratie (modellen en agents): de hoofdsessie is de orchestrator. Zij plant, beslist en bouwt zelf, op Opus
-  met effort high (xhigh bij lastige features). Een agent begint zonder context en leest alles opnieuw in, dus:
+  (5.5). Effort per soort werk: medium voor een nieuwe functie met een duidelijk doel, high voor bugs, migraties, auth,
+  RLS en alles waar controle en randgevallen tellen, xhigh voor lastig of lang werk (bron: Anthropic, 24 november 2026).
+  Kies het niveau aan het begin van de sessie en wissel niet heen en weer: dat kost cache. Een agent begint zonder context en leest alles opnieuw in, dus:
   - Kleine taken (tot ongeveer drie bestanden) doe je zelf, zonder agents.
   - Agents alleen voor zoekwerk over veel bestanden, voor werk dat echt parallel kan, of voor een review.
-  - Zoeken en code in kaart brengen: `code-explorer` of Explore op Haiku (effort low).
-  - Per wijziging hoogstens één review-ronde met `code-reviewer` (Sonnet, dekt ook TypeScript en React). Raakt
+  - Zoeken en code in kaart brengen: `code-explorer` of Explore op Haiku (effort medium; op low slaat Haiku soms een zoekstap over).
+  - Per wijziging hoogstens één review-ronde met `code-reviewer` (Sonnet, effort high, dekt ook TypeScript en React). Raakt
     de wijziging auth, RLS, migraties of persoonsgegevens, dan ook `security-reviewer` en/of `database-reviewer`
-    (Opus, effort medium).
+    (Opus, effort high).
   - Uitvoerwerk (build-fouten, refactor, e2e, tests, performance) op Sonnet, effort medium. Controlelijsten (seo,
-    a11y, silent-failure-hunter, pr-test-analyzer) op Sonnet, effort low.
+    a11y, silent-failure-hunter, pr-test-analyzer) op Sonnet, effort medium: een controle op low slaat punten over.
   - `planner` en `architect` alleen bij grote verbouwingen over meerdere delen van de app.
-  - Fable alleen als Opus echt vastloopt (twee keer de prijs). Kijk naar kosten per afgeronde taak, niet per
+  - Fable hebben we niet. Loopt Opus vast, verhoog dan eerst het effort naar xhigh. Max alleen voor een gerichte klus (bijvoorbeeld een beveiligingsjacht): het geeft afnemende winst en kan overdenken. Heeft Opus alle context en gaat het dan nog fout, meld dat aan Patrick. Kijk naar kosten per afgeronde taak, niet per
     aanroep. Model en effort per agent staan in de kop van `.claude/agents/*.md`.
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.
 - Edge functions uitrollen, migraties toepassen (`apply_migration`) en SQL uitvoeren (`execute_sql`) in Supabase mag
@@ -51,3 +53,27 @@ Werkwijze:
   `reviewer` volgen de orchestratieregels hierboven (19 november): Opus stuurt, geen Fable als standaard. Hoogstens 2
   agents tegelijk (`.claude/settings.json`); nooit twee workers in dezelfde bestanden (herkomst in
   `.claude/skills/BRONNEN.md`).
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- When graphify-out/graph.json exists, run `graphify query "<question>"` before your first grep, search or source-file read for a codebase question, and put this rule in every subagent prompt that explores code. Read raw files only for lines the graph or an earlier read already located. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. When the answer is under a Markdown heading, `graphify section "<heading>"` prints that section's text, so the .md need not be opened. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.
+
+## Ponytail, graphify en agent-skills (24 november 2026)
+
+Altijd gebruiken, besluit Patrick: **ponytail** (kies het simpelste dat werkt, geen overbouw), **graphify** (eerst
+`graphify query` vóór grep of bestanden lezen, zie hierboven) en de **agent-skills** van Addy Osmani (spec, plan, build,
+test, review, ship). Plugins staan in `.claude/settings.json`; herkomst in `.claude/skills/BRONNEN.md`. Bij een conflict
+gaan deze CLAUDE.md en `docs/specs/` voor.
+
+**Impeccable** (pbakaus/impeccable) vult `ui-ux-pro-max` aan: ui-ux-pro-max geeft patronen en naslag, Impeccable
+beoordeelt en verfijnt (`critique`, `audit`, `polish`, `harden`, `adapt`, `clarify`). `PRODUCT.md` en `DESIGN.md` in de
+hoofdmap zijn de korte samenvatting voor Impeccable en wijzen terug naar `docs/specs/` en `docs/stijlgids.md`. Alle
+skills en agents beginnen met een verwijzing naar `.claude/skills/vrijstaan-context/SKILL.md`: vaste feiten, voorrang
+en een tabel welke skill wanneer. Kleur- of lettertypeadvies van een skill dat de stijlgids tegenspreekt, negeer je.

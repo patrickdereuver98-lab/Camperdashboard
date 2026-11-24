@@ -81,3 +81,61 @@ Op 2 november 2026 toegevoegd (verzoek eigenaar, marketingplan `docs/marketing/p
 meegeleverde muziek of Hyperframes. Huisregels die voorgaan staan in `.claude/skills/brag-slim/VRIJSTAAN.md`.
 De volledige `/brag` (met Hyperframes en muziek, ±20 MB) is bewust niet overgenomen; de Studio in het dashboard
 gebruikt dezelfde werkwijze (HTML met tijdlijn, Chromium, ffmpeg) zonder extra pakket.
+
+## Ponytail, graphify en agent-skills
+
+Op 24 november 2026 toegevoegd (verzoek eigenaar: "gebruik ze vanaf nu overal en altijd"):
+
+- **ponytail** (github.com/DietrichGebert/ponytail, MIT): als plugin via `extraKnownMarketplaces` en `enabledPlugins` in
+  `.claude/settings.json`. Laadt bij elke sessie de "bouw het simpelste dat werkt"-regels (hooks in Node).
+- **agent-skills** (github.com/addyosmani/agent-skills): als plugin, marketplace `addy-agent-skills`, in dezelfde
+  instelling. Let op: de commando's `/spec`, `/plan`, `/build`, `/test`, `/review` en `/ship` botsen soms met
+  ingebouwde of bestaande namen; gebruik dan `/agent-skills:<naam>`.
+- **graphify** (github.com/Graphify-Labs/graphify, pakket `graphifyy` via `uv tool install graphifyy`): projectinstallatie
+  met `graphify install --project`. Gaf `.claude/skills/graphify/`, hooks in `.claude/settings.json` en een blok in
+  `CLAUDE.md`. In een nieuwe omgeving eerst `uv tool install graphifyy`, daarna `/graphify .`.
+- CLAUDE.md en `docs/specs/` gaan bij een conflict voor.
+
+## Playwright CLI (24 november 2026)
+
+`@playwright/cli` van Microsoft (npm, github.com/microsoft/playwright-cli), globaal geïnstalleerd met
+`npm i -g @playwright/cli`; skill in `.claude/skills/playwright-cli` via `playwright-cli install --skills`.
+Bedoeld om pagina's op telefoonbreedte te bekijken (`open <url> --mobile`, `resize 375 812`, `screenshot`).
+In de cloud-omgeving is `.playwright/cli.config.json` nodig met `executablePath: /opt/pw-browsers/chromium` en
+`--no-sandbox`. Geprobeerd op de startpagina: geen horizontaal scrollen (375/375), tekst en knoppen leesbaar.
+Awesome Design (merkontwerpen) en Three.js zijn bewust niet overgenomen; Impeccable alleen als `ui-ux-pro-max` te
+weinig kritiek geeft.
+
+## Impeccable en skill-hub (24 november 2026)
+
+- **Impeccable** (github.com/pbakaus/impeccable, Apache 2.0): als plugin `impeccable@impeccable` in
+  `.claude/settings.json`. Het binaire hulpprogramma wordt bij het eerste gebruik gedownload en met sha256 gecontroleerd.
+  Rol: beoordelaar en verfijner naast `ui-ux-pro-max`. Geen `bolder` en `colorize`: kleur betekent iets bij ons.
+- `PRODUCT.md` en `DESIGN.md` (hoofdmap): door ons geschreven uit `docs/specs/` en de stijlgids, zodat Impeccable de
+  vaste kleuren, Geist en de toon kent. Bij verschil gaan de specs voor.
+- **Skill-hub** `.claude/skills/vrijstaan-context/SKILL.md`: stack, vaste regels, voorrang en keuzetabel. 51 skills en
+  agents kregen bovenaan een verwijzing ernaartoe (marker `<!-- vrijstaan-context -->`, opnieuw aanbrengen met het
+  script in de commit als een skill wordt bijgewerkt of toegevoegd).
+
+### Analyse van de skills (24 november 2026)
+
+- Zwaar dubbel: `design-taste-frontend` (89 kB), `minimalist-ui`, `high-end-visual-design`, `redesign-existing-projects`
+  en `frontend-design` zeggen deels hetzelfde en willen soms andere lettertypes of effecten. Hun bruikbare deel zit al in
+  `docs/stijlgids.md`. Ze blijven als naslag; de hub zegt dat de stijlgids voorgaat.
+- Dubbel in testen: `tdd-workflow`, agent `tdd-guide` en agent-skills `test-driven-development`; `e2e-testing` en
+  `playwright-cli` vullen elkaar aan (patronen tegenover bediening).
+- Dubbel in orkestratie: `opus-orchestrator`, `orch-*`, `plan-orchestrate` en `team-agent-orchestration`. De regels in
+  CLAUDE.md gelden; gebruik `orch-*` voor een volledige functie en de rest alleen op verzoek.
+- Niet samengevoegd of verwijderd: elk bestand komt van een bron die we bijhouden, en verwijderen geeft bij een update
+  weer dubbel werk. De hub regelt de keuze.
+
+- **24 november 2026:** Fable is niet beschikbaar voor ons. `opus-orchestrator` is aangepast: Opus (high, xhigh of max bij lastig werk) stuurt en reviewt, Sonnet (medium) voert uit.
+
+### Modelkeuze en effort volgens de bronnen (24 november 2026)
+
+Bronnen: platform.claude.com/docs/en/build-with-claude/effort, code.claude.com/docs/en/model-config en de
+Anthropic-blog "Choosing a Claude model and effort level in Claude Code". Aangepast voor kwaliteit: verkenners Haiku
+medium (op low slaat Haiku zoekstappen over), controlelijsten Sonnet medium, `code-reviewer` Sonnet high,
+`security-reviewer`, `database-reviewer` en `reviewer` Opus high, hoofdsessie medium of high of xhigh per soort werk.
+Max alleen gericht. Niet gemeten op onze eigen code: de documentatie raadt een vergelijking aan (zelfde taak op medium en
+high) voordat we het effort verder verschuiven.

@@ -7,6 +7,10 @@ metadata:
   argument-hint: <file-or-pattern>
 ---
 
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
 # Web Interface Guidelines
 
 Review files for compliance with Web Interface Guidelines.

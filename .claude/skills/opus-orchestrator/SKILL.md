@@ -1,17 +1,24 @@
 ---
 name: opus-orchestrator
-description: Orchestrate complex Claude Code coding work with Claude Fable at medium reasoning as planner/integrator and reviewer and Claude Sonnet at max reasoning for exploration, implementation, testing, and research. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or when the user asks to delegate. Do not use for trivial edits or simple questions.
+description: Orchestrate complex Claude Code coding work with Claude Opus at high reasoning as planner/integrator and reviewer and Claude Sonnet at medium reasoning for exploration, implementation, testing, and research. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or when the user asks to delegate. Do not use for trivial edits or simple questions.
 ---
 
-# Orchestrator — Claude Fable Medium + Claude Sonnet Max
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
+# Orchestrator — Claude Opus High + Claude Sonnet Medium
 
 The user's explicit instructions take precedence over this skill.
 
+> VrijStaan: Fable is hier niet beschikbaar; Opus neemt die rol over. De modellen staan in `CLAUDE.md` en de kop van
+> elke agent en gaan voor.
+
 ## Topology
 
-- root: `fable` at `medium` reasoning
-- explorer, worker, tester, researcher: `sonnet` at `max` reasoning
-- reviewer: `fable` at `medium` reasoning, in an independent read-only context
+- root: `opus` at `medium` for a clear feature, `high` for bugs, migrations, auth and RLS, `xhigh` for hard or long work (`max` only for a targeted hunt)
+- explorer: `haiku` at `medium`; worker, tester, researcher: `sonnet` at `medium`
+- reviewer: `opus` at `high` reasoning, in an independent read-only context
 
 The role files in `.claude/agents/` pin these models and reasoning levels; generic subagents inherit the Sonnet defaults in `.claude/settings.json`. Do not change the root model from within a session.
 

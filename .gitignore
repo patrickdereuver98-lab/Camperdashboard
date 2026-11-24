@@ -15,3 +15,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 brag-output/
+graphify-out/cache/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
