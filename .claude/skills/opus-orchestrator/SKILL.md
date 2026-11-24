@@ -11,6 +11,9 @@ description: Orchestrate complex Claude Code coding work with Claude Fable at me
 
 The user's explicit instructions take precedence over this skill.
 
+> VrijStaan: de modellen hieronder zijn de oorspronkelijke opzet van de skill en gelden hier niet. Bij ons staat de
+> hoofdsessie op Opus (high), Sonnet voert uit (medium) en Haiku zoekt (low); zie `CLAUDE.md` en de kop van elke agent.
+
 ## Topology
 
 - root: `fable` at `medium` reasoning
