@@ -4,6 +4,12 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
 
 ## Volgende versie (in de maak)
 
+**Beveiliging** (audit 24 november 2026)
+- Redirect-allowlist van Supabase Auth zonder wildcard (H1, live); minimale wachtwoordlengte 12 (live).
+- Beheer vraagt een code uit een authenticator-app (TOTP). De database geeft beheerrechten pas bij aal2 met migratie
+  `20261124100000_beheer_alleen_met_tweestap` (nog niet live: eerst app koppelen).
+- Open redirect na het inloggen via `/%09/…` dicht (M1).
+
 **Herlezing** (dataplan november, spoor 1.4)
 - Een vertrekregel verdwijnt nooit stil: zegt een lezing niets over het vertrek, dan blijven regel, tijd en bronzin
   staan en wordt het wissen een voorstel in de Triage Inbox (migratie `20261120400000_vertrek_niet_stil_wissen`). In de

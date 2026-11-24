@@ -3,8 +3,9 @@
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, Logo, type IconName } from "@/components/icons";
+import { adminMfaStep, totpCode } from "@/lib/admin-mfa";
 import { errorMessage } from "@/lib/supabase-browser";
 import { supabaseClient as supabase } from "@/lib/supabase-client";
 import { ErrorNote, input, primary } from "./ui";
@@ -26,7 +27,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/instellingen", label: "Instellingen", icon: "settings" },
 ];
 
-type State = "laden" | "uit" | "geen-admin" | "admin" | "herstel" | "fout";
+type State = "laden" | "uit" | "mfa-code" | "mfa-instellen" | "geen-admin" | "admin" | "herstel" | "fout";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>("laden");
@@ -34,6 +35,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const pathname = usePathname();
+  // Herstellink geopend: eerst (zo nodig) de code, dan het nieuwe wachtwoord. Een herstelsessie is aal1, en Supabase
+  // weigert een wachtwoordwijziging zonder aal2 als het account een factor heeft. Een ref, zodat een check() die al
+  // liep (SIGNED_IN komt vóór PASSWORD_RECOVERY) het herstel niet overschrijft.
+  const recovering = useRef(false);
 
   useEffect(() => {
     const sb = supabase();
@@ -43,6 +48,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
       // Een netwerk- of serverfout is iets anders dan "geen beheerder": dan tonen we een foutmelding met opnieuw proberen
       // (R32). Ook een verzoek dat helemaal mislukt (geen antwoord) is een fout, geen "geen beheertoegang".
       try {
+        // Eerst de tweede stap: de database geeft beheerrechten alleen aan een aal2-sessie (audit 24 november, H2)
+        const levels = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (levels.error) return setState("fout");
+        const step = adminMfaStep(levels.data);
+        if (recovering.current) return setState(step === "code" ? "mfa-code" : "herstel");
+        if (step === "code") return setState("mfa-code");
+        if (step === "instellen") return setState("mfa-instellen");
         const { data, error } = await sb.rpc("is_admin");
         setState(error ? "fout" : data === true ? "admin" : "geen-admin");
       } catch {
@@ -54,8 +66,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
       () => setState("fout"),
     );
     const { data: sub } = sb.auth.onAuthStateChange((event, s) => {
-      if (event === "PASSWORD_RECOVERY") return setState("herstel");
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") void check(s);
+      if (event === "PASSWORD_RECOVERY") {
+        recovering.current = true;
+        return void check(s);
+      }
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "MFA_CHALLENGE_VERIFIED") void check(s);
     });
     return () => sub.subscription.unsubscribe();
   }, [attempt]);
@@ -81,7 +96,23 @@ export function AdminShell({ children }: { children: ReactNode }) {
       </Gate>
     );
   if (state === "uit") return <Login />;
-  if (state === "herstel") return <NewPassword onDone={() => setState("admin")} />;
+  // Na een nieuw wachtwoord opnieuw controleren: een herstellink geeft een aal1-sessie, dus eerst de tweede stap
+  const recheck = () => {
+    setState("laden");
+    setAttempt((a) => a + 1);
+  };
+  if (state === "herstel")
+    return (
+      <NewPassword
+        onDone={() => {
+          recovering.current = false;
+          recheck();
+        }}
+      />
+    );
+  if (state === "mfa-code")
+    return <MfaCode email={session?.user.email} onDone={() => (recovering.current ? setState("herstel") : recheck())} />;
+  if (state === "mfa-instellen") return <MfaEnroll email={session?.user.email} onDone={recheck} />;
   if (state === "geen-admin")
     return (
       <Gate>
@@ -202,11 +233,11 @@ function Login() {
               name="password"
               type="password"
               required
-              minLength={mode === "registreren" ? 10 : 1}
+              minLength={mode === "registreren" ? 12 : 1}
               autoComplete={mode === "registreren" ? "new-password" : "current-password"}
               className={input}
             />
-            {mode === "registreren" && <span className="mt-1 block text-sm text-muted">Minimaal 10 tekens.</span>}
+            {mode === "registreren" && <span className="mt-1 block text-sm text-muted">Minimaal 12 tekens.</span>}
           </label>
         )}
         <ErrorNote message={err} />
@@ -247,11 +278,132 @@ function NewPassword({ onDone }: { onDone: () => void }) {
       <form onSubmit={submit} className="mt-6 space-y-4">
         <label className="block">
           <span className="mb-1.5 block font-semibold">Nieuw wachtwoord</span>
-          <input name="password" type="password" required minLength={10} autoComplete="new-password" className={input} />
+          <input name="password" type="password" required minLength={12} autoComplete="new-password" className={input} />
         </label>
         <ErrorNote message={err} />
         <button disabled={busy} className={`${primary} h-12 w-full`}>Opslaan</button>
       </form>
+    </Gate>
+  );
+}
+
+function SignOut() {
+  return (
+    <button type="button" className="mt-6 min-h-11 font-semibold text-forest" onClick={() => supabase().auth.signOut()}>
+      Uitloggen
+    </button>
+  );
+}
+
+function CodeField() {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block font-semibold">Code uit je app</span>
+      <input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]{6,7}" maxLength={7} required className={input} />
+    </label>
+  );
+}
+
+/** Tweede stap bij het inloggen: de zescijferige code van een al ingestelde authenticator-app */
+function MfaCode({ email, onDone }: { email?: string; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const code = totpCode(String(new FormData(e.currentTarget).get("code") ?? ""));
+    if (!code) return setErr("Typ de zes cijfers uit je authenticator-app.");
+    setBusy(true);
+    setErr(null);
+    const mfa = supabase().auth.mfa;
+    const factors = await mfa.listFactors();
+    const factor = factors.data?.totp[0];
+    if (factors.error || !factor) {
+      setBusy(false);
+      return setErr(factors.error ? errorMessage(factors.error) : "Geen authenticator-app gevonden voor dit account.");
+    }
+    const { error } = await mfa.challengeAndVerify({ factorId: factor.id, code });
+    setBusy(false);
+    if (error) return setErr(/invalid|expired/i.test(error.message) ? "Deze code klopt niet of is verlopen. Probeer de nieuwe code." : errorMessage(error));
+    onDone();
+  }
+  return (
+    <Gate>
+      <h1 className="font-display text-2xl font-semibold">Tweede stap</h1>
+      <p className="mt-2 text-ink-2">Open je authenticator-app en typ de code voor VrijStaan{email ? ` (${email})` : ""}.</p>
+      <form onSubmit={submit} className="mt-6 space-y-4">
+        <CodeField />
+        <ErrorNote message={err} />
+        <button disabled={busy} className={`${primary} h-12 w-full`}>{busy ? "Bezig…" : "Bevestigen"}</button>
+      </form>
+      <SignOut />
+    </Gate>
+  );
+}
+
+/**
+ * Eerste keer: een authenticator-app koppelen (QR-code of sleutel), daarna één code invullen. Na de bevestiging is de
+ * sessie aal2 en logt Supabase andere sessies uit. Halve pogingen (ongeverifieerde factoren) ruimen we eerst op.
+ */
+function MfaEnroll({ email, onDone }: { email?: string; onDone: () => void }) {
+  const [factor, setFactor] = useState<{ id: string; qr: string; secret: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Eén registratie per scherm, ook als React de effect in de ontwikkelmodus twee keer draait
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    // Geen opruimfunctie: na de dubbele effect in de ontwikkelmodus moet dit ene resultaat het scherm nog vullen
+    void (async () => {
+      const mfa = supabase().auth.mfa;
+      const list = await mfa.listFactors();
+      for (const f of list.data?.all ?? []) if (f.status === "unverified") await mfa.unenroll({ factorId: f.id });
+      const { data, error } = await mfa.enroll({ factorType: "totp", friendlyName: `Beheer ${new Date().toISOString().slice(0, 10)} ${crypto.randomUUID().slice(0, 8)}` });
+      if (error) return setErr(errorMessage(error));
+      setFactor({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
+    })();
+  }, []);
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!factor) return;
+    const code = totpCode(String(new FormData(e.currentTarget).get("code") ?? ""));
+    if (!code) return setErr("Typ de zes cijfers uit je authenticator-app.");
+    setBusy(true);
+    setErr(null);
+    const { error } = await supabase().auth.mfa.challengeAndVerify({ factorId: factor.id, code });
+    setBusy(false);
+    if (error) return setErr(/invalid|expired/i.test(error.message) ? "Deze code klopt niet of is verlopen. Probeer de nieuwe code." : errorMessage(error));
+    onDone();
+  }
+
+  return (
+    <Gate>
+      <h1 className="font-display text-2xl font-semibold">Tweestapsverificatie instellen</h1>
+      <p className="mt-2 text-ink-2">
+        Beheer vraagt naast je wachtwoord een code uit een authenticator-app, zoals Google Authenticator, 1Password of
+        Microsoft Authenticator{email ? ` (voor ${email})` : ""}. Scan de QR-code en typ daarna de code die de app toont.
+      </p>
+      {factor ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- QR-code als data-URL van Supabase, geen extern beeld */}
+          <img src={factor.qr} alt="QR-code om VrijStaan toe te voegen aan je authenticator-app" width={200} height={200} className="mx-auto mt-6 rounded-lg bg-white p-2" />
+          <p className="mt-3 text-sm text-muted">Scannen lukt niet? Typ deze sleutel in de app:</p>
+          <p className="font-mono text-sm break-all">{factor.secret}</p>
+          <form onSubmit={submit} className="mt-6 space-y-4">
+            <CodeField />
+            <ErrorNote message={err} />
+            <button disabled={busy} className={`${primary} h-12 w-full`}>{busy ? "Bezig…" : "Koppelen"}</button>
+          </form>
+        </>
+      ) : err ? (
+        <div className="mt-6"><ErrorNote message={err} /></div>
+      ) : (
+        <p className="mt-6 text-muted" role="status">QR-code maken…</p>
+      )}
+      <SignOut />
     </Gate>
   );
 }

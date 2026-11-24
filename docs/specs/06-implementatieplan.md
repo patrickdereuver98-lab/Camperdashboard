@@ -305,7 +305,7 @@ contentdashboard voor de app: plan en stand in [`docs/marketing/plan.md`](../mar
 
 ## Beveiliging (audit 1 november 2026) 🟡
 
-Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA in de app: niet bouwen (besluit eigenaar).
+Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA in de app: eerst niet bouwen (besluit eigenaar); op 24 november 2026 herzien: TOTP verplicht voor beheer (audit H2, README 142).
 
 | Taak | Eigenaar | Input | Output | Klaar als | Afhankelijk van |
 |---|---|---|---|---|---|
@@ -314,6 +314,9 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 | 🔄 B1, B12 en B19: e-mailadres, beheernotitie en `user_id` van reviews afschermen, `admin_reviews()`, oude `submit_review` weg. Gebouwd in golf 1 B (migratie `20261106100000`), live na samenvoegen PR #143; op 8 november leest `anon` live nog `author_email` (0 reviews). `places.sources` blijft openbaar | Agent | Verbeterplan | Migratie, beheerpagina, test | Publieke sleutel krijgt geen `author_email` | Vóór de eerste goedgekeurde review |
 | 🔄 B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging. Live (SQL, 8 november): B5, B6, B17 ✅, B11 deels (bewust). In PR #143: B7, B18. Open: B16 | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
 | ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 89 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
+| ✅ Audit 24 november 2026, H1: wildcard `camperdashboard-*-vrijstaan.vercel.app` uit de redirect-allowlist van Supabase Auth (accountovername via een eigen Vercel-project). Live gezet via de Management API: alleen exacte adressen (`camperdashboard-vrijstaan.vercel.app`, `vrijstaan.nl`, `www.vrijstaan.nl`). Inloggen op Vercel-previews werkt niet meer | Agent | Audit | Instellingen | Allowlist zonder `*` in de host | — |
+| 🔄 Audit 24 november 2026, H2: beheer alleen met tweestapsverificatie. Live: minimale wachtwoordlengte 12 (B4 afgerond). Code: TOTP-stap in `app/admin/shell.tsx` (`lib/admin-mfa.ts`, test). Migratie `20261124100000_beheer_alleen_met_tweestap` (aal2 in `is_admin` en `has_admin_role`) pas toepassen als de code live is **en** elke beheerder een app heeft gekoppeld; de migratie breekt zelf af zolang dat niet zo is. Open: lekcontrole (HIBP) vraagt het Pro-abonnement; captcha vraagt een Turnstile- of hCaptcha-sleutel | Agent + Patrick | Audit | Code, migratie, instellingen | `is_admin()` geeft false bij een aal1-sessie | Patrick koppelt app op `/admin` |
+| ✅ Audit 24 november 2026, M1: open redirect in `safeNext` via tab of regeleinde (`/%09/evil.nl`) dicht; de URL-parser beslist nu. Tests in `tests/auth.test.ts` | Agent | Audit | Code, test | Geen extern adres na het inloggen | — |
 
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
 

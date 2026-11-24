@@ -302,3 +302,26 @@ Getoetst aan een veelgedeelde lijst (1 november 2026). ✅ = geregeld, ➖ = nie
 5. **Daarna:** B9, B10, B13, B14.
 
 Na elke stap: `get_advisors` (security) opnieuw draaien en deze tabel bijwerken.
+
+## Tweestapsverificatie voor beheer (audit 24 november 2026, H2)
+
+Beheer vraagt na het wachtwoord een code uit een authenticator-app (`web/src/app/admin/shell.tsx`). Met migratie
+`20261124100000_beheer_alleen_met_tweestap` geven `is_admin()` en `has_admin_role()` alleen nog rechten aan een sessie op
+niveau aal2.
+
+**Volgorde bij invoeren**
+1. De code staat live (PR samengevoegd, Vercel uitgerold).
+2. Elke beheerder logt in op `/admin`, scant de QR-code en typt één code. Bewaar de sleutel onder de QR-code ook in
+   een wachtwoordmanager als reserve.
+3. Migratie toepassen. Ontbreekt bij een beheerder nog een geverifieerde factor, dan breekt de migratie af en verandert
+   er niets.
+
+**Authenticator kwijt** (alleen via de SQL-editor van Supabase of `web/scripts/sql.sh`, nooit via de site):
+```sql
+delete from auth.mfa_factors where user_id = (select id from auth.users where email = '<adres>');
+```
+Daarna inloggen op `/admin` en een nieuwe app koppelen. Wachtwoord vergeten met een gekoppelde app: de herstellink
+vraagt eerst de code en daarna het nieuwe wachtwoord.
+
+**Nog open:** lekcontrole van wachtwoorden (HaveIBeenPwned) vraagt het Pro-abonnement van Supabase; captcha op de login
+vraagt een Turnstile- of hCaptcha-sleutel (instelling plus `captchaToken` in `signInWithPassword`).
