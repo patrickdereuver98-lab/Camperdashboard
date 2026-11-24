@@ -13,9 +13,24 @@ Nederlands eerst. Eigenaar: Patrick. Bijgewerkt 24 november 2026.
 1. `CLAUDE.md` en `docs/specs/` (PRD, TRD, flow, UI-brief, schema, plan)
 2. `docs/stijlgids.md` en skill `vrijstaan-stijl`
 3. `PRODUCT.md` en `DESIGN.md` (samenvatting voor Impeccable, wijst terug naar 1 en 2)
-4. Alle andere skills zijn naslag: Impeccable, ui-ux-pro-max, design-taste-frontend, minimalist-ui,
-   high-end-visual-design, redesign-existing-projects, frontend-design, ponytail, agent-skills.
+4. Alle andere skills zijn naslag, geordend in de hiërarchie hieronder.
    Zeggen ze iets anders (ander lettertype, serif, gradients, glas, 3D, schuine lagen), dan negeer je dat.
+
+## Hiërarchie van skills (bindend, standaard, naslag)
+
+Per groep: **bindend** gaat altijd voor en geldt zonder vraag; **standaard** gebruik je uit jezelf als de taak erom
+vraagt; **naslag** gebruik je alleen op verzoek of als de andere twee niets zeggen.
+
+| Groep | Bindend | Standaard | Naslag |
+|---|---|---|---|
+| Ontwerp en tekst | `docs/stijlgids.md`, `vrijstaan-stijl` | Impeccable (`critique`, `audit`, `polish`, `harden`, `adapt`, `clarify`), `ui-ux-pro-max`, `web-design-guidelines` | `design-taste-frontend`, `minimalist-ui`, `high-end-visual-design`, `redesign-existing-projects`, `frontend-design` |
+| Bouwen | `CLAUDE.md`, `docs/specs/` | ponytail, `react-patterns`, `nextjs-turbopack`, `vercel-react-best-practices` | agent-skills (`spec`, `plan`, `build`), `search-first` |
+| Testen en controle | `npm run check` en offline build | `tdd-workflow`, `verification-loop`, `playwright-cli` | `e2e-testing`, agent `tdd-guide`, agent-skills `test-driven-development` |
+| Data en database | specs 02 en 05, `database-migrations` | `postgres-patterns`, agent `database-reviewer` | `data-scraper-agent` |
+| Orkestratie | regels in `CLAUDE.md` | `orch-add-feature`, `orch-fix-defect`, `orch-change-feature`, `orch-refine-code` | `opus-orchestrator`, `plan-orchestrate`, `team-agent-orchestration`, `dev-team` |
+| Zoeken en onderhoud | n.v.t. | `graphify` | `codebase-onboarding` |
+
+Staat een skill of agent hier niet in, meld hem dan eerst aan Patrick en gebruik hem niet uit jezelf.
 
 ## Vaste feiten
 
