@@ -130,3 +130,12 @@ weinig kritiek geeft.
   weer dubbel werk. De hub regelt de keuze.
 
 - **24 november 2026:** Fable is niet beschikbaar voor ons. `opus-orchestrator` is aangepast: Opus (high, xhigh of max bij lastig werk) stuurt en reviewt, Sonnet (medium) voert uit.
+
+### Modelkeuze en effort volgens de bronnen (24 november 2026)
+
+Bronnen: platform.claude.com/docs/en/build-with-claude/effort, code.claude.com/docs/en/model-config en de
+Anthropic-blog "Choosing a Claude model and effort level in Claude Code". Aangepast voor kwaliteit: verkenners Haiku
+medium (op low slaat Haiku zoekstappen over), controlelijsten Sonnet medium, `code-reviewer` Sonnet high,
+`security-reviewer`, `database-reviewer` en `reviewer` Opus high, hoofdsessie medium of high of xhigh per soort werk.
+Max alleen gericht. Niet gemeten op onze eigen code: de documentatie raadt een vergelijking aan (zelfde taak op medium en
+high) voordat we het effort verder verschuiven.

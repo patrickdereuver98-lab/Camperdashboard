@@ -16,9 +16,9 @@ The user's explicit instructions take precedence over this skill.
 
 ## Topology
 
-- root: `opus` at `high` reasoning (`xhigh` or `max` for a hard feature or when stuck)
-- explorer: `haiku` at `low`; worker, tester, researcher: `sonnet` at `medium`
-- reviewer: `opus` at `medium` reasoning, in an independent read-only context
+- root: `opus` at `medium` for a clear feature, `high` for bugs, migrations, auth and RLS, `xhigh` for hard or long work (`max` only for a targeted hunt)
+- explorer: `haiku` at `medium`; worker, tester, researcher: `sonnet` at `medium`
+- reviewer: `opus` at `high` reasoning, in an independent read-only context
 
 The role files in `.claude/agents/` pin these models and reasoning levels; generic subagents inherit the Sonnet defaults in `.claude/settings.json`. Do not change the root model from within a session.
 

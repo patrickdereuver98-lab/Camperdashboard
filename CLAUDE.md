@@ -25,17 +25,19 @@ Werkwijze:
   herkomst in `.claude/skills/BRONNEN.md`). Gebruik ze als team (plannen, bouwen, reviewen); bij een conflict gaan
   deze instructies en `docs/specs/` voor.
 - Orchestratie (modellen en agents): de hoofdsessie is de orchestrator. Zij plant, beslist en bouwt zelf, op Opus
-  met effort high (xhigh bij lastige features). Een agent begint zonder context en leest alles opnieuw in, dus:
+  (5.5). Effort per soort werk: medium voor een nieuwe functie met een duidelijk doel, high voor bugs, migraties, auth,
+  RLS en alles waar controle en randgevallen tellen, xhigh voor lastig of lang werk (bron: Anthropic, 24 november 2026).
+  Kies het niveau aan het begin van de sessie en wissel niet heen en weer: dat kost cache. Een agent begint zonder context en leest alles opnieuw in, dus:
   - Kleine taken (tot ongeveer drie bestanden) doe je zelf, zonder agents.
   - Agents alleen voor zoekwerk over veel bestanden, voor werk dat echt parallel kan, of voor een review.
-  - Zoeken en code in kaart brengen: `code-explorer` of Explore op Haiku (effort low).
-  - Per wijziging hoogstens één review-ronde met `code-reviewer` (Sonnet, dekt ook TypeScript en React). Raakt
+  - Zoeken en code in kaart brengen: `code-explorer` of Explore op Haiku (effort medium; op low slaat Haiku soms een zoekstap over).
+  - Per wijziging hoogstens één review-ronde met `code-reviewer` (Sonnet, effort high, dekt ook TypeScript en React). Raakt
     de wijziging auth, RLS, migraties of persoonsgegevens, dan ook `security-reviewer` en/of `database-reviewer`
-    (Opus, effort medium).
+    (Opus, effort high).
   - Uitvoerwerk (build-fouten, refactor, e2e, tests, performance) op Sonnet, effort medium. Controlelijsten (seo,
-    a11y, silent-failure-hunter, pr-test-analyzer) op Sonnet, effort low.
+    a11y, silent-failure-hunter, pr-test-analyzer) op Sonnet, effort medium: een controle op low slaat punten over.
   - `planner` en `architect` alleen bij grote verbouwingen over meerdere delen van de app.
-  - Fable hebben we niet. Loopt Opus vast, zet het effort dan op max (of xhigh) in plaats van van model te wisselen. Kijk naar kosten per afgeronde taak, niet per
+  - Fable hebben we niet. Loopt Opus vast, verhoog dan eerst het effort naar xhigh. Max alleen voor een gerichte klus (bijvoorbeeld een beveiligingsjacht): het geeft afnemende winst en kan overdenken. Heeft Opus alle context en gaat het dan nog fout, meld dat aan Patrick. Kijk naar kosten per afgeronde taak, niet per
     aanroep. Model en effort per agent staan in de kop van `.claude/agents/*.md`.
 - Controleer vóór een push: `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`.
 - Edge functions uitrollen, migraties toepassen (`apply_migration`) en SQL uitvoeren (`execute_sql`) in Supabase mag

@@ -2,7 +2,7 @@
 name: reviewer
 description: Read-only code reviewer. Use after implementation to find correctness, security, regression, concurrency, data-integrity, and missing-test risks.
 model: opus
-effort: medium
+effort: high
 permissionMode: plan
 disallowedTools: Edit, Write, NotebookEdit
 ---

@@ -34,26 +34,26 @@ Staat een skill of agent hier niet in, meld hem dan eerst aan Patrick en gebruik
 
 ## Werkvolgorde en modellen (volgt `CLAUDE.md`, orchestratie)
 
-De hoofdsessie is de orchestrator: Opus, effort high (xhigh bij een lastige functie). Zij plant, beslist en bouwt zelf.
+De hoofdsessie is de orchestrator: Opus 5.5. Effort: medium voor een nieuwe functie met duidelijk doel, high voor bugs, migraties, auth, RLS en alles met randgevallen, xhigh voor lastig werk. Zij plant, beslist en bouwt zelf.
 Een agent begint zonder context; taken tot ongeveer drie bestanden doe je dus zelf. Hoogstens 2 agents tegelijk, nooit
 twee workers in dezelfde bestanden.
 
 | # | Stap | Wie en welk model | Skill of hulpmiddel |
 |---|---|---|---|
 | 1 | Lezen en tegenstrijdigheden melden | hoofdsessie | `docs/specs/`, noteer in `docs/specs/README.md` |
-| 2 | Code vinden | hoofdsessie; veel bestanden: `code-explorer` of `explorer` (Haiku, low) | `graphify query` vóór grep |
+| 2 | Code vinden | hoofdsessie; veel bestanden: `code-explorer` of `explorer` (Haiku, medium) | `graphify query` vóór grep |
 | 3 | Plannen | hoofdsessie; alleen bij een grote verbouwing `planner` of `architect` (Opus, high) | agent-skills `spec` en `plan` bij een grote functie |
 | 4 | Ontwerp bij een scherm | hoofdsessie | `vrijstaan-stijl`, Impeccable `shape`, `ui-ux-pro-max` |
 | 5 | Bouwen, test eerst | hoofdsessie; echt parallel werk: `worker` (Sonnet, medium) | ponytail, `tdd-workflow`, `orch-*` |
 | 6 | Build- en typefouten | `build-error-resolver` of `react-build-resolver` (Sonnet, medium) | `build-fix` |
 | 7 | Controle | hoofdsessie | `cd web && npm run check && VRIJSTAAN_OFFLINE=1 npm run build`, `npm test` |
 | 8 | Pagina bekijken | hoofdsessie of `e2e-runner` (Sonnet, medium) | `playwright-cli`, Impeccable `critique` en `audit` |
-| 9 | Review, één ronde | `code-reviewer` (Sonnet, medium); bij auth, RLS, migraties of persoonsgegevens ook `security-reviewer` en `database-reviewer` (Opus, medium) | `verification-loop` |
-| 10 | Controlelijsten | `seo-specialist`, `a11y-architect`, `silent-failure-hunter`, `pr-test-analyzer` (Sonnet, low) | `seo`, `frontend-a11y` |
+| 9 | Review, één ronde | `code-reviewer` (Sonnet, high); bij auth, RLS, migraties of persoonsgegevens ook `security-reviewer` en `database-reviewer` (Opus, high) | `verification-loop` |
+| 10 | Controlelijsten | `seo-specialist`, `a11y-architect`, `silent-failure-hunter`, `pr-test-analyzer` (Sonnet, medium) | `seo`, `frontend-a11y` |
 | 11 | Documenten bijwerken | hoofdsessie, in dezelfde commit | status in `06-implementatieplan.md`, schema, flow |
 | 12 | Push en PR | hoofdsessie | concept-PR naar `acceptatie`; migratie pas live na samenvoegen |
 
-Fable hebben we niet: loopt Opus vast, zet het effort op max of xhigh. De modellen en het effort per agent staan in de kop van
+Fable hebben we niet: loopt Opus vast, verhoog eerst naar xhigh; max alleen voor een gerichte klus. De modellen en het effort per agent staan in de kop van
 `.claude/agents/*.md`; wijkt een skill daarvan af (bijvoorbeeld `opus-orchestrator`), dan gaan de agentkoppen en
 `CLAUDE.md` voor.
 
