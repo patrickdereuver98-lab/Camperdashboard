@@ -81,3 +81,17 @@ Op 2 november 2026 toegevoegd (verzoek eigenaar, marketingplan `docs/marketing/p
 meegeleverde muziek of Hyperframes. Huisregels die voorgaan staan in `.claude/skills/brag-slim/VRIJSTAAN.md`.
 De volledige `/brag` (met Hyperframes en muziek, ±20 MB) is bewust niet overgenomen; de Studio in het dashboard
 gebruikt dezelfde werkwijze (HTML met tijdlijn, Chromium, ffmpeg) zonder extra pakket.
+
+## Ponytail, graphify en agent-skills
+
+Op 24 november 2026 toegevoegd (verzoek eigenaar: "gebruik ze vanaf nu overal en altijd"):
+
+- **ponytail** (github.com/DietrichGebert/ponytail, MIT): als plugin via `extraKnownMarketplaces` en `enabledPlugins` in
+  `.claude/settings.json`. Laadt bij elke sessie de "bouw het simpelste dat werkt"-regels (hooks in Node).
+- **agent-skills** (github.com/addyosmani/agent-skills): als plugin, marketplace `addy-agent-skills`, in dezelfde
+  instelling. Let op: de commando's `/spec`, `/plan`, `/build`, `/test`, `/review` en `/ship` botsen soms met
+  ingebouwde of bestaande namen; gebruik dan `/agent-skills:<naam>`.
+- **graphify** (github.com/Graphify-Labs/graphify, pakket `graphifyy` via `uv tool install graphifyy`): projectinstallatie
+  met `graphify install --project`. Gaf `.claude/skills/graphify/`, hooks in `.claude/settings.json` en een blok in
+  `CLAUDE.md`. In een nieuwe omgeving eerst `uv tool install graphifyy`, daarna `/graphify .`.
+- CLAUDE.md en `docs/specs/` gaan bij een conflict voor.
