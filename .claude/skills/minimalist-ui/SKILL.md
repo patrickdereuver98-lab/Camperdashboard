@@ -3,6 +3,10 @@ name: minimalist-ui
 description: Clean editorial-style interfaces. Warm monochrome palette, typographic contrast, flat bento grids, muted pastels. No gradients, no heavy shadows.
 ---
 
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
 # Protocol: Premium Utilitarian Minimalism UI Architect
 
 ## 1. Protocol Overview

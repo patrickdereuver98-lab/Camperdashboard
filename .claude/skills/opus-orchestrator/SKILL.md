@@ -3,6 +3,10 @@ name: opus-orchestrator
 description: Orchestrate complex Claude Code coding work with Claude Fable at medium reasoning as planner/integrator and reviewer and Claude Sonnet at max reasoning for exploration, implementation, testing, and research. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or when the user asks to delegate. Do not use for trivial edits or simple questions.
 ---
 
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
 # Orchestrator — Claude Fable Medium + Claude Sonnet Max
 
 The user's explicit instructions take precedence over this skill.

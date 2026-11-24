@@ -6,6 +6,10 @@ metadata:
   origin: ECC
 ---
 
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
 # Test-Driven Development Workflow
 
 This skill ensures all code development follows TDD principles with comprehensive test coverage.

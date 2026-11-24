@@ -105,3 +105,26 @@ In de cloud-omgeving is `.playwright/cli.config.json` nodig met `executablePath:
 `--no-sandbox`. Geprobeerd op de startpagina: geen horizontaal scrollen (375/375), tekst en knoppen leesbaar.
 Awesome Design (merkontwerpen) en Three.js zijn bewust niet overgenomen; Impeccable alleen als `ui-ux-pro-max` te
 weinig kritiek geeft.
+
+## Impeccable en skill-hub (24 november 2026)
+
+- **Impeccable** (github.com/pbakaus/impeccable, Apache 2.0): als plugin `impeccable@impeccable` in
+  `.claude/settings.json`. Het binaire hulpprogramma wordt bij het eerste gebruik gedownload en met sha256 gecontroleerd.
+  Rol: beoordelaar en verfijner naast `ui-ux-pro-max`. Geen `bolder` en `colorize`: kleur betekent iets bij ons.
+- `PRODUCT.md` en `DESIGN.md` (hoofdmap): door ons geschreven uit `docs/specs/` en de stijlgids, zodat Impeccable de
+  vaste kleuren, Geist en de toon kent. Bij verschil gaan de specs voor.
+- **Skill-hub** `.claude/skills/vrijstaan-context/SKILL.md`: stack, vaste regels, voorrang en keuzetabel. 51 skills en
+  agents kregen bovenaan een verwijzing ernaartoe (marker `<!-- vrijstaan-context -->`, opnieuw aanbrengen met het
+  script in de commit als een skill wordt bijgewerkt of toegevoegd).
+
+### Analyse van de skills (24 november 2026)
+
+- Zwaar dubbel: `design-taste-frontend` (89 kB), `minimalist-ui`, `high-end-visual-design`, `redesign-existing-projects`
+  en `frontend-design` zeggen deels hetzelfde en willen soms andere lettertypes of effecten. Hun bruikbare deel zit al in
+  `docs/stijlgids.md`. Ze blijven als naslag; de hub zegt dat de stijlgids voorgaat.
+- Dubbel in testen: `tdd-workflow`, agent `tdd-guide` en agent-skills `test-driven-development`; `e2e-testing` en
+  `playwright-cli` vullen elkaar aan (patronen tegenover bediening).
+- Dubbel in orkestratie: `opus-orchestrator`, `orch-*`, `plan-orchestrate` en `team-agent-orchestration`. De regels in
+  CLAUDE.md gelden; gebruik `orch-*` voor een volledige functie en de rest alleen op verzoek.
+- Niet samengevoegd of verwijderd: elk bestand komt van een bron die we bijhouden, en verwijderen geeft bij een update
+  weer dubbel werk. De hub regelt de keuze.

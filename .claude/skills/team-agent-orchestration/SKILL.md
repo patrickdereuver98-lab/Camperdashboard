@@ -5,6 +5,10 @@ metadata:
   origin: ECC
 ---
 
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
 # Team Agent Orchestration
 
 Use this skill when agents are being managed like a team rather than a single assistant. The purpose is to make team-based orchestration reliable: clear work items, explicit ownership, agent Kanban state, branch isolation, control pane visibility, and merge gates.

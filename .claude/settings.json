@@ -80,10 +80,17 @@
         "source": "github",
         "repo": "addyosmani/agent-skills"
       }
+    },
+    "impeccable": {
+      "source": {
+        "source": "github",
+        "repo": "pbakaus/impeccable"
+      }
     }
   },
   "enabledPlugins": {
     "ponytail@ponytail": true,
-    "agent-skills@addy-agent-skills": true
+    "agent-skills@addy-agent-skills": true,
+    "impeccable@impeccable": true
   }
 }

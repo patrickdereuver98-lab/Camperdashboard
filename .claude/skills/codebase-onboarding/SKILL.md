@@ -5,6 +5,10 @@ metadata:
   origin: ECC
 ---
 
+<!-- vrijstaan-context -->
+> VrijStaan: lees eerst `.claude/skills/vrijstaan-context/SKILL.md`. Bij een conflict gaan `CLAUDE.md`, `docs/specs/` en
+> `docs/stijlgids.md` voor op deze skill.
+
 # Codebase Onboarding
 
 Systematically analyze an unfamiliar codebase and produce a structured onboarding guide. Designed for developers joining a new project or setting up Claude Code in an existing repo for the first time.

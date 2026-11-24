@@ -69,3 +69,9 @@ Altijd gebruiken, besluit Patrick: **ponytail** (kies het simpelste dat werkt, g
 `graphify query` vóór grep of bestanden lezen, zie hierboven) en de **agent-skills** van Addy Osmani (spec, plan, build,
 test, review, ship). Plugins staan in `.claude/settings.json`; herkomst in `.claude/skills/BRONNEN.md`. Bij een conflict
 gaan deze CLAUDE.md en `docs/specs/` voor.
+
+**Impeccable** (pbakaus/impeccable) vult `ui-ux-pro-max` aan: ui-ux-pro-max geeft patronen en naslag, Impeccable
+beoordeelt en verfijnt (`critique`, `audit`, `polish`, `harden`, `adapt`, `clarify`). `PRODUCT.md` en `DESIGN.md` in de
+hoofdmap zijn de korte samenvatting voor Impeccable en wijzen terug naar `docs/specs/` en `docs/stijlgids.md`. Alle
+skills en agents beginnen met een verwijzing naar `.claude/skills/vrijstaan-context/SKILL.md`: vaste feiten, voorrang
+en een tabel welke skill wanneer. Kleur- of lettertypeadvies van een skill dat de stijlgids tegenspreekt, negeer je.
