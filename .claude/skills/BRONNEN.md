@@ -95,3 +95,13 @@ Op 24 november 2026 toegevoegd (verzoek eigenaar: "gebruik ze vanaf nu overal en
   met `graphify install --project`. Gaf `.claude/skills/graphify/`, hooks in `.claude/settings.json` en een blok in
   `CLAUDE.md`. In een nieuwe omgeving eerst `uv tool install graphifyy`, daarna `/graphify .`.
 - CLAUDE.md en `docs/specs/` gaan bij een conflict voor.
+
+## Playwright CLI (24 november 2026)
+
+`@playwright/cli` van Microsoft (npm, github.com/microsoft/playwright-cli), globaal geïnstalleerd met
+`npm i -g @playwright/cli`; skill in `.claude/skills/playwright-cli` via `playwright-cli install --skills`.
+Bedoeld om pagina's op telefoonbreedte te bekijken (`open <url> --mobile`, `resize 375 812`, `screenshot`).
+In de cloud-omgeving is `.playwright/cli.config.json` nodig met `executablePath: /opt/pw-browsers/chromium` en
+`--no-sandbox`. Geprobeerd op de startpagina: geen horizontaal scrollen (375/375), tekst en knoppen leesbaar.
+Awesome Design (merkontwerpen) en Three.js zijn bewust niet overgenomen; Impeccable alleen als `ui-ux-pro-max` te
+weinig kritiek geeft.
