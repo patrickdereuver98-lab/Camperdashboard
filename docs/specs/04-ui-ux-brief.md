@@ -37,7 +37,7 @@
 | `lake` (meerblauw) | `#2F6F7E` | `#82BCC8` | Water en routes op de kaart, **uitslapers** (vertrek 12:00 of later) |
 | `alert` | `#A8321D` | `#F08A72` | Fouten, "niet aanwezig" |
 
-Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live (zonsondergang). Een zon/maan-knop in de header vanaf `lg` (44 × 44 px), op de telefoon "Donkere modus" in het menu Meer zet het andere thema vast op dit toestel (`vrijstaan:thema`); kies je weer wat het systeem doet, dan volgt de site het systeem weer. Het actieve thema staat als `data-theme` op `<html>`, gezet vóór de eerste weergave (`lib/theme.ts`), zodat er geen lichte flits is. De kaart wisselt mee zonder te herladen.
+Donkere modus "avond in het bos": volgt standaard de systeeminstelling, ook live (zonsondergang). Een zon/maan-knop in de header vanaf `lg` (44 × 44 px), op de telefoon "Donkere modus" in het menu Meer zet het andere thema vast op dit toestel (`vrijstaan:thema`); kies je weer wat het systeem doet, dan volgt de site het systeem weer. Het actieve thema staat als `data-theme` op `<html>`, gezet vóór de eerste weergave (`lib/theme.ts`), zodat er geen lichte flits is. De kaart wisselt mee zonder te herladen. Basiskaart: eigen stijl (`scripts/kaartstijl.mjs`), licht in zand, zacht groen en meerblauw met een eigen tint per terrein; donker bijna neutraal met verschil in lichtheid, zodat groen voor de stippen blijft.
 
 ## Typografie
 

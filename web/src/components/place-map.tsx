@@ -18,31 +18,14 @@ export const NL_BOUNDS: [[number, number], [number, number]] = [
   [3.3, 50.75],
   [7.25, 53.55],
 ];
-export const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
-export const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
+/**
+ * Eigen kaartstijl ("natuur & vrijheid"), gemaakt door scripts/kaartstijl.mjs op de tegels van OpenFreeMap: eigen tint
+ * voor bos, heide, zand, gras en water, warme wegen, namen in het Nederlands. Verhoog `v` als de stijl verandert.
+ */
+export const STYLE_LIGHT = "/kaart/licht.json?v=2";
+export const STYLE_DARK = "/kaart/donker.json?v=2";
 /** Straal van het onzichtbare tikvlak rond een punt: 22 px = een tikdoel van 44 × 44 px */
 const HIT_RADIUS = 22;
-
-/** Basiskaart in de tinten van de site: koel wit, zacht groen, meerblauw */
-export function tint(map: MlMap, dark: boolean) {
-  const colors = dark
-    ? { bg: "#141b16", water: "#17303a", green: "#1a2a20" }
-    : { bg: "#f1ebdf", water: "#cfe3e4", green: "#dde7d6" };
-  for (const layer of map.getStyle().layers ?? []) {
-    try {
-      if (layer.type === "background") map.setPaintProperty(layer.id, "background-color", colors.bg);
-      else if (layer.type === "fill" && /water/.test(layer.id)) map.setPaintProperty(layer.id, "fill-color", colors.water);
-      else if (layer.type === "fill" && /wood|forest|park|grass|landcover/.test(layer.id))
-        map.setPaintProperty(layer.id, "fill-color", colors.green);
-      // Plaats- en landnamen in het Nederlands ("België", "Keulen"), anders de naam ter plekke (kaartronde 26 november
-      // 2026). Alleen lagen die een naam tonen, geen huisnummers of wegnummers.
-      else if (layer.type === "symbol" && "source" in layer && layer.source === "openmaptiles" && /name/.test(JSON.stringify(layer.layout?.["text-field"] ?? "")))
-        map.setLayoutProperty(layer.id, "text-field", ["coalesce", ["get", "name:nl"], ["get", "name"]]);
-    } catch {
-      /* niet elke laag ondersteunt deze eigenschap */
-    }
-  }
-}
 
 /**
  * Popup van een plek, als React-inhoud in het DOM-vak van MapLibre (portal). Zo werkt het hartje (SaveButton) zoals
@@ -207,7 +190,6 @@ export function PlaceMap({
         el.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
         if (!map) return;
         loaded = true;
-        tint(map, dark);
         map.addSource("places", {
           type: "geojson",
           data: toGeoJSON(latest.current.places, latest.current.departures),

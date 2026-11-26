@@ -335,6 +335,10 @@ Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, bes
   (Vertrekken groter, hulp in de cel, kortere oproep, verouderd in `alert`, fotobron onder de foto), kop met menu Meer,
   korte footer op taakpagina's, Doe mee, 404, opruimronde hoeken/schaduw/kopmaten, design-QA in stijlgids §12.
 - ✅ Nieuwe logo- en faviconset (README 143): iconen, favicon, `Logo`, `og.png`, bronnen in `public/merk/`.
+- ✅ Eigen kaartstijl (26 november 2026, besluit Patrick): `web/scripts/kaartstijl.mjs` schrijft
+  `public/kaart/licht.json` en `donker.json` (eigen tint voor bos, heide, zand, gras, akker, wetland; warme wegen;
+  Nederlandse namen; zelfde tegels van OpenFreeMap, geen nieuwe dienst). Donker: bijna neutraal land, verschil alleen
+  in lichtheid, zodat groen voor de stippen blijft. Vervangt Positron + `tint()` in `place-map.tsx` en `add-point.tsx`.
 - ⬜ T49 visuele snapshots in CI; groep D (Dichtbij rijtijd eerst, Mijn reis "volgende stop eerst") na een eigen
   ontwerpronde met screenshots.
 

@@ -7,7 +7,7 @@ import { MAP_LOCALE_NL } from "@/lib/map-locale";
 import { MAX_POINT_NAME, type TripPoint } from "@/lib/trip-merge";
 import { useDarkTheme } from "@/lib/use-media";
 import { Icon } from "@/components/icons";
-import { NL_BOUNDS, STYLE_DARK, STYLE_LIGHT, tint } from "@/components/place-map";
+import { NL_BOUNDS, STYLE_DARK, STYLE_LIGHT } from "@/components/place-map";
 import { AddressSearch } from "./endpoint-card";
 
 /**
@@ -37,7 +37,6 @@ function PointPicker({ near, onPick, onCancel }: { near?: LatLng; onPick: (p: La
       });
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-      map.on("load", () => map && tint(map, dark));
       map.on("error", (e) => {
         if (!map?.isStyleLoaded() && /style|fetch|Failed/i.test(String(e.error?.message ?? ""))) setFailed(true);
       });
