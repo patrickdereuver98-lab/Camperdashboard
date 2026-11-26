@@ -273,6 +273,7 @@ export function NearbyApp() {
                 onPrev={pickedIndex > 0 ? () => setPicked(list[pickedIndex - 1].place.slug) : undefined}
                 onNext={pickedIndex < list.length - 1 ? () => setPicked(list[pickedIndex + 1].place.slug) : undefined}
                 position={`${pickedIndex + 1} van ${list.length}`}
+                drive={<DriveLabel drive={drives?.[pickedPlace.slug]} km={list[pickedIndex]?.km ?? 0} eta />}
               />
             )}
           </div>
@@ -352,7 +353,7 @@ export function NearbyApp() {
         <ul className={`mt-2 sm:mt-3 ${RESULT_LIST}`}>
           {list.map(({ place, km }) => (
             <li key={place.id}>
-              <PlaceCard place={place as PlaceSummary} distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />
+              <PlaceCard place={place as PlaceSummary} leadDistance distanceLabel={<DriveLabel drive={drives?.[place.slug]} km={km} />} />
             </li>
           ))}
         </ul>
@@ -367,12 +368,39 @@ export function NearbyApp() {
   );
 }
 
-/** Echte rijtijd met het route-icoon; zolang die er niet is de hemelsbrede afstand met een kompaspictogram */
-function DriveLabel({ drive, km }: { drive?: Drive; km: number }) {
+/**
+ * Rijtijd als hoofdgegeven (Dichtbij, 26 november 2026): "12 min rijden" vet, daarachter klein de afstand en in het
+ * kaartpaneel wanneer je er ongeveer bent. Zolang de rijtijd er niet is de hemelsbrede afstand, zonder schatting.
+ */
+function DriveLabel({ drive, km, eta: showEta = false }: { drive?: Drive; km: number; eta?: boolean }) {
+  if (!drive)
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm text-ink-2">
+        <Icon name="locate" size={15} className="shrink-0" />
+        {formatKm(km)} hemelsbreed
+      </span>
+    );
+  // Wanneer je er bent alleen in het kaartpaneel; in de lijst staat de prijs ernaast en is daar geen ruimte voor
+  const eta = showEta ? arrivalAround(drive.seconds) : undefined;
+  // Onder een minuut zegt "0 min" niets: dan "1 min"
+  const time = formatDuration(Math.max(60, drive.seconds));
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <Icon name={drive ? "route" : "locate"} size={15} className="shrink-0" />
-      {drive ? `${formatDuration(drive.seconds)} rijden, ${formatKm(drive.km)}` : `${formatKm(km)} hemelsbreed`}
+    <span className={`inline-flex min-w-0 items-baseline gap-x-1.5 ${showEta ? "flex-wrap" : ""}`}>
+      <Icon name="route" size={16} className="shrink-0 self-center text-forest" />
+      <span className="font-semibold whitespace-nowrap">{time} rijden</span>
+      <span className={`text-sm text-ink-2 ${showEta ? "" : "truncate"}`}>
+        {formatKm(drive.km)}
+        {eta ? `, er rond ${eta}` : ""}
+      </span>
     </span>
   );
+}
+
+/** "18:40": nu plus de rijtijd, afgerond op 5 minuten; alleen in de browser (de klok van de bezoeker) */
+function arrivalAround(seconds: number): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const t = new Date(Date.now() + seconds * 1000);
+  const m = Math.round(t.getMinutes() / 5) * 5;
+  t.setMinutes(m, 0, 0);
+  return `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
 }

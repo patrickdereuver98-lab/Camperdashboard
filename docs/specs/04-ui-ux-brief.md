@@ -155,5 +155,11 @@ geldt niet meer:
 - **Kaart (kaartronde):** plaats- en landnamen in het Nederlands (`name:nl`), locatieknop onder de zoomknoppen,
   bronvermelding begint dichtgeklapt. Dichtbij-chips met een lijnicoon zonder vlak (`Sign bare`).
 - **Mijn reis:** zie Schermnotities (volgende stop eerst, vertrekbadge per stop, kaart onder de stops).
+- **Dichtbij:** rijtijd is het hoofdgegeven. In de lijst direct onder de naam "12 min rijden" (halfvet) met de afstand
+  klein erachter; in het paneel van de gekozen plek ook "er rond 18:40" (nu plus rijtijd, afgerond op 5 minuten, klok
+  van de bezoeker). Onder een minuut staat "1 min". Zonder rijtijd de hemelsbrede afstand, zonder schatting.
+- **Filtersheet:** volgorde Vertrekken, Open ("Alleen plekken die nu open zijn"), Prijs per nacht, Voorzieningen,
+  Soort plek, Lengte van je camper, Overig (score, alleen met reviews). Koppen `text-h3`, iconen zonder vlak. De vaste
+  balk onderaan met Wis filters en "Toon n plekken" blijft.
 - **Doe mee:** eerst één lijst met Vertrektijd doorgeven en Plek aanmelden, dan "Waar kun je mee helpen?", dan eigenaren.
 - **Niet gevonden:** zie App Flow.
