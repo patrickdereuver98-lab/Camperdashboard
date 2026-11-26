@@ -113,6 +113,11 @@ de pipeline of de stealth-lezer van de eigen site al ophaalde, en de regels van 
 - Per 24 uur telt alleen als de eigen extractor het in dezelfde zin ook leest; vrij vertrek zonder die bevestiging
   alleen bij een letterlijke zin als "geen vaste vertrektijd".
 - Een door een mens bevestigde vertrekregel krijgt geen AI-voorstel; een afgewezen voorstel komt niet terug.
+- **Ronde 26 november 2026:** vrij vertrek telt ook bij "geen aankomst- of vertrektijden" en varianten met
+  "verplichte", "precieze", "strakke" of "speciale"; niet bij "soepel", "in overleg" of "flexibel". Een vaste tijd wordt
+  alleen afgewezen als verhuur wanneer het zinsdeel met die tijd over verhuur gaat ("Vertrek vóór 11.30 uur, de chalets
+  voor 10.00 uur" geeft 11:30). "11 a.m." telt als 11:00. Opgeslagen lezingen zijn met `scripts/ai-recheck.ts` opnieuw
+  beoordeeld, zonder nieuwe modelaanroep.
 
 ## 3c. Google-reviews via de Places API (besluit Patrick, 21 november 2026, README 141)
 
