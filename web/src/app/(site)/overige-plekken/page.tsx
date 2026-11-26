@@ -23,7 +23,6 @@ export default async function Page({ searchParams }: PageProps<"/overige-plekken
   return (
     <>
       <PlacesPreload />
-      <HubIntro {...hubIntro("overig", all)} link={{ href: "/doe-mee", label: "Vertrektijd doorgeven" }} />
       <Suspense
         fallback={
           <div className="space-y-3 px-3 pt-28 sm:px-6 lg:w-[54%]">
@@ -33,7 +32,7 @@ export default async function Page({ searchParams }: PageProps<"/overige-plekken
           </div>
         }
       >
-        <Search page="overig" searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
+        <Search intro={<HubIntro {...hubIntro("overig", all)} link={{ href: "/doe-mee", label: "Vertrektijd doorgeven" }} embedded />} page="overig" searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
       </Suspense>
       <ProvinceLinks links={provinceLinks(all, "overig")} />
     </>

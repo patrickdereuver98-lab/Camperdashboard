@@ -230,7 +230,6 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           </div>
         </header>
 
-        <ActionRow place={place} tel={tel} reserveLabel={reserveLabel} shareText={shareText} />
         {/* Alleen tot lg: daarna staan ligging en contact in de zijkolom, naast de rest */}
         <SectionNav links={sections} className="lg:hidden" />
 
@@ -239,6 +238,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           <div id="overzicht" className={`min-w-0 space-y-8 lg:col-start-1 lg:row-start-1 ${SECTION_OFFSET}`}>
             <div className="space-y-3">
               <DecisionGrid place={place} visitors={visitors} />
+              {/* Telefoon: de actierij ná het beslisblok (design-audit 26 november 2026), zodat de vertrektijd bij openen
+                  in beeld staat en niet onder de vaste balk met prijs en Route verdwijnt */}
+              <ActionRow place={place} tel={tel} reserveLabel={reserveLabel} shareText={shareText} />
               <ArrivalTodayNote place={place} />
               {/* Drukte alleen als iemand het de laatste 3 uur meldde; doorgeven staat onderaan bij Help deze plek kloppen */}
               <CrowdStatusCard placeId={place.id} slug={place.slug} onlyReported />
@@ -361,7 +363,7 @@ function ActionRow({ place, tel, reserveLabel, shareText }: { place: Place; tel?
   const count = 2 + (place.website ? 1 : 0) + (tel ? 1 : 0);
   const cols = count === 4 ? "grid-cols-4" : count === 3 ? "grid-cols-3" : "grid-cols-2";
   return (
-    <div className={`mt-4 grid gap-2 md:hidden ${cols}`}>
+    <div className={`grid gap-2 md:hidden ${cols}`}>
       <SaveButton slug={place.slug} name={place.name} variant="tile" />
       <ShareButton title={place.name} text={shareText} variant="tile" />
       {place.website && (

@@ -141,7 +141,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={busy !== null || code.length < 6}
-            className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60"
+            className="h-11 w-full rounded-lg bg-forest font-semibold text-on-forest disabled:opacity-60"
           >
             {busy === "code" ? "Controleren…" : "Inloggen"}
           </button>
@@ -176,7 +176,7 @@ export function LoginForm() {
             type="button"
             onClick={() => provider(p.id)}
             disabled={busy !== null}
-            className="flex h-14 items-center justify-center gap-3 rounded-xl border-2 border-line bg-surface font-semibold transition-colors hover:border-forest disabled:opacity-60"
+            className="flex h-11 items-center justify-center gap-3 rounded-lg border border-line bg-surface font-semibold transition-colors hover:border-forest disabled:opacity-60"
           >
             {PROVIDER_ICON[p.id]}
             {busy === p.id ? "Doorsturen…" : `Doorgaan met ${p.label}`}
@@ -193,7 +193,7 @@ export function LoginForm() {
           <span className="mb-1.5 block font-semibold">E-mailadres</span>
           <input name="email" type="email" required autoComplete="email" inputMode="email" enterKeyHint="send" className={field} />
         </label>
-        <button type="submit" disabled={busy !== null} className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+        <button type="submit" disabled={busy !== null} className="h-11 w-full rounded-lg bg-forest font-semibold text-on-forest disabled:opacity-60">
           {busy === "email" ? "Versturen…" : "Stuur mij een inlogcode"}
         </button>
       </form>

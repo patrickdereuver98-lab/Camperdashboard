@@ -32,10 +32,13 @@ const FIRST = 20;
 export async function Search({
   page,
   updated,
+  intro,
   searchParams,
 }: {
   page?: DeparturePage;
   updated?: string;
+  /** Uitleg en cijfers van een vertrekpagina (HubIntro), onder de h1 */
+  intro?: React.ReactNode;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const raw = await searchParams;
@@ -52,5 +55,5 @@ export async function Search({
   } catch {
     // Geen data op de server: de browser laadt de lijst zoals altijd
   }
-  return <SearchApp page={page} updated={updated} initial={initial} />;
+  return <SearchApp page={page} updated={updated} initial={initial} intro={intro} />;
 }

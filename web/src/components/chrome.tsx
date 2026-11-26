@@ -83,12 +83,12 @@ function HeaderView({ pathname }: { pathname: string }) {
       {/* flex-wrap: met grote tekst (200%) op 320 px gaan de knoppen naar een tweede regel in plaats van buiten beeld (R31) */}
       <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-1 px-3 min-[400px]:gap-x-2 min-[400px]:px-4 sm:min-h-16 sm:gap-x-4 sm:px-6">
         {onPlace && <BackButton />}
-        <Link href="/" className="flex h-11 items-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
+        <Link href="/" className="flex h-11 min-w-11 items-center justify-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
           <Logo size={30} />
           {/* Op een heel smal scherm (onder 360 px, of met de terugknop erbij) alleen het logo, zodat Inloggen in beeld blijft;
               de naam staat dan in het aria-label van de link */}
           <span
-            className={`font-display text-lg font-semibold tracking-tight text-forest sm:text-xl ${onPlace ? "hidden min-[400px]:inline" : "hidden min-[350px]:inline"}`}
+            className={`font-semibold tracking-tight text-forest sm:text-xl ${onPlace ? "hidden min-[400px]:inline" : "hidden min-[350px]:inline"}`}
           >
             VrijStaan
           </span>
@@ -244,7 +244,7 @@ function AccountButton({ active }: { active: boolean }) {
       aria-current={active ? "page" : undefined}
       data-testid="account-button"
       data-state={loading ? "loading" : session ? "in" : "out"}
-      className="-mr-1 grid h-11 min-w-11 shrink-0 place-items-center rounded-xl px-1 text-ink-2 hover:bg-sunken aria-[current=page]:text-forest lg:ml-1"
+      className="-mr-1 grid h-11 min-w-11 shrink-0 place-items-center rounded-lg px-1 text-ink-2 hover:bg-sunken aria-[current=page]:text-forest lg:ml-1"
     >
       {avatar ? (
         // eslint-disable-next-line @next/next/no-img-element

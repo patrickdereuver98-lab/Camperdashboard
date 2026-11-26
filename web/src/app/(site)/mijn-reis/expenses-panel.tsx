@@ -8,7 +8,7 @@ import { Icon } from "@/components/icons";
 import { Chip } from "@/components/chip";
 
 const LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.label])) as Record<ExpenseCategory, string>;
-const input = "h-11 w-full rounded-lg border-2 border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const input = "h-11 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 const today = () => {
   const d = new Date();
@@ -124,8 +124,8 @@ export function ExpensesPanel({
           </label>
           {err && <p id="uitgave-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
           <div className="flex gap-2">
-            <button type="submit" className="h-12 flex-1 rounded-md bg-forest font-semibold text-on-forest">Opslaan</button>
-            <button type="button" onClick={() => setOpen(false)} className="h-12 rounded-md px-4 font-semibold">Annuleren</button>
+            <button type="submit" className="h-11 flex-1 rounded-md bg-forest font-semibold text-on-forest">Opslaan</button>
+            <button type="button" onClick={() => setOpen(false)} className="h-11 rounded-md px-4 font-semibold">Annuleren</button>
           </div>
         </form>
       )}
@@ -153,7 +153,7 @@ export function ExpensesPanel({
                 </div>
               ))}
             <div className="flex justify-between border-t border-line pt-2">
-              <dt className="font-display text-lg font-semibold">Uitgegeven</dt>
+              <dt className="font-semibold">Uitgegeven</dt>
               <dd className="font-display text-2xl font-semibold">{eur(summary.total)}</dd>
             </div>
           </dl>
