@@ -3,11 +3,9 @@ import { departureKind } from "@/lib/search";
 import { isIncomplete } from "@/lib/place-status";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { eur } from "@/lib/format";
-import { GiveDepartureButton } from "@/components/departure-form";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 import type { Place } from "@/lib/types";
-import { ReportProblem } from "./client";
 import { OpenValue } from "./live-facts";
 
 /** Aankomst in een paar woorden voor een tegel; alleen wat de bron noemt */
@@ -89,14 +87,6 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
             : undefined
     : undefined;
   const arrival = arrivalTile(place);
-  // Onbekend: "Weet jij dit?"; bekend: "Klopt dit niet?" (review R48). De oproep voor een onbekende vertrektijd
-  // staat direct onder dit blok (DecisionDetails), met de knop "Vertrektijd doorgeven".
-  const ask = (topic: string, context: string) => (
-    <ReportProblem placeId={place.id} placeName={place.name} topic={topic} label="Weet jij dit?" context={context} />
-  );
-  const fix = (topic: string, context: string) => (
-    <ReportProblem placeId={place.id} placeName={place.name} topic={topic} label="Klopt dit niet?" context={context} quiet />
-  );
   const askDeparture = needsDeparture(place);
 
   return (
@@ -111,18 +101,18 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
           tone={departureKnown ? (late ? "lake" : free ? "forest" : "plain") : "plain"}
           big
           extra={
-            // Onbekend: de hulpactie direct onder de waarde (UI/UX-plan T25); de korte oproep staat onder het blok
-            askDeparture ? <GiveDepartureButton placeId={place.id} placeName={place.name} label="Weet jij dit?" /> : (
-              <>
-                {visitors > 0 && (
-                  <span className="flex items-center gap-1 font-semibold text-ink-2" data-testid="departure-visitors">
-                    <Icon name="check" size={15} className={late ? "text-lake" : "text-forest"} />
-                    Volgens {pluralize(visitors, "bezoeker", "bezoekers")}
-                  </span>
-                )}
-                <GiveDepartureButton placeId={place.id} placeName={place.name} label="Klopt dit niet?" />
-              </>
-            )
+            // Geen vragen in het beslisblok (plekpagina-ronde 26 november 2026), met één uitzondering: een onbekende
+            // vertrektijd, het kernfeit. De link gaat naar Help deze plek kloppen onderaan.
+            askDeparture ? (
+              <a href="#help" className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
+                Weet jij het?
+              </a>
+            ) : visitors > 0 ? (
+              <span className="flex items-center gap-1 font-semibold text-ink-2" data-testid="departure-visitors">
+                <Icon name="check" size={15} className={late ? "text-lake" : "text-forest"} />
+                Volgens {pluralize(visitors, "bezoeker", "bezoekers")}
+              </span>
+            ) : undefined
           }
         >
           {departureKnown ? departureLong(place) : "Onbekend"}
@@ -131,16 +121,7 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
           sign="euro"
           label="Prijs"
           known={!!price}
-          extra={
-            price ? (
-              <>
-                {priceSub && <span className="block text-ink-2">{priceSub}</span>}
-                {fix("prijs", "De prijs aanpassen")}
-              </>
-            ) : (
-              ask("prijs", "De prijs doorgeven")
-            )
-          }
+          extra={price && priceSub ? <span className="block text-ink-2">{priceSub}</span> : undefined}
         >
           {price ? price.value : "Onbekend"}
         </Tile>
@@ -148,11 +129,10 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
           sign="calendar"
           label="Nu open"
           known={place.openAllYear === true || !!place.season}
-          extra={place.openAllYear || place.season ? fix("seizoen", "De openingsperiode aanpassen") : ask("seizoen", "De openingsperiode doorgeven")}
         >
           <OpenValue place={place} />
         </Tile>
-        <Tile sign="clock" label="Aankomen" known={!!arrival} extra={arrival ? fix("vertrektijd", "De aankomsttijden aanpassen") : ask("vertrektijd", "De aankomsttijden doorgeven")}>
+        <Tile sign="clock" label="Aankomen" known={!!arrival}>
           {arrival ?? "Onbekend"}
         </Tile>
       </dl>

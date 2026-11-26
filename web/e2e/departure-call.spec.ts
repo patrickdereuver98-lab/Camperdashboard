@@ -1,5 +1,5 @@
-// Review R48: duidelijke oproep "Vertrektijd doorgeven", "Klopt dit niet?" in het beslisblok, eigenaarsroute hoog,
-// en na verzenden een bevestiging met status en termijn.
+// Plekpagina-ronde 26 november 2026 (vervangt R48): geen vragen in het beslisblok behalve "Weet jij het?" bij een
+// onbekende vertrektijd; oproep, eigenaarsroute en wijzigingen onderaan in Help deze plek kloppen, met bevestiging.
 import snapshot from "../src/data/snapshot.json";
 import { expect, PLACES, PRERENDERED, test } from "./fixtures";
 import { SUPABASE } from "./session";
@@ -10,14 +10,17 @@ const bySlug = new Map((snapshot as unknown as { places: Snap[] }).places.map((p
 const place = PLACES.find((p) => !bySlug.get(p.slug)?.departure)!;
 const known = PRERENDERED.find((p) => bySlug.get(p.slug)?.departure === "vast" && bySlug.get(p.slug)?.checkoutUntil)!;
 
-test("bekende vertrektijd: Klopt dit niet? in de cel en de eigenaarsroute onder het beslisblok", async ({ page }) => {
+test("bekende vertrektijd: geen vragen in het beslisblok, eigenaarsroute onderaan", async ({ page }) => {
   await page.goto(`/plek/${known.slug}`);
   await expect(page.getByTestId("departure-call")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Klopt dit niet? De vertrektijd doorgeven" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Details over tijden en prijs" }).getByRole("button", { name: "Ben je de eigenaar? Vul je gegevens aan" })).toBeVisible();
+  await expect(page.getByText("Klopt dit niet?")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Weet jij het?" })).toHaveCount(0);
+  const help = page.getByRole("region", { name: "Help deze plek kloppen" });
+  await expect(help.getByRole("button", { name: "Ben je de eigenaar? Vul je gegevens aan" })).toBeVisible();
+  await expect(help.getByRole("button", { name: "Wijziging doorgeven" })).toBeVisible();
 });
 
-test("oproep met knop, Klopt dit niet? en bevestiging met termijn", async ({ page }) => {
+test("onbekende vertrektijd: Weet jij het? springt naar de oproep onderaan, met bevestiging en termijn", async ({ page }) => {
   test.skip(!place, "geen onvolledige plek in de snapshot");
   let sent: Record<string, unknown> | null = null;
   await page.route(`${SUPABASE}/rest/v1/**`, async (r) => {
@@ -31,6 +34,8 @@ test("oproep met knop, Klopt dit niet? en bevestiging met termijn", async ({ pag
   });
   await page.goto(`/plek/${place.slug}`);
 
+  await page.getByRole("link", { name: "Weet jij het?" }).click();
+  await expect(page).toHaveURL(/#help$/);
   const call = page.getByTestId("departure-call");
   await expect(call).toContainText("We weten de vertrektijd nog niet.");
   await expect(call.getByRole("button", { name: "Eigenaar? Vul de tijden in" })).toBeVisible();
