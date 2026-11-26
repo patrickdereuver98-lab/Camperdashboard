@@ -34,6 +34,10 @@ export function tint(map: MlMap, dark: boolean) {
       else if (layer.type === "fill" && /water/.test(layer.id)) map.setPaintProperty(layer.id, "fill-color", colors.water);
       else if (layer.type === "fill" && /wood|forest|park|grass|landcover/.test(layer.id))
         map.setPaintProperty(layer.id, "fill-color", colors.green);
+      // Plaats- en landnamen in het Nederlands ("België", "Keulen"), anders de naam ter plekke (kaartronde 26 november
+      // 2026). Alleen lagen die een naam tonen, geen huisnummers of wegnummers.
+      else if (layer.type === "symbol" && "source" in layer && layer.source === "openmaptiles" && /name/.test(JSON.stringify(layer.layout?.["text-field"] ?? "")))
+        map.setLayoutProperty(layer.id, "text-field", ["coalesce", ["get", "name:nl"], ["get", "name"]]);
     } catch {
       /* niet elke laag ondersteunt deze eigenschap */
     }
@@ -199,6 +203,8 @@ export function PlaceMap({
       });
 
       map.on("load", () => {
+        // Bronvermelding dicht bij het openen (een tik op (i) klapt hem open): open schoof hij op de telefoon over de kaart
+        el.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
         if (!map) return;
         loaded = true;
         tint(map, dark);
@@ -527,7 +533,7 @@ export function PlaceMap({
           disabled={locating === "busy"}
           aria-label={locating === "denied" ? "Locatie staat uit in je browser" : "Naar mijn locatie"}
           title={locating === "denied" ? "Locatie staat uit in je browser" : "Naar mijn locatie"}
-          className="absolute top-[76px] right-2.5 z-10 grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface text-forest shadow-float disabled:opacity-60"
+          className="absolute top-[112px] right-2.5 z-10 grid h-11 w-11 place-items-center rounded-lg border border-line bg-surface text-forest shadow-float disabled:opacity-60"
         >
           <Icon name="locate" size={20} className={locating === "busy" ? "animate-pulse" : undefined} />
         </button>
