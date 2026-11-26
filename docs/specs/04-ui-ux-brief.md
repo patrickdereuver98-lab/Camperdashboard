@@ -127,7 +127,7 @@ lijst naar detailpagina.
 
 | Asset | Status |
 |---|---|
-| Logo en app-icoon | "Camper bij de klokzon" (gekozen 2 november 2026): camper op een heuvel voor de zakkende avondzon, die ook een klok is; bosgroen, avondzon, zandpapier. Bron: `Logo` in `components/icons.tsx` en `public/icon.svg` (gelijk aan `app/icon.svg`); maskable en Apple-icoon vlak tot de rand. PNG's (192, 512, maskable 512, Apple 180) en het logo in `public/og.png` zijn uit deze SVG's gerenderd |
+| Logo en app-icoon | Nieuwe set "Camper bij de klokzon" (aangeleverd door de eigenaar, 26 november 2026, README 143): camper op lichte grond voor de avondzon die ook een klok is, met den en heuvel in het liggende logo. Bronnen in `public/merk/` (liggend, gestapeld, donker, los beeldmerk). App-icoon `public/icon.svg` en PNG's (192, 512, maskable 512), Apple-icoon `app/apple-icon.png`, favicon `app/icon.svg` (vereenvoudigd, met bosgroene rand) en `app/favicon.ico`. `Logo` in `components/icons.tsx` volgt dezelfde vormen. Deelafbeelding `public/og.png` opnieuw gemaakt in Geist met het nieuwe logo |
 | Pictogrammen (voorzieningen, klok, soorten plek) | Aanwezig (`web/src/components/sign.tsx`, `icons.tsx`) |
 | Getekende landschappen | Alleen nog voor lege toestanden (Mijn reis leeg, niet gevonden, Dichtbij-intro); niet op kaarten of de startpagina |
 | Foto's van plekken | Websitefoto's staan aan (met bron); aanvullend nodig: van bezoekers, eigenaren en Wikimedia Commons |

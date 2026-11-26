@@ -154,9 +154,10 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
   `on-forest` en een vinkje achteraan. Altijd `aria-pressed`. Geen getinte tussenvorm en geen chip met een eigen
   kleur: een chip die uit staat, mag er nooit aan uitzien. In een raster `wide` (vult de cel, tekst links).
   De verwijderbare chips met actieve filters op Zoeken hebben de aan-vorm met een kruisje.
-- **Logo** (`Logo` in `icons.tsx`): vanaf 33 px de versie met lichte heuvel; tot en met 32 px (kop, beheer, favicon
-  `app/icon.svg`) de kleine variant met een helemaal groen vlak, lichte camper op een grondlijn en een grotere zon,
-  zodat het merk in de lichte kop een onderkant houdt (de heuvel had daar contrast 1,00:1).
+- **Logo** (`Logo` in `icons.tsx`, set van 26 november 2026 in `public/merk/`): vanaf 33 px het app-icoon met lichte
+  grond; tot en met 32 px (kop, beheer, favicon `app/icon.svg`) de vereenvoudigde favicon-variant. Beide met een
+  bosgroene rand, zodat de lichte grond in de lichte kop niet wegvalt (R53). Het woordmerk in de kop blijft Geist-tekst;
+  de liggende en gestapelde logo's met ondertitel zijn voor marketing en drukwerk.
 - **Knop primair**: bosgroen vlak, witte tekst, 44 px hoog, 8 px hoek, geen rand, geen schaduw.
 - **Knop secundair**: `surface`, 1 px haarlijn (`border-line`), tekst `ink`.
 - **Tekstlink**: bosgroen, onderstreept met `underline-offset-2`.

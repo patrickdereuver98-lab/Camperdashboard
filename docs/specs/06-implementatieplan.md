@@ -322,6 +322,7 @@ Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, bes
 - ✅ Start (ondertitel, vinkjes, ruimte), snelle chips (vier), plekrij (foto 84 × 63, één prijsregel), plekpagina
   (Vertrekken groter, hulp in de cel, kortere oproep, verouderd in `alert`, fotobron onder de foto), kop met menu Meer,
   korte footer op taakpagina's, Doe mee, 404, opruimronde hoeken/schaduw/kopmaten, design-QA in stijlgids §12.
+- ✅ Nieuwe logo- en faviconset (README 143): iconen, favicon, `Logo`, `og.png`, bronnen in `public/merk/`.
 - ⬜ T49 visuele snapshots in CI; groep D (Dichtbij rijtijd eerst, Mijn reis "volgende stop eerst") na een eigen
   ontwerpronde met screenshots.
 

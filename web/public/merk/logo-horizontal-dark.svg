@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 220" role="img" aria-labelledby="title desc">
+<title id="title">VrijStaan</title><desc id="desc">Camper op een heuvel voor een avondzon die tegelijk een klok is.</desc>
+<g>
+      <!-- evening sun as a departure-time clock -->
+      <circle cx="177" cy="52" r="39" fill="#B9592A"/>
+      <path d="M177 25 V52 L194 41" fill="none" stroke="#FFFCF6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- distant pine -->
+      <path d="M26 119 L41 94 L34 94 L47 72 L60 94 L53 94 L68 119 Z" fill="#1F4E37"/>
+      <path d="M46 116 V132" stroke="#1F4E37" stroke-width="5" stroke-linecap="round"/>
+      <!-- rolling hill / ground line -->
+      <path d="M10 137 C43 122 76 119 111 124 C151 131 191 136 246 117 L246 147 H10 Z" fill="#1F4E37"/>
+      <!-- camper body -->
+      <path d="M62 87 C62 78 69 72 78 72 H143 C151 72 158 76 164 83 L181 101 C185 105 187 110 187 116 V126 H57 V93 C57 90 59 87 62 87 Z" fill="#1F4E37"/>
+      <!-- windscreen and side window -->
+      <path d="M148 80 H143 V103 H174 L158 85 C155 82 152 80 148 80 Z" fill="#FFFCF6"/>
+      <rect x="73" y="84" width="34" height="21" rx="4" fill="#FFFCF6"/>
+      <rect x="113" y="84" width="23" height="21" rx="3" fill="#FFFCF6"/>
+      <!-- lower body highlight -->
+      <path d="M65 113 H176" stroke="#FFFCF6" stroke-width="2.5" stroke-linecap="round" opacity=".92"/>
+      <!-- wheels -->
+      <circle cx="88" cy="126" r="11" fill="#FFFCF6"/>
+      <circle cx="88" cy="126" r="5" fill="#1F4E37"/>
+      <circle cx="160" cy="126" r="11" fill="#FFFCF6"/>
+      <circle cx="160" cy="126" r="5" fill="#1F4E37"/>
+    </g>
+<text x="300" y="111" fill="#F5F0E6" font-family="Geist, Inter, Arial, sans-serif" font-size="76" font-weight="700" letter-spacing="-3">VrijStaan</text>
+<text x="304" y="151" fill="#F5F0E6" font-family="Geist, Inter, Arial, sans-serif" font-size="19" font-weight="500" letter-spacing="2.2">CAMPERPLAATSENGIDS VAN NEDERLAND</text>
+</svg>
