@@ -324,7 +324,8 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
   herbeoordeling met `scripts/ai-recheck.ts`: 13 plekken (9 zonder vertrektijd, 4 vaste tijd), 15 voorstellen in de
   Triage Inbox. Pipeline uitrollen na samenvoegen (nieuwe lezingen met de nieuwe controle).
 - ⬜ Patrick: voorstellen accepteren in Mission Control → Triage Inbox (bron ai-lezer).
-- ⬜ Besluit: review-lezer weer aan (Gemini, ±2.700 reviews), en de 90%-eis (LANCERING besluit 4).
+- Besluit Patrick (26 november 2026): review-lezer blijft uit. De 90%-eis (LANCERING besluit 4) beslist hij later, na
+  de voorstellen en het domein.
 
 ## UI/UX-plan (26 november 2026) 🟡
 
