@@ -11,7 +11,7 @@ const LEVELS: CrowdLevel[] = ["rustig", "druk", "vol"];
 const DOT: Record<CrowdLevel, string> = { rustig: "bg-forest", druk: "bg-ember", vol: "bg-alert" };
 
 /** Live drukte: wat camperaars de laatste 3 uur meldden. Wordt in de browser opgehaald, dus nooit uit een oude cache. */
-export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: string }) {
+export function CrowdStatusCard({ placeId, slug, onlyReported = false }: { placeId: string; slug: string; onlyReported?: boolean }) {
   const { session } = useSession();
   const [status, setStatus] = useState<CrowdStatus | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -60,6 +60,15 @@ export function CrowdStatusCard({ placeId, slug }: { placeId: string; slug: stri
   const summary = !loaded ? null : loadFailed ? CROWD_ERROR : crowdSummary(status);
   // Nog geen melding: één regel in plaats van een blok, zodat Voorzieningen niet ±180 px naar beneden schuift (R55)
   const empty = !!summary && !summary.level && !loadFailed;
+
+  // Bovenaan de plekpagina alleen als iemand iets meldde; doorgeven staat onderaan (plekpagina-ronde 26 november)
+  if (onlyReported)
+    return summary?.level && !loadFailed ? (
+      <p className="flex flex-wrap items-baseline gap-x-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-ink-2" data-testid="crowd-summary">
+        <span className="font-semibold text-ink">{summary.title}</span>
+        <span className="text-sm">{summary.detail}</span>
+      </p>
+    ) : null;
 
   // Ook tijdens het laden, want meestal heeft nog niemand iets gemeld: dan verspringt er niets
   if ((empty || !summary) && !session)

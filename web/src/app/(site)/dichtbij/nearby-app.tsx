@@ -200,27 +200,27 @@ export function NearbyApp() {
         </div>
         <ul className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:mt-3 sm:flex-wrap sm:px-0">
           <li className="shrink-0">
-            <Chip pressed={openNow} onClick={() => set({ openNow: !openNow })} className="pl-1.5">
-              <Sign name="calendar" size={24} state={openNow ? "on" : "unknown"} />
+            <Chip pressed={openNow} onClick={() => set({ openNow: !openNow })} >
+              <Sign name="calendar" size={22} bare />
               Nu open
             </Chip>
           </li>
           <li className="shrink-0">
-            <Chip pressed={arriveNow} onClick={() => set({ arriveNow: !arriveNow })} className="pl-1.5">
-              <Sign name="clock" size={24} state={arriveNow ? "on" : "unknown"} />
+            <Chip pressed={arriveNow} onClick={() => set({ arriveNow: !arriveNow })} >
+              <Sign name="clock" size={22} bare />
               Nu nog aankomen
             </Chip>
           </li>
           <li className="shrink-0">
-            <Chip pressed={within30} onClick={() => set({ within30: !within30 })} className="pl-1.5">
-              <Sign name="camper" size={24} state={within30 ? "on" : "unknown"} />
+            <Chip pressed={within30} onClick={() => set({ within30: !within30 })} >
+              <Sign name="camper" size={22} bare />
               Binnen 30 min
             </Chip>
           </li>
           {vehicle.lengthM && (
             <li className="shrink-0">
-              <Chip pressed={!lengthOff} onClick={() => set({ lengthOff: !lengthOff })} className="pl-1.5">
-                <Sign name="length" size={24} state={lengthOff ? "unknown" : "on"} />
+              <Chip pressed={!lengthOff} onClick={() => set({ lengthOff: !lengthOff })} >
+                <Sign name="length" size={22} bare />
                 Mijn camper ({String(vehicle.lengthM).replace(".", ",")} m)
               </Chip>
             </li>
@@ -232,8 +232,8 @@ export function NearbyApp() {
             ] as const
           ).map(([g, label]) => (
             <li key={g} className="shrink-0">
-              <Chip pressed={departure === g} onClick={() => set({ departure: departure === g ? undefined : g })} className="pl-1.5">
-                <Sign name="clock" size={24} state={departure === g ? "on" : "unknown"} />
+              <Chip pressed={departure === g} onClick={() => set({ departure: departure === g ? undefined : g })}>
+                <Sign name="clock" size={22} bare />
                 {label}
               </Chip>
             </li>
@@ -242,8 +242,8 @@ export function NearbyApp() {
             const on = facilities.includes(f.key);
             return (
               <li key={f.key} className="shrink-0">
-                <Chip pressed={on} onClick={() => set({ facilities: on ? facilities.filter((k) => k !== f.key) : [...facilities, f.key as FacilityKey] })} className="pl-1.5">
-                  <Sign name={f.icon as SignName} size={24} state={on ? "on" : "unknown"} />
+                <Chip pressed={on} onClick={() => set({ facilities: on ? facilities.filter((k) => k !== f.key) : [...facilities, f.key as FacilityKey] })}>
+                  <Sign name={f.icon as SignName} size={22} bare />
                   {f.label}
                 </Chip>
               </li>
@@ -292,8 +292,7 @@ export function NearbyApp() {
                 : driveError
                   ? `${pluralize(list.length, "plek", "plekken")}, dichtstbij eerst. Rijtijden lukken nu niet, je ziet de afstand hemelsbreed.`
                   : `${pluralize(list.length, "plek", "plekken")} gevonden. Rijtijden berekenen…`}
-          {openNow && list.length > 0 && " Wat nu dicht is, staat er niet bij."}
-          {arriveNow && list.length > 0 && " Ook niet waar je vandaag niet meer kunt aankomen."}
+          {/* Wat Nu open en Nu nog aankomen weglaten, staat in de regel "Filters: …" eronder (kaartronde 26 november) */}
           {within30 && driveError && list.length > 0 && " Binnen 30 min werkt pas als de rijtijden er zijn."}
         </p>
         <DataDate cachedAt={cachedAt} />

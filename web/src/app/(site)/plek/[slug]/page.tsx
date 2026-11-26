@@ -184,6 +184,8 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
           <Icon name="chevronRight" size={14} />
           <span className="truncate text-ink-2">{place.name}</span>
         </nav>
+        {/* Vorige en volgende uit je zoekresultaten: één dunne regel boven de foto (plekpagina-ronde 26 november) */}
+        <ResultsNav slug={place.slug} />
         <Gallery slug={place.slug} name={place.name} photos={photos} kind={place.kind} town={place.town} />
       </div>
 
@@ -235,10 +237,11 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
         {/* Mobiel: beslissen, voorzieningen, beschrijving, ligging, ervaringen, praktisch. Groot scherm: zijkolom. */}
         <div className="mt-5 flex flex-col gap-8 lg:mt-6 lg:grid lg:grid-cols-[1.4fr_1fr] lg:grid-rows-[min-content_1fr] lg:gap-x-10">
           <div id="overzicht" className={`min-w-0 space-y-8 lg:col-start-1 lg:row-start-1 ${SECTION_OFFSET}`}>
-            <ResultsNav slug={place.slug} />
             <div className="space-y-3">
               <DecisionGrid place={place} visitors={visitors} />
               <ArrivalTodayNote place={place} />
+              {/* Drukte alleen als iemand het de laatste 3 uur meldde; doorgeven staat onderaan bij Help deze plek kloppen */}
+              <CrowdStatusCard placeId={place.id} slug={place.slug} onlyReported />
             </div>
             <DecisionDetails place={place} />
             {/* Tablet: de zijkolom staat pas onder de beschrijving, dus prijs en contact hier al in beeld */}
@@ -248,11 +251,6 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                 <PlekpulsVraag question={pulse} />
               </div>
             )}
-            {/* Foto toevoegen staat onder het kernblok: eerst beslissen, dan bijdragen */}
-            <div className="-mt-4 min-h-11">
-              <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
-            </div>
-            <CrowdStatusCard placeId={place.id} slug={place.slug} />
 
             {/* Voorzieningen */}
             <section aria-labelledby="voorzieningen">
@@ -260,17 +258,9 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
                 <h2 id="voorzieningen" className={`${SECTION_OFFSET} font-display text-h2 font-semibold`}>Voorzieningen</h2>
                 <Legend />
               </div>
-              <FacilityGrid placeId={place.id} placeName={place.name} values={pickFacilities(place)} />
+              <FacilityGrid placeId={place.id} placeName={place.name} values={pickFacilities(place)} ask={false} />
             </section>
 
-            {/* Over deze plek: alleen hele zinnen uit de eigen tekst van de plek (zie lib/description.ts) */}
-            {place.description && (
-              <section aria-labelledby="over">
-                <h2 id="over" className="font-display text-h2 font-semibold">Over deze plek</h2>
-                <p className="mt-2 max-w-prose text-ink-2">{place.description}</p>
-                <p className="mt-2 text-sm text-muted">Zo beschrijft de plek zichzelf op de eigen website.</p>
-              </section>
-            )}
           </div>
 
           {/* Zijkolom: op mobiel na de beschrijving */}
@@ -300,6 +290,14 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
               )}
             </section>
 
+            {/* Over deze plek: alleen hele zinnen uit de eigen tekst van de plek (zie lib/description.ts) */}
+            {place.description && (
+              <section aria-labelledby="over">
+                <h2 id="over" className="font-display text-h2 font-semibold">Over deze plek</h2>
+                <p className="mt-2 max-w-prose text-ink-2">{place.description}</p>
+                <p className="mt-2 text-sm text-muted">Zo beschrijft de plek zichzelf op de eigen website.</p>
+              </section>
+            )}
             <Practical place={place} address={address} tel={tel} reserveLabel={reserveLabel} />
           </div>
         </div>
@@ -326,6 +324,7 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             Alle camperplaatsen in {place.province}
           </Link>
         </p>
+        <HelpBlock place={place} />
       </div>
 
       {/* Vaste actiebalk op mobiel: prijs en één brede routeknop. Bewaren, delen, website en bellen staan in de
@@ -419,8 +418,6 @@ function PriceCard({ place, tel, reserveLabel, className }: { place: Place; tel?
 }
 
 function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: string; nearby: PlaceSummary[]; reserveLabel: string }) {
-  const facts = knownFacts(place);
-  const missing = facts.filter((f) => !f.known).map((f) => f.label);
   return (
     <>
       <PriceCard place={place} tel={tel} reserveLabel={reserveLabel} className="hidden lg:block" />
@@ -438,18 +435,6 @@ function SideColumn({ place, tel, nearby, reserveLabel }: { place: Place; tel?: 
         <RouteCard to={{ lat: place.lat, lng: place.lng }} slug={place.slug} />
       </section>
 
-      <div className="rounded-lg bg-sunken/60 p-4 text-sm text-ink-2">
-        <p className="flex items-center gap-2 font-semibold text-ink">
-          <Icon name="shield" size={17} className="text-forest" /> {facts.filter((f) => f.known).length} van {facts.length} gegevens bekend
-        </p>
-        {missing.length > 0 && (
-          <p className="mt-1">Nog onbekend: {missing.join(", ")}. Weet jij dit? Laat het weten, dan vullen we het aan.</p>
-        )}
-        {missing.length === 0 && <p className="mt-1">Zie je iets dat niet klopt? Laat het weten, dan passen we het aan.</p>}
-        <div className="mt-1 flex flex-wrap gap-x-5">
-          <ReportProblem placeId={place.id} placeName={place.name} facilities={pickFacilities(place)} />
-        </div>
-      </div>
     </>
   );
 }
@@ -477,72 +462,96 @@ function DecisionDetails({ place }: { place: Place }) {
     lateOption && `${lateOption.label} kan voor ${eur(lateOption.amount)}`,
     place.accessHours && place.checkinFrom && `Slagboom of poort open ${place.accessHours}`,
     place.maxStayNights && `Maximaal ${pluralize(place.maxStayNights, "nacht", "nachten")}`,
-    reservationRuleOf(place) && RESERVATION_TEXT[reservationRuleOf(place)!],
   ].filter(Boolean) as string[];
+  const reservation = reservationRuleOf(place);
   const price = cardPrice(place);
   const extras = (place.priceExtras ?? []).filter((x) => x !== lateOption);
   const priceDetails = !!price && (place.priceNote || place.touristTaxIncluded !== undefined || extras.length > 0 || nightTotal(place).total !== undefined);
+  if (!note && !times.length && !priceDetails && !place.maxLengthM && !reservation) return null;
+  // "Goed om te weten" (plekpagina-ronde 26 november 2026): eerst de tijden, dan of je camper past, dan de prijs in
+  // detail en als laatste reserveren. Geen vragen of eigenaarsroute meer; die staan onderaan in Help deze plek kloppen.
+  return (
+    <section aria-labelledby="goed-om-te-weten">
+      <h2 id="goed-om-te-weten" className="font-display text-h2 font-semibold">Goed om te weten</h2>
+      <div className="mt-3 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+        {(note || times.length > 0) && (
+          <div className="space-y-1 px-4 py-3 text-ink-2">
+            {note && <p className="text-sm">{note}</p>}
+            {times.length > 0 && <p>{times.join(". ")}.</p>}
+          </div>
+        )}
+        {place.maxLengthM && (
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Sign name="length" size={26} />
+            <span className="text-ink-2">Max. lengte</span>
+            <span className="ml-auto font-display font-semibold">{`${String(place.maxLengthM).replace(".", ",")} m`}</span>
+          </div>
+        )}
+        {priceDetails && (
+          <div className="space-y-1 px-4 py-3 text-sm text-ink-2">
+            <NightTotalLine place={place} />
+            {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}
+            {place.touristTaxIncluded !== undefined && !onlyTaxOpen(place) && (
+              <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>
+            )}
+            {extras.length > 0 && (
+              <details className="group">
+                <summary className="-my-2 flex h-11 cursor-pointer list-none items-center gap-1 font-semibold text-forest [&::-webkit-details-marker]:hidden">
+                  Extra kosten ({extras.length})
+                  <Icon name="chevronDown" size={16} className="transition-transform group-open:rotate-180" />
+                </summary>
+                <ul className="divide-y divide-line">
+                  {extras.map((x) => (
+                    <li key={x.label} className="flex justify-between gap-4 py-1.5">
+                      <span>{x.label}</span>
+                      <span className="text-right font-semibold text-ink">{extraLabel(x)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-muted">Prijzen kunnen per seizoen verschillen.</p>
+              </details>
+            )}
+          </div>
+        )}
+        {reservation && <p className="px-4 py-3 text-ink-2">{RESERVATION_TEXT[reservation]}.</p>}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Onderaan de plekpagina, één keer (plekpagina-ronde 26 november 2026, vervangt "Klopt dit niet?" per vak, R48):
+ * hoeveel we weten, een wijziging doorgeven, de vertrektijd als die onbekend is, foto, drukte en de eigenaarsroute.
+ */
+function HelpBlock({ place }: { place: Place }) {
+  const facts = knownFacts(place);
+  const missing = facts.filter((f) => !f.known).map((f) => f.label);
   const askDeparture = needsDeparture(place);
   return (
-    <section aria-label="Details over tijden en prijs" className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
-      {/* Oproep (brief, "Oproep vertrektijd"; review R48): de hoofdroute voor nieuwe vertrektijden. Eigenaren vullen
-          het zelf in, direct ernaast: we mailen ze niet (besluit eigenaar 18 en 24 oktober 2026). */}
+    <section id="help" aria-labelledby="help-kop" className="mt-10 scroll-mt-20 border-t border-line pt-6">
+      <h2 id="help-kop" className="font-display text-h2 font-semibold">Help deze plek kloppen</h2>
+      <p className="mt-1 flex items-start gap-2 text-ink-2">
+        <Icon name="shield" size={18} className="mt-0.5 shrink-0 text-forest" />
+        <span>
+          {facts.filter((f) => f.known).length} van {facts.length} gegevens bekend.
+          {missing.length > 0 ? ` Nog onbekend: ${missing.join(", ")}.` : " Zie je iets dat niet klopt? Geef het door."}
+        </span>
+      </p>
       {askDeparture && (
-        <div className="px-4 py-3" data-testid="departure-call">
-          <p className="text-ink-2">
-            We weten de vertrektijd nog niet. Heb je hier gestaan of gebeld? Geef het door, dan weten anderen hoe laat ze weg moeten.
-          </p>
+        <div className="mt-4 rounded-lg border border-line bg-surface px-4 py-3" data-testid="departure-call">
+          <p className="text-ink-2">We weten de vertrektijd nog niet. Heb je hier gestaan of gebeld? Geef het door, dan weten anderen hoe laat ze weg moeten.</p>
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
             <GiveDepartureButton placeId={place.id} placeName={place.name} />
             <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} label="Eigenaar? Vul de tijden in" />
           </div>
         </div>
       )}
-      {(note || times.length > 0) && (
-        <div className="space-y-1 px-4 py-3 text-ink-2">
-          {note && <p className="text-sm">{note}</p>}
-          {times.length > 0 && <p>{times.join(". ")}.</p>}
-        </div>
-      )}
-      {priceDetails && (
-        <div className="space-y-1 px-4 py-3 text-sm text-ink-2">
-          <NightTotalLine place={place} />
-          {place.priceNote && <p>{priceNoteText(place.priceNote)}</p>}
-          {place.touristTaxIncluded !== undefined && !onlyTaxOpen(place) && (
-            <p>Toeristenbelasting {place.touristTaxIncluded ? "zit in de prijs" : "komt erbij"}.</p>
-          )}
-          {extras.length > 0 && (
-            <details className="group">
-              <summary className="-my-2 flex h-11 cursor-pointer list-none items-center gap-1 font-semibold text-forest [&::-webkit-details-marker]:hidden">
-                Extra kosten ({extras.length})
-                <Icon name="chevronDown" size={16} className="transition-transform group-open:rotate-180" />
-              </summary>
-              <ul className="divide-y divide-line">
-                {extras.map((x) => (
-                  <li key={x.label} className="flex justify-between gap-4 py-1.5">
-                    <span>{x.label}</span>
-                    <span className="text-right font-semibold text-ink">{extraLabel(x)}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-1 text-muted">Prijzen kunnen per seizoen verschillen.</p>
-            </details>
-          )}
-        </div>
-      )}
-      <div className="flex items-center gap-3 px-4 py-3">
-        <Sign name="length" size={26} state={place.maxLengthM ? "on" : "unknown"} />
-        <span className="text-ink-2">Max. lengte</span>
-        <span className={`ml-auto font-display font-semibold ${place.maxLengthM ? "" : "text-muted"}`}>
-          {place.maxLengthM ? `${String(place.maxLengthM).replace(".", ",")} m` : "Onbekend"}
-        </span>
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
+        <ReportProblem placeId={place.id} placeName={place.name} facilities={pickFacilities(place)} label="Wijziging doorgeven" />
+        <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
+        {!askDeparture && <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />}
       </div>
-      {/* Eigenaarsroute hoog op de pagina, direct onder het beslisblok (review R48) */}
-      {!askDeparture && (
-        <div className="px-4 py-1">
-          <OwnerUpdate placeId={place.id} placeName={place.name} initial={ownerValues(place)} />
-        </div>
-      )}
+      <CrowdStatusCard placeId={place.id} slug={place.slug} />
     </section>
   );
 }

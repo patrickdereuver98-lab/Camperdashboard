@@ -82,7 +82,7 @@ export function ResultsNav({ slug }: { slug: string }) {
   const prev = order.items[i - 1];
   const next = order.items[i + 1];
   return (
-    <nav aria-label="Zoekresultaten" className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface px-1 text-sm">
+    <nav aria-label="Zoekresultaten" className="flex items-center justify-between gap-2 border-b border-line bg-surface px-1 text-sm sm:mb-2 sm:rounded-lg sm:border">
       {prev ? (
         <Link href={`/plek/${prev.slug}`} className="flex min-h-11 min-w-0 flex-1 items-center gap-1 px-2 font-semibold text-forest">
           <Icon name="chevronLeft" size={17} className="shrink-0" /> <span className="truncate">{prev.name}</span>

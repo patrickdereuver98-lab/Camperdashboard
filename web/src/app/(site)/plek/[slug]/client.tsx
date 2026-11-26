@@ -904,7 +904,7 @@ export function ReportProblem({
         </button>
       ) : (
         <button type="button" onClick={() => setOpen(true)} className="flex h-11 items-center gap-2 font-semibold text-forest underline">
-          <Icon name={context ? "help" : "alert"} size={18} /> {label}
+          <Icon name={context ? "help" : "edit"} size={18} /> {label}
           {context && <span className="sr-only"> {context}</span>}
         </button>
       )}

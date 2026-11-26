@@ -40,7 +40,18 @@ const QUESTION: Record<FacilityKey, string> = {
  * antwoord, of meteen als je de pagina verlaat (R11: één inzending per plek, niet één per voorziening). Beheer neemt
  * het met één klik over. Op de site verandert niets voordat beheer het heeft gecontroleerd: we zeggen dat ook.
  */
-export function FacilityGrid({ placeId, placeName, values }: { placeId: string; placeName: string; values: Partial<Record<FacilityKey, Value>> }) {
+export function FacilityGrid({
+  placeId,
+  placeName,
+  values,
+  ask = true,
+}: {
+  placeId: string;
+  placeName: string;
+  values: Partial<Record<FacilityKey, Value>>;
+  /** Vraagknop "?" per onbekende voorziening; op de plekpagina uit sinds 26 november 2026 (doorgeven staat onderaan) */
+  ask?: boolean;
+}) {
   const [open, setOpen] = useState<FacilityKey | null>(null);
   const [state, setState] = useState<Partial<Record<FacilityKey, State>>>({});
   const [answers, setAnswer] = useState<Partial<Record<FacilityKey, boolean>>>({});
@@ -121,6 +132,16 @@ export function FacilityGrid({ placeId, placeName, values }: { placeId: string; 
               <li key={f.key} className={`${cell} bg-surface ${v ? "font-semibold text-ink" : "text-muted"}`}>
                 <Sign name={sign} size={18} state={v ? "on" : "off"} />
                 {v ? f.label : NO[f.key]}
+              </li>
+            );
+          if (!ask)
+            return (
+              <li key={f.key} className={`${cell} bg-surface text-muted`}>
+                <Sign name={sign} size={18} state="unknown" />
+                <span className="min-w-0 leading-tight">
+                  {f.label}
+                  <span className="block">Onbekend</span>
+                </span>
               </li>
             );
           if (st === "bedankt" || st === "wacht" || st === "versturen")

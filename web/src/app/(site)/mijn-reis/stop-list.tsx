@@ -12,7 +12,7 @@ import type { CorridorHit } from "@/lib/route-corridor";
 import type { PlaceSummary } from "@/lib/types";
 import { Chip } from "@/components/chip";
 import { Icon } from "@/components/icons";
-import { OpenChip, PlacePhoto } from "@/components/place-ui";
+import { DepartureChip, OpenChip, PlacePhoto } from "@/components/place-ui";
 
 /**
  * Een stop zoals de lijst hem toont. Bij een eigen punt (`point`) is `place` alleen naam en ligging (zie `pointPlace`
@@ -324,6 +324,12 @@ export function StopItem({
               <Link href={`/plek/${s.slug}`} className="-my-2 block truncate py-2.5 font-display text-[1.0625rem] font-semibold hover:text-forest sm:text-lg">
                 {s.place.name}
               </Link>
+            )}
+            {/* Vertrektijd is het kernfeit, ook in Mijn reis (ontwerpronde 2, 26 november 2026) */}
+            {!own && (
+              <div className="mt-0.5 mb-1">
+                <DepartureChip place={s.place} compact />
+              </div>
             )}
             {dated ? (
               <p className="text-sm font-semibold text-ink-2" data-testid="stop-dates">

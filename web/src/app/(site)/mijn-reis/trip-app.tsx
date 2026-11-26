@@ -37,7 +37,6 @@ import { routeOptionsQuery, type RouteOptions } from "@/lib/route-options";
 import type { PlaceSummary } from "@/lib/types";
 import { tripText, tripToday } from "@/lib/trip-share";
 import { Icon } from "@/components/icons";
-import { NavigateButton } from "@/components/navigate";
 import { Landscape } from "@/components/landscape";
 import { PlaceMap } from "@/components/place-map";
 import { Sign } from "@/components/sign";
@@ -49,6 +48,7 @@ import { ExpensesPanel } from "./expenses-panel";
 import { RoutePrefsPanel, vehicleText } from "./route-prefs-panel";
 import { SharedCard } from "./shared-card";
 import { LegRow, OvernightList, Reorder, StopItem } from "./stop-list";
+import { NextStop, TripMoreMenu } from "./next-stop";
 import { TripSwitcher } from "./trip-switcher";
 import { assumedText, dataDateText, fromPriceNote, surchargeNote } from "./trip-notes";
 
@@ -571,8 +571,11 @@ export function TripApp() {
       <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
         <div>
           {header(true)}
-          <p className="text-sm text-ink-2 sm:text-base">
+          {/* Eén regel met de hele reis (ontwerpronde 2): stops, nachten, afstand en het totaal, eerlijk over wat ontbreekt */}
+          <p className="text-sm text-ink-2 sm:text-base" data-testid="trip-summary">
             {pluralize(stops.length, "stop", "stops")}, {pluralize(nights, "nacht", "nachten")}
+            {route ? `, ${formatKm(route.distanceM / 1000)}` : ""}
+            {total > 0 ? `, ${fromPrice ? "vanaf " : ""}${eur(total, true)}${unknownPriceStops > 0 ? ` + ${unknownPriceStops} onbekend` : ""}` : ""}
           </p>
         </div>
         {placesError ? (
@@ -587,26 +590,14 @@ export function TripApp() {
             </p>
           )
         )}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={optimize}
-            disabled={optimizing || stops.length < 2}
-            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest disabled:opacity-60"
-          >
-            <Icon name="route" size={18} /> {optimizing ? "Rekenen…" : "Slimste volgorde"}
-          </button>
-          <button
-            type="button"
-            onClick={() => withUndo("Volgorde omgedraaid.", () => trip.reverse())}
-            disabled={stops.length < 2}
-            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest disabled:opacity-60"
-          >
-            <Icon name="swap" size={18} /> Omdraaien
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
+      </div>
+
+      <NextStop stops={stops} dated={dated} today={today} />
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={async () => {
               if (navigator.share) await navigator.share({ title: "Mijn camperreis", url: shareUrl }).catch(() => undefined);
               else {
                 await navigator.clipboard.writeText(shareUrl);
@@ -614,13 +605,15 @@ export function TripApp() {
                 setTimeout(() => setShared(false), 2500);
               }
             }}
-            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest"
-          >
-            <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
+          className="flex h-11 items-center gap-1.5 rounded-md border border-line bg-surface px-3.5 font-semibold hover:border-forest"
+        >
+          <Icon name={shared ? "check" : "share"} size={18} /> {shared ? "Link gekopieerd" : "Delen"}
+        </button>
+        <TripMoreMenu
+          items={[
+            { label: optimizing ? "Rekenen…" : "Slimste volgorde", icon: "route", onSelect: optimize, disabled: optimizing || stops.length < 2 },
+            { label: "Omdraaien", icon: "swap", onSelect: () => withUndo("Volgorde omgedraaid.", () => trip.reverse()), disabled: stops.length < 2 },
+            { label: "Als tekst delen", icon: "list", onSelect: async () => {
               // Platte lijst voor groepen waar niemand een link opent (UX-audit)
               // Eigen punten met alleen hun naam, en alleen gedeelde notities
               const text = tripText(stops.map((s) => ({ ...s, own: !!s.point })), dated);
@@ -630,52 +623,38 @@ export function TripApp() {
                 setTextCopied(true);
                 setTimeout(() => setTextCopied(false), 2500);
               }
-            }}
-            className="flex h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 font-semibold hover:border-forest"
-          >
-            <Icon name={textCopied ? "check" : "list"} size={18} /> {textCopied ? "Tekst gekopieerd" : "Als tekst"}
-          </button>
-          <Link href="/mijn-reis/statistieken" className="flex h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold hover:border-forest">
-            <Icon name="chart" size={18} /> Statistieken
-          </Link>
-        </div>
+            } },
+            { label: "Statistieken", icon: "chart", href: "/mijn-reis/statistieken" },
+          ]}
+        />
+        {textCopied && (
+          <p role="status" className="text-sm font-semibold text-forest">
+            Tekst gekopieerd
+          </p>
+        )}
       </div>
-
-      {today && (
-        <section aria-label="Vandaag" className="mt-4 rounded-lg border border-forest bg-forest-tint p-4" data-testid="trip-today">
-          {today.leaving !== undefined && (
-            <p className="font-semibold text-forest">
-              Vandaag vertrek je bij {stops[today.leaving].place.name}
-              {departureShort(stops[today.leaving].place) ? ` (${departureShort(stops[today.leaving].place)!.toLowerCase()})` : ""}.
-            </p>
-          )}
-          {today.tonight !== undefined && (
-            <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-              <p className="min-w-0">
-                <span className="font-display text-h3 font-semibold">Vannacht: {stops[today.tonight].place.name}</span>
-                {stops[today.tonight].place.checkinUntil && <span className="block text-sm text-ink-2">Aankomen tot {stops[today.tonight].place.checkinUntil}</span>}
-              </p>
-              <NavigateButton
-                to={stops[today.tonight].place}
-                slug={stops[today.tonight].slug}
-                className="flex h-11 items-center gap-2 rounded-lg bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep"
-              >
-                <Icon name="route" size={18} /> Route
-              </NavigateButton>
-            </div>
-          )}
-        </section>
-      )}
 
       <div className="mt-4 grid gap-6 sm:mt-6 sm:gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="min-w-0">
+          {/* Start en vertrekdatum in één regel, open te klappen (ontwerpronde 2), zodat de stops hoog op het scherm staan */}
+          <details className="group mb-3 rounded-lg border border-line bg-surface" data-testid="trip-setup">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0 text-ink-2">
+                <span className="font-semibold text-ink">Start:</span> {start ? (start.label ?? "eigen adres") : "eerste stop"}
+                {", "}
+                <span className="font-semibold text-ink">vertrek:</span> {startDay ? shortDay(startDay) : "geen datum"}
+              </span>
+              <span className="shrink-0 font-semibold text-forest underline underline-offset-2 group-open:hidden">Wijzig</span>
+              <Icon name="chevronUp" size={20} className="hidden shrink-0 text-muted group-open:block" />
+            </summary>
+            <div className="space-y-3 border-t border-line p-3">
           <StartCard
             start={start}
             onChange={(s) => setEnds({ start: s, end: !s && ends.end === "start" ? "laatste" : ends.end })}
           />
 
           {/* Vertrekdatum: optioneel. Daarmee staat bij elke stop wanneer je er bent en of de plek dan open is */}
-          <div className="mb-3 rounded-lg border border-line bg-surface p-3">
+          <div className="rounded-lg border border-line bg-surface p-3">
             <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
               <label className="min-w-0 flex-1">
                 <span className="block font-semibold">Vertrekdatum</span>
@@ -695,6 +674,9 @@ export function TripApp() {
             </div>
             {!tripDate && <p className="mt-1.5 text-sm text-muted">Kies een datum, dan zie je per stop wanneer je er bent en of de plek dan open is.</p>}
           </div>
+
+            </div>
+          </details>
 
           <p className="mb-1 text-sm text-muted">Sleep een stop aan de greep, of gebruik de pijltjes, om de volgorde te veranderen.</p>
           <MotionConfig reducedMotion="user">
@@ -789,6 +771,24 @@ export function TripApp() {
             >
               <Icon name="map" size={19} /> Langs de route
             </button>
+          </div>
+          {/* Kaart van de route direct onder de stops (ontwerpronde 2), niet meer onderaan na de uitgaven */}
+          <div className="mt-4 space-y-2">
+          <PlaceMap
+            places={stops.filter((s) => !s.point).map((s) => s.place)}
+            pins={stops.flatMap((s, i) => (s.point ? [{ lat: s.point.lat, lng: s.point.lng, label: s.point.name, number: i + 1 }] : []))}
+            route={route?.geometry ?? null}
+            user={start}
+            cluster={false}
+            // Pas laden als de kaart bijna in beeld is: de tegels (±1,8 MB) verdrongen op trage 4G de rest (R65, 26 november)
+            whenVisible
+            fitKey={routeKey ?? stops.map((s) => s.slug).join()}
+            className="h-80 rounded-lg border border-line"
+          />
+          <p className="flex items-center gap-2 text-sm text-muted">
+            <Sign name="camper" size={22} />
+            {route?.vehicleApplied ? `Route over de weg via OpenRouteService, met je camper (${vehicleDims}).` : "Route over de weg via OpenRouteService of OSRM."}
+          </p>
           </div>
           {addingPoint && <AddPoint near={lastPoint} onAdd={addPoint} onClose={() => setAddingPoint(false)} />}
           {alongOpen && route && places && (
@@ -951,19 +951,6 @@ export function TripApp() {
 
           <ExpensesPanel stops={stops.map((s) => ({ slug: s.slug, name: s.place.name }))} budget={{ stay, fuel, tax }} />
 
-          <PlaceMap
-            places={stops.filter((s) => !s.point).map((s) => s.place)}
-            pins={stops.flatMap((s, i) => (s.point ? [{ lat: s.point.lat, lng: s.point.lng, label: s.point.name, number: i + 1 }] : []))}
-            route={route?.geometry ?? null}
-            user={start}
-            cluster={false}
-            fitKey={routeKey ?? stops.map((s) => s.slug).join()}
-            className="h-80 rounded-lg border border-line"
-          />
-          <p className="flex items-center gap-2 text-sm text-muted">
-            <Sign name="camper" size={22} />
-            {route?.vehicleApplied ? `Route over de weg via OpenRouteService, met je camper (${vehicleDims}).` : "Route over de weg via OpenRouteService of OSRM."}
-          </p>
           {confirmClear ? (
             <div role="alert" className="animate-fade-in rounded-lg bg-alert-tint p-4">
               <p className="font-semibold text-alert">Je hele reis wissen? Dit kun je niet ongedaan maken.</p>

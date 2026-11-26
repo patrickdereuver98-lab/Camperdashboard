@@ -23,7 +23,7 @@ test("voorzieningen doorgeven: alleen wat anders is gaat mee, met de oude waarde
   });
 
   await page.goto(`/plek/${place.slug}`);
-  await page.getByRole("button", { name: "Klopt er iets niet? Meld het" }).click();
+  await page.getByRole("button", { name: "Wijziging doorgeven" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("Wat klopt er niet?").selectOption("voorzieningen");
 
@@ -44,7 +44,7 @@ test("voorzieningen doorgeven: alleen wat anders is gaat mee, met de oude waarde
   expect(Object.keys((sent!.p_payload as { voorzieningen: object }).voorzieningen)).toEqual(["dump_station"]);
 });
 
-test("voorzieningenraster: '?' vraagt in de cel zelf, één tik op Ja stuurt het naar beheer", async ({ page }) => {
+test("voorzieningenraster: onbekend staat gedempt, zonder vraagknop in de cel", async ({ page }) => {
   type Snap2 = { slug: string; power?: boolean; water?: boolean; dumpStation?: boolean; toilet?: boolean; shower?: boolean; wifi?: boolean; dogs?: boolean };
   const p = (snapshot as unknown as { places: Snap2[] }).places.find((x) => top.has(x.slug) && x.wifi === undefined);
   test.skip(!p, "geen plek met onbekende wifi in de snapshot");
@@ -59,11 +59,9 @@ test("voorzieningenraster: '?' vraagt in de cel zelf, één tik op Ja stuurt het
     await r.fulfill(r.request().method() === "GET" ? { json: [] } : { json: null });
   });
   await page.goto(`/plek/${p!.slug}`);
-  const ask = page.getByRole("button", { name: "Is hier wifi? Geef het door" });
-  await ask.click();
-  await expect(ask).toHaveAttribute("aria-expanded", "true");
-  await page.getByRole("group", { name: "Is hier wifi?" }).getByRole("button", { name: "Ja" }).click();
-  await expect(page.getByText("Wifi: ja")).toBeVisible();
-  // Antwoorden per plek worden gebundeld en een paar seconden na de laatste tik verstuurd (review november, R11)
-  await expect.poll(() => sent, { timeout: 15_000 }).toMatchObject({ p_kind: "correctie", p_payload: { onderwerp: "voorzieningen", voorzieningen: { wifi: { was: null, nieuw: true } } } });
+  // Sinds de plekpagina-ronde (26 november 2026) geen vraagknop per voorziening meer: onbekend staat gedempt in het
+  // raster en doorgeven gaat via Wijziging doorgeven onderaan (de test hierboven)
+  await expect(page.getByRole("button", { name: "Is hier wifi? Geef het door" })).toHaveCount(0);
+  await expect(page.locator('section[aria-labelledby="voorzieningen"]')).toContainText("Onbekend");
+  expect(sent).toBeNull();
 });

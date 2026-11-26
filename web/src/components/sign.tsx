@@ -64,8 +64,11 @@ export function Sign({
   tone = "forest",
   title,
   className = "",
+  bare = false,
 }: {
   name: SignName;
+  /** Alleen de lijn in de tekstkleur, zonder vlak: voor in een chip of knop (stijlgids §8 en §10) */
+  bare?: boolean;
   size?: number;
   /** on = aanwezig, off = niet aanwezig, unknown = onbekend */
   state?: "on" | "off" | "unknown";
@@ -76,8 +79,12 @@ export function Sign({
 }) {
   const on = state === "on";
   // Rustige lijniconen op een lichte ondergrond; kleur alleen als het iets betekent (docs/stijlgids.md §8)
-  const bg = on && tone !== "neutral" ? `var(--${tone}-tint)` : "var(--sunken)";
-  const fg = on ? (tone === "neutral" ? "var(--ink-2)" : `var(--${tone})`) : state === "off" ? "var(--muted)" : "color-mix(in srgb, var(--muted) 70%, transparent)";
+  const bg = bare ? "transparent" : on && tone !== "neutral" ? `var(--${tone}-tint)` : "var(--sunken)";
+  const fg = bare
+    ? "currentColor"
+    : on
+      ? tone === "neutral" ? "var(--ink-2)" : `var(--${tone})`
+      : state === "off" ? "var(--muted)" : "color-mix(in srgb, var(--muted) 70%, transparent)";
   return (
     <svg
       width={size}
