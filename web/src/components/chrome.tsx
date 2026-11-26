@@ -190,13 +190,20 @@ function MoreMenu({ pathname, helpActive }: { pathname: string; helpActive: bool
   }, [open]);
   const item = "flex min-h-11 w-full items-center gap-3 px-4 text-left font-semibold text-ink hover:bg-sunken";
   return (
-    <div className="relative" data-meer>
+    <div
+      className="relative"
+      data-meer
+      // Tab uit het menu sluit het ook (review): focus gaat naar iets buiten deze knop en het menu
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpenAt(null);
+      }}
+    >
       <button
         id="meer-knop"
         type="button"
         aria-label="Meer"
         aria-expanded={open}
-        aria-controls="meer-menu"
+        aria-controls={open ? "meer-menu" : undefined}
         data-testid="menu-button"
         onClick={() => setOpen((o) => !o)}
         className="grid h-11 w-11 place-items-center rounded-md text-ink-2 hover:bg-sunken aria-expanded:text-forest"
@@ -205,7 +212,7 @@ function MoreMenu({ pathname, helpActive }: { pathname: string; helpActive: bool
       </button>
       {open && (
         <div id="meer-menu" className="animate-rise absolute top-full right-0 z-50 mt-1 w-56 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-float">
-          <Link href="/veelgestelde-vragen" aria-current={helpActive ? "page" : undefined} className={`${item} aria-[current=page]:text-forest`}>
+          <Link href="/veelgestelde-vragen" onClick={() => setOpenAt(null)} aria-current={helpActive ? "page" : undefined} className={`${item} aria-[current=page]:text-forest`}>
             <Icon name="help" size={20} /> Hulp
           </Link>
           <button

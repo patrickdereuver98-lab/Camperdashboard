@@ -33,7 +33,7 @@ const SLIDES: { icon: IconName; title: string; lead: string; points: string[] }[
     icon: "sliders",
     title: "Sneller op je plek",
     lead: "Filter op wat echt telt.",
-    points: ["Geen vaste vertrektijd of pas om 12:00 weg", "Stroom, lozen en gratis met één tik boven de lijst", "De lengte van je eigen camper"],
+    points: ["Geen vaste vertrektijd of pas om 12:00 weg", "Nu open en voorzieningen met één tik boven de lijst", "De lengte van je eigen camper"],
   },
 ];
 

@@ -47,17 +47,17 @@ const SORTS: { key: SortKey; label: string; needsCenter?: boolean }[] = [
 /** Verwijderbare chips voor elke actieve verfijning (Baymard: gekozen filters zichtbaar houden) */
 function activeChips(f: Filters & { lengthFromVehicle?: boolean }): { label: string; without: Filters }[] {
   const chips: { label: string; without: Filters }[] = [];
-  // Stroom, lozen, gratis en 8+ staan al als snelle chip aan; hier alleen wat in de filtersheet is gekozen
+  // Vertrekgroep en Nu open staan als snelle chip aan (UI/UX-plan T13); al het andere uit de filtersheet staat hier
   for (const fac of FACILITIES)
-    if (f.facilities.includes(fac.key) && fac.key !== "power" && fac.key !== "dumpStation") chips.push({ label: fac.label, without: { ...f, facilities: f.facilities.filter((x) => x !== fac.key) } });
+    if (f.facilities.includes(fac.key)) chips.push({ label: fac.label, without: { ...f, facilities: f.facilities.filter((x) => x !== fac.key) } });
+  if (f.free) chips.push({ label: "Gratis", without: { ...f, free: false } });
   for (const k of f.kinds) chips.push({ label: KIND_LABEL[k], without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   if (f.maxPrice) chips.push({ label: `Tot € ${f.maxPrice}`, without: { ...f, maxPrice: undefined } });
   // Uitzetten blijft uit, ook als het camperprofiel een lengte heeft (lengte=0 in het adres)
   const len = String(f.minLength).replace(".", ",");
   if (f.minLength) chips.push({ label: f.lengthFromVehicle ? `Mijn camper (${len} m)` : `Camper ${len} m`, without: { ...f, minLength: undefined, lengthOff: true } });
-  if (f.openNow) chips.push({ label: "Zonder gesloten plekken", without: { ...f, openNow: false } });
   if (f.priceUnknown && (f.free || f.maxPrice)) chips.push({ label: "Ook onbekende prijs", without: { ...f, priceUnknown: false } });
-  if (f.minScore && f.minScore !== 8) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
+  if (f.minScore) chips.push({ label: `Score ${f.minScore}+`, without: { ...f, minScore: undefined } });
   return chips;
 }
 

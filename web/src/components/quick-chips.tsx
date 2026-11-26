@@ -17,16 +17,25 @@ export function QuickChips({ filters, onChange, onFilters }: { filters: Filters;
   };
   return (
     <div role="group" aria-label="Snel filteren" className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 py-1 sm:mx-0 sm:flex-wrap sm:px-0">
-      {chips.map((c) => (
-        <Chip
-          key={c.key}
-          pressed={c.on}
-          icon={icon[c.key]}
-          onClick={() => (c.key === "voorzieningen" ? onFilters() : onChange(c.toggle()))}
-        >
-          {c.label}
-        </Chip>
-      ))}
+      {chips.map((c) =>
+        c.key === "voorzieningen" ? (
+          // Geen schakelaar maar een knop die de filtersheet opent: geen aria-pressed, het aantal staat in de tekst
+          <button
+            key={c.key}
+            type="button"
+            aria-haspopup="dialog"
+            onClick={onFilters}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-3 font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-forest"
+          >
+            {c.label}
+            {filters.facilities.length > 0 && <span className="text-forest tabular-nums">({filters.facilities.length})</span>}
+          </button>
+        ) : (
+          <Chip key={c.key} pressed={c.on} icon={icon[c.key]} onClick={() => onChange(c.toggle())}>
+            {c.label}
+          </Chip>
+        ),
+      )}
     </div>
   );
 }
