@@ -6,7 +6,8 @@ test.describe("startpagina", () => {
     expect(res?.status()).toBe(200);
     await expect(page).toHaveTitle(/VrijStaan/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Waar sta je");
-    await expect(page.getByText(/^\d[\d.]* camperplaatsen in Nederland/)).toBeVisible();
+    // Ondertitel met de belofte (UI/UX-plan T2); de aantallen staan bij "Hoe wil je staan?"
+    await expect(page.getByText("Zie meteen wanneer je moet vertrekken.")).toBeVisible();
 
     const cards = page.locator('main a[href^="/plek/"]');
     await expect(cards.first()).toBeVisible();

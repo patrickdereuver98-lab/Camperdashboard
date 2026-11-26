@@ -140,14 +140,14 @@ function CompactFooter() {
             <ul className="flex flex-wrap gap-x-5">
               {c.links.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="inline-block py-2.5 text-sm text-ink-2 hover:text-forest hover:underline">
+                  <Link href={l.href} className="flex min-h-11 items-center text-sm text-ink-2 hover:text-forest hover:underline">
                     {l.label}
                   </Link>
                 </li>
               ))}
               {c.title === "Over VrijStaan" && (
                 <li className="text-sm">
-                  <CookieSettingsLink />
+                  <CookieSettingsLink className="min-h-11" />
                 </li>
               )}
             </ul>
