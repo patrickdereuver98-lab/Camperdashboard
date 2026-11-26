@@ -322,7 +322,7 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
   sinds 22 november); scraper gepauzeerd door `herlees-rem` sinds 20 november (parser 47).
 - ✅ Controle van de AI-lezer ruimer waar hij ten onrechte afwees (`pipeline/ai.ts`, `quote.ts`, 4 nieuwe tests);
   herbeoordeling met `scripts/ai-recheck.ts`: 13 plekken (9 zonder vertrektijd, 4 vaste tijd), 15 voorstellen in de
-  Triage Inbox. Pipeline uitrollen na samenvoegen (nieuwe lezingen met de nieuwe controle).
+  Triage Inbox. Pipeline **versie 80** uitgerold op 26 november 2026 (main 86c176e, #196); controle `promote` geeft 200.
 - ⬜ Patrick: voorstellen accepteren in Mission Control → Triage Inbox (bron ai-lezer).
 - Besluit Patrick (26 november 2026): review-lezer blijft uit. De 90%-eis (LANCERING besluit 4) beslist hij later, na
   de voorstellen en het domein.
