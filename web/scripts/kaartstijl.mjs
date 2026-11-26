@@ -16,7 +16,7 @@ const PALET = {
     akker: "#ede6d3",
     woon: "#e8e0d0",
     industrie: "#e4dfd6",
-    gras: "#dfe8d2",
+    gras: "#e6ebd8",
     park: "#d9e6cc",
     bos: "#c9dcbf",
     heide: "#e7dcc6",

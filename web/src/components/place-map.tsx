@@ -22,8 +22,8 @@ export const NL_BOUNDS: [[number, number], [number, number]] = [
  * Eigen kaartstijl ("natuur & vrijheid"), gemaakt door scripts/kaartstijl.mjs op de tegels van OpenFreeMap: eigen tint
  * voor bos, heide, zand, gras en water, warme wegen, namen in het Nederlands. Verhoog `v` als de stijl verandert.
  */
-export const STYLE_LIGHT = "/kaart/licht.json?v=2";
-export const STYLE_DARK = "/kaart/donker.json?v=2";
+export const STYLE_LIGHT = "/kaart/licht.json?v=3";
+export const STYLE_DARK = "/kaart/donker.json?v=3";
 /** Straal van het onzichtbare tikvlak rond een punt: 22 px = een tikdoel van 44 × 44 px */
 const HIT_RADIUS = 22;
 
