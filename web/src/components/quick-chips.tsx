@@ -1,60 +1,41 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { Icon } from "./icons";
 import { Chip } from "./chip";
-import { requestMyLocation, useMyLocation } from "@/lib/my-location";
 import type { Filters } from "@/lib/search";
 import { quickChips, type QuickChipKey } from "@/lib/quick-chips";
 
 /**
- * Snelle filters boven de resultaten (redesign 30 oktober 2026, UX-audit stap 3): de keuzes die een camperaar onderweg
- * het vaakst wil, met één tik aan of uit. De rest staat in de filtersheet. Vervangt de tabbladen voor de vertrekregel.
- * Alle chips zien er hetzelfde uit (`Chip`, review R49): uit = rand, aan = vol bosgroen met vinkje.
+ * Snelle filters boven de resultaten: hoogstens vier (UI/UX-plan 26 november 2026, T13). De rest staat in de
+ * filtersheet. Alle chips zien er hetzelfde uit (`Chip`, review R49): uit = rand, aan = vol bosgroen met vinkje.
+ * Voorzieningen is geen schakelaar maar opent de filtersheet.
  */
-
-export function QuickChips({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
-  const loc = useMyLocation();
-  // Dichtbij zonder bekende locatie: eerst om de locatie vragen, daarna de filter zetten
-  const waiting = useRef(false);
-  useEffect(() => {
-    if (!waiting.current) return;
-    if (loc.status === "ready" && loc.pos) {
-      waiting.current = false;
-      onChange({ ...filters, where: "Mijn locatie", center: loc.pos, province: undefined, sort: "afstand" });
-    } else if (loc.status === "denied" || loc.status === "unavailable") waiting.current = false;
-  }, [loc, filters, onChange]);
-
-  const chips = quickChips(filters, loc.pos);
+export function QuickChips({ filters, onChange, onFilters }: { filters: Filters; onChange: (f: Filters) => void; onFilters: () => void }) {
+  const chips = quickChips(filters);
   const icon: Partial<Record<QuickChipKey, React.ReactNode>> = {
-    dichtbij: <Icon name="locate" size={17} />,
     vrij: <Icon name="clock" size={17} />,
   };
   return (
     <div role="group" aria-label="Snel filteren" className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 py-1 sm:mx-0 sm:flex-wrap sm:px-0">
-      {chips.map((c) => {
-        const locating = c.key === "dichtbij" && !c.on && loc.status === "locating";
-        const off = c.key === "dichtbij" && !c.on && loc.status === "denied";
-        return (
-          <Chip
+      {chips.map((c) =>
+        c.key === "voorzieningen" ? (
+          // Geen schakelaar maar een knop die de filtersheet opent: geen aria-pressed, het aantal staat in de tekst
+          <button
             key={c.key}
-            pressed={c.on}
-            icon={icon[c.key]}
-            disabled={locating || off}
-            title={off ? "Locatie staat uit in je browser" : undefined}
-            onClick={() => {
-              if (c.key === "dichtbij" && !c.on && !loc.pos) {
-                waiting.current = true;
-                requestMyLocation();
-                return;
-              }
-              onChange(c.toggle());
-            }}
+            type="button"
+            aria-haspopup="dialog"
+            onClick={onFilters}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-3 font-semibold whitespace-nowrap text-ink transition-colors duration-150 hover:border-forest"
           >
-            {locating ? "Locatie zoeken…" : c.label}
+            {c.label}
+            {filters.facilities.length > 0 && <span className="text-forest tabular-nums">({filters.facilities.length})</span>}
+          </button>
+        ) : (
+          <Chip key={c.key} pressed={c.on} icon={icon[c.key]} onClick={() => onChange(c.toggle())}>
+            {c.label}
           </Chip>
-        );
-      })}
+        ),
+      )}
     </div>
   );
 }

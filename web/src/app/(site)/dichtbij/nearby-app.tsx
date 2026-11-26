@@ -146,7 +146,7 @@ export function NearbyApp() {
   if (status !== "ready" || !pos) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 text-center sm:pt-14">
-        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-2xl shadow-lift">
+        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
           <Landscape seed="dichtbij" variant={0} van wide className="absolute inset-0 h-full w-full" />
         </div>
         <h1 className="mt-6 font-display text-h1 font-semibold">Waar kun je vannacht staan?</h1>

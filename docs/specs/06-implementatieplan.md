@@ -315,6 +315,17 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 | 🔄 B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging. Live (SQL, 8 november): B5, B6, B17 ✅, B11 deels (bewust). In PR #143: B7, B18. Open: B16 | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
 | ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 89 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
 
+## UI/UX-plan (26 november 2026) 🟡
+
+Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, besluit README 142.
+
+- ✅ Start (ondertitel, vinkjes, ruimte), snelle chips (vier), plekrij (foto 84 × 63, één prijsregel), plekpagina
+  (Vertrekken groter, hulp in de cel, kortere oproep, verouderd in `alert`, fotobron onder de foto), kop met menu Meer,
+  korte footer op taakpagina's, Doe mee, 404, opruimronde hoeken/schaduw/kopmaten, design-QA in stijlgids §12.
+- ✅ Nieuwe logo- en faviconset (README 143): iconen, favicon, `Logo`, `og.png`, bronnen in `public/merk/`.
+- ⬜ T49 visuele snapshots in CI; groep D (Dichtbij rijtijd eerst, Mijn reis "volgende stop eerst") na een eigen
+  ontwerpronde met screenshots.
+
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
 
 Leidraad: [README, VrijStaan 2.0](README.md#vrijstaan-20---visie-strategie--toekomstige-roadmap). Geen werk vóór de livegang; open punten 82 tot 86.

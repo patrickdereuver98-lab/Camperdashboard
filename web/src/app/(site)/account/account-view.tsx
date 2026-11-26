@@ -88,7 +88,7 @@ export function AccountView() {
       </div>
       <p className="mt-4 text-sm text-muted">Ingelogd via {via}.</p>
 
-      <Link href="/mijn-reis" className="mt-6 flex items-center justify-between rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+      <Link href="/mijn-reis" className="mt-6 flex items-center justify-between rounded-lg border border-line bg-surface p-4">
         <span className="flex items-center gap-3 font-semibold">
           <Icon name="heart" size={22} /> Mijn reis
         </span>
@@ -97,7 +97,7 @@ export function AccountView() {
         </span>
       </Link>
 
-      <Link href="/mijn-camper" className="mt-3 flex items-center justify-between rounded-2xl bg-surface p-4 outline-1 outline-line outline">
+      <Link href="/mijn-camper" className="mt-3 flex items-center justify-between rounded-lg border border-line bg-surface p-4">
         <span className="flex items-center gap-3 font-semibold">
           <Icon name="settings" size={22} /> Mijn camper
         </span>
@@ -120,7 +120,7 @@ export function AccountView() {
             Account verwijderen
           </button>
         ) : (
-          <div className="rounded-2xl bg-alert-tint p-4">
+          <div className="rounded-lg bg-alert-tint p-4">
             <p className="font-semibold text-alert">Weet je het zeker?</p>
             <p className="mt-1 text-ink-2">
               Je account wordt direct en definitief verwijderd, met je reis, je camper, je uitgaven en je papieren. Dit kun je

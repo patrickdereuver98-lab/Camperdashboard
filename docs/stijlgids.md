@@ -154,9 +154,10 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
   `on-forest` en een vinkje achteraan. Altijd `aria-pressed`. Geen getinte tussenvorm en geen chip met een eigen
   kleur: een chip die uit staat, mag er nooit aan uitzien. In een raster `wide` (vult de cel, tekst links).
   De verwijderbare chips met actieve filters op Zoeken hebben de aan-vorm met een kruisje.
-- **Logo** (`Logo` in `icons.tsx`): vanaf 33 px de versie met lichte heuvel; tot en met 32 px (kop, beheer, favicon
-  `app/icon.svg`) de kleine variant met een helemaal groen vlak, lichte camper op een grondlijn en een grotere zon,
-  zodat het merk in de lichte kop een onderkant houdt (de heuvel had daar contrast 1,00:1).
+- **Logo** (`Logo` in `icons.tsx`, set van 26 november 2026 in `public/merk/`): vanaf 33 px het app-icoon met lichte
+  grond; tot en met 32 px (kop, beheer, favicon `app/icon.svg`) de vereenvoudigde favicon-variant. Beide met een
+  bosgroene rand, zodat de lichte grond in de lichte kop niet wegvalt (R53). Het woordmerk in de kop blijft Geist-tekst;
+  de liggende en gestapelde logo's met ondertitel zijn voor marketing en drukwerk.
 - **Knop primair**: bosgroen vlak, witte tekst, 44 px hoog, 8 px hoek, geen rand, geen schaduw.
 - **Knop secundair**: `surface`, 1 px haarlijn (`border-line`), tekst `ink`.
 - **Tekstlink**: bosgroen, onderstreept met `underline-offset-2`.
@@ -189,3 +190,7 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 3. Geen van de punten uit §2 komt voor (zoek in de diff op `border-2`, `rounded-[`, `transition-all`, `font-display`
    met andere fonts, emoji).
 4. Tekst nagelezen volgens `.claude/skills/vrijstaan-stijl` (geen gedachtestreepjes, geen verkooppraat).
+5. Design-QA (UI/UX-plan T50, 26 november 2026): één primaire knop per scherm; elke kleur heeft één betekenis; geen
+   kaart in een kaart; geen tekst onder 14 px; elk tikvlak minstens 44 × 44 px; vertrek eerst, prijs tweede; laatste
+   update zichtbaar; onbekend nooit ingevuld; licht en donker met dezelfde componenten; randen van 1 px; geen schaduw
+   op gewone inhoud.

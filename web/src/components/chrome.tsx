@@ -109,7 +109,7 @@ function HeaderView({ pathname }: { pathname: string }) {
           <Link
             href="/veelgestelde-vragen"
             aria-current={isActive("/veelgestelde-vragen") ? "page" : undefined}
-            className="flex h-11 items-center gap-2 rounded-xl px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
+            className="flex h-11 items-center gap-2 rounded-lg px-4 font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-ink aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
           >
             <Icon name="help" size={19} />
             Hulp
@@ -124,22 +124,17 @@ function HeaderView({ pathname }: { pathname: string }) {
         <div className="ml-auto flex items-center lg:hidden">
           <Link
             href="/plek-aanmelden"
-            className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken"
+            className="grid h-11 w-11 place-items-center rounded-md text-ink-2 hover:bg-sunken"
             aria-label="Plek aanmelden"
           >
             <Icon name="plus" size={22} />
           </Link>
-          {/* Hulp als icoon: met tekst past de kop niet op 360 px en valt Inloggen weg (review november, R27) */}
-          <Link
-            href="/veelgestelde-vragen"
-            aria-label="Hulp"
-            aria-current={isActive("/veelgestelde-vragen") ? "page" : undefined}
-            className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken aria-[current=page]:text-forest"
-          >
-            <Icon name="help" size={22} />
-          </Link>
+          {/* Hulp en licht/donker in één menu (UI/UX-plan T39, 26 november 2026): op de telefoon hoogstens drie knoppen */}
+          <MoreMenu pathname={pathname} helpActive={isActive("/veelgestelde-vragen")} />
         </div>
-        <ThemeButton />
+        <div className="hidden lg:block">
+          <ThemeButton />
+        </div>
         <AccountButton active={isActive("/account")} />
       </div>
       <OfflineBar />
@@ -160,11 +155,80 @@ function ThemeButton() {
       aria-label="Donkere modus"
       aria-pressed={dark}
       data-testid="theme-button"
-      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-ink-2 hover:bg-sunken hover:text-ink lg:ml-1"
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-ink-2 hover:bg-sunken hover:text-ink lg:ml-1"
     >
       <Icon name="moon" size={21} className="dark:hidden" />
       <Icon name="sun" size={22} className="hidden dark:block" />
     </button>
+  );
+}
+
+/** Menu "Meer" in de telefoonkop: Hulp en licht/donker. Escape of een tik ernaast sluit het, focus gaat terug. */
+function MoreMenu({ pathname, helpActive }: { pathname: string; helpActive: boolean }) {
+  // Open op één pad: na het navigeren is het menu vanzelf dicht (pad uit de kop, die het binnen Suspense leest)
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === pathname;
+  const setOpen = (o: boolean | ((o: boolean) => boolean)) => setOpenAt((typeof o === "function" ? o(open) : o) ? pathname : null);
+  const dark = useDarkTheme();
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: KeyboardEvent | PointerEvent) => {
+      if (e instanceof KeyboardEvent) {
+        if (e.key !== "Escape") return;
+        setOpenAt(null);
+        document.getElementById("meer-knop")?.focus();
+        return;
+      }
+      if (!(e.target as Element).closest?.("[data-meer]")) setOpenAt(null);
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("pointerdown", close);
+    return () => {
+      document.removeEventListener("keydown", close);
+      document.removeEventListener("pointerdown", close);
+    };
+  }, [open]);
+  const item = "flex min-h-11 w-full items-center gap-3 px-4 text-left font-semibold text-ink hover:bg-sunken";
+  return (
+    <div
+      className="relative"
+      data-meer
+      // Tab uit het menu sluit het ook (review): focus gaat naar iets buiten deze knop en het menu
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpenAt(null);
+      }}
+    >
+      <button
+        id="meer-knop"
+        type="button"
+        aria-label="Meer"
+        aria-expanded={open}
+        aria-controls={open ? "meer-menu" : undefined}
+        data-testid="menu-button"
+        onClick={() => setOpen((o) => !o)}
+        className="grid h-11 w-11 place-items-center rounded-md text-ink-2 hover:bg-sunken aria-expanded:text-forest"
+      >
+        <Icon name="more" size={24} strokeWidth={3} />
+      </button>
+      {open && (
+        <div id="meer-menu" className="animate-rise absolute top-full right-0 z-50 mt-1 w-56 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-float">
+          <Link href="/veelgestelde-vragen" onClick={() => setOpenAt(null)} aria-current={helpActive ? "page" : undefined} className={`${item} aria-[current=page]:text-forest`}>
+            <Icon name="help" size={20} /> Hulp
+          </Link>
+          <button
+            type="button"
+            aria-pressed={dark}
+            data-testid="theme-menu-item"
+            onClick={() => setTheme(currentTheme() === "dark" ? "light" : "dark")}
+            className={item}
+          >
+            <Icon name="moon" size={20} className="dark:hidden" />
+            <Icon name="sun" size={20} className="hidden dark:block" />
+            Donkere modus
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -331,7 +395,7 @@ function SaveToastLive() {
     <div
       key={toast.id}
       role="status"
-      className={`animate-toast fixed left-1/2 z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-xl bg-ink py-2 pr-2 pl-4 text-surface shadow-lift lg:bottom-6 ${
+      className={`animate-toast fixed left-1/2 z-50 flex w-[min(92vw,26rem)] items-center gap-3 rounded-lg bg-ink py-2 pr-2 pl-4 text-surface shadow-float lg:bottom-6 ${
         onDetail ? "bottom-[calc(88px+env(safe-area-inset-bottom))]" : "bottom-[calc(76px+env(safe-area-inset-bottom))]"
       }`}
     >

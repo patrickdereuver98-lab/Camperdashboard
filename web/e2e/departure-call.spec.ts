@@ -32,7 +32,7 @@ test("oproep met knop, Klopt dit niet? en bevestiging met termijn", async ({ pag
   await page.goto(`/plek/${place.slug}`);
 
   const call = page.getByTestId("departure-call");
-  await expect(call).toContainText("We weten de vertrektijd van deze plek nog niet.");
+  await expect(call).toContainText("We weten de vertrektijd nog niet.");
   await expect(call.getByRole("button", { name: "Eigenaar? Vul de tijden in" })).toBeVisible();
 
   await call.getByRole("button", { name: "Vertrektijd doorgeven" }).click();

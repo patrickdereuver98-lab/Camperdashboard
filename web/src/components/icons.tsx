@@ -84,43 +84,42 @@ export function Icon({
   );
 }
 
-const CAMPER = "M14.5 36h15.2c1 0 1.9.4 2.6 1.1l5.6 5.9c.7.7 1.1 1.7 1.1 2.7V48a1.5 1.5 0 0 1-1.5 1.5H12.5A1.5 1.5 0 0 1 11 48v-8.5a3.5 3.5 0 0 1 3.5-3.5Z";
-
 /**
- * Beeldmerk: camper op een heuvel voor de zakkende avondzon, die ook een klok is (de vertrektijd). Gelijk aan
- * public/icon.svg. Een lichte rand houdt camper en wielen los van de groene lucht. Vanaf 48 px dunnere wijzers en
- * randen.
+ * Beeldmerk "Camper bij de klokzon", nieuwe set van 26 november 2026 (`public/merk/`, README 143): camper op lichte
+ * grond voor de zakkende avondzon, die ook een klok is (de vertrektijd). Groot gelijk aan `public/icon.svg`.
  *
- * Tot en met 32 px (kop, beheer, favicon `app/icon.svg`) een eigen variant (review R53): de lichte heuvel liep daar
- * weg in de lichte kop (contrast 1,00:1), waardoor het merk geen onderkant had. Klein blijft het vlak helemaal groen,
- * met een lichte camper op een lichte grondlijn; zon en wijzers zijn iets groter.
+ * Tot en met 32 px (kop, beheer, favicon `app/icon.svg`) de vereenvoudigde favicon-variant. De lichte grond loopt in
+ * de lichte kop weg (review R53), dus de tegel krijgt een bosgroene rand van 2 eenheden: zo houdt het merk een onderkant.
  */
 export function Logo({ size = 34 }: { size?: number }) {
   if (size <= 32)
     return (
       <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-        <rect width="64" height="64" rx="15" fill="#1f4e37" />
-        <circle cx="44" cy="25" r="12.5" fill="#e8915c" />
-        <path d="M44 25v-8.5M44 25l6-3.4" fill="none" stroke="#1f4e37" strokeWidth="3.8" strokeLinecap="round" />
-        <path d={CAMPER} fill="#fffcf6" stroke="#1f4e37" strokeWidth="2" strokeLinejoin="round" />
-        <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#1f4e37" />
-        <circle cx="17.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#1f4e37" strokeWidth="2" />
-        <circle cx="32.5" cy="49.5" r="3.8" fill="#fffcf6" stroke="#1f4e37" strokeWidth="2" />
-        <path d="M8 55.5h48" stroke="#fffcf6" strokeWidth="3" strokeLinecap="round" />
+        <rect width="64" height="64" rx="13" fill="#1F4E37" />
+        <circle cx="44" cy="23" r="13" fill="#B9592A" />
+        <path d="M44 14V23L50 19" fill="none" stroke="#F5F0E6" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M0 43C12 37 23 37 34 41C45 44 55 43 64 39V51A13 13 0 0 1 51 64H13A13 13 0 0 1 0 51Z" fill="#F5F0E6" />
+        <path d="M13 37H28C31 37 33 38 35 40L41 46V50H10V40C10 38 11 37 13 37Z" fill="#1F4E37" />
+        <rect x="15" y="40" width="7" height="4" rx="1" fill="#F5F0E6" />
+        <path d="M29 39H28V45H37L33 40C32 39 31 39 29 39Z" fill="#F5F0E6" />
+        <circle cx="17" cy="50" r="3.3" fill="#1F4E37" stroke="#F5F0E6" strokeWidth="1.8" />
+        <circle cx="34" cy="50" r="3.3" fill="#1F4E37" stroke="#F5F0E6" strokeWidth="1.8" />
+        <rect x="1" y="1" width="62" height="62" rx="12" fill="none" stroke="#1F4E37" strokeWidth="2" />
       </svg>
     );
-  const fine = size >= 48;
-  const wheel = { r: fine ? 3.4 : 3.6, fill: "#1f4e37", stroke: "#fffcf6", strokeWidth: fine ? 1.6 : 2 };
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="15" fill="#1f4e37" />
-      <circle cx="44" cy="27" r="11" fill="#e8915c" />
-      <path d="M44 27v-7.5M44 27l5.2-3" fill="none" stroke="#1f4e37" strokeWidth={fine ? 2.6 : 3.4} strokeLinecap="round" />
-      <path d="M0 44.5C11 39.2 21.5 36.5 32 36.5S53 39.2 64 44.5V49A15 15 0 0 1 49 64H15A15 15 0 0 1 0 49Z" fill="#fffcf6" />
-      <path d={CAMPER} fill="#1f4e37" stroke="#fffcf6" strokeWidth={fine ? 1.6 : 2} strokeLinejoin="round" />
-      <rect x="14.5" y="39" width="7" height="4.2" rx="1.2" fill="#fffcf6" />
-      <circle cx="17.5" cy="49.5" {...wheel} />
-      <circle cx="32.5" cy="49.5" {...wheel} />
+    <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden="true">
+      <rect width="512" height="512" rx="112" fill="#1F4E37" />
+      <circle cx="344" cy="184" r="116" fill="#B9592A" />
+      <path d="M344 105V184L397 148" fill="none" stroke="#FFFCF6" strokeWidth="19" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M0 330C87 284 169 284 250 305C345 330 423 333 512 290V400C512 462 462 512 400 512H112C50 512 0 462 0 400Z" fill="#F5F0E6" />
+      <path d="M95 313C95 287 116 267 142 267H275C296 267 314 276 329 292L375 340C386 352 393 368 393 384V405H82V327C82 319 88 313 95 313Z" fill="#FFFCF6" />
+      <path d="M286 282H272V344H361L323 302C314 289 301 282 286 282Z" fill="#1F4E37" />
+      <rect x="119" y="293" width="77" height="48" rx="10" fill="#1F4E37" />
+      <rect x="211" y="293" width="49" height="48" rx="8" fill="#1F4E37" />
+      <circle cx="157" cy="402" r="31" fill="#1F4E37" stroke="#F5F0E6" strokeWidth="10" />
+      <circle cx="326" cy="402" r="31" fill="#1F4E37" stroke="#F5F0E6" strokeWidth="10" />
+      <rect x="4" y="4" width="504" height="504" rx="108" fill="none" stroke="#1F4E37" strokeWidth="8" />
     </svg>
   );
 }

@@ -21,7 +21,7 @@ function BarChart({ title, bars, caption }: { title: string; bars: Bar[]; captio
   if (max <= 0) return null;
   return (
     <figure className="rounded-lg border border-line bg-surface p-5">
-      <figcaption className="font-display text-xl font-semibold">{title}</figcaption>
+      <figcaption className="font-display text-h2 font-semibold">{title}</figcaption>
       {caption && <p className="mt-1 text-sm text-muted">{caption}</p>}
       <ul className="mt-4 space-y-3" role="list">
         {bars.map((b) => (

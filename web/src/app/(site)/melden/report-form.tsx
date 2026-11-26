@@ -72,7 +72,7 @@ export function ReportForm() {
   if (done)
     return (
       <SuccessNote className="mt-8 rounded-xl bg-forest-tint p-6">
-        <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
+        <p className="flex items-center gap-2 font-display text-h2 font-semibold text-forest">
           <Icon name="check" size={24} /> Melding ontvangen (#{done.number})
         </p>
         <p className="mt-2 text-ink-2">Dank je wel. Dit gebeurt er nu:</p>

@@ -368,7 +368,7 @@ export function DestinationSearch({
     <ul
       id={listId}
       role="listbox"
-      className="absolute inset-x-0 top-full z-30 mt-2 max-h-[min(60vh,420px)] overflow-auto rounded-lg border border-line bg-surface py-1 text-ink shadow-lift"
+      className="absolute inset-x-0 top-full z-30 mt-2 max-h-[min(60vh,420px)] overflow-auto rounded-lg border border-line bg-surface py-1 text-ink shadow-float"
     >
       {parsed.labels.length > 0 && parsed.rest && (
         <li role="presentation" className="px-4 pt-1 pb-2 text-sm text-ink-2">

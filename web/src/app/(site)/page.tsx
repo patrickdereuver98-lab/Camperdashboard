@@ -19,7 +19,6 @@ const TONE_TEXT = { forest: "text-forest", lake: "text-lake", neutral: "text-ink
 
 export default async function Home() {
   const [stats, places] = await Promise.all([getStats(), getSummaries()]);
-  const withDeparture = places.filter((p) => p.departure).length;
 
   // Uitgelicht: eerst plekken zonder vaste vertrektijd, dan foto, score en de meeste informatie
   const free = (p: PlaceSummary) => (departureKind(p) === "vrij" ? 1 : 0);
@@ -80,12 +79,13 @@ export default async function Home() {
     <>
       <Onboarding />
       {/* Kop: één vraag, daaronder de hoofdactie (dichtbij) en het zoekveld (docs/specs/04-ui-ux-brief.md) */}
-      <section className="mx-auto w-full max-w-6xl px-3 pt-5 sm:px-6 sm:pt-10">
+      <section className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6 sm:pt-10">
         <h1 className="animate-rise font-display text-h1 font-semibold text-ink">
           Waar sta je vannacht?
         </h1>
-        <p className="animate-rise mt-1.5 max-w-xl text-ink-2 [animation-delay:60ms] sm:mt-2 sm:text-lg">
-          {nf.format(stats.total)} camperplaatsen in Nederland. Bij {nf.format(withDeparture)} weten we hoe laat je weg moet.
+        {/* UI/UX-plan T2 (26 november 2026): de belofte in één zin; de aantallen staan bij "Hoe wil je staan?" */}
+        <p className="animate-rise mt-2 max-w-xl text-ink-2 [animation-delay:60ms] sm:text-lg">
+          Zoek een camperplaats voor vannacht. Zie meteen wanneer je moet vertrekken.
         </p>
         <div className="animate-rise mt-4 [animation-delay:120ms] sm:mt-6">
           <HomeSearch />
@@ -94,7 +94,7 @@ export default async function Home() {
       <InstallTip />
 
       {/* Hoe wil je staan: het antwoord op de vraag in de kop, direct eronder (concept "Eén vraag") */}
-      <section aria-labelledby="hoe" className="mx-auto w-full max-w-6xl px-3 pt-7 sm:px-6 sm:pt-10">
+      <section aria-labelledby="hoe" className="mx-auto w-full max-w-6xl px-4 pt-8 sm:px-6 sm:pt-12">
         <h2 id="hoe" className="font-display text-h2 font-semibold">Hoe wil je staan?</h2>
         <ul className="mt-3 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {ways.map((w) => (
@@ -116,7 +116,7 @@ export default async function Home() {
       </section>
 
       {/* Vertrouwen: wat je hier zeker weet */}
-      <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-3 pt-6 sm:px-6 sm:pt-8">
+      <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6 sm:pt-8">
         <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
           {[
             "We vullen niets zelf in: wat we niet weten, staat er als onbekend",
@@ -124,9 +124,8 @@ export default async function Home() {
             "Gratis te gebruiken, je hebt geen account nodig",
           ].map((t) => (
             <li key={t} className="flex items-start gap-2.5">
-              <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest-tint text-forest">
-                <Icon name="check" size={16} />
-              </span>
+              {/* Lijnicoon zonder eigen vlak (UI/UX-plan T8) */}
+              <Icon name="check" size={20} className="mt-0.5 shrink-0 text-forest" />
               <span className="leading-snug sm:text-base">{t}</span>
             </li>
           ))}
@@ -134,7 +133,7 @@ export default async function Home() {
       </section>
 
       {/* Populaire bestemmingen met echte foto's */}
-      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+      <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-12">
         <h2 className="font-display text-h2 font-semibold">Populaire bestemmingen</h2>
         <p className="mt-0.5 text-ink-2">Hier staan de meeste plekken.</p>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-12">
@@ -175,7 +174,7 @@ export default async function Home() {
 
       {/* Uitgelicht */}
       {featured.length > 0 && (
-        <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+        <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-12">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4">
             <h2 className="font-display text-h2 font-semibold">
               {stats.freeDeparture > 0 ? "Vertrekken wanneer je wilt" : "Meest complete informatie"}
@@ -195,7 +194,7 @@ export default async function Home() {
       )}
 
       {/* Zoeken op voorziening */}
-      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+      <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-12">
         <h2 className="font-display text-h2 font-semibold">Zoek op wat je nodig hebt</h2>
         <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-4 sm:gap-3 lg:grid-cols-4">
           {facilities
@@ -218,7 +217,7 @@ export default async function Home() {
       </section>
 
       {/* Zo werkt het */}
-      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+      <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-12">
         <h2 className="font-display text-h2 font-semibold">Zo werkt VrijStaan</h2>
         <ol className="mt-3 grid gap-4 md:mt-5 md:grid-cols-3 md:gap-8">
           {([
@@ -253,7 +252,7 @@ export default async function Home() {
       </section>
 
       {/* Eigenaren */}
-      <section className="mx-auto max-w-6xl px-3 pt-9 sm:px-6 sm:pt-12">
+      <section className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 sm:pt-12">
         <div className="relative overflow-hidden rounded-lg border border-line bg-surface">
           <div className="relative flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-8">
             <div>
