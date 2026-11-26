@@ -339,6 +339,13 @@ Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, bes
   `public/kaart/licht.json` en `donker.json` (eigen tint voor bos, heide, zand, gras, akker, wetland; warme wegen;
   Nederlandse namen; zelfde tegels van OpenFreeMap, geen nieuwe dienst). Donker: bijna neutraal land, verschil alleen
   in lichtheid, zodat groen voor de stippen blijft. Vervangt Positron + `tint()` in `place-map.tsx` en `add-point.tsx`.
+- ✅ Design-audit (26 november 2026, alle pagina's op telefoon en desktop, licht en donker): plekpagina toont de
+  vertrektijd weer bij openen (actierij onder het beslisblok); cookiebalk op één rij (±70 px); start zonder gevulde
+  icoonblokjes; vertrekpagina's met de paginatitel als h1 en de uitleg eronder; tweede zoekveld alleen in een
+  afgebakende lijst; bestemmingstegels met reservefoto, rustige fotobron en geen
+  dubbele foto; oude hoeken, randen van 2 px en knoppen van 48–56 px weg (inloggen, account, mijn camper, formulieren,
+  foutpagina, FAQ); tikvlakken ≥ 44 px (cookiebalk, sorteren, logo, Doe mee); sheets openen zonder focusring op
+  Sluiten; lege staten in dezelfde groene tekening.
 - ⬜ T49 visuele snapshots in CI; groep D (Dichtbij rijtijd eerst, Mijn reis "volgende stop eerst") na een eigen
   ontwerpronde met screenshots.
 

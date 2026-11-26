@@ -73,7 +73,7 @@ export function VehicleApp() {
           verbruik gebruiken we voor de brandstofkosten in Mijn reis.
         </p>
         {err && <p id="camper-fout" role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-        <button type="submit" className="h-14 w-full rounded-xl bg-forest font-display text-lg font-semibold text-on-forest">Bewaren</button>
+        <button type="submit" className="h-11 w-full rounded-lg bg-forest font-semibold text-on-forest">Bewaren</button>
         {saved && (
           <p role="status" className="flex items-center gap-2 font-semibold text-forest">
             <Icon name="check" size={20} /> Bewaard. {vehicle.lengthM ? `Bij het zoeken zie je nu plekken voor ${dec(vehicle.lengthM)} meter.` : ""}
@@ -170,7 +170,7 @@ function Documents() {
         Bewaar hier bijvoorbeeld je kentekenbewijs, verzekering of ANWB-pas als PDF of foto. Alleen jij kunt ze zien.
       </p>
       {loading ? null : !session ? (
-        <Link href="/inloggen?next=/mijn-camper" className="mt-4 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
+        <Link href="/inloggen?next=/mijn-camper" className="mt-4 inline-flex h-11 items-center rounded-lg bg-forest px-5 font-semibold text-on-forest">
           Log in om papieren te bewaren
         </Link>
       ) : (
@@ -179,7 +179,7 @@ function Documents() {
             type="button"
             disabled={busy}
             onClick={() => input.current?.click()}
-            className="mt-4 inline-flex h-12 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 font-semibold hover:border-forest disabled:opacity-60"
+            className="mt-4 inline-flex h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest disabled:opacity-60"
           >
             <Icon name="plus" size={18} /> {busy ? "Uploaden…" : "Document toevoegen"}
           </button>
@@ -204,7 +204,7 @@ function Documents() {
                     <span className="block truncate font-semibold underline">{d.name.replace(/^\d+-/, "")}</span>
                     <span className="text-sm text-muted">{Math.max(1, Math.round(d.size / 1024))} kB</span>
                   </button>
-                  <button type="button" onClick={() => remove(d.name)} aria-label={`${d.name.replace(/^\d+-/, "")} weghalen`} className="grid h-11 w-11 place-items-center rounded-xl text-ink-2 hover:bg-sunken">
+                  <button type="button" onClick={() => remove(d.name)} aria-label={`${d.name.replace(/^\d+-/, "")} weghalen`} className="grid h-11 w-11 place-items-center rounded-lg text-ink-2 hover:bg-sunken">
                     <Icon name="trash" size={20} />
                   </button>
                 </li>

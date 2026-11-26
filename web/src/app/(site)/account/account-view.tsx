@@ -26,7 +26,7 @@ export function AccountView() {
       <>
         <h1 className="font-display text-h1 font-semibold">Mijn account</h1>
         <p className="mt-3 text-lg text-ink-2">Log in om je reis op al je apparaten te bewaren.</p>
-        <Link href="/inloggen?next=/account" className="mt-6 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
+        <Link href="/inloggen?next=/account" className="mt-6 inline-flex h-11 items-center rounded-lg bg-forest px-5 font-semibold text-on-forest">
           Inloggen
         </Link>
       </>
@@ -109,7 +109,7 @@ export function AccountView() {
           await signOut();
           router.replace("/");
         }}
-        className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-line font-semibold hover:border-forest"
+        className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest"
       >
         <Icon name="logout" size={20} /> Uitloggen
       </button>
@@ -134,11 +134,11 @@ export function AccountView() {
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}
-                className="h-12 w-full rounded-xl border-2 border-field bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none focus:ring-2 focus:ring-alert"
+                className="h-11 w-full rounded-lg border border-field bg-surface px-3 font-semibold tracking-wide focus:border-alert focus:outline-none focus:ring-2 focus:ring-alert"
               />
             </label>
             <div className="mt-3 flex gap-3">
-              <button onClick={remove} disabled={!typedOk || deleting} className="h-11 rounded-xl bg-alert px-4 font-semibold text-surface disabled:opacity-40">
+              <button onClick={remove} disabled={!typedOk || deleting} className="h-11 rounded-lg bg-alert px-4 font-semibold text-surface disabled:opacity-40">
                 {deleting ? "Verwijderen…" : "Account definitief verwijderen"}
               </button>
               <button
@@ -146,7 +146,7 @@ export function AccountView() {
                   setConfirm(false);
                   setTyped("");
                 }}
-                className="h-11 rounded-xl px-4 font-semibold"
+                className="h-11 rounded-lg px-4 font-semibold"
               >
                 Annuleren
               </button>

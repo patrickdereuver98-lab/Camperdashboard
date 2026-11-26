@@ -38,7 +38,9 @@ export function SheetPanel({
     const prev = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const t = setTimeout(() => panel.current?.querySelector<HTMLElement>("button, input, select, textarea")?.focus(), 50);
+    // Focus op het paneel zelf, niet op de eerste knop: anders staat bij openen een dikke focusring om "Sluiten"
+    // (design-audit 26 november 2026). Tab gaat daarna naar de eerste knop; schermlezers lezen de titel voor.
+    const t = setTimeout(() => panel.current?.focus({ preventScroll: true }), 50);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close.current();
       if (e.key === "Tab" && panel.current) {
@@ -51,7 +53,8 @@ export function SheetPanel({
         if (!items.length) return;
         const first = items[0];
         const last = items[items.length - 1];
-        if (!panel.current.contains(document.activeElement)) {
+        // Focus staat buiten het paneel, of op het paneel zelf (na openen): naar de eerste of laatste knop
+        if (!panel.current.contains(document.activeElement) || document.activeElement === panel.current) {
           e.preventDefault();
           (e.shiftKey ? last : first).focus();
         } else if (e.shiftKey && document.activeElement === first) {
@@ -87,10 +90,11 @@ export function SheetPanel({
           />
           <motion.div
             ref={panel}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby={id}
-            className="relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-surface shadow-float sm:max-w-lg sm:rounded-2xl"
+            className="relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-surface shadow-float outline-none sm:max-w-lg sm:rounded-2xl"
             initial={reduce ? { opacity: 0 } : { y: "100%" }}
             animate={reduce ? { opacity: 1 } : { y: 0 }}
             exit={reduce ? { opacity: 0 } : { y: "100%" }}

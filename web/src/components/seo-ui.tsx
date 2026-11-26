@@ -166,9 +166,20 @@ export function LinkChips({ title, links }: { title: string; links: { href: stri
  * Korte uitleg bovenaan een hub (Zonder vertrektijd, Uitslapers, Overige plekken), op de server in de HTML. De eerste
  * zin staat in beeld; de rest staat achter "Meer over deze lijst", zodat het zoekscherm op een telefoon hoog blijft.
  */
-export function HubIntro({ lead, more, link }: { lead: string; more: string[]; link?: { href: string; label: string } }) {
+export function HubIntro({
+  lead,
+  more,
+  link,
+  embedded = false,
+}: {
+  lead: string;
+  more: string[];
+  link?: { href: string; label: string };
+  /** Onder de h1 van de vertrekpagina (DepartureIntro): geen eigen vlak of marge (design-audit 26 november 2026) */
+  embedded?: boolean;
+}) {
   return (
-    <section aria-label="Over deze lijst" className="bg-surface px-3 pt-3 sm:px-6 lg:bg-transparent lg:pt-6">
+    <section aria-label="Over deze lijst" className={embedded ? "mt-2" : "bg-surface px-3 pt-3 sm:px-6 lg:bg-transparent lg:pt-6"}>
       <p className="max-w-prose text-ink-2">{lead}</p>
       <details className="group max-w-prose">
         <summary className="-mx-1 inline-flex h-11 cursor-pointer list-none items-center gap-1 px-1 font-semibold text-forest [&::-webkit-details-marker]:hidden">

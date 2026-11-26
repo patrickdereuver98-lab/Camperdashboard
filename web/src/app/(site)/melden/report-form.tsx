@@ -19,7 +19,7 @@ const REASONS = [
   { value: "anders", label: "Iets anders", short: "anders", category: "overig" },
 ] as const;
 
-const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const field = "h-11 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 /** Een pad als "/plek/x" wordt een volledig adres op vrijstaan.nl */
 function fullUrl(raw: string): string {
@@ -71,7 +71,7 @@ export function ReportForm() {
 
   if (done)
     return (
-      <SuccessNote className="mt-8 rounded-xl bg-forest-tint p-6">
+      <SuccessNote className="mt-8 rounded-lg bg-forest-tint p-6">
         <p className="flex items-center gap-2 font-display text-h2 font-semibold text-forest">
           <Icon name="check" size={24} /> Melding ontvangen (#{done.number})
         </p>
@@ -85,7 +85,7 @@ export function ReportForm() {
           Bewaar de link hieronder. Daar zie je hoe het ervoor staat en wat we antwoorden. Je kunt er ook reageren, zonder
           account.
         </p>
-        <Link href={`/support/${done.token}`} className="mt-4 inline-flex h-12 items-center rounded-lg bg-forest px-5 font-semibold text-on-forest">
+        <Link href={`/support/${done.token}`} className="mt-4 inline-flex h-11 items-center rounded-lg bg-forest px-5 font-semibold text-on-forest">
           Naar mijn melding
         </Link>
       </SuccessNote>
@@ -167,7 +167,7 @@ export function ReportForm() {
       </label>
       <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       <FormAlert error={err} />
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-11 w-full rounded-lg bg-forest hover:bg-forest-deep font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Melding versturen"}
       </button>
     </form>

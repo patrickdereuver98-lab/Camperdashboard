@@ -107,12 +107,17 @@ export function CookieBanner() {
           </>
         ) : (
           <>
-            {/* Vraag links, twee even zware knoppen rechts (richtlijn Autoriteit Persoonsgegevens). Op een smal scherm
-                staan de knoppen onder de vraag, even breed, zodat "Nee" nooit wegvalt (review november, R27). */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <p id="cookie-titel" className="min-w-0 basis-full text-sm leading-snug text-ink-2 min-[480px]:basis-0 min-[480px]:flex-1">
+            {/* Vraag links, twee even zware knoppen rechts (richtlijn Autoriteit Persoonsgegevens), ook op de telefoon op
+                één rij: de balk is zo ongeveer 70 px hoog in plaats van 120 (design-audit 26 november 2026). "Nee" valt
+                nooit weg: de knoppen krimpen niet (review november, R27). */}
+            <div className="flex items-center gap-2">
+              <p id="cookie-titel" className="min-w-0 flex-1 text-sm leading-snug text-ink-2">
                 Mogen we bezoek tellen, zonder cookies van derden?{" "}
-                <button type="button" onClick={() => setDetails(true)} className="-my-3 inline-block py-3 font-semibold text-forest underline">
+                <button
+                  type="button"
+                  onClick={() => setDetails(true)}
+                  className="relative font-semibold text-forest underline after:absolute after:-inset-x-1 after:-inset-y-3 after:content-['']"
+                >
                   Zelf instellen
                 </button>
               </p>
@@ -120,7 +125,7 @@ export function CookieBanner() {
                 type="button"
                 onClick={() => close(true)}
                 aria-label="Ja, tel mijn bezoek"
-                className="min-h-11 flex-1 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint min-[480px]:flex-none"
+                className="min-h-11 w-16 shrink-0 rounded-md border border-forest bg-surface font-semibold text-forest hover:bg-forest-tint"
               >
                 Ja
               </button>
@@ -128,7 +133,7 @@ export function CookieBanner() {
                 type="button"
                 onClick={() => close(false)}
                 aria-label="Nee, alleen wat nodig is"
-                className="min-h-11 flex-1 rounded-md border border-forest bg-surface px-4 font-semibold text-forest hover:bg-forest-tint min-[480px]:flex-none"
+                className="min-h-11 w-16 shrink-0 rounded-md border border-forest bg-surface font-semibold text-forest hover:bg-forest-tint"
               >
                 Nee
               </button>

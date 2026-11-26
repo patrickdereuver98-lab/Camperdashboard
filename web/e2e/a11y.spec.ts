@@ -204,8 +204,8 @@ test("sheet: een keuze maken verplaatst de focus niet", async ({ page }) => {
   await page.goto(PLACE);
   await page.getByRole("button", { name: /Schrijf een review/ }).click();
   const dialog = page.getByRole("dialog");
-  // De sheet zet bij openen zelf de focus (na 50 ms, het paneel laadt lazy); pas daarna de keuze maken
-  await expect(dialog.locator(":focus")).toHaveCount(1);
+  // De sheet zet bij openen zelf de focus op het paneel (na 50 ms, het paneel laadt lazy); pas daarna de keuze maken
+  await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true);
   const seven = dialog.getByRole("radio", { name: "7", exact: true }).first();
   await seven.focus();
   await page.keyboard.press("Space");

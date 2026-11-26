@@ -6,7 +6,6 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useOptimistic, u
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   applyFilters,
-  DEPARTURE_PAGES,
   filtersToQuery,
   parseFilters,
   refinementCount,
@@ -64,7 +63,7 @@ function activeChips(f: Filters & { lengthFromVehicle?: boolean }): { label: str
 /** De eerste plekken van deze zoekopdracht, op de server berekend (zie search.tsx) */
 export type InitialResults = { key: string; results: Result[]; total: number };
 
-export function SearchApp({ page, updated, initial }: { page?: DeparturePage; updated?: string; initial?: InitialResults }) {
+export function SearchApp({ page, updated, initial, intro }: { page?: DeparturePage; updated?: string; initial?: InitialResults; intro?: React.ReactNode }) {
   const router = useRouter();
   const params = useSearchParams();
   const [vehicle] = useVehicle();
@@ -76,6 +75,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
   // Filteren over ±2.000 plekken kost op een trage telefoon een paar honderd ms: de chips reageren meteen, de lijst
   // en de kaart volgen met de uitgestelde filters (R36)
   const deferredFilters = useDeferredValue(filters);
+  const CountHeading = page ? "h2" : "h1";
   const results = useMemo(() => (places ? applyFilters(places, deferredFilters) : (early?.results ?? null)), [places, deferredFilters, early]);
   const resultsKey = filtersToQuery(deferredFilters);
   const total = early ? early.total : results?.length;
@@ -185,7 +185,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
       <div className="min-w-0">
         {/* Zoekbalk en filters, plakt op mobiel onder de header */}
-        <DepartureIntro page={page} filters={filters} />
+        <DepartureIntro page={page} filters={filters} intro={intro} />
         <div
           className="sticky top-14 z-30 border-b border-line bg-surface px-3 pt-2 pb-1 transition-transform duration-200 motion-reduce:transition-none sm:top-16 sm:px-6 sm:pt-3 sm:pb-3 lg:static lg:border-0 lg:bg-transparent lg:pt-4"
           style={hideTop ? { transform: `translateY(-${topHeight}px)` } : undefined}
@@ -219,7 +219,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
                 aria-label="Sorteren"
                 value={shown.sort}
                 onChange={(e) => update({ ...filters, sort: e.target.value as SortKey })}
-                className="absolute inset-0 min-w-0 appearance-none truncate bg-transparent opacity-0 focus:outline-none sm:static sm:h-full sm:w-full sm:opacity-100"
+                className="absolute inset-0 min-w-0 appearance-none truncate bg-transparent opacity-0 focus:outline-none sm:static sm:-my-px sm:h-11 sm:w-full sm:opacity-100"
               >
                 {SORTS.filter((s) => (!s.needsCenter || filters.center) && (s.key !== "score" || hasReviews)).map((s) => (
                   <option key={s.key} value={s.key}>
@@ -298,12 +298,13 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
 
         <section className={`px-3 pt-3 pb-24 sm:px-6 sm:pt-4 lg:pb-8 ${!wide && mapOpen ? "hidden" : "animate-fade-in"}`}>
           {/* Alleen de teller is live: een schermlezer hoort "12 plekken in Gelderland", niet de hele lijst (R30) */}
-          <h1 className="font-display text-h1 font-semibold" aria-live="polite" aria-atomic="true">
+          {/* Op een vertrekpagina is de paginatitel de h1 (DepartureIntro) en de teller een h2 (design-audit 26 november) */}
+          <CountHeading className={`font-display font-semibold ${page ? "text-h2" : "text-h1"}`} aria-live="polite" aria-atomic="true">
             <span key={total} className="animate-fade-in inline-block">
               {total !== undefined ? pluralize(total, "plek", "plekken") : "Plekken laden"}
             </span>{" "}
             <span>{filters.center ? `binnen ${filters.radiusKm} km van ${heading}` : `in ${heading}`}</span>
-          </h1>
+          </CountHeading>
           {unknownPlace && (
             <p role="status" className="mt-2 rounded-lg bg-sunken px-4 py-3 text-ink-2">
               We kennen geen plaats die &ldquo;{unknownPlace}&rdquo; heet. Daarom zie je alle plekken. Typ een plaats of
@@ -334,7 +335,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
             </div>
           )}
           {results && places && results.length === 0 && <Empty filters={filters} places={places} onChange={update} />}
-          {results && results.length > 0 && <Results key={resultsKey} queryKey={resultsKey} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} />}
+          {results && results.length > 0 && <Results key={resultsKey} queryKey={resultsKey} results={results} total={total ?? results.length} fromServer={!!early} hovered={hovered} onHover={setHovered} scoped={!!(filters.where || filters.province || filters.center || page)} />}
         </section>
       </div>
 
@@ -373,13 +374,21 @@ const INTRO: Record<DeparturePage, string> = {
  * Kop en uitleg van de vertrekpagina's (Zonder vertrektijd, Uitslapers, Overige). De tabbladen zijn vervangen door de
  * snelle chip "Zonder vertrektijd" (redesign 30 oktober 2026); de pagina's zelf blijven, met hun eigen kop.
  */
-function DepartureIntro({ page, filters }: { page?: DeparturePage; filters: Filters }) {
+/** Paginatitel (h1) per vertrekpagina; de teller eronder is een h2 */
+const PAGE_H1: Record<DeparturePage, string> = {
+  vrij: "Camperplaatsen zonder vertrektijd",
+  uitslapers: "Camperplaatsen voor uitslapers",
+  overig: "Overige camperplaatsen",
+};
+
+function DepartureIntro({ page, filters, intro }: { page?: DeparturePage; filters: Filters; intro?: React.ReactNode }) {
   if (!page) return null;
   return (
     <div className="border-b border-line bg-surface px-3 sm:px-6 lg:border-0 lg:bg-transparent lg:pt-6">
         <div className="pt-3 pb-1">
-          <h2 className="font-display text-h2 font-semibold">{DEPARTURE_PAGES[page].title}</h2>
-          <p className="mt-0.5 text-ink-2">{INTRO[page]}</p>
+          <h1 className="font-display text-h1 font-semibold">{PAGE_H1[page]}</h1>
+          <p className="mt-1 max-w-prose text-ink-2">{INTRO[page]}</p>
+          {intro}
           {page === "overig" && (
             <div className="no-scrollbar -mx-3 mt-1 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0" role="group" aria-label="Soort vertrektijd">
               {(
@@ -430,8 +439,11 @@ function Results({
   fromServer,
   hovered,
   onHover,
+  scoped,
 }: {
   queryKey: string;
+  /** Lijst voor een plaats, provincie of vertrekpagina; zonder bestemming zoekt de balk bovenaan al op naam */
+  scoped: boolean;
   results: Result[];
   /** Kan groter zijn dan results, zolang alleen de eerste plekken van de server er zijn */
   total: number;
@@ -484,7 +496,8 @@ function Results({
 
   return (
     <>
-      {total > 40 && (
+      {/* Alleen in een afgebakende lijst: zonder bestemming stonden er twee zoekvelden onder elkaar (design-audit 26 november) */}
+      {scoped && total > 40 && (
         <label className="mt-3 flex h-11 items-center gap-2 rounded-lg bg-sunken px-3 text-ink-2 focus-within:ring-2 focus-within:ring-forest">
           <Icon name="search" size={17} className="shrink-0 text-muted" />
           <span className="sr-only">Zoek in deze plekken</span>

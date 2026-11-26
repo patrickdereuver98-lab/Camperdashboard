@@ -50,7 +50,7 @@ export function Callback() {
       <>
         <h1 className="font-display text-h1 font-semibold">Inloggen lukte niet</h1>
         <p role="alert" className="mt-3 text-lg text-ink-2">{err}</p>
-        <Link href="/inloggen" className="mt-6 inline-flex h-12 items-center rounded-xl bg-forest px-5 font-semibold text-on-forest">
+        <Link href="/inloggen" className="mt-6 inline-flex h-11 items-center rounded-lg bg-forest px-5 font-semibold text-on-forest">
           Opnieuw proberen
         </Link>
       </>

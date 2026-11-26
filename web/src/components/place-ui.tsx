@@ -142,17 +142,36 @@ export function PlacePhoto({
 }
 
 /** Foto met bronvermelding; de vermelding verdwijnt als de foto niet laadt (dan staat er een tekening) */
-export function CreditedPhoto({ src, alt, credit, className = "" }: { src?: string; alt: string; credit?: string; className?: string }) {
-  const [failed, setFailed] = useState(false);
-  const onFail = useCallback(() => setFailed(true), []);
+/**
+ * Bestemmingstegel-foto op de start met naam, aantal en bronvermelding. Laadt een foto niet, dan de volgende kandidaat
+ * (design-audit 26 november 2026: Zeeland stond zonder foto tussen tegels met foto). De bron staat als rustige regel
+ * onder het aantal, zonder eigen vlak, zodat hij nooit over de tekst valt.
+ */
+export function CreditedPhoto({
+  photos,
+  alt,
+  title,
+  subtitle,
+  className = "",
+}: {
+  photos: { src: string; credit?: string }[];
+  alt: string;
+  title: string;
+  subtitle: string;
+  className?: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const onFail = useCallback(() => setIndex((i) => i + 1), []);
+  const photo = photos[index];
   return (
     <>
-      <PlacePhoto src={src} alt={alt} className={className} onFail={onFail} />
-      {src && credit && !failed && (
-        <span className="absolute top-2 right-2 max-w-[70%] truncate rounded-md bg-black/55 px-2 py-0.5 text-sm text-white">
-          Foto: {credit}
-        </span>
-      )}
+      <PlacePhoto key={photo?.src ?? "leeg"} src={photo?.src} alt={alt} className={className} onFail={onFail} />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#14281d]/80 via-[#14281d]/20 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
+        <h3 className="font-display text-h3 font-semibold text-[#fffcf6]">{title}</h3>
+        <p className="text-sm font-semibold text-[#efe9dc]">{subtitle}</p>
+        {photo?.credit && <p className="truncate text-sm text-[#efe9dc]/85">Foto: {photo.credit}</p>}
+      </div>
     </>
   );
 }

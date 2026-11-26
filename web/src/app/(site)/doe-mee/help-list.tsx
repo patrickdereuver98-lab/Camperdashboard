@@ -57,7 +57,8 @@ export function HelpList() {
             {list.slice(0, shown).map((p) => (
               <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <Link href={`/plek/${p.slug}`} className="block truncate font-semibold hover:text-forest hover:underline">
+                  {/* Tikvlak over naam en plaats samen (minstens 44 px hoog, design-audit 26 november 2026) */}
+                  <Link href={`/plek/${p.slug}`} className="relative block truncate font-semibold after:absolute after:inset-x-0 after:-top-2.5 after:-bottom-6 after:content-[''] hover:text-forest hover:underline">
                     {p.name}
                   </Link>
                   <span className="block truncate text-sm text-muted">{p.town}</span>

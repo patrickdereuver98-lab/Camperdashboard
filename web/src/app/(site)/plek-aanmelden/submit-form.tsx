@@ -10,7 +10,7 @@ import { SuccessNote } from "@/components/success-note";
 import { Icon } from "@/components/icons";
 import { Sign, type SignName } from "@/components/sign";
 
-const field = "h-12 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
+const field = "h-11 w-full rounded-lg border border-field bg-surface px-3 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest";
 
 export function SubmitForm() {
   const params = useSearchParams();
@@ -62,7 +62,7 @@ export function SubmitForm() {
 
   if (done)
     return (
-      <SuccessNote className="mt-8 rounded-xl bg-forest-tint p-6">
+      <SuccessNote className="mt-8 rounded-lg bg-forest-tint p-6">
         <p className="flex items-center gap-2 font-display text-h2 font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
@@ -213,7 +213,7 @@ export function SubmitForm() {
 
       <input name="website_hp" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
-      <button type="submit" disabled={busy} className="h-14 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-11 w-full rounded-lg bg-forest hover:bg-forest-deep font-semibold text-on-forest disabled:opacity-60">
         {busy ? "Versturen…" : "Plek aanmelden"}
       </button>
     </form>

@@ -14,7 +14,6 @@ import { InstallTip } from "@/components/install-tip";
 
 const nf = new Intl.NumberFormat("nl-NL");
 // Vaste donkere bostint voor tekst op het landschap, in licht én donker thema
-const SCRIM = "from-[#14281d]/80 via-[#14281d]/20 to-transparent";
 const TONE_TEXT = { forest: "text-forest", lake: "text-lake", neutral: "text-ink" } as const;
 
 export default async function Home() {
@@ -33,12 +32,17 @@ export default async function Home() {
     .slice(0, 6);
 
   // Populaire bestemmingen: provincies met de meeste plekken, met een echte foto van een plek daar
-  const coverOf = (prov: string) =>
+  // Drie kandidaten per provincie: laadt de eerste niet, dan de volgende. Niet de foto's van "Uitgelicht" hieronder, zodat
+  // dezelfde foto niet twee keer op de start staat (design-audit 26 november 2026).
+  const featuredPhotos = new Set(featured.map((p) => p.imageUrl));
+  const coversOf = (prov: string) =>
     places
-      .filter((p) => p.province === prov && p.imageUrl && !looksLikeGraphic(p.imageUrl))
-      .sort((a, b) => b.completeness - a.completeness || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0))[0];
+      .filter((p) => p.province === prov && p.imageUrl && !looksLikeGraphic(p.imageUrl) && !featuredPhotos.has(p.imageUrl))
+      .sort((a, b) => b.completeness - a.completeness || (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0))
+      .slice(0, 3)
+      .map((p) => ({ src: p.imageUrl!, credit: p.imageCredit }));
   const provinces = [...PROVINCES].sort((a, b) => (stats.byProvince[b] ?? 0) - (stats.byProvince[a] ?? 0));
-  const destinations = provinces.slice(0, 6).map((prov) => ({ prov, count: stats.byProvince[prov] ?? 0, cover: coverOf(prov) }));
+  const destinations = provinces.slice(0, 6).map((prov) => ({ prov, count: stats.byProvince[prov] ?? 0, covers: coversOf(prov) }));
 
   // Kleur betekent iets (stijlgids §3, review R53): groen = geen vaste vertrektijd, blauw = uitslapers, "Alle" is neutraal
   const ways: { href: string; title: string; text: string; count: number; sign: SignName; tone: "forest" | "lake" | "neutral" }[] = [
@@ -100,7 +104,8 @@ export default async function Home() {
           {ways.map((w) => (
             <li key={w.title}>
               <Link href={w.href} className="group flex h-full min-h-19 items-center gap-3.5 px-3.5 py-3 hover:bg-sunken/50 sm:flex-col sm:items-start sm:gap-2 sm:p-5">
-                <Sign name={w.sign} size={36} tone={w.tone} />
+                {/* Lijnicoon zonder vlak (stijlgids §2, design-audit 26 november 2026) */}
+                <Sign name={w.sign} size={30} bare className={TONE_TEXT[w.tone]} />
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{w.title}</span>
                   <span className="mt-0.5 block text-sm text-ink-2">{w.text}</span>
@@ -144,16 +149,12 @@ export default async function Home() {
                 className={`group relative block overflow-hidden rounded-lg border border-line bg-sunken ${i < 2 ? "h-36 sm:h-56 lg:h-64" : "h-28 sm:h-44"}`}
               >
                 <CreditedPhoto
-                  src={d.cover?.imageUrl}
+                  photos={d.covers}
                   alt={`Camperplaatsen in ${d.prov}`}
-                  credit={d.cover?.imageCredit}
+                  title={d.prov}
+                  subtitle={`${nf.format(d.count)} plekken`}
                   className="absolute inset-0 h-full w-full transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
                 />
-                <div className={`absolute inset-0 bg-gradient-to-t ${SCRIM}`} />
-                <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                  <h3 className="font-display text-h3 font-semibold text-[#fffcf6]">{d.prov}</h3>
-                  <p className="text-sm font-semibold text-[#efe9dc]">{nf.format(d.count)} plekken</p>
-                </div>
               </Link>
             </li>
           ))}
@@ -205,7 +206,7 @@ export default async function Home() {
                   href={f.href}
                   className="flex h-full min-h-16 items-center gap-2.5 rounded-lg border border-line bg-surface p-3 hover:border-forest sm:min-h-20 sm:gap-3 sm:p-4"
                 >
-                  <Sign name={f.sign} size={34} />
+                  <Sign name={f.sign} size={30} bare className="text-forest" />
                   <span className="min-w-0">
                     <span className="block font-semibold leading-tight">{f.label}</span>
                     <span className="block text-sm text-muted">{nf.format(f.count)} plekken</span>
@@ -238,7 +239,7 @@ export default async function Home() {
             },
           ] satisfies { sign: SignName; title: string; text: string }[]).map((s, i) => (
             <li key={s.title} className="flex gap-3 border-t border-line pt-4 md:flex-col md:gap-3 md:pt-5">
-              <Sign name={s.sign} size={32} />
+              <Sign name={s.sign} size={28} bare className="text-forest" />
               <div>
                 <h3 className="font-display text-h3 font-semibold">
                   <span className="mr-1.5 text-muted tabular-nums">{i + 1}.</span>

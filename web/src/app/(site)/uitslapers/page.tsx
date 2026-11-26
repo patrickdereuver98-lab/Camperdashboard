@@ -23,7 +23,6 @@ export default async function Page({ searchParams }: PageProps<"/uitslapers">) {
   return (
     <>
       <PlacesPreload />
-      <HubIntro {...hubIntro("uitslapers", all)} />
       <Suspense
         fallback={
           <div className="space-y-3 px-3 pt-28 sm:px-6 lg:w-[54%]">
@@ -33,7 +32,7 @@ export default async function Page({ searchParams }: PageProps<"/uitslapers">) {
           </div>
         }
       >
-        <Search page="uitslapers" searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
+        <Search intro={<HubIntro {...hubIntro("uitslapers", all)} embedded />} page="uitslapers" searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
       </Suspense>
       <ProvinceLinks links={provinceLinks(all, "uitslapers")} />
     </>

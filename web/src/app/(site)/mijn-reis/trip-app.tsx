@@ -373,7 +373,7 @@ export function TripApp() {
         {(trips.list.length > 1 || trips.active.name !== "Mijn reis") && <div className="mb-6">{header(false)}</div>}
         <div className="text-center">
         <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
-          <Landscape seed="mijn-reis" variant={2} van wide className="absolute inset-0 h-full w-full" />
+          <Landscape seed="mijn-reis" variant={1} van wide className="absolute inset-0 h-full w-full" />
         </div>
         <h1 className="mt-6 font-display text-h1 font-semibold">Je reis is nog leeg</h1>
         <p className="mt-2 text-ink-2 sm:text-lg">

@@ -23,7 +23,6 @@ export default async function Page({ searchParams }: PageProps<"/zonder-vertrekt
   return (
     <>
       <PlacesPreload />
-      <HubIntro {...hubIntro("vrij", all)} />
       <Suspense
         fallback={
           <div className="space-y-3 px-3 pt-28 sm:px-6 lg:w-[54%]">
@@ -33,7 +32,7 @@ export default async function Page({ searchParams }: PageProps<"/zonder-vertrekt
           </div>
         }
       >
-        <Search page="vrij" searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
+        <Search intro={<HubIntro {...hubIntro("vrij", all)} embedded />} page="vrij" searchParams={searchParams} updated={updatedAt ? formatDate(updatedAt) : undefined} />
       </Suspense>
       <ProvinceLinks links={provinceLinks(all, "vrij")} />
     </>

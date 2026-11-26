@@ -120,7 +120,7 @@ Op Start en boven de zoekresultaten (`destination-search.tsx`, combobox met pijl
 ## Navigatieregels
 
 - **Tabbalk** onderaan (mobiel): Start, Zoeken, Dichtbij, Mijn reis (met teller). Tik op het tabblad waar je al bent: naar boven; sta je al boven, dan de cursor in het zoekvak (Start en Zoeken; UX-audit G2). Verborgen op `/plek/*`; daar staat een
-  vaste actiebalk met prijs en **Route**. Bewaren, delen, website en bellen staan in de actierij onder de naam, en een
+  vaste actiebalk met prijs en **Route**. Bewaren, delen, website en bellen staan in de actierij onder het beslisblok, en een
   rij springlinks (Overzicht tot In de buurt) blijft onder de header plakken (18 november 2026).
 - **Header**: logo naar Start, **+** naar Plek aanmelden, **? Hulp** naar Veelgestelde vragen (op desktop: Zoeken, Dichtbij, Mijn reis, Hulp en Plek aanmelden), zon/maan wisselt licht en donker (gevolg: thema direct om, keuze bewaard op het toestel; gelijk aan het systeem = geen keuze bewaard). Op `/plek/*` een terugknop.
 - **Actief tabblad**: Zoeken is ook actief op de vertrekpagina's en alle landingspagina's (provincie, plaats, vertrekgroep per provincie).
