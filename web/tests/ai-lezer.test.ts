@@ -240,3 +240,52 @@ test("tweede steekproef: drukke tijden en later vertrekken zijn geen vertrekrege
   assert.deepEqual(fields({ vertrekregel: "vast", vertrektijd: "12:00", vertrek_citaat: "In drukke tijden verwachten wij dat u voor 12:00 uur uw kampeerplaats heeft vrijgemaakt." }, text), {});
   assert.deepEqual(fields({ vertrekregel: "vast", vertrektijd: "17:00", vertrek_citaat: "Laat vertrek: vertrek vóór 17:00 uur i.p.v. 11:00 uur" }, text), {});
 });
+
+// Ronde 26 november 2026: zinnen van plekken zonder vertrekregel die de controle ten onrechte afwees
+test("geen aankomst- of vertrektijden is vrij vertrek, in de gangbare varianten", () => {
+  for (const zin of [
+    "Wij hanteren geen aankomst of vertrek tijden.",
+    "Je mag je plek zelf kiezen en er zijn geen aankomst/vertrektijden.",
+    "Geen precieze aankomst-, en vertrektijden",
+    "Geen verplichte aankomst- of vertrektijden",
+    "Wij hanteren geen speciale aankomst- en vertrektijden.",
+    "Geen verplichte vertrek of aankomsttijd omdat er altijd een dag zit tussen de volgende reservering.",
+    "U komt aan wanneer u wilt op uw aankomstdag en vertrekt ook wanneer u wilt op uw vertrekdag.",
+  ]) {
+    const text = site({ "https://a.nl/info": `<p>${zin}</p>` });
+    assert.deepEqual(fields({ vertrekregel: "vrij", vertrek_citaat: zin }, text), { departure: "vrij" }, zin);
+  }
+});
+
+test("soepel of in overleg is geen vrij vertrek; alleen dagen ook niet", () => {
+  for (const zin of [
+    "Voor aankomsttijden en vertrektijden zijn de eigenaren bijzonder soepel.",
+    "Aankomst en vertrek zijn op iedere gewenste dag mogelijk in overleg, alleen is aankomst op zondag niet mogelijk.",
+    "Het is bij ons mogelijk om alle dagen van de week te arriveren of te vertrekken.",
+  ]) {
+    const text = site({ "https://a.nl/info": `<p>${zin}</p>` });
+    assert.equal(verifyAnswer({ vertrekregel: "vrij", vertrek_citaat: zin }, text).proposals.length, 0, zin);
+  }
+});
+
+test("vertrektijd voor kampeerders telt, ook als de zin daarna de chalets noemt", () => {
+  const cases: [string, string][] = [
+    ["Vertrek vóór 11.30 uur, de chalets voor 10.00 uur.", "11:30"],
+    ["Incheck is bij ons vanaf 15:00 uur en de uitcheck is om 11:00 uur voor kampeerders en 10:00 uur voor de accommodaties.", "11:00"],
+    ["Vertek: Voor 12:00 uur camping, voor 10:30 accommodaties", "12:00"],
+  ];
+  for (const [zin, tijd] of cases) {
+    const text = site({ "https://a.nl/info": `<p>${zin}</p>` });
+    assert.equal(fields({ vertrekregel: "vast", vertrektijd: tijd, vertrek_citaat: zin }, text).checkout_until, tijd, zin);
+  }
+  // De tijd van de chalets zelf blijft weg
+  const zin = "Vertrek vóór 11.30 uur, de chalets voor 10.00 uur.";
+  const text = site({ "https://a.nl/info": `<p>${zin}</p>` });
+  assert.equal(verifyAnswer({ vertrekregel: "vast", vertrektijd: "10:00", vertrek_citaat: zin }, text).proposals.length, 0);
+});
+
+test("check-out before 11 a.m. is 11:00", () => {
+  const zin = "Please note: check-out before 11 a.m. for all guests on the camper pitches.";
+  const text = site({ "https://a.nl/en": `<p>${zin}</p>` });
+  assert.equal(fields({ vertrekregel: "vast", vertrektijd: "11:00", vertrek_citaat: zin }, text).checkout_until, "11:00");
+});

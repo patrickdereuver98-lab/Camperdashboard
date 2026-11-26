@@ -315,6 +315,17 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 | 🔄 B5, B6, B7, B11, B16–B18: rechten opruimen, bewaartermijnen live, Actions vastzetten, meldingen, grootte van reizen, sessies na wachtwoordwijziging. Live (SQL, 8 november): B5, B6, B17 ✅, B11 deels (bewust). In PR #143: B7, B18. Open: B16 | Agent | Verbeterplan | Migraties, workflows | `get_advisors` schoon op bewuste meldingen na | B1 |
 | ⬜ B3 en B8: eigen SMTP met SPF/DKIM/DMARC, domein in de inlog-URL's | Patrick + Agent | Verbeterplan, README 89 | Instellingen | Inlogmail komt aan vanaf `vrijstaan.nl` | Livegang |
 
+## Vertrekregels naar 90% (spoor B, 26 november 2026) 🔄
+
+- Nulmeting 26 november: 2.373 gepubliceerd, 689 zonder vertrekregel (71% bekend), 683 daarvan met website; alle 651
+  opgeslagen teksten al door de AI-lezer gelezen; 3.052 Google-reviews, 343 geanalyseerd (cron `review-lezer` staat uit
+  sinds 22 november); scraper gepauzeerd door `herlees-rem` sinds 20 november (parser 47).
+- ✅ Controle van de AI-lezer ruimer waar hij ten onrechte afwees (`pipeline/ai.ts`, `quote.ts`, 4 nieuwe tests);
+  herbeoordeling met `scripts/ai-recheck.ts`: 13 plekken (9 zonder vertrektijd, 4 vaste tijd), 15 voorstellen in de
+  Triage Inbox. Pipeline uitrollen na samenvoegen (nieuwe lezingen met de nieuwe controle).
+- ⬜ Patrick: voorstellen accepteren in Mission Control → Triage Inbox (bron ai-lezer).
+- ⬜ Besluit: review-lezer weer aan (Gemini, ±2.700 reviews), en de 90%-eis (LANCERING besluit 4).
+
 ## UI/UX-plan (26 november 2026) 🟡
 
 Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, besluit README 142.

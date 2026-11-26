@@ -34,7 +34,7 @@ export function checkQuote(a: QuoteAnswer, text: string): QuoteCheck | null {
     const hour = Number(m[1]);
     if (hour < 7 || hour > 14 || Number(m[2]) > 59) return null;
     // De tijd moet in de zin staan: 11:00, 11.00, 11 uur of 11u
-    const t = new RegExp(String.raw`\b0?${hour}(?:[:.]${m[2]}|\s*(?:uur|uhr|u\b|h\b))`);
+    const t = new RegExp(String.raw`\b0?${hour}(?:[:.]${m[2]}|\s*(?:uur|uhr|u\b|h\b|a\.?m\.?))`);
     if (!t.test(q)) return null;
     const checkout = `${String(hour).padStart(2, "0")}:${m[2]}`;
     return {
@@ -42,7 +42,7 @@ export function checkQuote(a: QuoteAnswer, text: string): QuoteCheck | null {
       confirmed: found.departure === "vast" && found.checkout_until === checkout,
     };
   }
-  const free = /geen (vaste )?(aankomst|vertrek|uitcheck|check-?out)|wanneer (je|u) (wilt|wil)|elk (gewenst )?(moment|tijdstip)|vrije? (aankomst|vertrek)|keine (festen )?(an|ab)|jederzeit|any ?time|24 uur|24 stunden|24 hours/;
+  const free = /geen ((vaste|verplichte|precieze|strakke|speciale|specifieke|vastgestelde) )?(aankomst|vertrek|uitcheck|check-?out)|wanneer (je|u) (wilt|wil)|elk (gewenst )?(moment|tijdstip)|vrije? (aankomst|vertrek)|keine (festen )?(an|ab)|jederzeit|any ?time|24 uur|24 stunden|24 hours/;
   if (!free.test(q) && !found.departure) return null;
   return { fields: { departure: a.departure, times_note: a.quote.slice(0, 290) }, confirmed: found.departure === a.departure };
 }

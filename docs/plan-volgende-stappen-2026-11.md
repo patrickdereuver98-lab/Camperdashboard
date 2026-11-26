@@ -31,7 +31,8 @@ Advies: A1 tot en met A4 deze week, A5 en A6 vóór 6 december.
 
 ## Spoor B: kernbelofte en data (agent, met jouw besluit A6)
 
-1. **Vertrekregel van 71% naar 90%:** de stealth-lezer en zoekagenten eerst op de 689 plekken zonder vertrekregel,
+1. **Vertrekregel van 71% naar 90%** (26 november: controle van de AI-lezer verbeterd, 13 plekken als voorstel, zie
+   implementatieplan "Vertrekregels naar 90%"): de stealth-lezer en zoekagenten eerst op de 689 plekken zonder vertrekregel,
    gesorteerd op hoeveel mensen ze bekijken. Wekelijks de teller in LANCERING bijwerken.
 2. **Mail aan eigenaren** aanzetten zodra A1 en A5 klaar zijn (code staat klaar, verzenden staat uit).
 3. **Steekproef van 30 plekken** (LANCERING D.1) half december: vertrekregel ≥ 90% juist, Zonder vertrektijd 100%.

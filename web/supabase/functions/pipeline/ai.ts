@@ -28,7 +28,12 @@ const forCheck = (text: string) =>
     .filter((l) => l.trim() && !/^### /.test(l))
     .join(" | ");
 // Vrij vertrek zonder bevestiging van de extractor alleen bij een ondubbelzinnige zin (kernbelofte)
-const PLAIN_FREE = /geen (vaste )?(vertrek|uitcheck|check-?out)|vertrek(ken)? wanneer|vrije? vertrek/;
+// Ook "geen aankomst- of vertrektijden", "geen verplichte/precieze/strakke aankomst- en vertrektijden" (26 november 2026:
+// 9 van de 689 plekken zonder vertrekregel zeiden het zo op hun eigen site en vielen hier weg)
+const PLAIN_FREE =
+  /geen (?:(?:vaste|verplichte|precieze|strakke|speciale|specifieke|vastgestelde) )?(?:aankomst[-,\s]*(?:en|of|\/)?[\s-]*)?(?:vertrek|uitcheck|check-?out)|vertrek(?:t|ken)? (?:ook )?wanneer (?:je|u) (?:wilt|wil)|vertrek(ken)? wanneer|vrije? vertrek/;
+// "Soepel" of "in overleg" is geen vrij vertrek: het hangt van de eigenaar af
+const SOFT_FREE = /soepel|in overleg|flexibel|meestal|doorgaans/;
 // Elke vrij-regel moet over vertrekken gaan, niet alleen over aankomen ("geen vaste aankomsttijden")
 const DEPARTURE_WORD = /vertrek|uitcheck|check-?out|weggaan|verlaten|vrij (in en uit|komen en gaan)|komen en gaan/;
 
@@ -234,7 +239,21 @@ const hhmm = (v: unknown) => {
 
 // Onderwerp: een tijd of prijs van verhuur, receptie of voorzieningen hoort niet bij de camperplaats
 const RENTAL = /\b(chalets?|huuraccommodaties?|accommodaties?|huurtent(en)?|stacaravans?|bungalows?|lodges?|safaritent(en)?|glamping|hotel|kamers?|b&b|bed (?:&|and) breakfast|trekkershut(ten)?|groepsaccommodaties?|vakantiewoning(en)?|vakantiehui(s|zen)|appartement(en)?|tiny ?houses?|cottages?|huisjes?|pipowagen|receptie|winkel|restaurant|zwembad|sauna|ontbijt|arrangement(en)?)\b/;
-const PITCH = /camper|kampeerauto|kampeerplaats|camperplaats|camperplek|standplaats|staanplaats|kampeerplek|plaats per nacht|plek per nacht|stellplatz|motorhome/;
+const PITCH = /camper|kampeerauto|kampeerplaats|camperplaats|camperplek|standplaats|staanplaats|kampeerplek|plaats per nacht|plek per nacht|stellplatz|motorhome|kampeerders/;
+
+/**
+ * Het zinsdeel van een citaat met de vertrektijd zelf: "Vertrek vóór 11.30 uur, de chalets voor 10.00 uur" gaat met
+ * 11:30 niet over de chalets, en "uitcheck is om 11:00 uur voor kampeerders en 10:00 uur voor de accommodaties" ook niet
+ * (26 november 2026). Zonder tijd (vrij, per 24 uur) of zonder herkenbaar zinsdeel: het hele citaat, zoals voorheen.
+ */
+export function rentalPart(q: string, checkout: string | null): string {
+  if (!checkout) return q;
+  const [h, m] = checkout.split(":").map(Number);
+  const t = new RegExp(String.raw`\b0?${h}(?:[:.]${String(m).padStart(2, "0")}|\s*(?:uur|u\b|a\.?m\.?))`);
+  const parts = q.split(/[,;(]|\s+en\s+(?=\d|voor|om|tot|de |het )/);
+  const hit = parts.filter((x) => t.test(x));
+  return hit.length === 1 ? hit[0] : q;
+}
 // Woorden vlak vóór een bedrag die het bedrag tot een toeslag maken
 const EXTRA = /(toeristen\s?belasting|toeristenbijdrage|hond(en)?|huisdier(en)?|stroom|elektra|kwh|douche|extra (persoon|personen|volwassene|kind)|per persoon|p\.?p\.?|kind(eren)?|bezoek(ers)?|auto|aanhanger|boot|wasmachine|borg)\W{0,12}(?:[a-z.]+\W{0,4}){0,3}$/;
 
@@ -274,8 +293,9 @@ export function verifyAnswer(a: AiAnswer, text: string): Verdict {
     const q = String(a.vertrek_citaat ?? "");
     if (url === undefined) fail("vertrek", "citaat niet letterlijk in de tekst");
     else if (rule === "vast" && !checkout) fail("vertrek", "vaste regel zonder geldige tijd");
-    else if (RENTAL.test(norm(q)) && !PITCH.test(norm(q))) fail("vertrek", "citaat gaat over verhuur of een voorziening");
+    else if (RENTAL.test(rentalPart(norm(q), checkout)) && !PITCH.test(rentalPart(norm(q), checkout))) fail("vertrek", "citaat gaat over verhuur of een voorziening");
     else if (rule === "vrij" && !DEPARTURE_WORD.test(norm(q))) fail("vertrek", "citaat gaat niet over vertrekken");
+    else if (rule === "vrij" && SOFT_FREE.test(norm(q))) fail("vertrek", "geen vrij vertrek, alleen soepel of in overleg");
     else if (CONDITION.test(norm(q))) fail("vertrek", "regel geldt alleen onder een voorwaarde");
     // "Vertrek vóór 17:00 uur i.p.v. 11:00 uur" is een betaalde late vertrektijd, geen regel
     else if (/i\.\s?p\.\s?v\.?|in plaats van|laat vertrek|later vertrek|late check-?out/.test(norm(q))) fail("vertrek", "citaat gaat over later vertrekken");
