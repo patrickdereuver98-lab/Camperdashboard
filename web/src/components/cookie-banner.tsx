@@ -48,7 +48,9 @@ export function CookieBanner() {
   // (zie components/onboarding.tsx; dezelfde voorwaarde: geen eerdere cookiekeuze en uitleg nog niet gezien).
   // window pas na hydratatie (mounted); usePathname zou de prerender blokkeren
   const waitForWelcome = mounted && window.location.pathname === "/" && !consent && !welcomeSeen;
-  if (!mounted || waitForWelcome || (!needed && !forced)) return null;
+  // Beheer telt geen bezoek en heeft geen cookievraag nodig (beheerdashboard, 26 november 2026)
+  const inAdmin = mounted && window.location.pathname.startsWith("/admin");
+  if (!mounted || waitForWelcome || (inAdmin && !forced) || (!needed && !forced)) return null;
 
   const close = (a: boolean) => {
     save(a);

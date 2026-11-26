@@ -337,6 +337,14 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 - Besluit Patrick (26 november 2026): review-lezer blijft uit. De 90%-eis (LANCERING besluit 4) beslist hij later, na
   de voorstellen en het domein.
 
+## Beheerdashboard (opdracht Patrick, 26 november 2026) ✅
+
+- Nieuw Overzicht in beheer met werkvoorraad, binnenkomend, diensten en API's, geplande taken, fouten, updates en
+  besluiten; menu in groepen met aantallen; oud overzicht naar `/admin/datakwaliteit`. Eén RPC `admin_dashboard()`
+  (migratie `20261126100000_admin_dashboard.sql`, droog getest op live, toepassen na samenvoegen).
+- Gevonden en hersteld: de prijscontrole in Plekken ververste de site-cache via `/api/revalidate`, die niet bestaat
+  (nu `/api/admin/revalidate`); de cookiebalk verscheen in beheer.
+
 ## UI/UX-plan (26 november 2026) 🟡
 
 Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, besluit README 142.

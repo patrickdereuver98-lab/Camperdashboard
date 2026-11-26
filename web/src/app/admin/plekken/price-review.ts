@@ -20,13 +20,13 @@ export function suspiciousRows(rows: PriceRow[]): SuspiciousRow[] {
 }
 
 /**
- * Vraag de site om de plekken opnieuw op te halen (route /api/revalidate). Fouten negeren we: de cache verloopt
+ * Vraag de site om de plekken opnieuw op te halen (route /api/admin/revalidate; was /api/revalidate, die niet bestaat, gevonden 26 november 2026). Fouten negeren we: de cache verloopt
  * vanzelf, en het opslaan zelf is dan al gelukt.
  */
 export async function revalidatePlaces(token: string | undefined, doFetch: typeof fetch = fetch): Promise<void> {
   if (!token) return;
   try {
-    await doFetch("/api/revalidate", {
+    await doFetch("/api/admin/revalidate", {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({ tags: ["places"] }),

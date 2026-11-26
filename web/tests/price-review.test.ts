@@ -30,7 +30,7 @@ test("revalidatePlaces: POST met Bearer-token en tag places", async () => {
   }) as typeof fetch);
   assert.equal(calls.length, 1);
   const [url, init] = calls[0];
-  assert.equal(url, "/api/revalidate");
+  assert.equal(url, "/api/admin/revalidate");
   assert.equal(init.method, "POST");
   assert.deepEqual(init.headers, { Authorization: "Bearer abc", "Content-Type": "application/json" });
   assert.deepEqual(JSON.parse(String(init.body)), { tags: ["places"] });

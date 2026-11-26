@@ -9,22 +9,59 @@ import { errorMessage } from "@/lib/supabase-browser";
 import { supabaseClient as supabase } from "@/lib/supabase-client";
 import { ErrorNote, input, primary } from "./ui";
 
-const NAV: { href: string; label: string; icon: IconName }[] = [
-  { href: "/admin", label: "Overzicht", icon: "chart" },
-  { href: "/admin/mission-control", label: "Mission Control", icon: "shield" },
-  { href: "/admin/marketing", label: "Marketing", icon: "share" },
-  { href: "/admin/statistieken", label: "Statistieken", icon: "eye" },
-  { href: "/admin/plekken", label: "Plekken", icon: "pin" },
-  { href: "/admin/vertrektijden", label: "Vertrektijden", icon: "clock" },
-  { href: "/admin/dubbelen", label: "Dubbelen", icon: "map" },
-  { href: "/admin/support", label: "Support", icon: "inbox" },
-  { href: "/admin/inzendingen", label: "Inzendingen", icon: "plus" },
-  { href: "/admin/reviews", label: "Reviews", icon: "star" },
-  { href: "/admin/fotos", label: "Foto's", icon: "eye" },
-  { href: "/admin/faq", label: "FAQ", icon: "help" },
-  { href: "/admin/logs", label: "Logs", icon: "log" },
-  { href: "/admin/instellingen", label: "Instellingen", icon: "settings" },
+// Gegroepeerd (beheerdashboard, 26 november 2026): eerst het werk dat binnenkomt, dan de gegevens, dan het systeem.
+// `count` is de sleutel van een wachtrij uit public.admin_dashboard(); het getal staat dan achter het menu-item.
+const NAV: { title?: string; items: { href: string; label: string; icon: IconName; count?: string }[] }[] = [
+  { items: [{ href: "/admin", label: "Overzicht", icon: "chart" }] },
+  {
+    title: "Werk",
+    items: [
+      { href: "/admin/mission-control", label: "Voorstellen", icon: "inbox", count: "triage" },
+      { href: "/admin/vertrektijden", label: "Vertrektijden", icon: "clock", count: "vertrektijden" },
+      { href: "/admin/inzendingen", label: "Inzendingen", icon: "plus", count: "inzendingen" },
+      { href: "/admin/support", label: "Support", icon: "mail", count: "support" },
+      { href: "/admin/reviews", label: "Reviews", icon: "star", count: "reviews" },
+      { href: "/admin/fotos", label: "Foto's", icon: "eye", count: "fotos" },
+      { href: "/admin/dubbelen", label: "Dubbelen", icon: "map" },
+    ],
+  },
+  {
+    title: "Gegevens",
+    items: [
+      { href: "/admin/plekken", label: "Plekken", icon: "pin" },
+      { href: "/admin/datakwaliteit", label: "Datakwaliteit", icon: "database" },
+      { href: "/admin/statistieken", label: "Statistieken", icon: "chart" },
+    ],
+  },
+  {
+    title: "Systeem",
+    items: [
+      { href: "/admin/logs", label: "Logs", icon: "log" },
+      { href: "/admin/instellingen", label: "Instellingen", icon: "settings" },
+      { href: "/admin/faq", label: "FAQ", icon: "help" },
+    ],
+  },
+  { title: "Marketing", items: [{ href: "/admin/marketing", label: "Marketing", icon: "share" }] },
 ];
+
+/** Aantallen per wachtrij voor het menu; ververst bij elke paginawissel */
+function useQueueCounts(enabled: boolean, pathname: string): Record<string, number> {
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    supabase()
+      .rpc("admin_dashboard")
+      .then(({ data }) => {
+        const q = (data as { queues?: { key: string; count: number }[] } | null)?.queues;
+        if (live && q) setCounts(Object.fromEntries(q.map((x) => [x.key, x.count])));
+      });
+    return () => {
+      live = false;
+    };
+  }, [enabled, pathname]);
+  return counts;
+}
 
 type State = "laden" | "uit" | "geen-admin" | "admin" | "herstel" | "fout";
 
@@ -34,6 +71,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const pathname = usePathname();
+  const counts = useQueueCounts(state === "admin", pathname);
 
   useEffect(() => {
     const sb = supabase();
@@ -97,20 +135,35 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const isActive = (href: string) => (href === "/admin" ? pathname === href : pathname.startsWith(href));
   const nav = (
-    <ul className="space-y-1">
-      {NAV.map((n) => (
-        <li key={n.href}>
-          <Link
-            href={n.href}
-            onClick={() => setMenu(false)}
-            aria-current={isActive(n.href) ? "page" : undefined}
-            className="flex h-11 items-center gap-3 rounded-lg px-3 font-semibold text-ink-2 hover:bg-sunken aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
-          >
-            <Icon name={n.icon} size={20} /> {n.label}
-          </Link>
-        </li>
+    <div className="space-y-4">
+      {NAV.map((g, gi) => (
+        <div key={gi}>
+          {g.title && <p className="mb-1 px-3 text-sm font-semibold text-muted">{g.title}</p>}
+          <ul className="space-y-0.5">
+            {g.items.map((n) => {
+              const c = n.count ? counts[n.count] : undefined;
+              return (
+                <li key={n.href}>
+                  <Link
+                    href={n.href}
+                    onClick={() => setMenu(false)}
+                    aria-current={isActive(n.href) ? "page" : undefined}
+                    className="flex h-11 items-center gap-3 rounded-md px-3 font-semibold text-ink-2 hover:bg-sunken aria-[current=page]:bg-forest-tint aria-[current=page]:text-forest"
+                  >
+                    <Icon name={n.icon} size={19} /> {n.label}
+                    {!!c && (
+                      <span className="ml-auto rounded-sm bg-forest px-1.5 text-sm font-semibold text-on-forest tabular-nums" aria-label={`${c} open`}>
+                        {c > 999 ? "999+" : c}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       ))}
-    </ul>
+    </div>
   );
 
   return (
@@ -129,8 +182,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <Logo size={30} />
           <span className="font-display text-lg font-semibold text-forest">Beheer</span>
         </Link>
-        <nav aria-label="Beheermenu">{nav}</nav>
-        <div className="mt-auto space-y-2 border-t border-line pt-4 text-sm">
+        <nav aria-label="Beheermenu" className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{nav}</nav>
+        <div className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
           <p className="truncate px-2 text-muted">{session?.user.email}</p>
           <Link href="/" className="flex h-10 items-center gap-2 rounded-lg px-2 font-semibold hover:bg-sunken">
             <Icon name="external" size={18} /> Naar de site

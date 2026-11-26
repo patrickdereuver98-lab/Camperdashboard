@@ -1447,6 +1447,7 @@ export type Database = {
         Args: { p_keep: string; p_remove: string }
         Returns: Json
       }
+      admin_dashboard: { Args: never; Returns: Json }
       admin_overview: { Args: never; Returns: Json }
       admin_pipeline: { Args: { p_action: string }; Returns: string }
       admin_reject_update: { Args: { p_id: string; p_note?: string }; Returns: Json }
