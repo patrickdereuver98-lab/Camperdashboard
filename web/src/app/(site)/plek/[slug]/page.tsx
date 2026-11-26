@@ -384,7 +384,7 @@ function PriceCard({ place, tel, reserveLabel, className }: { place: Place; tel?
   const price = cardPrice(place);
   return (
     <div className={`rounded-lg border border-line bg-surface p-5 ${className}`}>
-      <p className="font-display text-3xl font-semibold">
+      <p className="font-display text-h1 font-semibold">
         {price?.value ?? "Prijs onbekend"}
         {/* Zelfde label als de actiebalk op mobiel: "+ toeslagen" zodra er iets bij komt */}
         {price && (price.extras || place.touristTaxIncluded === false) ? (
@@ -490,8 +490,7 @@ function DecisionDetails({ place }: { place: Place }) {
       {askDeparture && (
         <div className="px-4 py-3" data-testid="departure-call">
           <p className="text-ink-2">
-            We weten de vertrektijd van deze plek nog niet. Heb je er gestaan of gebeld, geef het dan door. Zo weten andere camperaars hoe laat ze
-            weg moeten.
+            We weten de vertrektijd nog niet. Heb je hier gestaan of gebeld? Geef het door, dan weten anderen hoe laat ze weg moeten.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
             <GiveDepartureButton placeId={place.id} placeName={place.name} />

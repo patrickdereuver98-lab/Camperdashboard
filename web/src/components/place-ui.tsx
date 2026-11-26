@@ -7,8 +7,7 @@ import { departureKind, FACILITIES, openStatus, type DepartureFacts } from "@/li
 import { looksLikeGraphic, upgradePhotoUrl } from "@/lib/photos";
 import { distanceKm, formatKm } from "@/lib/geo";
 import { useMyLocation } from "@/lib/my-location";
-import { arrivalText, cardPrice, departureShort, eur, scoreLabel, scoreWord } from "@/lib/format";
-import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
+import { arrivalText, cardPrice, departureShort, scoreLabel, scoreWord } from "@/lib/format";
 import { useTrip } from "@/lib/store";
 import { isIncomplete } from "@/lib/place-status";
 import { useHydrated } from "@/lib/use-media";
@@ -408,12 +407,13 @@ function PlaceRow({
       onMouseLeave={() => onHover?.(null)}
       // Eén lijst met een lijn onder elke rij (besluit eigenaar 30 oktober en 1 november 2026): geen kaartjes, geen schaduw.
       // De lijn tekent de lijst (ResultList); de actieve rij (kaart) krijgt een bosgroene streep links.
-      className={`group relative flex min-h-[6.5rem] gap-3 py-2.5 select-none [-webkit-touch-callout:none] transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:-outline-offset-3 has-[a:focus-visible]:outline-forest ${
+      className={`group relative flex min-h-24 gap-3 py-3 select-none [-webkit-touch-callout:none] transition-colors duration-150 has-[a:focus-visible]:outline-3 has-[a:focus-visible]:-outline-offset-3 has-[a:focus-visible]:outline-forest ${
         active ? "bg-forest-tint shadow-[inset_3px_0_0_var(--color-forest)]" : "hover:bg-sunken/50"
       }`}
     >
-      {/* Hooguit 30% van de rij: met grote tekst op een smal scherm houdt de tekst zo ruimte (R31) */}
-      <div className="relative w-[min(6rem,30%)] shrink-0 self-stretch overflow-hidden rounded-md sm:w-36">
+      {/* Telefoon: vaste foto van 84 × 63 px (4:3, UI/UX-plan T9), hooguit 30% van de rij zodat grote tekst ruimte houdt
+          (R31); vanaf sm 144 px breed over de hele rijhoogte */}
+      <div className="relative h-[3.9375rem] w-[min(5.25rem,30%)] shrink-0 self-start overflow-hidden rounded-md sm:h-auto sm:w-36 sm:self-stretch">
         <ViewTransition name={`foto-${place.slug}`} share="photo-morph" default="none">
           {/* Absoluut: de foto bepaalt de hoogte van de rij niet, dus elke rij is even hoog (R55) */}
           <PlacePhoto src={place.imageUrl} alt={`Foto van ${place.name}`} kind={place.kind} town={place.town} eager={eager} className="absolute inset-0 h-full w-full" />
@@ -463,20 +463,14 @@ function PlaceRow({
   );
 }
 
-/** Prijs in de rij: het bedrag en één regel eronder (totaal voor 2 personen, toeslagen of per nacht) */
+/**
+ * Prijs in de rij: één duidelijke prijsregel (UI/UX-plan T26, 26 november 2026): het bedrag met "per nacht", of
+ * "+ toeslagen" als er toeslagen bij komen. Het totaal voor 2 personen staat op de plekpagina.
+ */
 function RowPrice({ place }: { place: PlaceSummary }) {
   const price = cardPrice(place);
   if (!price) return <p className="max-w-16 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
-  const t = nightTotal(place);
-  const total = t.total !== undefined && t.parts.length > 1 ? t.total : undefined;
-  const sub =
-    total !== undefined
-      ? `${TOTAL_PERSONS} pers. ${t.from ? "vanaf " : ""}${eur(total)}`
-      : price.extras || place.touristTaxIncluded === false
-        ? "+ toeslagen"
-        : price.perNight
-          ? "per nacht"
-          : undefined;
+  const sub = price.extras || place.touristTaxIncluded === false ? "+ toeslagen" : price.perNight ? "per nacht" : undefined;
   return (
     <div className="text-right leading-tight">
       <p className="font-display text-lg leading-none font-semibold text-ink tabular-nums">{price.value}</p>
@@ -487,8 +481,8 @@ function RowPrice({ place }: { place: PlaceSummary }) {
 
 export function CardSkeleton() {
   return (
-    <div className="flex gap-3 border-b border-line py-2.5">
-      <div className="h-[5.75rem] w-24 shrink-0 animate-pulse rounded-md bg-sunken sm:w-36" />
+    <div className="flex min-h-24 gap-3 border-b border-line py-3">
+      <div className="h-[3.9375rem] w-21 shrink-0 animate-pulse rounded-md bg-sunken sm:h-[5.75rem] sm:w-36" />
       <div className="flex-1 space-y-3 py-1">
         <div className="h-4 w-24 animate-pulse rounded bg-sunken" />
         <div className="h-6 w-3/4 animate-pulse rounded bg-sunken" />
@@ -530,23 +524,14 @@ export function DepartureChip({ place, compact = false }: { place: DepartureFact
 function CardPrice({ place }: { place: PlaceSummary }) {
   const price = cardPrice(place);
   if (!price) return <p className="ml-auto max-w-20 shrink-0 text-right text-sm leading-tight text-muted">Prijs onbekend</p>;
-  // Toeslagen bekend (toeristenbelasting apart, extra persoon, hond …): klein onder de prijs, details op de plekpagina.
-  // Staat elk onderdeel vast, dan het totaal voor 2 personen met toeristenbelasting en stroom.
-  const t = nightTotal(place);
-  const total = t.total !== undefined && t.parts.length > 1 ? t.total : undefined;
-  const surcharges = total === undefined && (price.extras || place.touristTaxIncluded === false);
+  // Eén prijsregel, net als in de rij (UI/UX-plan T26): "+ toeslagen" als er iets bij komt, anders "per nacht".
+  // Het totaal voor 2 personen met toeristenbelasting en stroom staat op de plekpagina.
+  const sub = price.extras || place.touristTaxIncluded === false ? "+ toeslagen" : price.perNight ? "per nacht" : undefined;
   return (
     <div className="ml-auto shrink-0 text-right leading-tight">
       {place.priceFrom && <p className="text-sm text-muted">vanaf</p>}
       <p className="font-display text-xl leading-none font-semibold text-ink sm:text-2xl">{place.priceFrom ? price.value.replace(/^vanaf /, "") : price.value}</p>
-      {price.perNight && <p className="mt-0.5 text-sm text-muted">per nacht</p>}
-      {total !== undefined && (
-        <p className="text-sm text-muted">
-          {TOTAL_PERSONS} pers. {t.from ? "vanaf " : ""}
-          <span className="font-semibold text-ink-2">{eur(total)}</span>
-        </p>
-      )}
-      {surcharges && <p className="text-sm text-muted">+ toeslagen</p>}
+      {sub && <p className="mt-0.5 text-sm text-muted">{sub}</p>}
     </div>
   );
 }

@@ -25,6 +25,7 @@ function Tile({
   label,
   known,
   tone = "plain",
+  big = false,
   children,
   extra,
 }: {
@@ -32,6 +33,8 @@ function Tile({
   label: string;
   known: boolean;
   tone?: "plain" | "forest" | "lake";
+  /** Vertrekken: één stap grotere waarde, zodat de kernbelofte de eerste blik krijgt (UI/UX-plan T21) */
+  big?: boolean;
   children: React.ReactNode;
   extra?: React.ReactNode;
 }) {
@@ -43,7 +46,7 @@ function Tile({
         <Sign name={sign} size={18} state={known ? "on" : "unknown"} tone={tone === "lake" ? "lake" : "forest"} />
         {label}
       </dt>
-      <dd className={`mt-1 font-display text-[1.0625rem] leading-snug font-semibold text-balance tabular-nums ${known ? "text-ink" : "text-muted"}`}>{children}</dd>
+      <dd className={`mt-1 font-display leading-snug font-semibold text-balance tabular-nums ${big ? "text-h2" : "text-[1.0625rem]"} ${known ? "text-ink" : "text-muted"}`}>{children}</dd>
       {extra && <dd className="mt-auto pt-1 text-sm">{extra}</dd>}
     </div>
   );
@@ -106,8 +109,10 @@ export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?:
           label={free ? "Zonder vertrektijd" : late ? "Voor uitslapers" : "Vertrekken"}
           known={departureKnown}
           tone={departureKnown ? (late ? "lake" : free ? "forest" : "plain") : "plain"}
+          big
           extra={
-            askDeparture ? undefined : (
+            // Onbekend: de hulpactie direct onder de waarde (UI/UX-plan T25); de korte oproep staat onder het blok
+            askDeparture ? <GiveDepartureButton placeId={place.id} placeName={place.name} label="Weet jij dit?" /> : (
               <>
                 {visitors > 0 && (
                   <span className="flex items-center gap-1 font-semibold text-ink-2" data-testid="departure-visitors">

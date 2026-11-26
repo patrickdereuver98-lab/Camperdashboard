@@ -189,3 +189,7 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 3. Geen van de punten uit §2 komt voor (zoek in de diff op `border-2`, `rounded-[`, `transition-all`, `font-display`
    met andere fonts, emoji).
 4. Tekst nagelezen volgens `.claude/skills/vrijstaan-stijl` (geen gedachtestreepjes, geen verkooppraat).
+5. Design-QA (UI/UX-plan T50, 26 november 2026): één primaire knop per scherm; elke kleur heeft één betekenis; geen
+   kaart in een kaart; geen tekst onder 14 px; elk tikvlak minstens 44 × 44 px; vertrek eerst, prijs tweede; laatste
+   update zichtbaar; onbekend nooit ingevuld; licht en donker met dezelfde componenten; randen van 1 px; geen schaduw
+   op gewone inhoud.

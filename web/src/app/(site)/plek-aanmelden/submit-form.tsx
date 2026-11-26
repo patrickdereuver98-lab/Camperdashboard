@@ -63,7 +63,7 @@ export function SubmitForm() {
   if (done)
     return (
       <SuccessNote className="mt-8 rounded-xl bg-forest-tint p-6">
-        <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
+        <p className="flex items-center gap-2 font-display text-h2 font-semibold text-forest">
           <Icon name="check" size={24} /> Bedankt voor je aanmelding
         </p>
         <p className="mt-2 text-ink-2">We controleren de gegevens en zetten de plek online als alles klopt. Dat duurt meestal een paar werkdagen.</p>
@@ -86,7 +86,7 @@ export function SubmitForm() {
       />
 
       <fieldset className="space-y-4">
-        <legend className="mb-2 font-display text-xl font-semibold">De plek</legend>
+        <legend className="mb-2 font-display text-h2 font-semibold">De plek</legend>
         <p className="text-sm text-muted">Velden met <span className="text-alert">*</span> zijn verplicht.</p>
         <label className="block">
           <span className="mb-1.5 block font-semibold">Naam van de plek <span className="text-alert" aria-hidden="true">*</span></span>
@@ -124,7 +124,7 @@ export function SubmitForm() {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="mb-2 font-display text-xl font-semibold">Wat je zeker weet</legend>
+        <legend className="mb-2 font-display text-h2 font-semibold">Wat je zeker weet</legend>
         <div>
           <RadioCards
             label="Hoe laat moet je weg?"
@@ -197,7 +197,7 @@ export function SubmitForm() {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="mb-2 font-display text-xl font-semibold">Jouw gegevens</legend>
+        <legend className="mb-2 font-display text-h2 font-semibold">Jouw gegevens</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block font-semibold">Naam</span>

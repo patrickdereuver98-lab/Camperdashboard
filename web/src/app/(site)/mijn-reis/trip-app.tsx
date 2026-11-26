@@ -318,7 +318,7 @@ export function TripApp() {
           role="status"
           // Zelfde vorm als de melding "Bewaard in Mijn reis" (chrome.tsx), maar boven de cookiebalk: anders is
           // "Ongedaan maken" bij een eerste bezoek op de telefoon niet aan te tikken
-          className="animate-toast fixed left-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] flex w-[min(92vw,26rem)] items-center gap-2 rounded-xl bg-ink py-2 pr-1 pl-4 text-surface shadow-lift lg:bottom-6"
+          className="animate-toast fixed left-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] z-[60] flex w-[min(92vw,26rem)] items-center gap-2 rounded-lg bg-ink py-2 pr-1 pl-4 text-surface shadow-float lg:bottom-6"
           data-testid="undo-toast"
         >
           <p className="min-w-0 flex-1 text-sm">{undo.text}</p>

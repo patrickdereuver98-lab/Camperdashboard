@@ -5,6 +5,12 @@ import { expect, test } from "./fixtures";
 
 const theme = (page: Page) => page.locator("html").getAttribute("data-theme");
 const stored = (page: Page) => page.evaluate(() => localStorage.getItem("vrijstaan:thema"));
+// Op de telefoon zit de knop in het menu Meer (UI/UX-plan T39), op een groot scherm in de kop
+const themeButton = async (page: Page, isMobile: boolean) => {
+  if (!isMobile) return page.getByTestId("theme-button");
+  if ((await page.getByTestId("menu-button").getAttribute("aria-expanded")) !== "true") await page.getByTestId("menu-button").click();
+  return page.getByTestId("theme-menu-item");
+};
 
 test("volgt het systeem, ook als dat wisselt zonder herladen", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
@@ -16,10 +22,10 @@ test("volgt het systeem, ook als dat wisselt zonder herladen", async ({ page }) 
   await expect(page.locator("body")).toHaveCSS("color-scheme", "dark");
 });
 
-test("zon/maan-knop wisselt, onthoudt een afwijkende keuze en volgt daarna weer het systeem", async ({ page }) => {
+test("zon/maan-knop wisselt, onthoudt een afwijkende keuze en volgt daarna weer het systeem", async ({ page, isMobile }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const button = page.getByTestId("theme-button");
+  const button = await themeButton(page, isMobile);
   await expect(button).toHaveAttribute("aria-pressed", "false");
 
   await button.click();
@@ -36,7 +42,7 @@ test("zon/maan-knop wisselt, onthoudt een afwijkende keuze en volgt daarna weer 
   expect(await theme(page)).toBe("dark");
 
   // Terug naar het systeemthema: geen keuze meer bewaard
-  await page.getByTestId("theme-button").click();
+  await (await themeButton(page, isMobile)).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   expect(await stored(page)).toBeNull();
 });

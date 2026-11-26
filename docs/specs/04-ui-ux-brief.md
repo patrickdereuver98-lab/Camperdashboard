@@ -3,7 +3,7 @@
 > Doel: één consistente, bruikbare visuele richting. De kleuren van **"natuur & vrijheid"** staan vast (keuze van de
 > eigenaar). Hoe alles eruitziet en beweegt (typografie, hoeken, schaduw, iconen, beweging) staat in de
 > **stijlgids `docs/stijlgids.md`**, die bij twijfel voorgaat. Tokens: `web/src/app/globals.css`.
-> Bijgewerkt: 29 oktober 2026 (redesign: start en plekpagina "Eén vraag", kaart "Kaart eerst", landingspagina's
+> Bijgewerkt: 26 november 2026 (UI/UX-plan van ChatGPT, README 142; zie "Wijzigingen 26 november 2026" onderaan). Eerder: 29 oktober 2026 (redesign: start en plekpagina "Eén vraag", kaart "Kaart eerst", landingspagina's
 > "Reisgids"; besluit eigenaar 29 oktober 2026, ontwerpcanvas in README nummer 64). Gelijkgetrokken met de stijlgids
 > en besluit 75 op 8 november 2026 (README 113): hoeken, schaduw, chips, velden en koppen volgen de stijlgids.
 
@@ -132,3 +132,25 @@ lijst naar detailpagina.
 | Getekende landschappen | Alleen nog voor lege toestanden (Mijn reis leeg, niet gevonden, Dichtbij-intro); niet op kaarten of de startpagina |
 | Foto's van plekken | Websitefoto's staan aan (met bron); aanvullend nodig: van bezoekers, eigenaren en Wikimedia Commons |
 | Screenshots voor app-stores | Later (fase C) |
+
+## Wijzigingen 26 november 2026 (UI/UX-plan, README 142)
+
+Besluit eigenaar: het plan van ChatGPT overgenomen, ook waar het eerdere besluiten raakt. Wat hierboven anders staat,
+geldt niet meer:
+
+- **Start:** ondertitel "Zoek een camperplaats voor vannacht. Zie meteen wanneer je moet vertrekken." (geen aantallen;
+  die staan bij "Hoe wil je staan?"). Vertrouwenspunten met een los vinkje, zonder rond vlak. Secties 32 px uit elkaar
+  op de telefoon, 48 px vanaf `sm`.
+- **Snelle chips (Zoeken):** hoogstens vier: Zonder vertrektijd, Vertrek 12:00 of later, Nu open en Voorzieningen
+  (opent de filtersheet). Dichtbij staat in de tabbalk; Gratis, 8+, Stroom en Lozen in de filtersheet.
+- **Plekrij:** foto op de telefoon 84 × 63 px (4:3), bovenaan; vanaf `sm` 144 px over de hele hoogte. Rij minstens
+  96 px, 12 px boven en onder. Eén prijsregel: bedrag met "per nacht" of "+ toeslagen" (ook op de stapelkaart); het
+  totaal voor 2 personen staat op de plekpagina.
+- **Plekpagina:** waarde van Vertrekken één stap groter (`text-h2`). Onbekende of onzekere vertrektijd: "Weet jij
+  dit?" in de cel zelf, de oproep eronder is één zin. "Mogelijk verouderd" in `alert` met een waarschuwingsicoon. De
+  fotobron staat onder de foto (14 px, `muted`), niet meer op de foto.
+- **Kop op de telefoon:** Plek aanmelden, **Meer** (menu met Hulp en Donkere modus) en Inloggen. Vanaf `lg` ongewijzigd.
+- **Footer:** op taakpagina's (plek, zoeken, vertrekpagina's, Dichtbij, Mijn reis) een korte footer met hulp, juridisch
+  en de kaartvermelding; elders de volledige footer met provincies.
+- **Doe mee:** eerst één lijst met Vertrektijd doorgeven en Plek aanmelden, dan "Waar kun je mee helpen?", dan eigenaren.
+- **Niet gevonden:** zie App Flow.

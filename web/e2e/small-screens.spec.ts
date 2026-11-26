@@ -37,8 +37,8 @@ test.describe("kleine schermen", () => {
         expect(m.scroll, `${path} op ${width} px schuift: ${m.out.join(", ")}`).toBeLessThanOrEqual(m.client);
         expect(m.body, `${path} op ${width} px: body breder dan het scherm`).toBeLessThanOrEqual(m.client);
 
-        // Inloggen en de themaknop staan helemaal in beeld
-        for (const id of ["account-button", "theme-button"]) {
+        // Inloggen en het menu Meer (met de themaknop, UI/UX-plan T39) staan helemaal in beeld
+        for (const id of ["account-button", "menu-button"]) {
           const box = await page.getByTestId(id).boundingBox();
           expect(box, `${id} op ${path}`).not.toBeNull();
           expect(box!.x, `${id} links op ${path}`).toBeGreaterThanOrEqual(0);

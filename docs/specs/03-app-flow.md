@@ -46,7 +46,7 @@
 | Meld inhoud | `/melden` | DSA-melding van illegale of onjuiste inhoud | Formulier → `create_ticket` |
 | Veelgestelde vragen | `/veelgestelde-vragen` | Antwoorden zoeken | `faq` |
 | Over ons, Reviews en ranking, Privacy, Cookies, Voorwaarden, Disclaimer, Toegankelijkheid | eigen routes | Uitleg en juridische informatie | `src/lib/company.ts`, statistieken |
-| Niet gevonden | elke onbekende route | "Verkeerd afgeslagen" met terugweg | — |
+| Niet gevonden | elke onbekende route | "Deze pagina bestaat niet meer", knop **Naar zoeken** en link **Naar start**, zonder tekening (UI/UX-plan T37, 26 november 2026) | — |
 | Inloggen | `/inloggen?next=<pad>` | Google, Apple, Facebook of e-mail: je krijgt een mail met een code (invullen op dezelfde pagina) en een link; daarna terug naar `next`. Met e-mail maak je bij de eerste keer meteen een account aan | Supabase Auth |
 | Inlog-terugkomst | `/auth/callback` | Code inwisselen, door naar `next`; bij een fout een begrijpelijke melding | Supabase Auth |
 | Reisstatistieken | `/mijn-reis/statistieken` | Kerncijfers (km langs je stops, nachten, gemiddelde nachtprijs over bekende prijzen, aandeel nachten zonder stroom over bekende nachten) en staafdiagrammen (nachten per stroomsituatie, uitgaven per soort) met tabelweergave. Onbekend blijft onbekend | Mijn reis, uitgaven, `/api/route` |

@@ -194,7 +194,7 @@ export function SearchApp({ page, updated, initial }: { page?: DeparturePage; up
           <div ref={topPart} className={hideTop ? "invisible" : undefined}>
           <DestinationSearch key={filters.where ?? ""} variant="bar" base={filters} initial={filters.where ?? filters.province ?? ""} onPick={update} places={places} />
           <div className="mt-2 sm:mt-3">
-            <QuickChips filters={shown} onChange={update} />
+            <QuickChips filters={shown} onChange={update} onFilters={() => setFiltersOpen(true)} />
           </div>
           </div>
           {/* Mobiel: één rustige rij zoals bij Booking (filters, sorteren, kaart); groter scherm: knoppen met rand */}
@@ -363,7 +363,8 @@ function DistanceToggle() {
 }
 
 const INTRO: Record<DeparturePage, string> = {
-  vrij: "Hier is geen vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur vanaf je aankomst.",
+  // UI/UX-plan T19: één uitlegregel. Niet "zonder opgegeven vaste vertrektijd": dat zou betekenen dat de tijd onbekend is
+  vrij: "Hier staan plekken zonder vaste vertrektijd. Je vertrekt wanneer je wilt, of je betaalt per 24 uur.",
   uitslapers: "Je hoeft pas om 12:00 of later weg. Genoeg tijd voor een rustig ontbijt.",
   overig: "Plekken waar je vóór 12:00 weg moet, en plekken waarvan we de vertrektijd nog niet zeker weten.",
 };

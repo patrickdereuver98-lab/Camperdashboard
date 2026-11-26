@@ -111,8 +111,8 @@ export function LoginForm() {
   if (sentTo)
     return (
       <div className="mt-8">
-        <div role="status" className="rounded-2xl bg-forest-tint p-6">
-          <p className="flex items-center gap-2 font-display text-xl font-semibold text-forest">
+        <div role="status" className="rounded-lg bg-forest-tint p-6">
+          <p className="flex items-center gap-2 font-display text-h2 font-semibold text-forest">
             <Icon name="mail" size={24} /> Check je mail
           </p>
           <p className="mt-2 text-ink-2">

@@ -197,7 +197,7 @@ function Documents() {
           />
           {docs && docs.length === 0 && <p className="mt-4 text-muted">Nog geen papieren bewaard.</p>}
           {docs && docs.length > 0 && (
-            <ul className="mt-4 divide-y divide-line rounded-2xl bg-surface shadow-low">
+            <ul className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
               {docs.map((d) => (
                 <li key={d.name} className="flex items-center gap-3 p-3">
                   <button type="button" onClick={() => open(d.name)} className="min-w-0 flex-1 text-left">

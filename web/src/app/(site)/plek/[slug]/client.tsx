@@ -98,11 +98,8 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
                 aria-label={`Foto ${i + 1} van ${visible.length} groot bekijken`}
                 className="absolute inset-0 cursor-zoom-in"
               />
-              {p.credit && (
-                <figcaption className="animate-fade-in-late pointer-events-none absolute bottom-2 left-2 max-w-[60%] truncate rounded-md bg-black/50 px-1.5 py-0.5 text-sm text-white">
-                  Foto: {p.credit}
-                </figcaption>
-              )}
+              {/* Bron onder de foto, niet erop (UI/UX-plan T29); hier alleen voor schermlezers bij deze foto */}
+              {p.credit && <figcaption className="sr-only">Foto: {p.credit}</figcaption>}
             </figure>
           );
         })}
@@ -123,6 +120,12 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
             </button>
           </div>
         </>
+      )}
+      {/* Bron van de foto die je ziet: 14 px onder de foto (UI/UX-plan T29) */}
+      {visible[Math.min(index, visible.length - 1)]?.credit && (
+        <p aria-hidden="true" className="truncate px-4 pt-1.5 text-sm text-muted sm:px-0">
+          Foto: {visible[Math.min(index, visible.length - 1)].credit}
+        </p>
       )}
       {full !== null && (
         <Lightbox
@@ -1007,5 +1010,10 @@ export function ShareButton({ title, text, className = "", variant = "full" }: {
 export function OutdatedNote({ verifiedAt, departureCheckedAt }: { verifiedAt?: string; departureCheckedAt?: string }) {
   const hydrated = useHydrated();
   if (!hydrated || !isPossiblyOutdated({ verifiedAt, departureCheckedAt })) return null;
-  return <span className="font-semibold text-ink-2">, mogelijk verouderd</span>;
+  // UI/UX-plan T27 (26 november 2026): in de foutkleur met een icoon, zodat het opvalt zonder de datum te overstemmen
+  return (
+    <span className="inline-flex items-center gap-1 font-semibold text-alert">
+      , <Icon name="alert" size={15} className="shrink-0" /> mogelijk verouderd
+    </span>
+  );
 }
