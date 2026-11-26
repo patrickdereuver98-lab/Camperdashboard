@@ -323,9 +323,27 @@ Volledig plan: [verbeterplan beveiliging](../beveiliging/verbeterplan.md). 2FA i
 - ✅ Controle van de AI-lezer ruimer waar hij ten onrechte afwees (`pipeline/ai.ts`, `quote.ts`, 4 nieuwe tests);
   herbeoordeling met `scripts/ai-recheck.ts`: 13 plekken (9 zonder vertrektijd, 4 vaste tijd), 15 voorstellen in de
   Triage Inbox. Pipeline **versie 80** uitgerold op 26 november 2026 (main 86c176e, #196); controle `promote` geeft 200.
-- ⬜ Patrick: voorstellen accepteren in Mission Control → Triage Inbox (bron ai-lezer).
+- ✅ Triage Inbox leeg (26 november 2026, besluiten door Claude op verzoek van Patrick, via `admin_apply_update` en
+  `admin_reject_update` met zijn beheeraccount; elke afwijzing heeft een notitie met de reden). 1.541 voorstellen:
+  852 geaccepteerd, 689 afgewezen. Regels: Google vult alleen onbekende honden, toilet en telefoon aan (honden "ja"
+  tegen onze "nee" alleen als de eigen site dat ook zegt: 3 van 210); 49 voorstellen van de pipeline die een vaste
+  vertrekregel wilden wissen afgewezen; vertrekregels, aankomsttijden, lengte en verblijf met letterlijk citaat
+  geaccepteerd; 15 websitecorrecties uit de audit van 21 november geaccepteerd; prijzen alleen bij een citaat over een
+  camperplek per nacht (of all-in, incl. 2 personen) zonder per persoon, 1 persoon, leden/SVR, vanaf, tent/caravan,
+  fietser of evenement, en hoogstens 40% afwijking van een bestaande prijs (138 van 541 + 8 van 9 van de pipeline).
+  Heiderust: site noemt zowel vrij als "tot max. 12.00 uur", vertrekregel teruggezet op vast. Analyse:
+  `scripts/triage-analyse.ts`. Effect gepubliceerd: 2.384 plekken, vertrekregel 1.699 (71,3%), zonder vertrektijd
+  34 → 45, prijs 1.385, honden bekend 2.078.
 - Besluit Patrick (26 november 2026): review-lezer blijft uit. De 90%-eis (LANCERING besluit 4) beslist hij later, na
   de voorstellen en het domein.
+
+## Beheerdashboard (opdracht Patrick, 26 november 2026) ✅
+
+- Nieuw Overzicht in beheer met werkvoorraad, binnenkomend, diensten en API's, geplande taken, fouten, updates en
+  besluiten; menu in groepen met aantallen; oud overzicht naar `/admin/datakwaliteit`. Eén RPC `admin_dashboard()`
+  (migratie `20261126100000_admin_dashboard.sql`, droog getest op live, toepassen na samenvoegen).
+- Gevonden en hersteld: de prijscontrole in Plekken ververste de site-cache via `/api/revalidate`, die niet bestaat
+  (nu `/api/admin/revalidate`); de cookiebalk verscheen in beheer.
 
 ## UI/UX-plan (26 november 2026) 🟡
 
