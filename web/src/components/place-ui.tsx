@@ -285,11 +285,14 @@ export function PlaceCard({
   onHover,
   layout = "row",
   eager,
+  leadDistance = false,
 }: {
   place: PlaceSummary;
   km?: number;
   /** Eigen afstandstekst (bijv. echte rijtijd); vervangt de hemelsbrede afstand */
   distanceLabel?: React.ReactNode;
+  /** Afstand direct onder de naam in plaats van onderaan (Dichtbij: rijtijd is daar het hoofdgegeven) */
+  leadDistance?: boolean;
   active?: boolean;
   onHover?: (slug: string | null) => void;
   layout?: "row" | "stack";
@@ -314,7 +317,7 @@ export function PlaceCard({
       )
     ));
   const arrival = arrivalShort(place);
-  if (!stack) return <PlaceRow place={place} distance={distance} active={active} onHover={onHover} eager={eager} />;
+  if (!stack) return <PlaceRow place={place} distance={distance} active={active} onHover={onHover} eager={eager} leadDistance={leadDistance} />;
   const hasWhen = Boolean(departureShort(place) || isIncomplete(place) || arrival);
   return (
     <article
@@ -387,12 +390,14 @@ function PlaceRow({
   active,
   onHover,
   eager,
+  leadDistance = false,
 }: {
   place: PlaceSummary;
   distance: React.ReactNode;
   active?: boolean;
   onHover?: (slug: string | null) => void;
   eager?: boolean;
+  leadDistance?: boolean;
 }) {
   // Lang indrukken of rechtsklikken: snelmenu (G5)
   const [menu, setMenu] = useState(false);
@@ -439,6 +444,7 @@ function PlaceRow({
               {place.name}
             </Link>
           </h3>
+          {leadDistance && distance && <p className="truncate text-ink" data-testid="lead-distance">{distance}</p>}
           <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
             {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
           </p>
@@ -449,7 +455,7 @@ function PlaceRow({
                 <span className="text-muted">({place.ratingCount})</span>
               </span>
             ) : null}
-            {distance && <span className="truncate font-semibold text-ink-2">{distance}</span>}
+            {distance && !leadDistance && <span className="truncate font-semibold text-ink-2">{distance}</span>}
             <OpenChip place={place} onlyClosed />
           </div>
         </div>
@@ -554,8 +560,11 @@ export function MapPick({
   onPrev,
   onNext,
   position,
+  drive,
 }: {
   place: PlaceSummary;
+  /** Rijtijd vanaf je locatie (Dichtbij), onder de naam */
+  drive?: React.ReactNode;
   onClose: () => void;
   /** Vorige en volgende plek in de volgorde van de lijst (G3); ook met opzij vegen */
   onPrev?: () => void;
@@ -646,6 +655,7 @@ export function MapPick({
         </div>
         <div className="min-w-0 flex-1 space-y-1 pr-9">
           <h2 className="font-display text-h3 font-semibold">{place.name}</h2>
+          {drive && <p className="text-ink">{drive}</p>}
           <p className="truncate text-sm text-ink-2">
             {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
           </p>

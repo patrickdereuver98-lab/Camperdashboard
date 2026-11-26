@@ -29,7 +29,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     // Een zwevende legend gedraagt zich als gewone kop binnen de padding van de fieldset
     <fieldset className="border-b border-line py-5 first:pt-1 last:border-0">
-      <legend className="float-left mb-3 w-full font-display text-lg font-semibold">{title}</legend>
+      <legend className="float-left mb-3 w-full font-display text-h3 font-semibold">{title}</legend>
       <div className="clear-both">{children}</div>
     </fieldset>
   );
@@ -136,11 +136,11 @@ export function FilterSheet({
         </Section>
       )}
 
-      <Section title="Aankomen en vertrekken">
+      <Section title="Vertrekken">
         <div className="grid grid-cols-2 gap-2">
           {DEPARTURE_CHOICES.map((c) => (
             <Toggle key={c.label} pressed={chosen(c.value)} onClick={() => set({ departure: c.value })}>
-              <Sign name="clock" size={30} state={chosen(c.value) && c.value ? "on" : "unknown"} />
+              <Sign name="clock" size={24} bare />
               {c.label}
             </Toggle>
           ))}
@@ -150,15 +150,13 @@ export function FilterSheet({
         </p>
       </Section>
 
-      <Section title="Voorzieningen">
-        <div className="grid grid-cols-2 gap-2">
-          {FACILITIES.map((f) => (
-            <Toggle key={f.key} pressed={draft.facilities.includes(f.key)} onClick={() => set({ facilities: toggleIn(draft.facilities, f.key) })}>
-              <Sign name={f.icon as SignName} size={30} state={draft.facilities.includes(f.key) ? "on" : "unknown"} />
-              {f.label}
-            </Toggle>
-          ))}
-        </div>
+
+
+      <Section title="Open">
+        <Toggle pressed={draft.openNow} onClick={() => set({ openNow: !draft.openNow })}>
+          <Sign name="calendar" size={24} bare />
+          Alleen plekken die nu open zijn
+        </Toggle>
       </Section>
 
       <Section title="Prijs per nacht">
@@ -188,11 +186,22 @@ export function FilterSheet({
         )}
       </Section>
 
+      <Section title="Voorzieningen">
+        <div className="grid grid-cols-2 gap-2">
+          {FACILITIES.map((f) => (
+            <Toggle key={f.key} pressed={draft.facilities.includes(f.key)} onClick={() => set({ facilities: toggleIn(draft.facilities, f.key) })}>
+              <Sign name={f.icon as SignName} size={24} bare />
+              {f.label}
+            </Toggle>
+          ))}
+        </div>
+      </Section>
+
       <Section title="Soort plek">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {(Object.keys(KIND_LABEL) as PlaceKind[]).map((k) => (
             <Toggle key={k} pressed={draft.kinds.includes(k)} onClick={() => set({ kinds: toggleIn(draft.kinds, k) })}>
-              <Sign name={KIND_SIGN[k]} size={30} state={draft.kinds.includes(k) ? "on" : "unknown"} />
+              <Sign name={KIND_SIGN[k]} size={24} bare />
               {KIND_LABEL[k]}
             </Toggle>
           ))}
@@ -219,23 +228,18 @@ export function FilterSheet({
         </p>
       </Section>
 
-      <Section title="Overig">
-        <div className="grid gap-2">
-          <Toggle pressed={draft.openNow} onClick={() => set({ openNow: !draft.openNow })}>
-            <Sign name="calendar" size={30} state={draft.openNow ? "on" : "unknown"} />
-            Verberg plekken die nu dicht zijn
-          </Toggle>
-          {showScore && (
-            <div className="grid grid-cols-3 gap-2">
-              {SCORES.map((s) => (
-                <Toggle key={s} pressed={draft.minScore === s} onClick={() => set({ minScore: draft.minScore === s ? undefined : s })}>
-                  <span className="w-full text-center">Score {s}+</span>
-                </Toggle>
-              ))}
-            </div>
-          )}
-        </div>
-      </Section>
+
+      {showScore && (
+        <Section title="Overig">
+          <div className="grid grid-cols-3 gap-2">
+            {SCORES.map((s) => (
+              <Toggle key={s} pressed={draft.minScore === s} onClick={() => set({ minScore: draft.minScore === s ? undefined : s })}>
+                <span className="w-full text-center">Score {s}+</span>
+              </Toggle>
+            ))}
+          </div>
+        </Section>
+      )}
     </Sheet>
   );
 }
