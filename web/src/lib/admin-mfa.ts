@@ -21,3 +21,12 @@ export function totpCode(raw: string): string | null {
   const digits = raw.replace(/\D/g, "");
   return digits.length === 6 ? digits : null;
 }
+
+/**
+ * auth-js maakt van de QR-code `data:image/svg+xml;utf-8,<svg …>` zonder te coderen; een "#" (kleur) of "%" in de SVG
+ * breekt dan de data-URL. Hier opnieuw opgebouwd met encodeURIComponent. Een ander soort waarde blijft ongewijzigd.
+ */
+export function qrDataUrl(qr: string): string {
+  const m = /^data:image\/svg\+xml;(?:utf-8|charset=utf-8),(<[\s\S]*)$/i.exec(qr);
+  return m ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(m[1])}` : qr;
+}

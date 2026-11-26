@@ -242,7 +242,7 @@ besluit alleen op tekst die een sessie zelf instuurde, dan wordt het `controle`.
 | `profiles.role` | eigen rij | trigger vanuit `admins` | nooit door de gebruiker (kolomrechten: alleen `display_name`, `avatar_url`) | — |
 | `internal_secrets`, `private.*` | niemand via de API | systeem | systeem | systeem |
 
-"Beheer" = `public.is_admin()`: elke gebruiker in `admins`, ongeacht rol.
+"Beheer" = `public.is_admin()`: elke gebruiker in `admins`, ongeacht rol. Met migratie `20261124100000_beheer_alleen_met_tweestap` (audit H2, nog niet live) geven `is_admin()` en `has_admin_role()` alleen true bij een sessie op niveau aal2 (`aal` in `request.jwt.claims`): wachtwoord plus TOTP-code.
 
 **Functies (RPC):**
 

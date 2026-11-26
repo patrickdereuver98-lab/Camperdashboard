@@ -9,6 +9,7 @@
 --   2. Elke beheerder logt in op /admin en koppelt een authenticator-app.
 --   3. Pas dan deze migratie toepassen. De controle hieronder breekt de migratie af (er verandert dan niets) zolang een
 --      beheerder nog geen geverifieerde TOTP-factor heeft.
+-- Het niveau komt uit request.jwt.claims (wat auth.jwt() ook leest), zodat de herbouwtest op de kale image werkt.
 -- Terugdraaien: de vorige definities staan in 20261102132558_baseline.sql (is_admin) en 20261106100100_is_admin_rol.sql
 -- (has_admin_role); zonder de aal-voorwaarde opnieuw aanmaken.
 
@@ -39,7 +40,7 @@ create or replace function public.is_admin()
  stable security definer
  set search_path to ''
 as $function$
-  select coalesce((select auth.jwt() ->> 'aal') = 'aal2', false)
+  select coalesce((select nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'aal') = 'aal2', false)
      and exists (select 1 from public.admins where user_id = (select auth.uid()) and role = 'admin');
 $function$;
 
@@ -49,6 +50,6 @@ create or replace function public.has_admin_role()
  stable security definer
  set search_path to ''
 as $function$
-  select coalesce((select auth.jwt() ->> 'aal') = 'aal2', false)
+  select coalesce((select nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'aal') = 'aal2', false)
      and exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin');
 $function$;

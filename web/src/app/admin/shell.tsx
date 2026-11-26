@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon, Logo, type IconName } from "@/components/icons";
-import { adminMfaStep, totpCode } from "@/lib/admin-mfa";
+import { adminMfaStep, qrDataUrl, totpCode } from "@/lib/admin-mfa";
 import { errorMessage } from "@/lib/supabase-browser";
 import { supabaseClient as supabase } from "@/lib/supabase-client";
 import { ErrorNote, input, primary } from "./ui";
@@ -362,7 +362,7 @@ function MfaEnroll({ email, onDone }: { email?: string; onDone: () => void }) {
       for (const f of list.data?.all ?? []) if (f.status === "unverified") await mfa.unenroll({ factorId: f.id });
       const { data, error } = await mfa.enroll({ factorType: "totp", friendlyName: `Beheer ${new Date().toISOString().slice(0, 10)} ${crypto.randomUUID().slice(0, 8)}` });
       if (error) return setErr(errorMessage(error));
-      setFactor({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
+      setFactor({ id: data.id, qr: qrDataUrl(data.totp.qr_code), secret: data.totp.secret });
     })();
   }, []);
 
