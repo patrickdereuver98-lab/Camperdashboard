@@ -14,7 +14,7 @@ De aanname "raster/Leaflet" klopt niet. De kaart is al wat het voorstel beschrij
 | Onderdeel | Nu | Waar |
 |---|---|---|
 | Kaartbibliotheek | MapLibre GL JS 6 (`maplibre-gl`), dynamisch geladen, worker in `public/` | `web/src/components/place-map.tsx`, `scripts/copy-maplibre-worker.mjs` |
-| Tegels | Vectortegels van OpenFreeMap, stijlen `positron` (licht) en `dark`; geen key nodig, staat in de CSP | `STYLE_LIGHT`, `STYLE_DARK`, `next.config.ts` |
+| Tegels | Vectortegels van OpenFreeMap met een eigen stijl (`public/kaart/licht.json` en `donker.json`, gemaakt door `scripts/kaartstijl.mjs`; sinds 26 november 2026, daarvoor Positron met `tint()`); geen key nodig, staat in de CSP | `STYLE_LIGHT`, `STYLE_DARK`, `next.config.ts` |
 | Clustering | Native: GeoJSON-bron met `cluster: true`, `clusterRadius` 46, `clusterMaxZoom` 10; groepskleuren uit `clusterColors` | `place-map.tsx`, `lib/map-data.ts` |
 | Stippen | Cirkellagen op kleur van de vertrekregel, holle stip bij onbekend, prijs als tekstlaag, onzichtbaar tikvlak van 44 px | `place-map.tsx` |
 | Pop-up | React via een portal in het vak van MapLibre (hartje werkt zoals overal) | `PopupCard` |

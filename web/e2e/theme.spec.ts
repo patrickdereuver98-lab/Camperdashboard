@@ -51,8 +51,8 @@ test("de kaart wisselt mee zonder herladen", async ({ page, isMobile }) => {
   test.skip(isMobile, "op de telefoon staat de kaart op Zoeken achter een knop");
   // Kaartstijlen nagemaakt (geen netwerk in de test); we tellen welke stijl de kaart opvraagt
   const styles: string[] = [];
-  await page.route("https://tiles.openfreemap.org/styles/*", (route) => {
-    styles.push(route.request().url().split("/").pop() ?? "");
+  await page.route("**/kaart/*.json*", (route) => {
+    styles.push(new URL(route.request().url()).pathname.split("/").pop() ?? "");
     return route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({ version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#ffffff" } }] }),
@@ -61,10 +61,10 @@ test("de kaart wisselt mee zonder herladen", async ({ page, isMobile }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/zoeken");
   await expect(page.locator(".maplibregl-canvas")).toBeVisible();
-  await expect.poll(() => styles).toEqual(["positron"]);
+  await expect.poll(() => styles).toEqual(["licht.json"]);
 
   await page.getByTestId("theme-button").click();
-  await expect.poll(() => styles).toEqual(["positron", "dark"]);
+  await expect.poll(() => styles).toEqual(["licht.json", "donker.json"]);
   await expect(page.locator(".maplibregl-canvas")).toHaveCount(1);
   await expect(page.getByText("De kaart kon niet worden geladen")).toHaveCount(0);
 });
