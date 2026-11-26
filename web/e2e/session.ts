@@ -22,7 +22,27 @@ export const SESSION = {
   user: USER,
 };
 
-export async function signIn(page: Page) {
-  await page.addInitScript((s) => localStorage.setItem("vrijstaan-auth", JSON.stringify(s)), SESSION);
-  await page.route(`${SUPABASE}/auth/v1/user`, (r) => r.fulfill({ json: USER }));
+export const TOTP_FACTOR = {
+  id: "22222222-2222-4222-8222-222222222222",
+  friendly_name: "Beheer",
+  factor_type: "totp",
+  status: "verified",
+  created_at: "2026-11-24T00:00:00Z",
+  updated_at: "2026-11-24T00:00:00Z",
+};
+
+/** Sessie met een bepaald niveau (`aal` in het token) en eventueel factoren; beheer vraagt aal2 (audit H2) */
+export function sessionWith(o: { aal?: "aal1" | "aal2"; factors?: object[] } = {}) {
+  const user = { ...USER, factors: o.factors ?? [] };
+  const claims = { sub: USER.id, exp, role: "authenticated", aud: "authenticated", ...(o.aal ? { aal: o.aal } : {}) };
+  return { ...SESSION, access_token: `${b64({ alg: "HS256", typ: "JWT" })}.${b64(claims)}.sig`, user };
 }
+
+export async function signIn(page: Page, o: { aal?: "aal1" | "aal2"; factors?: object[] } = {}) {
+  const s = o.aal || o.factors ? sessionWith(o) : SESSION;
+  await page.addInitScript((s) => localStorage.setItem("vrijstaan-auth", JSON.stringify(s)), s);
+  await page.route(`${SUPABASE}/auth/v1/user`, (r) => r.fulfill({ json: s.user }));
+}
+
+/** Beheerder na de tweede stap: token op aal2 en een geverifieerde TOTP-factor */
+export const signInAdmin = (page: Page) => signIn(page, { aal: "aal2", factors: [TOTP_FACTOR] });

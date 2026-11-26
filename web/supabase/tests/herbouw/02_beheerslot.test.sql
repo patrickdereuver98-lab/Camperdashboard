@@ -14,7 +14,7 @@ values ('Herbouw slot', 'herbouw-slot', 52.3, 5.3, 'https://voorbeeld.nl', 'vrij
 
 -- Bevestigen als beheerder zet een slot op regel, tijd en bronzin
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b1';
-set local request.jwt.claims = '{"sub": "00000000-0000-0000-0000-0000000000b1", "role": "authenticated"}';
+set local request.jwt.claims = '{"sub": "00000000-0000-0000-0000-0000000000b1", "role": "authenticated", "aal": "aal2"}';
 select public.check_departure((select id from public.places where slug = 'herbouw-slot'), 'bevestigd', 'beheer');
 reset request.jwt.claim.sub;
 reset request.jwt.claims;
@@ -46,7 +46,7 @@ end $$;
 insert into public.places (name, slug, lat, lng, departure, times_note)
 values ('Herbouw afgewezen', 'herbouw-afgewezen', 52.4, 5.4, 'vrij', 'Vrij in- en uitrijden.');
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b1';
-set local request.jwt.claims = '{"sub": "00000000-0000-0000-0000-0000000000b1", "role": "authenticated"}';
+set local request.jwt.claims = '{"sub": "00000000-0000-0000-0000-0000000000b1", "role": "authenticated", "aal": "aal2"}';
 select public.check_departure((select id from public.places where slug = 'herbouw-afgewezen'), 'afgewezen', 'beheer');
 reset request.jwt.claim.sub;
 reset request.jwt.claims;

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { signIn, SUPABASE } from "./session";
+import { signIn, signInAdmin, sessionWith, SUPABASE, TOTP_FACTOR } from "./session";
 
 const side = (p: string, id: string, extra: Record<string, unknown>) => ({
   [`${p}_id`]: id, [`${p}_slug`]: `plek-${id.slice(0, 4)}`, [`${p}_name`]: `Plek ${id.slice(0, 4)}`, [`${p}_status`]: "draft",
@@ -13,7 +13,7 @@ const D = "dddddddd-0000-4000-8000-000000000004";
 
 test.describe("beheer: dubbele plekken", () => {
   test.beforeEach(async ({ page }) => {
-    await signIn(page);
+    await signInAdmin(page);
     await page.route(`${SUPABASE}/rest/v1/rpc/is_admin**`, (r) => r.fulfill({ json: true }));
     await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
     await page.route(`${SUPABASE}/rest/v1/rpc/admin_duplicate_candidates**`, (r) =>
@@ -74,7 +74,7 @@ test.describe("beheer: dubbele plekken", () => {
 });
 
 test("beheerpoort: netwerkfout is geen 'Geen beheertoegang', maar een foutstaat met opnieuw proberen (R32)", async ({ page }) => {
-  await signIn(page);
+  await signInAdmin(page);
   await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
   let offline = true;
   await page.route(`${SUPABASE}/rest/v1/rpc/is_admin**`, (r) => (offline ? r.abort("internetdisconnected") : r.fulfill({ json: true })));
@@ -86,4 +86,58 @@ test("beheerpoort: netwerkfout is geen 'Geen beheertoegang', maar een foutstaat 
   await page.getByRole("button", { name: "Opnieuw proberen" }).click();
   await expect(page.getByRole("heading", { name: "Beheer is nu niet bereikbaar" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Naar de site/ }).first()).toBeVisible();
+});
+
+test.describe("beheerpoort: tweestapsverificatie (audit H2)", () => {
+  test("zonder factor: eerst een app koppelen, daarna pas de rechtencontrole", async ({ page }) => {
+    await signIn(page, { aal: "aal1" });
+    await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
+    let adminAsked = false;
+    await page.route(`${SUPABASE}/rest/v1/rpc/is_admin**`, (r) => {
+      adminAsked = true;
+      return r.fulfill({ json: true });
+    });
+    await page.route(`${SUPABASE}/rest/v1/rpc/admin_duplicate_candidates**`, (r) => r.fulfill({ json: [] }));
+    const qr = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="#000"/></svg>';
+    await page.route(`${SUPABASE}/auth/v1/factors`, (r) =>
+      r.fulfill({ json: { id: TOTP_FACTOR.id, type: "totp", friendly_name: "Beheer", totp: { qr_code: qr, secret: "GEHEIMESLEUTEL", uri: "otpauth://totp/x" } } }),
+    );
+    await page.route(`${SUPABASE}/auth/v1/factors/*/challenge`, (r) => r.fulfill({ json: { id: "ch1", type: "totp", expires_at: Math.floor(Date.now() / 1000) + 300 } }));
+    let code = "";
+    await page.route(`${SUPABASE}/auth/v1/factors/*/verify`, async (r) => {
+      code = (r.request().postDataJSON() as { code: string }).code;
+      return r.fulfill({ json: sessionWith({ aal: "aal2", factors: [TOTP_FACTOR] }) });
+    });
+    await page.goto("/admin/dubbelen");
+    await expect(page.getByRole("heading", { name: "Tweestapsverificatie instellen" })).toBeVisible();
+    await expect(page.getByText("GEHEIMESLEUTEL")).toBeVisible();
+    expect(adminAsked).toBe(false);
+    await page.getByLabel("Code uit je app").fill("123 456");
+    // Enter: op mobiel ligt de cookiebalk over de knop onderaan
+    await page.getByLabel("Code uit je app").press("Enter");
+    await expect(page.getByRole("link", { name: /Naar de site/ }).first()).toBeVisible();
+    expect(code).toBe("123456");
+    expect(adminAsked).toBe(true);
+  });
+
+  test("met factor maar zonder code: de tweede stap, geen beheer", async ({ page }) => {
+    await signIn(page, { aal: "aal1", factors: [TOTP_FACTOR] });
+    await page.route(`${SUPABASE}/rest/v1/user_trips**`, (r) => r.fulfill({ json: null }));
+    let adminAsked = false;
+    await page.route(`${SUPABASE}/rest/v1/rpc/is_admin**`, (r) => {
+      adminAsked = true;
+      return r.fulfill({ json: true });
+    });
+    await page.route(`${SUPABASE}/auth/v1/factors/*/challenge`, (r) => r.fulfill({ json: { id: "ch1", type: "totp", expires_at: Math.floor(Date.now() / 1000) + 300 } }));
+    await page.route(`${SUPABASE}/auth/v1/factors/*/verify`, (r) =>
+      r.fulfill({ status: 422, json: { code: "mfa_verification_failed", msg: "Invalid TOTP code entered" } }),
+    );
+    await page.goto("/admin/dubbelen");
+    await expect(page.getByRole("heading", { name: "Tweede stap" })).toBeVisible();
+    await page.getByLabel("Code uit je app").fill("000000");
+    await page.getByLabel("Code uit je app").press("Enter");
+    await expect(page.getByText("Deze code klopt niet of is verlopen.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Naar de site/ })).toHaveCount(0);
+    expect(adminAsked).toBe(false);
+  });
 });

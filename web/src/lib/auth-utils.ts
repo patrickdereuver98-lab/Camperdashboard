@@ -1,7 +1,19 @@
 /** Alleen interne paden als bestemming na het inloggen (geen open redirect) */
 export function safeNext(next: string | null | undefined): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return "/account";
-  return next;
+  if (!next || !next.startsWith("/")) return "/account";
+  // De browser haalt tabs en regeleinden uit een URL en leest "\\" als "/": "/\t/evil.nl" wordt zo "//evil.nl". Daarom
+  // laten we de URL-parser beslissen en houden we alleen pad, zoekvraag en anker over als de herkomst gelijk blijft.
+  const base = "https://vrijstaan.invalid";
+  let url: URL;
+  try {
+    url = new URL(next, base);
+  } catch {
+    return "/account";
+  }
+  if (url.origin !== base) return "/account";
+  // Ook na het opschonen van "." en ".." mag het geen protocol-relatief adres worden ("/..//evil.nl" → "//evil.nl")
+  const out = url.pathname + url.search + url.hash;
+  return out.startsWith("//") || out.startsWith("/\\") ? "/account" : out;
 }
 
 /** Vriendelijke foutmelding voor fouten uit de inlogflow (ook ?error_description= in de callback-URL) */
