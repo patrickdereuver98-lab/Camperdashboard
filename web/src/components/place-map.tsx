@@ -314,6 +314,10 @@ export function PlaceMap({
           filter: ["!", ["has", "point_count"]],
           paint: { ...hit, "circle-radius": HIT_RADIUS },
         });
+        // Steden en dorpen boven de groepen (kaartronde 26 november): anders dekten de donkere cirkels Amsterdam en
+        // Rotterdam af. Onder de getallen in de groep, zodat die bij een botsing voorgaan.
+        for (const id of ["label_town", "label_city", "label_city_capital", "place_town", "place_city", "place_city_large"])
+          if (map.getLayer(id) && map.getLayer("cluster-count")) map.moveLayer(id, "cluster-count");
         map.on("click", "clusters-hit", async (e) => {
           const f = e.features?.[0];
           if (!f || !map) return;

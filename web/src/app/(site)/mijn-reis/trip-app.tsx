@@ -780,6 +780,8 @@ export function TripApp() {
             route={route?.geometry ?? null}
             user={start}
             cluster={false}
+            // Pas laden als de kaart bijna in beeld is: de tegels (±1,8 MB) verdrongen op trage 4G de rest (R65, 26 november)
+            whenVisible
             fitKey={routeKey ?? stops.map((s) => s.slug).join()}
             className="h-80 rounded-lg border border-line"
           />
