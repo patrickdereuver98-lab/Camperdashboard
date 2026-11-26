@@ -21,6 +21,9 @@ test("reis met datums: aankomst en vertrek per stop, waarschuwing als de plek da
   // Plek b: aankomst 1 november, dus dicht volgens het seizoen
   await expect(page.getByTestId("stop-closed")).toHaveCount(1);
   await expect(page.getByTestId("stop-closed")).toContainText("1 november");
+  // Volgende stop bovenaan: de eerste stop zolang de reis nog moet beginnen (ontwerpronde 2)
+  await expect(page.getByTestId("next-stop")).toContainText("Volgende stop");
+  await page.getByTestId("trip-setup").locator("summary").click();
   await page.getByRole("button", { name: "Vertrekdatum wissen" }).click();
   await expect(page.getByTestId("stop-dates")).toHaveCount(0);
 });

@@ -43,11 +43,11 @@ goedkeurt, daarna bouwen.
 
 | # | Wat | Waarom | Moeite |
 |---|---|---|---|
-| C1 | **Screenshots van kaart en Dichtbij werkend krijgen** (kaarttegels nadoen in de screenshotscripts, zoals in de e2e-test) | Zonder beeld kan niemand de kaart beoordelen; ChatGPT kon het ook niet | S |
-| C2 | **Mijn reis "volgende stop eerst"**: bovenaan de eerstvolgende stop met datum, vertrekregel en Route; daaronder kosten en de rest. Meteen ook sneller maken (R65: LCP 2,9 s, TBT 1,3 s op trage 4G) | Onderweg is de volgende stop de enige vraag; nu het traagste scherm | L |
+| C1 ✅ | **Screenshots van kaart en Dichtbij werkend krijgen** (kaarttegels nadoen in de screenshotscripts, zoals in de e2e-test) | Zonder beeld kan niemand de kaart beoordelen; ChatGPT kon het ook niet | S |
+| C2 🔄 | **Mijn reis "volgende stop eerst"** (opbouw klaar 26 november; snelheid R65 nog meten): bovenaan de eerstvolgende stop met datum, vertrekregel en Route; daaronder kosten en de rest. Meteen ook sneller maken (R65: LCP 2,9 s, TBT 1,3 s op trage 4G) | Onderweg is de volgende stop de enige vraag; nu het traagste scherm | L |
 | C3 | **Dichtbij met rijtijd als hoofdgegeven** in de lijst en het paneel op de kaart, afstand klein | De vraag is "haal ik het vóór sluiting", niet hoeveel kilometer | M |
 | C4 | **Filtersheet nalopen**: vaste knop "Toon n plekken" onderaan, volgorde Vertrek, Open, Prijs, Voorzieningen, Overig | Nu meer filters in de sheet (Gratis, 8+, Stroom, Lozen) | M |
-| C5 | **Kaart**: stippen, groepen en het gekozen-plekpaneel beoordelen op 390 px in licht en donker | Laatste hoofdscherm zonder ontwerpronde | M |
+| C5 🔄 | **Kaart** (26 november: Nederlandse namen, locatieknop, bronvermelding, Dichtbij-chips; open: groepen dekken plaatsnamen af): stippen, groepen en het gekozen-plekpaneel beoordelen op 390 px in licht en donker | Laatste hoofdscherm zonder ontwerpronde | M |
 | C6 | **Voor/na-overzicht** per scherm als pagina, voor jou en voor latere reviews | Laat zien wat er echt veranderde | S |
 
 Niet doen vóór de livegang: visuele snapshottests in CI (T49): de data wisselt dagelijks, dus de baselines breken

@@ -63,6 +63,8 @@ test("tussenstop, notitie, omdraaien en ongedaan maken", async ({ page, request 
   await expect(stops.first().getByTestId("stop-note-scope")).toHaveText("Privé");
 
   // Omdraaien en terug
+  // Omdraaien zit in het menu Meer reisopties (ontwerpronde 2)
+  await page.getByRole("button", { name: "Meer reisopties" }).click();
   await page.getByRole("button", { name: "Omdraaien" }).click();
   await expect(stops.first()).toContainText(picked[2].name);
   await page.getByTestId("undo-toast").getByRole("button", { name: "Ongedaan maken" }).click();
@@ -130,6 +132,8 @@ test("begin- en eindpunt: adres kiezen, terug naar het begin", async ({ page, re
   const routeCalls: string[] = [];
   page.on("request", (r) => r.url().includes("/api/route?") && routeCalls.push(r.url()));
   await page.goto("/mijn-reis");
+  // Start en vertrekdatum staan in een inklapbaar blok (ontwerpronde 2)
+  await page.getByTestId("trip-setup").locator("summary").click();
   const startCard = page.getByTestId("start-card");
   await startCard.getByRole("button", { name: "Adres kiezen" }).click();
   await startCard.getByLabel("Adres, postcode of plaats").fill("Dorps");
