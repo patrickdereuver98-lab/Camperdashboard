@@ -144,7 +144,11 @@ commit. Per fase hoogstens één review met `code-reviewer`. Geen migraties of e
 - ✅ Docs, routes, componenten en smells gelezen; offline build en screenshots; matrix (§3) en routetabel (§4).
 - ✅ Plan B vergeleken (§2).
 
-### Fase D: plekpagina (P0)
+### Fase D: plekpagina (P0) ✅ (27 november, commit 1880a8d)
+
+Afwijking van de tabel: Bewaren staat op de telefoon in de kop (V3), niet ook als hartje op de foto, en Delen in het
+menu ⋯; zo staat elke actie één keer in beeld. De oproep Vertrektijd doorgeven staat alleen in het beslisblok, niet
+nog eens onderaan. D15 (cookiebalk) bleek al goed: hij staat boven de vaste balk.
 
 Doelvolgorde op de telefoon:
 
@@ -187,19 +191,22 @@ Vaste balk: [prijs zodra het beslisblok uit beeld is] · Route openen
 | D15 | Cookiebalk op taakpagina's niet over de vaste balk: erboven aansluiten | S |
 | D16 | Tests: onbekende vertrektijd, oude data, prijs onbekend, reserveren onbekend, centrale correctieflow, vaste Route, prijs in de balk pas na scrollen, desktop: vertrektijd in de eerste viewport | M |
 
-### Fase E: Zoeken, kaart, Dichtbij (P0, klein)
+### Fase E: Zoeken, kaart, Dichtbij (P0, klein) ✅ (27 november, commit c1e4f58)
 - ⬜ E1 Dichtbij nul resultaten: hoogstens twee uitwegen in beeld (A §17).
 - ⬜ E2 Dichtbij locatie geweigerd: één zin + zoekveld "Zoek op een plaats of streek" (A §47).
 - ⬜ E3 Kaartpaneel en popup: foto, naam, vertrek, prijs, rijtijd, **Route openen**, **Bekijk plek** (+ hartje); C5 afronden.
 - ⬜ E4 e2e: lijst ↔ kaartselectie en terugkeer met filters en scroll (A §45, B T19).
 - ⬜ E5 Rijtijd nooit tonen als het hemelsbreed is (B §12): test op de bestaande labels.
 
-### Fase F: Mijn reis (P0, alleen QA)
+### Fase F: Mijn reis (P0, alleen QA) ✅ (27 november, commit c1e4f58)
+
+F2: Delen en Meer reisopties blijven direct onder Volgende stop (brief, rij Mijn reis); het is een gesloten menu,
+geen instellingen vóór de stops.
 - ⬜ F1 Onbekende vertrektijd of rijtijd: gewone status, uitleg alleen als de berekening er last van heeft (A §21).
 - ⬜ F2 e2e: volgende stop bovenaan, reisopties niet boven de stops, volgorde wijzigen zonder slepen (B T25).
 
 ### Fase G: globaal (P1)
-- ⬜ G1 **Woordenboek en statuscopy** (A §32, B T55–T56) in de stijlgids, daarna overal doorvoeren:
+- 🔄 G1 **Woordenboek en statuscopy** (woordenboek en statustaal ✅ in stijlgids §11a; doorvoeren buiten de plekpagina open) (A §32, B T55–T56) in de stijlgids, daarna overal doorvoeren:
   Bewaren · Route openen · Naar de website · Bellen · Delen · Gegevens corrigeren of aanvullen · Vertrektijd
   doorgeven · Vertrektijd onbekend · Onbekend · Laatste update · Mogelijk verouderd · Bekijk plek. Verwijzingen naar
   "Klopt er iets niet?" in voorwaarden, melden, disclaimer en FAQ; "Bedankt!" zonder uitroepteken.
