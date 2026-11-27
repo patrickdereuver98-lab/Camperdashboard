@@ -1,187 +1,268 @@
-# VrijStaan: plan naar een nieuwe base version (23 oktober 2026)
+# VrijStaan: plan UX-audit "volwassen maken" (27 november 2026)
 
-Er loopt veel tegelijk: elf agentsessies en dertien open PR's. Dit plan brengt alles in kaart, legt de volgorde vast
-waarin we het samenvoegen, en beschrijft wat er daarna komt: een beschrijving van de nieuwe base version, voor- en
-nadelen, een review van de site vanuit de gebruiker en een designronde met Claude Design.
+Eén plan uit twee bronnen, gelegd naast de code op `main` (8422374), de specs, de stijlgids en de besluiten in
+`docs/specs/README.md` (vooral 141, 142 en 144):
 
-Het vorige plan (16 oktober) staat in [`docs/archief/plan-2026-10-16.md`](docs/archief/plan-2026-10-16.md). De
-besluiten voor Patrick (§3) en de polishronde (§4 tot en met §6, codes K, P, S, N, E, C, D) blijven daar geldig tot
-ze in deze ronde zijn afgevinkt.
+- **Plan A**: opdracht *Volledige UX-, UI-, informatiearchitectuur- en workflow-audit* (74 punten, Claude-brief).
+- **Plan B**: *VrijStaan 2027* van ChatGPT (57 hoofdstukken, taken T01–T70).
 
-Stand 23 oktober: §2 stap 1 tot en met 9 klaar, alles in PR #54.
-
-**Marketing (2 november 2026):** het plan voor het nieuwe marketing- en contentdashboard staat in
-[`docs/marketing/plan.md`](docs/marketing/plan.md).
+Het vorige plan (23 oktober) staat in [`docs/archief/plan-2026-10-23.md`](docs/archief/plan-2026-10-23.md).
 
 Status: ✅ klaar · 🔄 bezig · ⬜ open · 👤 alleen Patrick.
 
 ---
 
-## 1. Stand van zaken
+## 1. Kern van de analyse
 
-Alle open PR's zijn gebouwd vanaf `acceptatie` (e7b068e). Elk mergt los zonder botsing, maar onderling botsen ze, vooral
-op de plekpagina (`web/src/app/(site)/plek/[slug]/page.tsx`, zeven PR's), `place-ui.tsx` en de specs. `main` loopt 33
-commits achter op `acceptatie`.
+**Een groot deel van beide plannen staat al in de site.** Dat komt door de ronden van 26 november (UI/UX-plan
+T1–T50, README 142; plekpagina-ronde, README 144; design-audit #200; ontwerpronde 2 C2–C4). Plan B zag alleen
+screenshots en beschrijft daardoor een aantal dingen als werk die er al zijn (zie §3). Die bouwen we niet opnieuw.
 
-### 1a. Open PR's
+Beide plannen zijn het eens over het overgebleven probleem: **de plekpagina geeft te veel dingen hetzelfde
+gewicht**. Waarnemingen op screenshots van de offline build (390 × 844 en 1440 × 900, 27 november):
 
-| PR | Inhoud | Sessie | Wat nog nodig is | Botst met |
+| # | Waarneming | Waar |
+|---|---|---|
+| W1 | **Desktop: vertrektijd onder de vouw.** Foto 1104 × 470 px; op 1440 × 900 zie je naam en "Nog geen reviews", niet het beslisblok | `Gallery`, `page.tsx` |
+| W2 | Beslisblok 2×2 met vier even grote vakken; Reserveren pas onderaan Goed om te weten | `decision-grid.tsx` |
+| W3 | Telefoon: vier gelijke tegels (Bewaar, Delen, Website, Bellen) direct onder het beslisblok, plus de vaste balk met Route | `ActionRow` |
+| W4 | Desktop: "Reserveren via de website" is een gevulde bosgroene knop; Route staat lager onder de kaart | `PriceCard`, `RouteCard` |
+| W5 | Kop op de plekpagina (telefoon): terug, logo, +, ⋯, Inloggen | `chrome.tsx` |
+| W6 | "Nog geen reviews" bovenaan elke plek (live: 0 reviews) | kop `page.tsx` |
+| W7 | "Check voor vertrek" herhaalt vertrek, prijs en reserveren | `CheckVoorVertrek` |
+| W8 | Help-blok: "7 van 12 gegevens bekend. Nog onbekend: …" en tot zes acties | `HelpBlock` |
+| W9 | "Mogelijk verouderd" in rood met waarschuwingsicoon | `OutdatedNote` |
+| W10 | Ervaringen vóór Over deze plek; hoogte, gewicht en lengte verspreid over Goed om te weten en Praktisch | `page.tsx` |
+| W11 | Correctieformulier: één `select` met 8 onderwerpen; Reserveren, Aankomst en Foto ontbreken | `ReportProblem` |
+| W12 | Teksten verwijzen naar de knop "Klopt er iets niet?", die niet meer bestaat; "Bedankt!" met uitroepteken | voorwaarden, melden, disclaimer, review-sheet |
+| W13 | Cookiebalk + vaste Route-balk samen ±170 px over de inhoud bij het eerste bezoek | `cookie-banner.tsx` |
+| W14 | "1 van 300" als volle-breedtekaart boven de foto op desktop | `ResultsNav` |
+| W15 | Springlinks (Overzicht, Voorzieningen, …) plakken op de telefoon bovenaan: ±56 px vaste ruimte | `section-nav.tsx` |
+| W16 | Prijs staat drie keer: beslisblok, vaste balk en (tablet/desktop) prijskaart | `page.tsx` |
+
+## 2. Plan A en plan B vergeleken
+
+### 2a. Waar ze hetzelfde zeggen (overgenomen)
+Beslisblok met vertrek eerst en prijs daarna; één centrale correctieknop met uitzondering voor de vertrektijd;
+reserveren eerst uitleggen, dan de externe link; één primaire actie (Route); onbekend is geen fout; mogelijk verouderd
+niet rood; reviews lager; kop met minder iconen; vaste termen voor acties; kaart → preview → plek; Dichtbij met
+rijtijd; Mijn reis met volgende stop; Doe mee met twee doelen; Plek aanmelden in stappen; huisstijl blijft.
+
+### 2b. Alleen in plan B, en waardevol (overgenomen)
+| Plan B | Wat we doen |
+|---|---|
+| §8, T10: springlinks weg op mobiel | **Overgenomen** (D9). Duidelijke sectiekoppen zijn genoeg, en zo komt het beslisblok hoger |
+| §7: vaste balk niet dubbel | **Overgenomen, aangepast** (D4): Route blijft altijd staan, de prijs verschijnt pas in de balk als het beslisblok uit beeld is |
+| §4.4, T07: voorzieningen en geschiktheid samen | **Overgenomen** (D8): lengte, hoogte, gewicht, ondergrond en betalen bij Voorzieningen als "Past je camper?" |
+| T56: statuscopy-matrix | **Overgenomen** in G1: één tabel voor onbekend, mogelijk verouderd, dicht en in behandeling |
+| §28, §51: 320 en 820 px testen, vragen per screenshot | **Overgenomen** in H2 |
+| §52: scorecard per release | **Overgenomen** in I1 (`SCREENSHOT-QA.md`) |
+| §53: zes begeleide gebruikerstests | **Overgenomen als 👤-spoor** (P1): Patrick in de testweek, scenario's uit plan B §53 en plan A §64 |
+| §40: 65+ als stresstest | **Overgenomen** in de QA-vragen |
+
+### 2c. Staat er al (niet opnieuw bouwen)
+| Plan B | Waar het al zit |
+|---|---|
+| T17 clustering | `place-map.tsx` (groepen met aantallen) |
+| T18 Zoek in dit gebied | sinds 0.9.1 |
+| T19, T59 lijst + kaart naast elkaar op desktop, selectie gekoppeld | `search-app.tsx`, `MapPick` |
+| §23 "Met filters: Gratis, Texel, Stroom" | `destination-search.tsx` |
+| §24 geen resultaten met voorstellen en aantallen | `nearbySuggestions` (Dichtbij) en zoekpagina |
+| T21–T24 Mijn reis volgende stop, kosten "€ 84 + 2 onbekend", statistieken lager | ontwerpronde 2 C2 |
+| T25 volgorde zonder slepen | knoppen "Eerder/Later in de reis" in `stop-list.tsx` |
+| §20 geen tekening als er geen foto is | `PlacePhoto`: rustig vlak met soort plek |
+| T13 filtersheet met "Toon n plekken" en vaste volgorde | C4 |
+| §31 compacte footer op taakpagina's | `footer.tsx` |
+
+### 2d. Verschillen: opties en mijn keuze
+| # | Onderwerp | Optie A | Optie B | **Gekozen** | Waarom |
+|---|---|---|---|---|---|
+| K1 | Knoptekst route | "Route openen" (A en B) | "Route" (nu) | **Route openen**, overal | Beide plannen; de balk is breed genoeg; één werkwoord per actie |
+| K2 | Knoptekst website | "Website openen" (A) | "Naar de website" (B, nu deels) | **Naar de website** + domein klein eronder | Zegt waar je heen gaat (B §6); sluit aan op wat er staat |
+| K3 | Correctieknop | "Gegevens corrigeren of aanvullen" (A, V4) | "Gegevens corrigeren" (B) | **Gegevens corrigeren of aanvullen** | Jouw besluit V4; aanvullen is de helft van de meldingen |
+| K4 | Vaste balk | altijd prijs + Route (nu) | pas tonen na 1 scherm (B §7) | **Route altijd, prijs pas als het beslisblok uit beeld is** | Zonder actierij is de balk de enige Route op de telefoon, dus die moet er meteen zijn; de prijs dubbel tonen hoeft niet |
+| K5 | Snelle chips Zoeken | Zonder vertrektijd, 12:00+, Nu open, Voorzieningen (nu, T13) | + Stroom en Lozen als chip (B §10) | **Zo laten** | Pas gisteren besloten; geen gebruiksdata die iets anders zegt (A §15: geen chip per veld) |
+| K6 | Start: wat eerst | Dichtbij-knop, dan zoekveld (nu, brief) | zoekveld eerst (B §9) | **Zo laten** | Beide staan al boven de vouw; avondzonknop is een vast besluit in de brief |
+| K7 | Component-API's | alles nu: Button, Status, DataRow, Section, Card (B T38–T42) | alleen wat de plekpagina nodig heeft | **Alleen `DecisionSummary`, `DataRow` en één status voor onbekend/verouderd** | Bevriezing 19 december; een grote refactor raakt elke pagina en de e2e. De rest na de livegang |
+| K8 | Analytics-events (B §54) | nu bouwen | na de livegang | **Na de livegang** | Geen tracking van derden; eerst toestemming en meting op productie (LANCERING 3.3) |
+| K9 | Rapporten | in de root (A §69) | – | **`docs/review/`** | Zoals de eerdere reviews |
+| K10 | "vanaf € 18" (B §4.6: niet zonder context) | uitleggen | bestaande prijslogica | **Bestaande logica** | A §5.4: de datalogica voor prijzen is leidend; "vanaf" komt uit de bron |
+
+## 3. Matrix behouden / versimpelen / herstructureren / herbouwen
+
+| Onderdeel | Oordeel | Toelichting |
+|---|---|---|
+| Huisstijl, tokens, Geist, kleuren, kaartstijl | **Niet aanraken** | Vast (brief, stijlgids, besluit 75); beide plannen |
+| Startpagina | **Behouden** | Propositie zoals A §22 en B §9; #200 maakte hem rustiger |
+| Zoeken: rij, chips, filtersheet, desktop lijst + kaart | **Behouden** | §2c |
+| Kaart: stippen, groepen, paneel, Zoek in dit gebied | **Behouden**, C5 afmaken | §2c |
+| Dichtbij | **Versimpelen** (klein) | nul resultaten en locatie geweigerd nalopen |
+| Mijn reis | **Behouden** | QA op ontbrekende data |
+| Plekpagina: kop, foto, springlinks | **Herstructureren** | W1, W5, W6, W14, W15 |
+| Plekpagina: beslisblok | **Herbouwen** | W2 |
+| Plekpagina: acties en vaste balk | **Herstructureren** | W3, W4, W13, W16 |
+| Plekpagina: Goed om te weten, Voorzieningen, Praktisch | **Herstructureren** | W10 |
+| Plekpagina: Ervaringen | **Versimpelen** | W6, W7 |
+| Plekpagina: help-blok + formulier | **Herstructureren** | W8, W11 |
+| Kop (globaal) | **Versimpelen** op de plekpagina | W5 |
+| Formulieren (aanmelden, doe mee) | **Nalopen** | A §25–26, B T32–T35 |
+| Provincie- en plaatspagina's | **Nalopen** | A §24, B §15 |
+
+## 4. Routes: taak, eerste vraag, primaire actie, risico
+
+| Route | Doel | Eerste vraag | Primaire actie | Grootste risico nu |
 |---|---|---|---|---|
-| #53 | Eigenaar vult zijn plek aan | Iets mee doen | CI groen, wacht op review | #48, #46 |
-| #52 | Laatste aankomst en reserveren (pipeline en migratie) | Site progress | Migratie staat al live als `20261022092015` en `..092604`; bestandsnaam in de PR is `20261022100000` | #51, #47, #46 |
-| #51 | Totaalprijs per nacht voor 2 personen | Site progress | Review | #52, #49, #47, #46 |
-| #50 | Eerste 20 plekken op de server (B4), vertrektijd met één klik overnemen | Mobile UI redesign | CI groen op 3aa663d, wacht op test | geen |
-| #49 | WCAG 2.1 AA afronden (P13), 38 bestanden | onbekend | Review; raakt bijna alles | #51, #47 |
-| #48 | Reviews alleen met account of code per mail | Skills PRD assessment | Migratie `reviews_met_account` niet live; sessie wacht op toestemming voor SQL | #53, #47, #46, #37 |
-| #47 | SEO-pagina's per provincie, plaats, eiland en vertrekgroep | onbekend | Review | #52, #51, #49, #48, #46, #37 |
-| #46 | Onvolledige plekken grijs, "mogelijk verouderd" na 12 maanden | onbekend | Review | #53, #52, #51, #48, #47, #37 |
-| #45 | Stand tien punten, N+1-fix Beheer → Foto's | 10 punten evaluatie | Gericht op `main` en 33 commits achter; migratie `user_trust_lijst` niet live | geen |
-| #44 | Implementatieplan: contactregel en OSM-ronde (één regel) | afgerond | Mergen | geen |
-| #37 | PRD bijgewerkt na vragenronde, ook `CLAUDE.md` | Skills PRD assessment | Review | #48, #47, #46 (docs) |
-| #43 | Dependabot: drie kleine updates | | Mergen als CI groen is | geen |
-| #40 | Dataplan Fase 0: bronnenlaag, bronnenbeleid, MCP-server (2.935 regels) | | Voorstel: buiten deze base houden, apart beoordelen | geen |
-| #28 | TypeScript 5.9 naar 7.0 | | Voorstel: niet in deze base; later apart | |
+| `/` | plek vinden | waar wil ik staan? | Plekken bij mij in de buurt / zoeken | welkomstsheet over de start bij eerste bezoek (besluit 87) |
+| `/zoeken`, vertrekgroepen | vergelijken | welke plek past? | plek openen | weinig; QA |
+| `/dichtbij` | nabij kiezen | wat haal ik nog? | plek kiezen | nul resultaten, locatie geweigerd |
+| `/plek/[slug]` | beslissen | kan ik hier staan, hoe laat weg? | Route openen | **te veel even zware blokken en acties** |
+| `/mijn-reis` | reis plannen | volgende stop? | Route openen | weinig; QA bij onbekende data |
+| `/camperplaatsen/*` | oriënteren (SEO) | wat is er in deze streek? | plek openen | database-gevoel |
+| `/doe-mee`, `/plek-aanmelden`, `/melden` | bijdragen | hoe help ik? | formulier | lange formulieren |
+| `/account`, `/inloggen` | ondersteunend | – | inloggen | geen accountdruk (staat goed) |
+| 404, fout, offline | herstellen | waar nu heen? | Terug naar Zoeken | QA |
 
-### 1b. Sessies
+## 5. Besluiten Patrick (27 november 2026)
 
-| Sessie | Branch | Staat | Voorstel |
-|---|---|---|---|
-| Iets mee doen | `claude/eigenaar-aanvullen` | wacht op merge #53 | stoppen na opname |
-| Site progress | `claude/externe-bronnen` (#51, #52) | wacht op toestemming SQL | stoppen na opname |
-| Mobile UI redesign en foto's | `claude/mobile-ui-photos-ux-axxlae` (#50) | wacht op test | stoppen na opname |
-| Skills PRD assessment | `claude/prd-bijwerken` (#37, #48) | wacht op toestemming SQL | stoppen na opname |
-| 10 punten evaluatie | `claude/duizend-gebruikers` (#45) | wacht op SQL en geheimen 👤 | stoppen na opname |
-| Camperdashboard implementation plan | `claude/launch-hardening` | wacht op `NEXT_PUBLIC_SUPABASE_URL` 👤 | vraag beantwoorden, dan stoppen |
-| Feature review en plan | `feature/kernbelofte-acceptatie` | vraagt om B9, al besloten | archiveren |
-| Local host setup | `claude/local-host-setup-3xwg5y` | PR #6 al gemerged | archiveren |
-| Tool plan, audit en feedback | `claude/brave-wright-odz441` | sessielimiet, werk gemerged | archiveren |
-| Repository redesign | `redesign/nextjs` | vraagt om besluiten die al genomen zijn | archiveren |
-| Claude code integration | `claude/everything-claude-code` | PR #30 gemerged | archiveren |
+| Vraag | Besluit |
+|---|---|
+| V1 Beslisblok | Vertrek groot over de volle breedte, prijs eronder, Aankomst · Open · Reserveren als drie compacte regels |
+| V2 Acties telefoon | Alleen Route prominent; tegelrij weg; Bewaren als hartje op de foto, Delen als icoon bij de naam; Website/Bellen als regels bij Reserveren en Contact |
+| V3 Kop plekpagina | Terug, Bewaren, ⋯ (Delen, Plek aanmelden, Hulp, Donker, Inloggen); naam verschijnt bij scrollen |
+| V4 Bijdragen | Eén knop **Gegevens corrigeren of aanvullen** + blok **Eigenaar van deze plek?**; teller weg; Foto toevoegen als kleine link; oproep **Vertrektijd doorgeven** blijft bij een onbekende vertrektijd |
+| V5 Mogelijk verouderd | `ink-2` halfvet met icoon, geen rood en geen avondzon |
+| V5b Desktopfoto | Lager, ongeveer 320 px |
+| V6 Check voor vertrek | Weg; Ervaringen houdt Google-cijfer en reviews |
+| K1–K10 | Gekozen door Claude op verzoek van Patrick (27 november), zie §2d; elk punt is los terug te draaien |
 
-Archiveren en oude branches verwijderen gebeurt pas na akkoord van Patrick.
+## 6. Fasen en taken
 
-### 1c. Gaten die we eerst nalopen
+Werkwijze per fase: bouwen → `npm run check` → e2e die het raakt → screenshots → specs en stijlgids in dezelfde
+commit. Per fase hoogstens één review met `code-reviewer`. Geen migraties of edge functions: alles is presentatie.
 
-| # | Wat | Aanpak |
+### Fase A: audit ✅
+- ✅ Docs, routes, componenten en smells gelezen; offline build en screenshots; matrix (§3) en routetabel (§4).
+- ✅ Plan B vergeleken (§2).
+
+### Fase D: plekpagina (P0) ✅ (27 november, commit 1880a8d)
+
+Afwijking van de tabel: Bewaren staat op de telefoon in de kop (V3), niet ook als hartje op de foto, en Delen in het
+menu ⋯; zo staat elke actie één keer in beeld. De oproep Vertrektijd doorgeven staat alleen in het beslisblok, niet
+nog eens onderaan. D15 (cookiebalk) bleek al goed: hij staat boven de vaste balk.
+
+Doelvolgorde op de telefoon:
+
+```text
+Kop: terug · (naam bij scrollen) · Bewaren · ⋯
+Foto (hartje op de foto, "Foto: domein" eronder)
+Naam · Soort in plaats, provincie · [score als er reviews zijn] · afstand
+Laatste update: datum[, mogelijk verouderd]
+BESLISBLOK   Vertrek (groot, met steunzin; bij onbekend: Vertrektijd doorgeven)
+             Prijs (bedrag, per nacht / + toeslagen)
+             Aankomst · Open · Reserveren
+Goed om te weten: tijden en voorwaarden → reserveren uitgelegd + Naar de website → prijs in detail
+Voorzieningen + Past je camper? (lengte, hoogte, gewicht, ondergrond, betalen)
+Ligging en route (kaart, adres, Route openen)
+Over deze plek
+Ervaringen (Google-cijfer, reviews)
+Contact (telefoon, website, e-mail)
+In de buurt
+Klopt er iets niet? → Gegevens corrigeren of aanvullen · Foto toevoegen
+Eigenaar van deze plek? → Gegevens aanpassen
+Vaste balk: [prijs zodra het beslisblok uit beeld is] · Route openen
+```
+
+| # | Taak | Moeite |
 |---|---|---|
-| G1 | Drie migraties met dezelfde versie `20261022100000` (#52, #48, #45) | #52 hernoemen naar de live versies; #48 en #45 een eigen, latere tijd |
-| G2 | `20261019070000_contact_beheerder.sql` staat in `acceptatie`, maar niet in de live migratielijst | In de database nagaan of de functie al live is (dan via SQL gezet); anders live zetten |
-| G3 | #45 is gericht op `main` | De fix en migratie overnemen in deze ronde; de plantekst gaat op in dit plan |
-| G4 | #47 en #49 passen het oude `plan.md` aan | Hun wijzigingen verwerken in `docs/archief/plan-2026-10-16.md` of in dit plan |
+| D1 | **`DecisionSummary`** (vervangt `DecisionGrid`): vertrek over de volle breedte en groter, met steunzin ("Je kunt vertrekken wanneer het jou uitkomt" / "Je verblijf loopt per 24 uur" / "We weten nog niet hoe laat je hier moet vertrekken"); prijs; daarna drie `DataRow`'s Aankomst, Open, Reserveren. Onbekend = "Onbekend", gedempt, geen fout | M |
+| D2 | Onbekende vertrektijd: link **Vertrektijd doorgeven** opent het formulier meteen op Vertrektijd | S |
+| D3 | Acties: `ActionRow` weg; hartje op de foto; Delen-icoon naast de naam; Website/Bellen als regels bij Reserveren en Contact | M |
+| D4 | Vaste balk: altijd **Route openen**; de prijs schuift er pas in als het beslisblok uit beeld is (IntersectionObserver, geen layout shift) | S |
+| D5 | Desktop: zijkolom begint met **Route openen** (primair), dan "Naar de website" (secundair, met domein), telefoon, e-mail | S |
+| D6 | Desktopfoto ±320 px; "1 van 300" als dunne tekstregel | M |
+| D7 | Kop op de plekpagina: terug, naam bij scrollen, Bewaren, ⋯ met Delen, Plek aanmelden, Hulp, Donker, Inloggen | M |
+| D8 | Volgorde zoals hierboven; "Past je camper?" bij Voorzieningen; Praktisch wordt Contact (alleen adres en contact) | S |
+| D9 | Springlinks weg tot `lg` (B T10); vanaf `lg` niet nodig door de zijkolom | S |
+| D10 | "Nog geen reviews" weg uit de kop; score klein en alleen als er reviews zijn | S |
+| D11 | Check voor vertrek weg (V6) | S |
+| D12 | Help-blok → **Klopt er iets niet?** (één zin + **Gegevens corrigeren of aanvullen** + kleine link Foto toevoegen) en **Eigenaar van deze plek?** (**Gegevens aanpassen**). Teller en lijst weg. Drukte doorgeven via het formulier | M |
+| D13 | Formulier: eerste stap **Wat wil je aanpassen?** als radiolijst (Vertrektijd, Prijs, Aankomst, Reserveren, Voorzieningen, Contactgegevens, Locatie, Foto, De plek bestaat niet meer, Anders), daarna alleen die velden; fout bij het veld; invoer blijft staan. Zelfde RPC `submit_place` | M |
+| D14 | Mogelijk verouderd in `ink-2` halfvet met icoon (V5) | S |
+| D15 | Cookiebalk op taakpagina's niet over de vaste balk: erboven aansluiten | S |
+| D16 | Tests: onbekende vertrektijd, oude data, prijs onbekend, reserveren onbekend, centrale correctieflow, vaste Route, prijs in de balk pas na scrollen, desktop: vertrektijd in de eerste viewport | M |
 
-### 1d. Alleen Patrick 👤
+### Fase E: Zoeken, kaart, Dichtbij (P0, klein) ✅ (27 november, commit c1e4f58)
+- ⬜ E1 Dichtbij nul resultaten: hoogstens twee uitwegen in beeld (A §17).
+- ⬜ E2 Dichtbij locatie geweigerd: één zin + zoekveld "Zoek op een plaats of streek" (A §47).
+- ⬜ E3 Kaartpaneel en popup: foto, naam, vertrek, prijs, rijtijd, **Route openen**, **Bekijk plek** (+ hartje); C5 afronden.
+- ⬜ E4 e2e: lijst ↔ kaartselectie en terugkeer met filters en scroll (A §45, B T19).
+- ⬜ E5 Rijtijd nooit tonen als het hemelsbreed is (B §12): test op de bestaande labels.
 
-Al eerder gevraagd, nog steeds open:
+### Fase F: Mijn reis (P0, alleen QA) ✅ (27 november, commit c1e4f58)
 
-- Supabase SQL-editor: `web/supabase/retention.sql`, `delete_my_account` en `drop table private.probe, private.probe2;` (B5).
-- GitHub: geheimen `SUPABASE_DB_URL`, `BACKUP_PASSPHRASE` en variabele `SITE_URL` (B10).
-- Vercel: de waarde van `NEXT_PUBLIC_SUPABASE_URL` doorgeven (inloggen werkt niet).
-- Beheeraccount (B6), bedrijfsgegevens (B8), mailprovider (B7), domein, branch protection (E5).
+F2: Delen en Meer reisopties blijven direct onder Volgende stop (brief, rij Mijn reis); het is een gesloten menu,
+geen instellingen vóór de stops.
+- ⬜ F1 Onbekende vertrektijd of rijtijd: gewone status, uitleg alleen als de berekening er last van heeft (A §21).
+- ⬜ F2 e2e: volgende stop bovenaan, reisopties niet boven de stops, volgorde wijzigen zonder slepen (B T25).
 
----
+### Fase G: globaal (P1)
+- ✅ G1 **Woordenboek en statuscopy** (stijlgids §11a, doorgevoerd; FAQ via migratie `20261127100000` na de merge) (A §32, B T55–T56) in de stijlgids, daarna overal doorvoeren:
+  Bewaren · Route openen · Naar de website · Bellen · Delen · Gegevens corrigeren of aanvullen · Vertrektijd
+  doorgeven · Vertrektijd onbekend · Onbekend · Laatste update · Mogelijk verouderd · Bekijk plek. Verwijzingen naar
+  "Klopt er iets niet?" in voorwaarden, melden, disclaimer en FAQ; "Bedankt!" zonder uitroepteken.
+- ✅ G2 Doe mee: twee doelen (plek verbeteren, plek aanmelden), eigenaren onderaan.
+- ✅ G3 Plek aanmelden in stappen (welke plek, waar, wat weet je, contact); server-side validatie blijft.
+- ✅ G4 Formulierfouten en successen gelijk: fout bij het veld, invoer blijft, succes zegt wat er nu gebeurt (B T34–T35).
+- ✅ G5 Empty, loading, error en offline per datacomponent: skeleton zoals de echte lijst; offline "Geen verbinding.
+  Je ziet de gegevens die eerder zijn bewaard."
+- ✅ G6 (stond er al; nagekeken op screenshots) Provincie- en plaatspagina's als reisgids: titel, korte feiten, kaart, vertrekgroepen, plekken, plaatsen.
+- ✅ G7 (schermen van deze ronde schoon: schaduw en 16 px alleen op zwevende delen) Technische opruimlijst (A §55, B T43–T47): 13× `shadow-`, 9× `text-[…]`, 2× `rounded-2xl`, 32 inline
+  styles, 77 hexwaarden (meeste in kaart, iconen en OG-beelden: terecht). Alleen in schermen die we toch aanraken.
 
-## 2. Samenvoegen tot de nieuwe base version
+### Fase H: toegankelijkheid en schermformaten (P0 vóór 19 december)
+- ✅ H1 axe-e2e op alle gewijzigde schermen; toetsenbord, focus in sheets en terug naar de knop, Escape, 44 px,
+  reduced motion, geen betekenis alleen via kleur (A §42, B T49–T54).
+- ✅ H2 Screenshots 320, 390 (licht en donker), 430, 820 en 1440 (licht; plekpagina ook donker). Randgevallen:
+  lange naam, lang adres, geen foto, geen prijs, onbekende vertrektijd, oude data, lange beschrijving, 0 en veel
+  reviews. Per screenshot de negen vragen uit B §51.
 
-Werkbranch `claude/ecstatic-edison-64e02x`, vanaf `acceptatie`. Volgorde: klein en docs eerst, dan de keten op de
-plekpagina, WCAG als laatste omdat die bijna alles raakt. Na elke stap `cd web && npm run check && npm test`.
+### Fase I: oplevering
+- ✅ I1 In `docs/review/`: `UX-AUDIT-REPORT.md`, `DESIGN-DECISIONS.md`, `SCREENSHOT-QA.md` (met scorecard B §52; geen
+  release onder 4 op Hiërarchie, Scanbaarheid, Rust en Actie).
+- ✅ I2 Specs bijwerken: `04-ui-ux-brief.md` (Plek, Laatste update, Navigatie), `03-app-flow.md`, stijlgids
+  (informatiedichtheid A §39, woordenboek), implementatieplan, README 145.
 
-| Stap | PR's | Let op | Status |
-|---|---|---|---|
-| 1 | #44, #43, #37 | Alleen docs en kleine updates | ✅ |
-| 2 | #50 | Zoeken met de eerste 20 plekken op de server | ✅ |
-| 3 | #52, dan #51, dan #46 | Migratie #52 hernoemen (G1); plekpagina en `place-ui.tsx` samenvoegen: aankomst, totaalprijs en status naast elkaar | ✅ |
-| 4 | #53, dan #48 | `departure-radios.tsx` uit beide; migratie #48 hernummeren (G1) | ✅ |
-| 5 | #47 | SEO-pagina's op de nieuwe plekpagina | ✅ |
-| 6 | #49 | WCAG over alles heen; a11y-e2e opnieuw | ✅ plus twee fixes na het samenvoegen: tikdoelen van de SEO-links, `connection()` in `zoeken/search.tsx` |
-| 7 | #45 | Alleen de N+1-fix en de migratie (G3) | ✅ |
-| 8 | Controle | `npm run check && VRIJSTAAN_OFFLINE=1 npm run build`, unit-tests, Playwright (met a11y) | ✅ 226 unit-tests, 192 Playwright-tests |
-| 9 | Live zetten | Migraties #48 en #45 en G2 in Supabase; edge function `pipeline` als #52 een nieuwere versie heeft dan live | ✅ `user_trust_lijst` live, G2 stond al live, pipeline v43 live. #48 pas na de deploy van `main` |
-| 10 | Opruimen | Eén PR naar `acceptatie` die #44 tot en met #53 vervangt; in elke oude PR een regel "opgenomen in …"; sessies laten stoppen | ✅ #54 en #55 gemerged, #37 en #43 tot en met #53 gesloten, sessies gearchiveerd |
-| 11 | Base version 👤 | Patrick test de Vercel-preview; `acceptatie` naar `main`; tag `v0.2-basis` | ✅ `main` 848536a (23 oktober), reviewmigratie live |
+### Spoor P: alleen Patrick 👤
+- 👤 P1 Zes begeleide tests (2× 40–49, 2× 50–64, 2× 65+) in de testweek, met de scenario's van B §53 en de vijf taken
+  van A §64. Noteer misklikken, terug, vragen en "waar moet ik klikken?".
+- 👤 P2 Na de livegang: besluit over eigen meting van de events uit B §54 (met toestemming).
 
-Bij botsingen in de docs houden we beide kanten. Bij een inhoudelijke keuze in de code (twee PR's willen iets anders op
-dezelfde plek) stoppen we en vraagt de agent het aan Patrick. De specs worden bijgewerkt in dezelfde commits
-(implementatieplan, schema, app flow, open punten in `docs/specs/README.md`).
+### Na de livegang (bewust niet nu)
+- Button-, Card- en Section-API voor de hele site (B T38, T41, T42).
+- Snelle chips en startvolgorde opnieuw bekijken met echte gebruiksdata (K5, K6).
+- Visuele snapshottests in CI (bestaand besluit: de data wisselt dagelijks).
+- Tabnamen blijven Start, Zoeken, Dichtbij, Mijn reis (beide plannen: niet veranderen zonder bewijs).
 
----
+## 7. Botsingen met eerdere besluiten (CLAUDE.md: melden vóór bouwen)
 
-## 3. Na de merge: rapport over de base version
-
-Komt in dit bestand (§5) en als pagina om te delen.
-
-- **Wat de base version is**: functies per scherm, aantal plekken live, wat in Supabase draait (migraties, edge functions,
-  cron), wat nog op Patrick wacht.
-- **Voor- en nadelen**: wat sterk is en wat zwak is, eerlijk en met cijfers waar die er zijn.
-- **Review vanuit de gebruiker**: de site doorlopen op iPhone-formaat (Playwright, lokale build), als camperaar uit de doelgroep (40+ volgens de PRD in #37):
-  zoeken, filteren, plek openen, vertrektijd en prijs lezen, bewaren, reis plannen, offline. Daarnaast de eigenaar die
-  zijn plek aanvult en iemand die meedoet. Per stap: wat werkt, wat stoort, met screenshot en prioriteit.
-
-## 4. Meedenken met Claude Design
-
-Na het rapport een designverkenning met Claude Design van de drie hoofdschermen: start, zoeken en plekpagina. Binnen de
-vaste stijlgids (`docs/stijlgids.md`, skill `vrijstaan-stijl`: zandpapier, bosgroen, avondzon, meerblauw, Geist).
-Input: de bevindingen uit de gebruikersreview. Twee of drie varianten; Patrick kiest, daarna wordt de keuze een taak in
-het implementatieplan.
-
-## 5. Base version: rapport en designronde
-
-- Rapport (wat erin zit, cijfers, sterk en zwak, gebruikersreview): https://claude.ai/artifact/2Nos9bWU62qykbAC2hKzvr
-- Designcanvas met varianten: https://claude.ai/artifact/Mu311sSaEa3nn85Uh9LHjc
-- Gebouwd uit de designronde: plekpagina B, zoeklijst A en de tekst van start A (implementatieplan, Mijlpaal 5).
-- Nog open voor Patrick 👤: `web/supabase/retention.sql` uitvoeren (database groeit ~19 MB per dag; de Supabase-tool van
-  de agents laat `delete` niet door), de oude `submit_review` droppen (README nummer 55), beheeraccount, mailprovider,
-  back-upgeheimen.
-- Herscrape met parser 43 klaar (23 oktober, 3.242 websites): +132 vertrektijden, 203 laatste aankomsttijden, 919 reserveringsregels; 15 verdwenen vertrektijden hersteld uit de baseline. Volgende: ronde 2 (forums, reviews, gidsen) voor de plekken zonder vertrektijd.
-- Scrape-taken samengevoegd tot één (migratie `20261023210000_scrape_een_taak.sql`): een tiende van de logregels.
-- Later, als de aankomsttijden gevuld zijn: zoeklijst B ("Hier kun je nog aankomen") en start B.
-- Ronde 2 proef (23 oktober): 0 van 8 steekproefplekken kreeg via zoeken of een tweede leesronde een vertrektijd; de tijd staat meestal nergens. Voorstel in `docs/specs/README.md` nummer 59.
-- Pipeline v48 live (24 oktober): lege startpagina wist niets meer; van de 18 teruggevallen plekken zijn er 7 weer gepubliceerd (prijs teruggezet uit de baseline), 11 blijven concept.
-- Kapotte websites (24 oktober): 7 nieuwe adressen gevonden, 5 plekken kregen daardoor een vertrektijd en staan online. 11 sites hebben een certificaatfout (niet omzeild), de rest blijft zonder adres.
-
----
-
-## 6. Naar beta (24 oktober 2026)
-
-**Beta = gesloten beta:** de site draait op het Vercel-adres van `main`, zonder eigen domein en zonder verplicht account;
-testers komen uit een paar Facebookgroepen en fora. Reviews staan uit tot er eigen mail is; vertrektijd doorgeven,
-eigenaar aanvullen, bewaren, reis en offline werken zonder account. Doel van de beta: laten zien dat de kernbelofte
-(hoe laat moet ik weg) klopt, en leren welke tijden ontbreken of fout zijn.
-
-### 6a. Stand base version (live cijfers)
-
-| | Nu | Beta-doel |
+| Nieuw | Eerder besluit | Status |
 |---|---|---|
-| Gepubliceerde plekken | 2.095 (1.509 concept) | zo houden |
-| Met vertrektijd | 1.362 (65%), waarvan 1.331 vaste tijd | ≥ 70% van de camperplaatsen |
-| Camperplaatsen met vertrektijd | 137 van 295 (46%) | ≥ 60% of eerlijk "onbekend" met invulroute |
-| Met nachtprijs | 1.221 (58%) | 70% (PRD-release: 90%) |
-| Met laatste aankomst / reserveerregel | 189 / 741 | zo laten groeien |
-| Met contactgegevens | 1.990 (95%) | zo houden |
-| Door beheer bevestigd | 0 | 0 mag in beta, wel de route klaar |
-| Reviews / gebruikers | 0 / 0 | n.v.t. in beta |
-| Database | 198 MB van 500 MB, cron-logboek 156 MB | < 150 MB, groei < 2 MB per dag |
+| V1 beslisblok nieuwe opbouw | 2×2 (30 oktober, README 144) | Besloten 27 november |
+| V2 geen actierij | Actierij vier tegels (18 november) | Besloten 27 november |
+| V3 kop plekpagina | T39 (26 november) | Besloten 27 november |
+| V4 één correctieknop, geen teller | README 144 | Besloten 27 november |
+| V5 verouderd in `ink-2` | T27 via README 142 (`alert`) | Besloten 27 november |
+| V6 Check voor vertrek weg | README 141 | Besloten 27 november |
+| D9 springlinks weg op mobiel | Plekpagina-ronde 18 november ("springlinks die blijven plakken") | Gekozen door Claude (K, op verzoek Patrick) |
+| K1 "Route openen" | Brief: knop **Route** | Gekozen door Claude |
 
-### 6b. Wat de base version is
-Sterk: vertrektijd centraal op kaart en plekpagina; prijs met toeslagen; geen tracking; snel en offline; eerlijk
-"onbekend"; 249 unit-tests en 192 Playwright-tests groen; scraper met controle tegen een baseline (geen verlies meer).
-Zwak: een derde van de camperplaatsen zonder tijd; geen beheeraccount en geen eigen mail (inzendingen en reviews
-bereiken niemand); bedrijfsgegevens staan nog als "[… nog invullen]" op de juridische pagina's; geen eigen domein;
-veel plaatsnamen uit OSM zijn gemeente in plaats van dorp.
+## 8. Planning (vóór de bevriezing van 19 december)
 
-### 6c. Verbeterplan en wie wat doet
+| Week | Claude | Patrick |
+|---|---|---|
+| 27 nov – 3 dec | Fase D (plekpagina) bouwen en testen | A1–A4 uit het vorige stappenplan |
+| 4 – 10 dec | Fase E, F, G1 | Plekpagina beoordelen op je telefoon |
+| 11 – 18 dec | H1, H2, G2–G6 voor zover tijd, I1, I2, samenvoegen | P1 gebruikerstests plannen |
+| 19 – 31 dec | Alleen fixes | P1 tests, afvinken |
 
-| # | Wat | Wie | Status |
-|---|---|---|---|
-| B1 | PR #56 en #57 (design, scraper v47/v48, eigenaarsroute, bronnenlaag) naar `acceptatie` en `main` | Agent | 🔄 |
-| B2 | Database niet laten volgroeien: cron-logboek opruimen en retentie activeren | Agent | 🔄 24 okt: logboek opgeruimd (gewone `delete` in blokken + `vacuum full`), database 202 MB → 51 MB, groei ~2 MB per dag. De dagelijkse functie `private.apply_retention()` met cron `retention` staat nog niet live: de Supabase-tool vraagt bij `create function` met `delete` om een bevestiging die niet komt (zie `web/supabase/retention.sql`) |
-| B3 | Plaatsnaam = officiële woonplaats voor alle plekken (PDOK, README 61) | Agent | ✅ 24 okt: 1.395 plekken aangepast, 2.256 klopten al |
-| B4 | Beheer-inzendingen afhandelen | Agent | 🔄 25 okt: uitnodiging voor de eigenaar staat klaar (`private.admin_invites`); inzendingen komen binnen zodra hij één keer inlogt |
-| B5 | Dode websites: nog ~100 plekken zonder adres; foutlijst voor Beheer | Agent | 🔄 25 okt: 228 concepten zijn één beslisfeit van publicatie verwijderd (README 66); patronen uitgeput, besluit over de harde eis bij Patrick |
-| B6 | Ronde 2: aanwijzingen zonder controle (8) en twijfelgevallen (18+14) handmatig afwerken voor zover mogelijk | Agent | ⬜ |
-| B7 | Prijzen: scraper v49 en v50 (patronen "N personen inclusief" en "all-inclusief"); prijsdekking 59% | Agent | 🔄 +9 prijzen bij ~1.700 herlezen plekken; 70% is zo niet haalbaar, doel beta 60% met "prijs onbekend" eerlijk zichtbaar |
-| B8 | Juridische pagina's: geen "[nog invullen]" meer | Agent | ✅ 25 okt: eerlijke hobbyproject-zin; naam en adres voor livegang blijven nodig (README 63) |
-| B9 | Alleen Patrick: naam en contactadres, domein, mailprovider, OAuth-sleutels, back-upgeheimen | Patrick | 👤 (niet nodig voor de gesloten beta, wel voor livegang) |
-
-Volgorde: B1 → B2 → B3 → B5 → B6 → B7 → B8 → B4.
-
-Open PR's per 25 oktober: alleen #60 (stealth-lezer, besluit eigenaar in open punt 62; uitrol door de sessie "Scraper evaluation"). #28 (TypeScript 7) gesloten tot `typescript-eslint` TS 7 ondersteunt.
+Gaat de tijd op, dan valt eerst G6, daarna G3 en G2 weg. Fase D, E, F, G1 en H gaan voor.

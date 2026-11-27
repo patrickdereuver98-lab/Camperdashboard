@@ -26,11 +26,12 @@ test("website en route tellen elk apart, met de slug van de plek", async ({ page
   });
   await page.goto(`/plek/${place.slug}`);
 
-  // Mobiel staat de website bij Praktisch en contact, vanaf md alleen in de prijskaart van de zijkolom
+  // Mobiel staat de website bij Reserveren en Contact, vanaf md bij Route openen
   await page.locator("main a[target=_blank]:visible").first().click();
   await expect.poll(() => events.filter((e) => e.p_name === "outbound").map((e) => e.p_props)).toContainEqual({ soort: "website", slug: place.slug });
 
-  await page.locator("#ligging").getByRole("button", { name: "Open in navigatie" }).click();
+  // Route openen: in de vaste balk (telefoon) of bovenaan de zijkolom (groot scherm)
+  await page.getByRole("button", { name: "Route openen" }).filter({ visible: true }).first().click();
   await page.getByRole("link", { name: "Google Maps" }).click();
   await expect.poll(() => events.filter((e) => e.p_name === "route").map((e) => e.p_props)).toContainEqual({ slug: place.slug, app: "Google Maps" });
   // Een route is geen doorklik naar de website

@@ -4,6 +4,15 @@ Elke versie is een stand van `main` met een tag (bijvoorbeeld `v0.9.1`). Wat liv
 
 ## Volgende versie (in de maak)
 
+**UX-audit "volwassen maken"** ([plan](plan.md), README 145; geen migraties)
+- Plekpagina: eerst de vertrektijd (groot), dan de prijs, dan aankomst, open en reserveren. Eén hoofdknop Route
+  openen; geen rij met vier knoppen en geen springlinks meer. Op een computer staat de vertrektijd zonder scrollen in
+  beeld.
+- Eén knop onderaan om gegevens te corrigeren of aan te vullen (eerst kiezen wat), een eigen blok voor eigenaren, en
+  "mogelijk verouderd" niet meer in rood.
+- Dichtbij helpt verder met hoogstens twee voorstellen; zonder locatie meteen zoeken op een plaats. Kaartpaneel en
+  Mijn reis: Route openen.
+
 **Herlezing** (dataplan november, spoor 1.4)
 - Een vertrekregel verdwijnt nooit stil: zegt een lezing niets over het vertrek, dan blijven regel, tijd en bronzin
   staan en wordt het wissen een voorstel in de Triage Inbox (migratie `20261120400000_vertrek_niet_stil_wissen`). In de

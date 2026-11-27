@@ -46,8 +46,8 @@ export default function DisclaimerPage() {
       <Section title="Contact">
         <p>
           <CompanyIdentity /> Zie je een fout, mail dan
-          naar <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> of gebruik de knop &quot;Klopt er iets niet?&quot; op
-          de pagina van de plek.
+          naar <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> of gebruik de knop &quot;Gegevens corrigeren of
+          aanvullen&quot; onderaan de pagina van de plek.
         </p>
       </Section>
     </ProsePage>

@@ -6,7 +6,7 @@ import { expect, PRERENDERED, test } from "./fixtures";
 // Alleen in het desktopproject: de breedte zetten we hier zelf.
 
 const WIDTHS = [320, 360, 390, 820];
-const PAGES = ["/", "/zoeken", `/plek/${PRERENDERED[0].slug}`, "/mijn-reis", "/plek-aanmelden"];
+const PAGES = ["/", "/zoeken", `/plek/${PRERENDERED[0].slug}`, "/mijn-reis", "/plek-aanmelden", "/doe-mee"];
 
 async function overflow(page: Page) {
   return page.evaluate(() => {
@@ -38,7 +38,9 @@ test.describe("kleine schermen", () => {
         expect(m.body, `${path} op ${width} px: body breder dan het scherm`).toBeLessThanOrEqual(m.client);
 
         // Inloggen en het menu Meer (met de themaknop, UI/UX-plan T39) staan helemaal in beeld
-        for (const id of ["account-button", "menu-button"]) {
+        // Op de plekpagina staat Inloggen onder md in het menu ⋯ (UX-audit 27 november, V3)
+        const ids = path.startsWith("/plek/") && width < 768 ? ["menu-button"] : ["account-button", "menu-button"];
+        for (const id of ids) {
           const box = await page.getByTestId(id).boundingBox();
           expect(box, `${id} op ${path}`).not.toBeNull();
           expect(box!.x, `${id} links op ${path}`).toBeGreaterThanOrEqual(0);
@@ -62,6 +64,16 @@ test.describe("kleine schermen", () => {
       expect(m.scroll, `${path} op 320 px en 200% schuift: ${m.out.join(", ")}`).toBeLessThanOrEqual(m.client);
       expect(m.body, `${path} op 320 px en 200%: body breder dan het scherm (${m.out.join(", ")})`).toBeLessThanOrEqual(m.client);
     }
+  });
+
+  test("320 px: Mijn reis met stops schuift niet zijwaarts", async ({ page }) => {
+    const slugs = PRERENDERED.slice(0, 3).map((p) => p.slug);
+    await page.addInitScript((s) => localStorage.setItem("vrijstaan:reis", JSON.stringify(s.map((slug) => ({ slug, nights: 2 })))), slugs);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/mijn-reis");
+    await expect(page.getByRole("button", { name: "Later in de reis" }).first()).toBeVisible();
+    const m = await overflow(page);
+    expect(m.scroll, `Mijn reis op 320 px schuift: ${m.out.join(", ")}`).toBeLessThanOrEqual(m.client);
   });
 
   test("820 px (tablet): tabbalk onderaan, geen desktopmenu in de kop", async ({ page }) => {

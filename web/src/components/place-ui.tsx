@@ -222,7 +222,7 @@ export function SaveButton({ slug, name, variant = "icon" }: { slug: string; nam
     return (
       <button type="button" onClick={toggle} aria-pressed={saved} className={`${ACTION_TILE} aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest`}>
         <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop" : ""} />
-        {saved ? "Bewaard" : "Bewaar"}
+        {saved ? "Bewaard" : "Bewaren"}
       </button>
     );
   if (variant === "full")
@@ -234,7 +234,7 @@ export function SaveButton({ slug, name, variant = "icon" }: { slug: string; nam
         className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
       >
         <Icon name="heart" size={20} filled={saved} className={saved ? "animate-pop" : ""} />
-        {saved ? "Bewaard" : "Bewaar"}
+        {saved ? "Bewaard" : "Bewaren"}
       </button>
     );
   return (
@@ -563,7 +563,7 @@ function CardPrice({ place }: { place: PlaceSummary }) {
 
 /**
  * Gekozen plek onderaan de kaart (concept "Kaart eerst", 29 oktober 2026): na een tik op een stip schuift één plek
- * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route en Bekijk plek. Vervangt op de
+ * omhoog met wat je onderweg wilt weten (vertrek, aankomst, prijs) en de knoppen Route openen en Bekijk plek, plus het hartje. Vervangt op de
  * telefoon de kleine popup van de kaart.
  */
 /** Hoe ver je het paneel moet vegen (px): omhoog opent de plek, omlaag sluit het */
@@ -595,7 +595,7 @@ export function MapPick({
   const router = useRouter();
   const href = `/plek/${place.slug}`;
   // Vegen zoals in een kaart-app (redesign 18 november 2026): omhoog naar de plekpagina, omlaag dicht. De knoppen
-  // Route en Bekijk plek blijven de gewone weg; vegen is een snelkoppeling. Opzij vegen: vorige of volgende plek (G3).
+  // Route openen en Bekijk plek blijven de gewone weg; vegen is een snelkoppeling. Opzij vegen: vorige of volgende plek (G3).
   const drag = useRef<{ id: number; y: number; x: number; moved: boolean; axis?: "x" | "y" } | null>(null);
   const [dy, setDy] = useState(0);
   const [dx, setDx] = useState(0);
@@ -705,9 +705,9 @@ export function MapPick({
           </button>
         </div>
       )}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-[1fr_1fr_auto] items-center gap-2">
         <NavigateButton to={place} slug={place.slug} className="flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep">
-          <Icon name="route" size={18} /> Route
+          <Icon name="route" size={18} /> Route openen
         </NavigateButton>
         <Link
           href={`/plek/${place.slug}`}
@@ -715,6 +715,7 @@ export function MapPick({
         >
           Bekijk plek
         </Link>
+        <SaveButton slug={place.slug} name={place.name} variant="bar" />
       </div>
     </section>
   );

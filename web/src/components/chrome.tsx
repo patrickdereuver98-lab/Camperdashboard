@@ -11,6 +11,7 @@ import { useTrip } from "@/lib/store";
 import { useLastSearch } from "@/lib/last-search";
 import { track } from "@/lib/track";
 import { Icon, Logo, type IconName } from "./icons";
+import { PlaceHeaderBar } from "./place-header";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/zoeken", label: "Zoeken", icon: "search" },
@@ -83,7 +84,9 @@ function HeaderView({ pathname }: { pathname: string }) {
       {/* flex-wrap: met grote tekst (200%) op 320 px gaan de knoppen naar een tweede regel in plaats van buiten beeld (R31) */}
       <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-1 px-3 min-[400px]:gap-x-2 min-[400px]:px-4 sm:min-h-16 sm:gap-x-4 sm:px-6">
         {onPlace && <BackButton />}
-        <Link href="/" className="flex h-11 min-w-11 items-center justify-center gap-2.5" aria-label="VrijStaan, naar de startpagina">
+        {/* Plekpagina op de telefoon: geen logo, maar de naam (bij scrollen) en Bewaren (place-header.tsx, V3) */}
+        {onPlace && <PlaceHeaderBar />}
+        <Link href="/" className={`flex h-11 min-w-11 items-center justify-center gap-2.5 ${onPlace ? "max-md:hidden" : ""}`} aria-label="VrijStaan, naar de startpagina">
           <Logo size={30} />
           {/* Op een heel smal scherm (onder 360 px, of met de terugknop erbij) alleen het logo, zodat Inloggen in beeld blijft;
               de naam staat dan in het aria-label van de link */}
@@ -124,18 +127,18 @@ function HeaderView({ pathname }: { pathname: string }) {
         <div className="ml-auto flex items-center lg:hidden">
           <Link
             href="/plek-aanmelden"
-            className="grid h-11 w-11 place-items-center rounded-md text-ink-2 hover:bg-sunken"
+            className={`grid h-11 w-11 place-items-center rounded-md text-ink-2 hover:bg-sunken ${onPlace ? "max-md:hidden" : ""}`}
             aria-label="Plek aanmelden"
           >
             <Icon name="plus" size={22} />
           </Link>
           {/* Hulp en licht/donker in één menu (UI/UX-plan T39, 26 november 2026): op de telefoon hoogstens drie knoppen */}
-          <MoreMenu pathname={pathname} helpActive={isActive("/veelgestelde-vragen")} />
+          <MoreMenu pathname={pathname} helpActive={isActive("/veelgestelde-vragen")} onPlace={onPlace} />
         </div>
         <div className="hidden lg:block">
           <ThemeButton />
         </div>
-        <AccountButton active={isActive("/account")} />
+        <AccountButton active={isActive("/account")} className={onPlace ? "max-md:hidden" : ""} />
       </div>
       <OfflineBar />
     </header>
@@ -164,7 +167,7 @@ function ThemeButton() {
 }
 
 /** Menu "Meer" in de telefoonkop: Hulp en licht/donker. Escape of een tik ernaast sluit het, focus gaat terug. */
-function MoreMenu({ pathname, helpActive }: { pathname: string; helpActive: boolean }) {
+function MoreMenu({ pathname, helpActive, onPlace = false }: { pathname: string; helpActive: boolean; onPlace?: boolean }) {
   // Open op één pad: na het navigeren is het menu vanzelf dicht (pad uit de kop, die het binnen Suspense leest)
   const [openAt, setOpenAt] = useState<string | null>(null);
   const open = openAt === pathname;
@@ -212,6 +215,8 @@ function MoreMenu({ pathname, helpActive }: { pathname: string; helpActive: bool
       </button>
       {open && (
         <div id="meer-menu" className="animate-rise absolute top-full right-0 z-50 mt-1 w-56 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-float">
+          {/* Plekpagina op de telefoon (V3): Delen, Plek aanmelden en Inloggen staan hier in plaats van in de kop */}
+          {onPlace && <PlaceMenuItems className={`${item} md:hidden`} onDone={() => setOpenAt(null)} />}
           <Link href="/veelgestelde-vragen" onClick={() => setOpenAt(null)} aria-current={helpActive ? "page" : undefined} className={`${item} aria-[current=page]:text-forest`}>
             <Icon name="help" size={20} /> Hulp
           </Link>
@@ -232,7 +237,51 @@ function MoreMenu({ pathname, helpActive }: { pathname: string; helpActive: bool
   );
 }
 
-function AccountButton({ active }: { active: boolean }) {
+/** Delen (tekst van de plek uit de pagina), Plek aanmelden en Inloggen of Mijn account, voor het menu op de plekpagina */
+function PlaceMenuItems({ className, onDone }: { className: string; onDone: () => void }) {
+  const { session } = useSession();
+  const [copied, setCopied] = useState(false);
+  async function share() {
+    const el = document.querySelector<HTMLElement>("[data-share-text]");
+    const title = el?.dataset.shareTitle ?? document.title;
+    const text = el?.dataset.shareText;
+    const url = location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+      } catch {
+        /* geannuleerd */
+      }
+      onDone();
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text ? `${text}\n${url}` : url);
+      setCopied(true);
+      setTimeout(onDone, 1200);
+    } catch {
+      onDone();
+    }
+  }
+  return (
+    <>
+      <button type="button" onClick={share} className={className} data-testid="menu-share">
+        <Icon name={copied ? "check" : "share"} size={20} /> {copied ? "Link gekopieerd" : "Delen"}
+      </button>
+      <span role="status" className="sr-only">
+        {copied ? "Link gekopieerd" : ""}
+      </span>
+      <Link href="/plek-aanmelden" onClick={onDone} className={className}>
+        <Icon name="plus" size={20} /> Plek aanmelden
+      </Link>
+      <Link href={session ? "/account" : "/inloggen"} onClick={onDone} className={`${className} border-b border-line`}>
+        <Icon name="user" size={20} /> {session ? "Mijn account" : "Inloggen"}
+      </Link>
+    </>
+  );
+}
+
+function AccountButton({ active, className = "" }: { active: boolean; className?: string }) {
   const { session, loading } = useSession();
   const meta = session?.user.user_metadata as { avatar_url?: string; picture?: string; full_name?: string; name?: string } | undefined;
   const avatar = meta?.avatar_url ?? meta?.picture;
@@ -244,7 +293,7 @@ function AccountButton({ active }: { active: boolean }) {
       aria-current={active ? "page" : undefined}
       data-testid="account-button"
       data-state={loading ? "loading" : session ? "in" : "out"}
-      className="-mr-1 grid h-11 min-w-11 shrink-0 place-items-center rounded-lg px-1 text-ink-2 hover:bg-sunken aria-[current=page]:text-forest lg:ml-1"
+      className={`-mr-1 grid h-11 min-w-11 shrink-0 place-items-center rounded-lg px-1 text-ink-2 hover:bg-sunken aria-[current=page]:text-forest lg:ml-1 ${className}`}
     >
       {avatar ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -402,7 +451,7 @@ function SaveToastLive() {
       <Icon name="heart" size={20} filled className="shrink-0" />
       <span className="min-w-0 flex-1 truncate font-semibold">Bewaard in Mijn reis</span>
       <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-lg px-3 font-semibold text-surface underline underline-offset-2">
-        Bekijk
+        Bekijk<span className="sr-only"> Mijn reis</span>
       </Link>
     </div>
   );

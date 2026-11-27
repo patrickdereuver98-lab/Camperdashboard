@@ -7,7 +7,8 @@ const slug = PLACES[0].slug;
 async function openPlace(page: import("@playwright/test").Page) {
   await page.goto(`/plek/${slug}`);
   await page.waitForLoadState("networkidle");
-  await expect(page.getByTestId("account-button").filter({ visible: true })).toHaveAttribute("data-state", "in");
+  // Op de plekpagina staat de accountknop onder md in het menu ⋯ (V3); hij staat wel in de kop, verborgen
+  await expect(page.getByTestId("account-button").first()).toHaveAttribute("data-state", "in");
 }
 
 // Klein maar groot genoeg testbeeld (800×600) als PNG, gemaakt in de browser

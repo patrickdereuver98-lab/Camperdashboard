@@ -183,6 +183,47 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
 - Zware onderdelen (kaart) pas laden als ze nodig zijn; geen nieuwe bibliotheken zonder reden.
 - Doelen: LCP < 2,5 s, CLS < 0,1, INP < 200 ms op een gemiddelde telefoon.
 
+## 11a. Informatiedichtheid (UX-audit 27 november 2026)
+
+Minder tegelijk in beeld, niet minder informatie. Per scherm:
+
+- **één primaire knop** (gevuld bosgroen of op de start avondzon) en hoogstens één of twee secundaire die zichtbaar
+  ondergeschikt zijn (rand van 1 px of tekstlink);
+- **één dominante statuskleur**; geen kleur zonder betekenis;
+- hoogstens **drie vlaklagen** (pagina, `surface`, `sunken`), geen kaart in een kaart;
+- een kaart alleen als groeperen het scannen beter maakt; losse waarden krijgen witruimte, een scheidingslijn of een
+  rij `label · waarde`;
+- geen vraag of knop bij elk gegeven: onbekend is een gewone waarde ("Onbekend"); corrigeren gaat via één knop
+  onderaan. Alleen de vertrektijd, het kernfeit, mag bij onbekend een eigen knop hebben;
+- niets dubbel tegelijk in beeld (prijs, vertrektijd, Route).
+
+### Woordenboek (vaste termen)
+
+| Gebruik | Niet |
+|---|---|
+| Bewaren / Bewaard | Opslaan, Favoriet |
+| Route openen | Route, Navigeer, Open in navigatie |
+| Naar de website (met het domein klein erbij) | Website, Reserveren via de website |
+| Bellen | Telefoneren |
+| Delen | Deel |
+| Gegevens corrigeren of aanvullen | Klopt dit niet?, Wijziging doorgeven, Fout melden |
+| Vertrektijd doorgeven | Weet jij het?, Weet jij dit? |
+| Gegevens aanpassen (eigenaar) | Ben je de eigenaar? Vul je gegevens aan |
+| Bekijk plek | Bekijk, Meer info |
+| Vertrektijd onbekend / Onbekend / Prijs onbekend | Weet jij dit?, -, n.v.t. |
+| Laatste update | Laatst gewijzigd, Bijgewerkt |
+| Mogelijk verouderd (`ink-2`, klokicoon) | rood, Verouderd! |
+
+### Statustaal
+
+| Staat | Tekst | Kleur |
+|---|---|---|
+| Onbekend | "Onbekend" of een korte zin ("We weten nog niet hoe laat je hier moet vertrekken.") | `muted` of `ink-2` |
+| Mogelijk verouderd | ", mogelijk verouderd" achter Laatste update | `ink-2` halfvet |
+| Dicht | "Dicht tot 1 april" | `alert` |
+| In behandeling | "Wacht op controle, meestal binnen twee werkdagen" | `forest` op `forest-tint` |
+| Fout | Wat ging mis en wat je nu kunt doen, bij het veld | `alert` |
+
 ## 12. Controle vóór elke push
 
 1. `npm run check` en `VRIJSTAAN_OFFLINE=1 npm run build` zijn schoon.

@@ -367,6 +367,25 @@ Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, bes
 - ⬜ T49 visuele snapshots in CI; groep D (Dichtbij rijtijd eerst, Mijn reis "volgende stop eerst") na een eigen
   ontwerpronde met screenshots.
 
+## UX-audit "volwassen maken" (27 november 2026) ✅
+
+Plan in `plan.md` (twee plannen samengevoegd), besluiten V1–V6 en K1–K10 in README 145. Geen migraties of edge
+functions: alleen presentatie.
+
+- ✅ Fase D, plekpagina: beslisblok (`DecisionSummary`), geen actierij of springlinks, vaste balk met Route openen en
+  prijs pas na scrollen, kop met naam en Bewaren (`components/place-header.tsx`), desktopfoto 320 px en Route openen
+  bovenaan de zijkolom, Goed om te weten met reserveren vóór de link, Past je camper?, één correctieknop met eerst
+  "Wat wil je aanpassen?", blok Eigenaar van deze plek?, mogelijk verouderd in `ink-2`. e2e `place-decision.spec.ts`.
+- ✅ Fase E en F: Dichtbij hoogstens twee uitwegen en locatie geweigerd met zoekveld, kaartpaneel met Route openen en
+  hartje, rijtijd nooit bij hemelsbreed (`driveSummary`), Mijn reis Route openen en uitleg bij onbekende vertrektijd.
+  e2e `map-and-trip-flow.spec.ts`.
+- ✅ Woordenboek, statustaal en informatiedichtheid in de stijlgids (§11a).
+- ✅ Fase G: Doe mee met één primaire actie, Plek aanmelden in vier stappen (e2e `plek-aanmelden.spec.ts`),
+  woordenboek doorgevoerd, laadscherm plekpagina in de nieuwe maten.
+- ✅ Fase H en I: volledige e2e groen, screenshots 320 tot 1440 px licht en donker, rapporten in `docs/review/`
+  (`UX-AUDIT-REPORT.md`, `DESIGN-DECISIONS.md`, `SCREENSHOT-QA.md`).
+- ⬜ Na de merge: migratie `20261127100000_faq_nieuwe_knoppen.sql` live zetten (FAQ-teksten).
+
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
 
 Leidraad: [README, VrijStaan 2.0](README.md#vrijstaan-20---visie-strategie--toekomstige-roadmap). Geen werk vóór de livegang; open punten 82 tot 86.

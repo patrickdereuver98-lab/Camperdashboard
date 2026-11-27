@@ -22,56 +22,45 @@ export default async function HelpPage() {
   const stats = await getStats();
   return (
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
-      <h1 className="font-display text-h1 font-semibold">Doe mee</h1>
+      <h1 className="font-display text-h1 font-semibold">Ken je een plek of weet je iets dat niet klopt?</h1>
       <p className="mt-2 max-w-prose text-ink-2">
-        VrijStaan wordt beter met wat camperaars zelf weten. We kijken alles na voordat het online komt.
+        Dan help je andere camperaars. We kijken alles na voordat het online komt. Ken je alleen een plek, dan zijn je naam en e-mail niet nodig.
       </p>
 
-      {/* UI/UX-plan T34 (26 november 2026): eerst de twee acties als één lijst, dan de plekken, dan eigenaren */}
-      <ul className="mt-5 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
-        <li>
-          <a href="#vertrektijden" className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-sunken/50">
-            <Icon name="clock" size={22} className="shrink-0 text-forest" />
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold text-ink">Vertrektijd doorgeven</span>
-              <span className="block text-sm text-muted">Van {nf.format(stats.unknownDeparture)} plekken weten we het nog niet</span>
-            </span>
-            <Icon name="chevronRight" size={20} className="shrink-0 text-muted" />
-          </a>
-        </li>
-        <li>
-          <Link href="/plek-aanmelden" className="flex min-h-16 items-center gap-3 px-4 py-3 hover:bg-sunken/50">
-            <Icon name="plus" size={22} className="shrink-0 text-forest" />
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold text-ink">Plek aanmelden</span>
-              <span className="block text-sm text-muted">Een camperplaats of camping die nog ontbreekt</span>
-            </span>
-            <Icon name="chevronRight" size={20} className="shrink-0 text-muted" />
-          </Link>
-        </li>
-      </ul>
+      {/* G2 (27 november 2026): één primaire actie (plek zoeken, want de meeste plekken staan er al) en één secundaire */}
+      <section aria-labelledby="verbeteren" className="mt-6 rounded-lg border border-line bg-surface p-4 sm:p-5">
+        <h2 id="verbeteren" className="font-display text-h2 font-semibold">Een plek verbeteren</h2>
+        <p className="mt-1 text-ink-2">Zoek de plek op, open hem en kies onderaan &ldquo;Gegevens corrigeren of aanvullen&rdquo;.</p>
+        <Link href="/zoeken" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-lg bg-forest font-semibold text-on-forest hover:bg-forest-deep sm:inline-flex sm:px-6">
+          <Icon name="search" size={18} /> Plek zoeken
+        </Link>
+      </section>
+
+      <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-2">
+        Staat de plek er niet bij?
+        <Link href="/plek-aanmelden" className="inline-flex h-11 items-center gap-1.5 font-semibold text-forest underline underline-offset-2">
+          <Icon name="plus" size={18} /> Plek aanmelden
+        </Link>
+      </p>
 
       <section id="vertrektijden" className="mt-8 scroll-mt-24 sm:mt-12">
-        <h2 className="font-display text-h2 font-semibold">Waar kun je mee helpen?</h2>
-        <p className="mt-1 text-ink-2">Kies je provincie en tik op een plek waar je bent geweest.</p>
+        <h2 className="font-display text-h2 font-semibold">Weet je een vertrektijd?</h2>
+        <p className="mt-1 text-ink-2">
+          Van {nf.format(stats.unknownDeparture)} plekken weten we nog niet hoe laat je weg moet. Kies je provincie en tik op een plek waar
+          je bent geweest.
+        </p>
         <HelpList />
       </section>
 
       <section aria-labelledby="eigenaar" className="mt-8 border-t border-line pt-6 sm:mt-12">
         <h2 id="eigenaar" className="font-display text-h2 font-semibold">Heb je zelf een camperplaats of camping?</h2>
         <p className="mt-1 text-ink-2">
-          Zoek je plek op en tik daar op de knop voor eigenaren. Dan vul je de vertrektijd, de prijs en de rest zelf in. We
-          kijken het na en zetten het daarna op de site.
+          Meld je plek aan, of zoek hem op en tik onderaan bij Eigenaar van deze plek? op &ldquo;Gegevens aanpassen&rdquo;. Dan vul je de vertrektijd, de prijs en de rest zelf in.
         </p>
-        <Link href="/zoeken" className="mt-2 inline-flex h-11 items-center gap-2 font-semibold text-forest underline underline-offset-2">
-          <Icon name="search" size={18} /> Zoek je plek
+        <Link href="/plek-aanmelden?soort=eigenaar" className="mt-2 inline-flex h-11 items-center gap-2 font-semibold text-forest underline underline-offset-2">
+          <Icon name="plus" size={18} /> Meld je plek als eigenaar
         </Link>
       </section>
-
-      <p className="mt-10 flex items-start gap-2 text-sm text-muted">
-        <Icon name="info" size={17} className="mt-0.5 shrink-0" />
-        Wat je invult, lezen we eerst na. Pas als het klopt, passen we de plek aan. Je naam en e-mail zijn niet nodig.
-      </p>
     </div>
   );
 }
