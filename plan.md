@@ -216,20 +216,20 @@ geen instellingen vóór de stops.
 - ✅ G5 Empty, loading, error en offline per datacomponent: skeleton zoals de echte lijst; offline "Geen verbinding.
   Je ziet de gegevens die eerder zijn bewaard."
 - ✅ G6 (stond er al; nagekeken op screenshots) Provincie- en plaatspagina's als reisgids: titel, korte feiten, kaart, vertrekgroepen, plekken, plaatsen.
-- ⬜ G7 Technische opruimlijst (A §55, B T43–T47): 13× `shadow-`, 9× `text-[…]`, 2× `rounded-2xl`, 32 inline
+- ✅ G7 (schermen van deze ronde schoon: schaduw en 16 px alleen op zwevende delen) Technische opruimlijst (A §55, B T43–T47): 13× `shadow-`, 9× `text-[…]`, 2× `rounded-2xl`, 32 inline
   styles, 77 hexwaarden (meeste in kaart, iconen en OG-beelden: terecht). Alleen in schermen die we toch aanraken.
 
 ### Fase H: toegankelijkheid en schermformaten (P0 vóór 19 december)
-- ⬜ H1 axe-e2e op alle gewijzigde schermen; toetsenbord, focus in sheets en terug naar de knop, Escape, 44 px,
+- ✅ H1 axe-e2e op alle gewijzigde schermen; toetsenbord, focus in sheets en terug naar de knop, Escape, 44 px,
   reduced motion, geen betekenis alleen via kleur (A §42, B T49–T54).
-- ⬜ H2 Screenshots 320, 390 (licht en donker), 430, 820 en 1440 (licht; plekpagina ook donker). Randgevallen:
+- ✅ H2 Screenshots 320, 390 (licht en donker), 430, 820 en 1440 (licht; plekpagina ook donker). Randgevallen:
   lange naam, lang adres, geen foto, geen prijs, onbekende vertrektijd, oude data, lange beschrijving, 0 en veel
   reviews. Per screenshot de negen vragen uit B §51.
 
 ### Fase I: oplevering
-- ⬜ I1 In `docs/review/`: `UX-AUDIT-REPORT.md`, `DESIGN-DECISIONS.md`, `SCREENSHOT-QA.md` (met scorecard B §52; geen
+- ✅ I1 In `docs/review/`: `UX-AUDIT-REPORT.md`, `DESIGN-DECISIONS.md`, `SCREENSHOT-QA.md` (met scorecard B §52; geen
   release onder 4 op Hiërarchie, Scanbaarheid, Rust en Actie).
-- ⬜ I2 Specs bijwerken: `04-ui-ux-brief.md` (Plek, Laatste update, Navigatie), `03-app-flow.md`, stijlgids
+- ✅ I2 Specs bijwerken: `04-ui-ux-brief.md` (Plek, Laatste update, Navigatie), `03-app-flow.md`, stijlgids
   (informatiedichtheid A §39, woordenboek), implementatieplan, README 145.
 
 ### Spoor P: alleen Patrick 👤

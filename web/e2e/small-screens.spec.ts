@@ -66,6 +66,16 @@ test.describe("kleine schermen", () => {
     }
   });
 
+  test("320 px: Mijn reis met stops schuift niet zijwaarts", async ({ page }) => {
+    const slugs = PRERENDERED.slice(0, 3).map((p) => p.slug);
+    await page.addInitScript((s) => localStorage.setItem("vrijstaan:reis", JSON.stringify(s.map((slug) => ({ slug, nights: 2 })))), slugs);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/mijn-reis");
+    await expect(page.getByRole("button", { name: "Later in de reis" }).first()).toBeVisible();
+    const m = await overflow(page);
+    expect(m.scroll, `Mijn reis op 320 px schuift: ${m.out.join(", ")}`).toBeLessThanOrEqual(m.client);
+  });
+
   test("820 px (tablet): tabbalk onderaan, geen desktopmenu in de kop", async ({ page }) => {
     await page.setViewportSize({ width: 820, height: 1180 });
     await page.goto("/zoeken");

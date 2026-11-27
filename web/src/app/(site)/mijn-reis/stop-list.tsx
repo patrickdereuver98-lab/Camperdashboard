@@ -374,7 +374,8 @@ export function StopItem({
             </span>
           </p>
         )}
-        <div className="mt-2 flex items-center gap-1">
+        {/* flex-wrap: op 320 px passen nachten en de drie knoppen niet naast elkaar (QA 27 november 2026) */}
+        <div className="mt-2 flex flex-wrap items-center gap-1">
           <div className="flex items-center rounded-lg border border-line" role="group" aria-label={`Nachten bij ${s.place.name}`}>
             <button
               type="button"

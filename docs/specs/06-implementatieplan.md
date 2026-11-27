@@ -367,7 +367,7 @@ Plan van ChatGPT, triage in `docs/review/ux-plan-chatgpt-2026-11-triage.md`, bes
 - ⬜ T49 visuele snapshots in CI; groep D (Dichtbij rijtijd eerst, Mijn reis "volgende stop eerst") na een eigen
   ontwerpronde met screenshots.
 
-## UX-audit "volwassen maken" (27 november 2026) 🔄
+## UX-audit "volwassen maken" (27 november 2026) ✅
 
 Plan in `plan.md` (twee plannen samengevoegd), besluiten V1–V6 en K1–K10 in README 145. Geen migraties of edge
 functions: alleen presentatie.
@@ -380,8 +380,11 @@ functions: alleen presentatie.
   hartje, rijtijd nooit bij hemelsbreed (`driveSummary`), Mijn reis Route openen en uitleg bij onbekende vertrektijd.
   e2e `map-and-trip-flow.spec.ts`.
 - ✅ Woordenboek, statustaal en informatiedichtheid in de stijlgids (§11a).
-- 🔄 Fase G (formulieren Doe mee en Plek aanmelden, microcopy), H (a11y en schermformaten), I (rapporten in
-  `docs/review/`).
+- ✅ Fase G: Doe mee met één primaire actie, Plek aanmelden in vier stappen (e2e `plek-aanmelden.spec.ts`),
+  woordenboek doorgevoerd, laadscherm plekpagina in de nieuwe maten.
+- ✅ Fase H en I: volledige e2e groen, screenshots 320 tot 1440 px licht en donker, rapporten in `docs/review/`
+  (`UX-AUDIT-REPORT.md`, `DESIGN-DECISIONS.md`, `SCREENSHOT-QA.md`).
+- ⬜ Na de merge: migratie `20261127100000_faq_nieuwe_knoppen.sql` live zetten (FAQ-teksten).
 
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
 
