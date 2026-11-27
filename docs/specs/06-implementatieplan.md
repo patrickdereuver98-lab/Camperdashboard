@@ -384,7 +384,10 @@ functions: alleen presentatie.
   woordenboek doorgevoerd, laadscherm plekpagina in de nieuwe maten.
 - ✅ Fase H en I: volledige e2e groen, screenshots 320 tot 1440 px licht en donker, rapporten in `docs/review/`
   (`UX-AUDIT-REPORT.md`, `DESIGN-DECISIONS.md`, `SCREENSHOT-QA.md`).
-- ⬜ Na de merge: migratie `20261127100000_faq_nieuwe_knoppen.sql` live zetten (FAQ-teksten).
+- ✅ Migratie `20261127100000_faq_nieuwe_knoppen.sql` live gezet op 27 november 2026, na de merge van PR #202
+  (FAQ: 0 verwijzingen naar "Klopt er iets niet?", 3 naar de nieuwe knoppen).
+- ✅ Tekstcheck over de hele site (27 november 2026, opdracht Patrick): geen los woord op de laatste regel, namen
+  niet meer afgekapt, getal en eenheid bij elkaar, start zonder vertrouwenspunten en met kleinere blokken.
 
 ## Mijlpaal 7: VrijStaan 2.0 (na de livegang) ⬜
 
