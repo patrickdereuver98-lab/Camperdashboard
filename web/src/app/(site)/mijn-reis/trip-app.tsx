@@ -719,6 +719,7 @@ export function TripApp() {
                           plan={lp}
                           date={legDate(lp?.day)}
                           from={i === 0 ? start! : stops[i - 1].place}
+                          fromPlace={i > 0 && !stops[i - 1].point ? stops[i - 1].place : undefined}
                           to={s.place}
                           loading={routeState === "loading"}
                           maxDriveMin={prefs.maxDriveMin}
@@ -741,6 +742,7 @@ export function TripApp() {
               plan={plan?.endLeg}
               date={legDate(plan?.endLeg?.day)}
               from={stops[stops.length - 1].place}
+              fromPlace={stops[stops.length - 1].point ? undefined : stops[stops.length - 1].place}
               to={endPt}
               loading={routeState === "loading"}
               maxDriveMin={prefs.maxDriveMin}

@@ -1,7 +1,7 @@
 // Dichtbij: welke plekken om je heen passen bij je keuzes, en wat je kunt aanpassen als er niets past (review R51).
-import { distanceKm, type LatLng } from "./geo";
+import { distanceKm, formatKm, type LatLng } from "./geo";
 import { applyFilters, arrivalClosed, confirmedFirst, DEFAULT_FILTERS, FACILITIES, nowInNL, relaxations, type FacilityKey, type Filters } from "./search";
-import { pluralize } from "./format";
+import { formatDuration, pluralize } from "./format";
 import type { PlaceSummary } from "./types";
 import { applyVehicle, type Vehicle } from "./vehicle";
 
@@ -49,6 +49,30 @@ export function withinDrive<T extends { place: Pick<PlaceSummary, "slug"> }>(lis
   return list.filter((r) => (drives[r.place.slug]?.seconds ?? Infinity) <= WITHIN_SECONDS);
 }
 
+/** Knoptekst van de uitweg die "Nu nog aankomen" uitzet (Dichtbij, plan E1) */
+export const LATE_ARRIVAL_LABEL = "Ook plekken tonen waar je nu niet meer kunt aankomen";
+
+/** Hoogstens zoveel uitwegen in de lege staat (plan E1); de rest is ruis */
+export const NEARBY_WAYS_OUT = 2;
+
+/**
+ * Is "Nu nog aankomen" de enige reden dat er niets is? Dan zeggen we dat, in plaats van "niets binnen 80 km".
+ * Alleen aanroepen als de lijst leeg is (zonder "Binnen 30 min" als oorzaak).
+ */
+export function arrivalIsCause(places: PlaceSummary[], pos: LatLng, c: NearbyChoices, vehicle: Vehicle, now: Date = nowInNL()): boolean {
+  return c.arriveNow && nearestPlaces(places, pos, { ...c, arriveNow: false }, vehicle, now, 1).length > 0;
+}
+
+/**
+ * Wat je bij een plek in Dichtbij als hoofdgegeven ziet. Rijtijd alleen als die echt berekend is (`drive`); anders
+ * de hemelsbrede afstand, met het woord "hemelsbreed" en zonder rijtijd of schatting (plan E5).
+ */
+export function driveSummary(drive: Drive | undefined, km: number): { kind: "rijtijd"; time: string; distance: string } | { kind: "hemelsbreed"; distance: string } {
+  if (!drive) return { kind: "hemelsbreed", distance: formatKm(km) };
+  // Onder een minuut zegt "0 min" niets: dan "1 min"
+  return { kind: "rijtijd", time: formatDuration(Math.max(60, drive.seconds)), distance: formatKm(drive.km) };
+}
+
 export type Suggestion = { label: string; next: NearbyChoices; count?: number };
 
 /**
@@ -61,7 +85,7 @@ export function nearbySuggestions(
   pos: LatLng,
   c: NearbyChoices,
   vehicle: Vehicle,
-  { now = nowInNL(), farther = 0, limit = 4 }: { now?: Date; farther?: number; limit?: number } = {},
+  { now = nowInNL(), farther = 0, limit = NEARBY_WAYS_OUT }: { now?: Date; farther?: number; limit?: number } = {},
 ): Suggestion[] {
   const around = places.filter((p) => distanceKm(pos, p) < NEARBY_RADIUS_KM && (!c.arriveNow || !arrivalClosed(p, now)));
   const out: (Suggestion & { count: number })[] = relaxations(around, nearbyFilters(c, vehicle)).map((r) => ({
@@ -72,9 +96,12 @@ export function nearbySuggestions(
   if (c.arriveNow) {
     const next = { ...c, arriveNow: false };
     const count = nearestPlaces(places, pos, next, vehicle, now, Infinity).length;
-    if (count > 0) out.push({ label: "Ook waar je nu niet meer binnenkomt", next, count });
+    if (count > 0) out.push({ label: LATE_ARRIVAL_LABEL, next, count });
   }
   out.sort((a, b) => b.count - a.count);
+  // Is de aankomsttijd de reden dat er niets is, dan staat die uitweg vooraan (past bij de kopregel)
+  const late = out.findIndex((s) => s.label === LATE_ARRIVAL_LABEL);
+  if (late > 0 && !nearestPlaces(places, pos, c, vehicle, now, 1).length) out.unshift(...out.splice(late, 1));
   const list: Suggestion[] = out.map((s) => (c.within30 ? { label: s.label, next: s.next } : s));
   if (c.within30 && farther > 0) list.unshift({ label: "Ook verder dan 30 minuten", next: { ...c, within30: false }, count: farther });
   return list.slice(0, limit);
@@ -128,7 +155,7 @@ export function closerSuggestions(
   if (c.arriveNow) {
     const next = { ...c, arriveNow: false };
     const count = nearestPlaces(close, pos, next, vehicle, now, Infinity).length;
-    if (count > 0) out.push({ label: "Ook waar je nu niet meer binnenkomt", next, count });
+    if (count > 0) out.push({ label: LATE_ARRIVAL_LABEL, next, count });
   }
   return out
     .sort((a, b) => b.count - a.count)

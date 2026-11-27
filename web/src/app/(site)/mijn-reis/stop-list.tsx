@@ -13,6 +13,7 @@ import type { PlaceSummary } from "@/lib/types";
 import { Chip } from "@/components/chip";
 import { Icon } from "@/components/icons";
 import { DepartureChip, OpenChip, PlacePhoto } from "@/components/place-ui";
+import { isIncomplete } from "@/lib/place-status";
 
 /**
  * Een stop zoals de lijst hem toont. Bij een eigen punt (`point`) is `place` alleen naam en ligging (zie `pointPlace`
@@ -33,6 +34,7 @@ export function LegRow({
   maxDriveMin,
   onFindStop,
   suggestions,
+  fromPlace,
 }: {
   leg?: Leg;
   plan?: LegPlan;
@@ -44,7 +46,11 @@ export function LegRow({
   onFindStop?: () => void;
   /** Voorstellen om te overnachten rond het punt waar de dag vol is (OvernightList) */
   suggestions?: React.ReactNode;
+  /** De plek waar je vertrekt (niet bij een beginpunt of eigen punt): zonder bekende vertrektijd is de aankomst onzeker */
+  fromPlace?: PlaceSummary;
 }) {
+  // Rekent de planning met jouw eigen vertrektijd omdat de plek er geen noemt? Dan is de aankomst niet betrouwbaar
+  const unreliable = !!plan && plan.departSource === "jij" && !!fromPlace && isIncomplete(fromPlace);
   return (
     <div className="flex gap-3 py-2 pl-5 text-sm text-ink-2" data-testid="leg">
       <span className="w-0 shrink-0 border-l-[3px] border-dotted border-forest" aria-hidden="true" />
@@ -63,6 +69,11 @@ export function LegRow({
             Vertrek {clock(plan.departMin)}
             {plan.departSource === "plek" ? " (uiterlijke vertrektijd van de plek)" : plan.departSource === "tussenstop" ? " na de tussenstop" : ""}, aankomst rond{" "}
             {clock(plan.arriveMin)}
+          </p>
+        )}
+        {unreliable && (
+          <p className="mt-1" data-testid="leg-unknown-departure">
+            We kunnen de aankomsttijd niet betrouwbaar berekenen omdat de vertrektijd van deze plek onbekend is.
           </p>
         )}
         {plan?.per24Until !== undefined && (
