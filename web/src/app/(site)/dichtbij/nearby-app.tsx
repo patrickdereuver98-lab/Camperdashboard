@@ -25,11 +25,10 @@ import { useMediaQuery } from "@/lib/use-media";
 import type { PlaceSummary } from "@/lib/types";
 import { CardSkeleton, MapPick, PlaceCard, RESULT_LIST } from "@/components/place-ui";
 import { PlaceMap } from "@/components/place-map";
-import { Icon } from "@/components/icons";
+import { Icon, BrandMark } from "@/components/icons";
 import { Chip } from "@/components/chip";
 import { DataDate } from "@/components/data-date";
 import { DestinationSearch } from "@/components/destination-search";
-import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 
 type Status = "idle" | "locating" | "denied" | "unavailable" | "ready";
@@ -150,10 +149,9 @@ export function NearbyApp() {
   if (status !== "ready" || !pos) {
     return (
       <div className="mx-auto max-w-xl px-4 pt-8 text-center sm:pt-14">
-        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
-          <Landscape seed="dichtbij" variant={0} van wide className="absolute inset-0 h-full w-full" />
-        </div>
-        <h1 className="mt-6 font-display text-h1 font-semibold">Waar kun je vannacht staan?</h1>
+        {/* Beeldmerk in plaats van de grote landschapstekening: kleiner en van ons eigen logo (Patrick, 27 november 2026) */}
+        <BrandMark width={128} className="animate-rise mx-auto" />
+        <h1 className="mt-4 font-display text-h1 font-semibold">Waar kun je vannacht staan?</h1>
         <p className="mt-2 text-ink-2 sm:text-lg">
           Deel je locatie en we zetten de plekken om je heen op een rij, gesorteerd op echte rijtijd.
         </p>

@@ -36,8 +36,7 @@ import { endPoint } from "@/lib/route-prefs";
 import { routeOptionsQuery, type RouteOptions } from "@/lib/route-options";
 import type { PlaceSummary } from "@/lib/types";
 import { tripText, tripToday } from "@/lib/trip-share";
-import { Icon } from "@/components/icons";
-import { Landscape } from "@/components/landscape";
+import { BrandMark, Icon } from "@/components/icons";
 import { PlaceMap } from "@/components/place-map";
 import { Sign } from "@/components/sign";
 import { AddPoint } from "./add-point";
@@ -372,10 +371,8 @@ export function TripApp() {
         {undoToast}
         {(trips.list.length > 1 || trips.active.name !== "Mijn reis") && <div className="mb-6">{header(false)}</div>}
         <div className="text-center">
-        <div className="animate-rise relative mx-auto h-36 overflow-hidden rounded-lg border border-line">
-          <Landscape seed="mijn-reis" variant={1} van wide className="absolute inset-0 h-full w-full" />
-        </div>
-        <h1 className="mt-6 font-display text-h1 font-semibold">Je reis is nog leeg</h1>
+        <BrandMark width={128} className="animate-rise mx-auto" />
+        <h1 className="mt-4 font-display text-h1 font-semibold">Je reis is nog leeg</h1>
         <p className="mt-2 text-ink-2 sm:text-lg">
           Tik op het hartje bij een plek om hem te bewaren. Hier zet je ze op volgorde en zie je de echte rijtijd en wat de reis ongeveer kost.
         </p>

@@ -91,6 +91,35 @@ export function Icon({
  * Tot en met 32 px (kop, beheer, favicon `app/icon.svg`) de vereenvoudigde favicon-variant. De lichte grond loopt in
  * de lichte kop weg (review R53), dus de tegel krijgt een bosgroene rand van 2 eenheden: zo houdt het merk een onderkant.
  */
+/**
+ * Beeldmerk uit de logoset van 26 november 2026 (`public/merk/brand-mark.svg`): camper, den en heuvel met de avondzon
+ * als vertrekklok. Voor lege staten (Dichtbij zonder locatie, lege reis) in plaats van de oude landschapstekening
+ * (besluit Patrick, 27 november 2026). Kleuren uit de tokens, zodat het in donker meekleurt; ramen en wielen in de
+ * paginakleur, zodat ze als uitsparing lezen.
+ */
+export function BrandMark({ width = 128, className = "" }: { width?: number; className?: string }) {
+  const g = "var(--forest)";
+  const cut = "var(--paper)";
+  return (
+    <svg width={width} height={(width * 160) / 256} viewBox="0 0 256 160" aria-hidden="true" className={className}>
+      <circle cx="177" cy="52" r="39" fill="var(--ember)" />
+      <path d="M177 25 V52 L194 41" fill="none" stroke={cut} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M26 119 L41 94 L34 94 L47 72 L60 94 L53 94 L68 119 Z" fill={g} />
+      <path d="M46 116 V132" stroke={g} strokeWidth="5" strokeLinecap="round" />
+      <path d="M10 137 C43 122 76 119 111 124 C151 131 191 136 246 117 L246 147 H10 Z" fill={g} />
+      <path d="M62 87 C62 78 69 72 78 72 H143 C151 72 158 76 164 83 L181 101 C185 105 187 110 187 116 V126 H57 V93 C57 90 59 87 62 87 Z" fill={g} />
+      <path d="M148 80 H143 V103 H174 L158 85 C155 82 152 80 148 80 Z" fill={cut} />
+      <rect x="73" y="84" width="34" height="21" rx="4" fill={cut} />
+      <rect x="113" y="84" width="23" height="21" rx="3" fill={cut} />
+      <path d="M65 113 H176" stroke={cut} strokeWidth="2.5" strokeLinecap="round" opacity=".92" />
+      <circle cx="88" cy="126" r="11" fill={cut} />
+      <circle cx="88" cy="126" r="5" fill={g} />
+      <circle cx="160" cy="126" r="11" fill={cut} />
+      <circle cx="160" cy="126" r="5" fill={g} />
+    </svg>
+  );
+}
+
 export function Logo({ size = 34 }: { size?: number }) {
   if (size <= 32)
     return (

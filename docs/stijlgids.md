@@ -173,6 +173,9 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
   Nieuwe kaarten of tegels naast elkaar: zelfde regel, nooit kaarten van wisselende hoogte (design-audit 2 november 2026).
 - **Vertrekbadge**: 6 px hoek, klein klokje, getint vlak (groen/blauw/grijs). Het enige gekleurde element op een kaart.
 - **Lege foto**: zandkleurig vlak met een klein lijnicoon van het soort plek; geen tekening.
+- **Lege staat** (Dichtbij zonder locatie, lege reis): het beeldmerk (`BrandMark` in `icons.tsx`, 128 px breed,
+  kleuren uit de tokens zodat het in donker meekleurt) boven de vraag. Geen landschapstekening meer (besluit Patrick,
+  27 november 2026).
 - **Lege staat, fout, laden**: zie Design Brief; laden altijd met skeletvormen van de echte layout.
 
 ## 11. Snelheid

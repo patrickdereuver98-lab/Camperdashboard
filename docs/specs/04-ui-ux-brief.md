@@ -183,6 +183,8 @@ V6, keuzes K1 tot en met K10 door de agent op verzoek van de eigenaar.
 - **Tekstcheck** (27 november 2026, opdracht Patrick): geen los woord op de laatste regel (`text-wrap: pretty` op
   `body`), plaknamen in lijsten op twee of drie regels in plaats van afgekapt, getal en eenheid met een vaste spatie
   (`formatKm`), startpagina zonder de drie vertrouwenspunten en met kleinere blokken bij "Hoe wil je staan?".
+- **Lege staten**: Dichtbij zonder locatie en een lege reis tonen het beeldmerk (`BrandMark`) in plaats van de
+  landschapstekening; `components/landscape.tsx` is weg.
 - **Mijn reis**: knop Route openen; bij een onbekende vertrektijd één gewone uitlegregel als de aankomsttijd daardoor
   niet te berekenen is.
 
