@@ -35,6 +35,7 @@ function departureNote(place: Place, known: boolean): string | undefined {
   const claimed = place.departure === "vrij" || place.departure === "per24";
   if (claimed && place.departureCheck === "voorwaardelijk") return "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na.";
   if (place.departure === "vrij") return "Je kunt hier vertrekken wanneer het jou uitkomt.";
+  if (place.departure === "per24") return "Je betaalt per 24 uur.";
   return undefined;
 }
 
@@ -80,15 +81,17 @@ export function DecisionSummary({ place, visitors = 0 }: { place: Place; visitor
       <h2 id="kort" className="sr-only">In het kort</h2>
       <div className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
         {/* 1. Vertrekken: de kernbelofte, het grootst */}
-        <div className={`px-4 py-3.5 ${bg}`} data-testid="decision-departure">
+        {/* Compact (Patrick, 27 november 2026): één maat kleiner dan de paginatitel en de waarde kort, zodat ze op één
+            regel past; wat de regel betekent staat in de zin eronder */}
+        <div className={`px-4 py-3 ${bg}`} data-testid="decision-departure">
           <p className={`flex items-center gap-1.5 text-sm font-semibold ${head}`}>
             <Sign name="clock" size={18} state={departureKnown ? "on" : "unknown"} tone={tone === "lake" ? "lake" : "forest"} />
             {free && departureKnown ? "Zonder vertrektijd" : late && departureKnown ? "Voor uitslapers" : "Vertrekken"}
           </p>
-          <p className={`mt-1 font-display text-h1 leading-tight font-semibold text-balance tabular-nums ${departureKnown ? "text-ink" : "text-ink-2"}`}>
-            {departureKnown ? departureLong(place) : "Vertrektijd onbekend"}
+          <p className={`mt-0.5 font-display text-xl leading-tight font-semibold text-balance tabular-nums sm:text-2xl ${departureKnown ? "text-ink" : "text-ink-2"}`}>
+            {departureKnown ? (place.departure === "per24" && place.departureCheck !== "voorwaardelijk" ? "Geen vaste tijd" : departureLong(place)) : "Vertrektijd onbekend"}
           </p>
-          {note && <p className="mt-1 text-balance text-ink-2">{note}</p>}
+          {note && <p className="mt-0.5 text-balance text-ink-2">{note}</p>}
           {askDeparture ? (
             <div className="mt-2">
               <GiveDepartureButton placeId={place.id} placeName={place.name} />

@@ -27,7 +27,6 @@ import { Gallery, OutdatedNote, ReportProblem, ReviewList, ReviewSummary, RouteC
 import { OwnerUpdate } from "./owner-update";
 import { ownerValues } from "@/lib/owner-update";
 import { PhotoUpload } from "./photo-upload";
-import { CrowdStatusCard } from "./crowd-status";
 import { DecisionSummary } from "./decision-grid";
 import { FacilityGrid } from "./facility-grid";
 import { ArrivalTodayNote, CopyButton, DistanceFromMe, ResultsNav, StickyRouteBar } from "./live-facts";
@@ -214,8 +213,6 @@ export default async function PlacePage({ params }: PageProps<"/plek/[slug]">) {
             <div className="space-y-3">
               <DecisionSummary place={place} visitors={visitors} />
               <ArrivalTodayNote place={place} />
-              {/* Drukte alleen als iemand het de laatste 3 uur meldde; doorgeven staat onderaan */}
-              <CrowdStatusCard placeId={place.id} slug={place.slug} onlyReported />
             </div>
             {/* Tablet: geen vaste balk en nog geen zijkolom, dus Route openen en contact hier */}
             <PlaceActions place={place} tel={tel} className="hidden md:grid lg:hidden" />
@@ -483,7 +480,7 @@ function CamperFit({ place }: { place: Place }) {
 
 /**
  * Onderaan, één keer (UX-audit 27 november, besluit V4): één knop voor alle correcties en aanvullingen, een kleine
- * link voor een foto, de drukte, en apart de route voor eigenaren. Geen teller van bekende gegevens: de bezoeker hoeft
+ * link voor een foto, en apart de route voor eigenaren. Drukte doorgeven is weg (besluit Patrick, 27 november 2026). Geen teller van bekende gegevens: de bezoeker hoeft
  * de database niet te begrijpen. Een onbekende vertrektijd vragen we al in het beslisblok.
  */
 function Contribution({ place }: { place: Place }) {
@@ -499,7 +496,6 @@ function Contribution({ place }: { place: Place }) {
           <ReportProblem placeId={place.id} placeName={place.name} facilities={pickFacilities(place)} label="Gegevens corrigeren of aanvullen" />
           <PhotoUpload placeId={place.id} slug={place.slug} placeName={place.name} />
         </div>
-        <CrowdStatusCard placeId={place.id} slug={place.slug} />
       </section>
       <section aria-labelledby="eigenaar-kop">
         <h2 id="eigenaar-kop" className="font-display text-h3 font-semibold">Eigenaar van deze plek?</h2>
