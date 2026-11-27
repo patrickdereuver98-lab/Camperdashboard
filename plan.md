@@ -83,7 +83,7 @@ stijlgids in dezelfde commit bijwerken. Per fase hoogstens één review met `cod
 - ✅ Docs, routes, componenten, smells gelezen; offline build en screenshots (zie §1).
 - ✅ Matrix (§2) en routetabel (§3).
 
-### Fase D: plekpagina (P1) — ❓ wacht op vragen V1–V6
+### Fase D: plekpagina (P1) — ⬜ besloten 27 november, klaar om te bouwen
 
 | # | Taak | Hangt af van | Moeite |
 |---|---|---|---|
@@ -149,6 +149,18 @@ stijlgids in dezelfde commit bijwerken. Per fase hoogstens één review met `cod
 | §6, §7: één correctieknop + apart eigenaarsblok, geen "x van 12 bekend" | README 144: help-blok met teller en meerdere acties | V4 |
 | §13 / §9: geen dubbele beslisinfo | "Check voor vertrek" (README 141, opdracht Patrick 21 november) | V6 |
 | §69: rapporten in de root | Reviews staan in `docs/review/` | geen vraag, `docs/review/` |
+
+### Besluiten Patrick (27 november 2026)
+
+| Vraag | Besluit |
+|---|---|
+| V1 Beslisblok | Nieuwe opbouw: vertrek groot over de volle breedte, prijs eronder, Aankomst · Open · Reserveren als drie compacte regels |
+| V2 Acties telefoon | Alleen Route prominent; tegelrij weg, Bewaren als hartje op de foto, Delen als icoon bij de naam, Website/Bellen als regels bij Reserveren en Contact |
+| V3 Kop plekpagina | Terug, Bewaren, ⋯ (Delen, Plek aanmelden, Hulp, Donker, Inloggen); naam van de plek verschijnt bij scrollen |
+| V4 Bijdragen | Eén knop **Gegevens corrigeren of aanvullen** + blok **Eigenaar van deze plek?**; teller weg; Foto toevoegen als kleine link; oproep Vertrektijd doorgeven blijft bij onbekende vertrektijd |
+| V5 Mogelijk verouderd | `ink-2` halfvet met icoon, geen rood en geen avondzon |
+| V5b Desktopfoto | Lager, ongeveer 320 px, zodat naam en vertrektijd in 1440 × 900 staan |
+| V6 Check voor vertrek | Weghalen; Ervaringen houdt Google-cijfer en reviews |
 
 ## 6. Planning (vóór de bevriezing van 19 december)
 
