@@ -1,7 +1,7 @@
 // Dichtbij: lijst, "Binnen 30 min", voorstellen als er niets past en de regel met actieve filters (review R51).
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { activeFilterLabels, clearedChoices, closerSuggestions, NEARBY_DEFAULTS, nearbySuggestions, nearestIsFar, nearestPlaces, withinDrive } from "../src/lib/nearby";
+import { activeFilterLabels, arrivalIsCause, clearedChoices, driveSummary, NEARBY_WAYS_OUT, closerSuggestions, NEARBY_DEFAULTS, nearbySuggestions, nearestIsFar, nearestPlaces, withinDrive } from "../src/lib/nearby";
 import type { PlaceSummary } from "../src/lib/types";
 
 const utrecht = { lat: 52.09, lng: 5.12 };
@@ -36,7 +36,8 @@ test("Binnen 30 min: alleen een bekende rijtijd tot 30 minuten; zonder rijtijden
 
 test("niets binnen 30 min zonder vertrektijd: eerst verder dan 30 minuten, dan uitslapers", () => {
   const c = { ...NEARBY_DEFAULTS, departure: "vrij" as const, within30: true };
-  const s = nearbySuggestions(places, utrecht, c, {}, { now, farther: 1 });
+  // Meer dan de standaard twee uitwegen opvragen, om ook de uitslapers te zien
+  const s = nearbySuggestions(places, utrecht, c, {}, { now, farther: 1, limit: 4 });
   assert.equal(s[0].label, "Ook verder dan 30 minuten");
   assert.equal(s[0].next.within30, false);
   assert.equal(s[0].count, 1);
@@ -54,7 +55,7 @@ test("voorstellen hergebruiken relaxations() en tellen over 80 km", () => {
   assert.deepEqual(s[0].next.facilities, []);
   // Alleen de aankomst houdt de vroege plek tegen
   const late = nearbySuggestions([vroeg], utrecht, NEARBY_DEFAULTS, {}, { now });
-  assert.deepEqual(late.map((x) => x.label), ["Ook waar je nu niet meer binnenkomt"]);
+  assert.deepEqual(late.map((x) => x.label), ["Ook plekken tonen waar je nu niet meer kunt aankomen"]);
   assert.equal(late[0].next.arriveNow, false);
   // Niets binnen 80 km: geen voorstellen
   assert.deepEqual(nearbySuggestions([verweg], utrecht, NEARBY_DEFAULTS, {}, { now }), []);
@@ -105,5 +106,39 @@ test("voorstel dichterbij: alleen plekken die hemelsbreed dichterbij liggen, zon
   const late = closerSuggestions([vrij, vroeg], utrecht, c, {}, 55, { now });
   assert.deepEqual(late, []);
   const onlyArrive = closerSuggestions([vrij, place("laat", 0.1, { departure: "vrij", checkinUntil: "18:00" })], utrecht, c, {}, 55, { now });
-  assert.deepEqual(onlyArrive.map((x) => x.label), ["Ook waar je nu niet meer binnenkomt: 1 plek dichterbij"]);
+  assert.deepEqual(onlyArrive.map((x) => x.label), ["Ook plekken tonen waar je nu niet meer kunt aankomen: 1 plek dichterbij"]);
+});
+
+test("lege staat: hoogstens twee uitwegen", () => {
+  // Alles aan wat iets weghaalt: veel mogelijke voorstellen, maar nooit meer dan twee
+  const c = { ...NEARBY_DEFAULTS, departure: "vrij" as const, facilities: ["power" as const, "dogs" as const], within30: true };
+  const s = nearbySuggestions(places, utrecht, c, {}, { now, farther: 2 });
+  assert.ok(s.length <= NEARBY_WAYS_OUT);
+  assert.equal(s[0].label, "Ook verder dan 30 minuten");
+});
+
+test("aankomsttijd als enige oorzaak: voorstel staat vooraan en de kopregel kan het zeggen", () => {
+  assert.equal(arrivalIsCause([vroeg], utrecht, NEARBY_DEFAULTS, {}, now), true);
+  // Zonder dat filter is er ook niets: dan is aankomst niet de oorzaak
+  assert.equal(arrivalIsCause([verweg], utrecht, NEARBY_DEFAULTS, {}, now), false);
+  assert.equal(arrivalIsCause([vroeg], utrecht, { ...NEARBY_DEFAULTS, arriveNow: false }, {}, now), false);
+  const c = { ...NEARBY_DEFAULTS, facilities: ["power" as const] };
+  const vroegMetStroom = place("vroeg-stroom", 0.1, { departure: "vast", checkoutUntil: "10:00", checkinUntil: "18:00", power: true });
+  const s = nearbySuggestions([vroegMetStroom], utrecht, c, {}, { now });
+  assert.equal(s[0].label, "Ook plekken tonen waar je nu niet meer kunt aankomen");
+});
+
+test("rijtijd nooit tonen als de afstand hemelsbreed is (E5)", () => {
+  // Zonder berekende rijtijd: alleen de hemelsbrede afstand, geen minuten
+  const crow = driveSummary(undefined, 12.4);
+  assert.equal(crow.kind, "hemelsbreed");
+  assert.ok(!("time" in crow));
+  assert.match(crow.distance, /km|m$/);
+  // Met een berekende rijtijd: rijtijd en rijafstand
+  const road = driveSummary({ km: 15.2, seconds: 20 * 60 }, 12.4);
+  assert.equal(road.kind, "rijtijd");
+  assert.ok("time" in road && /20 min/.test(road.time));
+  // Onder een minuut: 1 min, nooit 0 min
+  const short = driveSummary({ km: 0.1, seconds: 10 }, 0.1);
+  assert.ok("time" in short && /^1 min/.test(short.time));
 });

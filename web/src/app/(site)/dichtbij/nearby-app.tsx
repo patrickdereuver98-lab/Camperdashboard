@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { coarse, formatKm, type LatLng } from "@/lib/geo";
-import { formatDuration, pluralize } from "@/lib/format";
-import { confirmedFirst, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
+import { coarse, type LatLng } from "@/lib/geo";
+import { pluralize } from "@/lib/format";
+import { confirmedFirst, DEFAULT_FILTERS, FACILITIES, isOpenOn, type FacilityKey } from "@/lib/search";
 import {
   activeFilterLabels,
+  arrivalIsCause,
+  driveSummary,
   clearedChoices,
   closerSuggestions,
   NEARBY_DEFAULTS,
+  NEARBY_WAYS_OUT,
   nearbySuggestions,
   nearestPlaces,
   nearestIsFar,
@@ -25,6 +28,7 @@ import { PlaceMap } from "@/components/place-map";
 import { Icon } from "@/components/icons";
 import { Chip } from "@/components/chip";
 import { DataDate } from "@/components/data-date";
+import { DestinationSearch } from "@/components/destination-search";
 import { Landscape } from "@/components/landscape";
 import { Sign, type SignName } from "@/components/sign";
 
@@ -163,15 +167,20 @@ export function NearbyApp() {
           {status === "locating" ? "Locatie bepalen…" : "Gebruik mijn locatie"}
         </button>
         {(status === "denied" || status === "unavailable") && (
-          <div role="alert" className="mt-5 rounded-lg border border-alert/40 bg-alert-tint p-4 text-alert">
-            <p>
-              {status === "denied"
-                ? "Je hebt geen toegang tot je locatie gegeven. Sta het toe in de instellingen van je browser, of zoek op plaatsnaam."
-                : "Je locatie kon niet worden bepaald. Probeer het opnieuw of zoek op plaatsnaam."}
+          <div role="status" className="mt-6 text-left" data-testid="nearby-no-location">
+            <p className="text-center text-ink-2">
+              {status === "denied" ? "Je locatie is niet toegestaan, dus we kunnen geen plekken dichtbij tonen." : "We kunnen je locatie nu niet bepalen."}
             </p>
-            <Link href="/zoeken" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-md border border-line bg-surface px-4 font-semibold text-ink hover:border-forest">
-              <Icon name="search" size={18} /> Zoek op plaats
-            </Link>
+            <div className="mt-4">
+              <p className="mb-2 font-display text-h3 font-semibold">Zoek op een plaats of streek</p>
+              <DestinationSearch variant="bar" base={DEFAULT_FILTERS} />
+            </div>
+            {status === "denied" && (
+              <details className="mt-4 text-sm text-ink-2">
+                <summary className="min-h-11 cursor-pointer py-2.5 font-semibold text-forest">Hoe zet ik locatie aan?</summary>
+                <p className="pb-2">Sta locatie toe voor deze site in de instellingen van je browser en tik daarna op Gebruik mijn locatie.</p>
+              </details>
+            )}
           </div>
         )}
         <p className="mt-6 text-sm text-muted">Je locatie wordt alleen gebruikt om afstanden te berekenen en niet opgeslagen.</p>
@@ -183,6 +192,7 @@ export function NearbyApp() {
   const list = withinDrive(all, drives, within30);
   const active = activeFilterLabels(choices, vehicle);
   const suggestions = places && list.length === 0 ? nearbySuggestions(places, pos, choices, vehicle, { farther: all.length }) : [];
+  const arrivalCause = !!places && list.length === 0 && all.length === 0 && arrivalIsCause(places, pos, choices, vehicle);
   // Wel plekken, maar de dichtste is ver weg: welke ene aanpassing geeft een plek dichterbij? Pas als de rijtijden er
   // zijn (of zeker niet komen), anders springt het voorstel weg zodra ze binnenkomen.
   const far = places && (drives || driveError) ? nearestIsFar(list, drives) : false;
@@ -287,7 +297,9 @@ export function NearbyApp() {
             : list.length === 0
               ? within30 && drives && all.length > 0
                 ? "Geen plekken binnen 30 minuten rijden met deze keuzes."
-                : "Geen plekken binnen 80 km met deze keuzes."
+                : arrivalCause
+                  ? "Geen plekken waar je nu nog kunt aankomen."
+                  : "Geen plekken binnen 80 km met deze keuzes."
               : drives
                 ? `${pluralize(list.length, "plek", "plekken")}, dichtstbij eerst (rijtijd).`
                 : driveError
@@ -341,9 +353,10 @@ export function NearbyApp() {
                   {o.count !== undefined && <span className="font-normal text-muted"> ({o.count})</span>}
                 </button>
               ))}
-              {!suggestions.length && (
+              {/* Hoogstens twee uitwegen: een tweede uitweg is verder zoeken op een plaats */}
+              {suggestions.length < NEARBY_WAYS_OUT && (
                 <Link href="/zoeken" className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 font-semibold hover:border-forest hover:text-forest">
-                  <Icon name="search" size={18} /> Zoek op plaats
+                  <Icon name="search" size={18} /> Zoek op een plaats
                 </Link>
               )}
             </div>
@@ -373,23 +386,22 @@ export function NearbyApp() {
  * kaartpaneel wanneer je er ongeveer bent. Zolang de rijtijd er niet is de hemelsbrede afstand, zonder schatting.
  */
 function DriveLabel({ drive, km, eta: showEta = false }: { drive?: Drive; km: number; eta?: boolean }) {
-  if (!drive)
+  const sum = driveSummary(drive, km);
+  if (sum.kind === "hemelsbreed")
     return (
       <span className="inline-flex items-center gap-1.5 text-sm text-ink-2">
         <Icon name="locate" size={15} className="shrink-0" />
-        {formatKm(km)} hemelsbreed
+        {sum.distance} hemelsbreed
       </span>
     );
   // Wanneer je er bent alleen in het kaartpaneel; in de lijst staat de prijs ernaast en is daar geen ruimte voor
-  const eta = showEta ? arrivalAround(drive.seconds) : undefined;
-  // Onder een minuut zegt "0 min" niets: dan "1 min"
-  const time = formatDuration(Math.max(60, drive.seconds));
+  const eta = showEta && drive ? arrivalAround(drive.seconds) : undefined;
   return (
     <span className={`inline-flex min-w-0 items-baseline gap-x-1.5 ${showEta ? "flex-wrap" : ""}`}>
       <Icon name="route" size={16} className="shrink-0 self-center text-forest" />
-      <span className="font-semibold whitespace-nowrap">{time} rijden</span>
+      <span className="font-semibold whitespace-nowrap">{sum.time} rijden</span>
       <span className={`text-sm text-ink-2 ${showEta ? "" : "truncate"}`}>
-        {formatKm(drive.km)}
+        {sum.distance}
         {eta ? `, er rond ${eta}` : ""}
       </span>
     </span>

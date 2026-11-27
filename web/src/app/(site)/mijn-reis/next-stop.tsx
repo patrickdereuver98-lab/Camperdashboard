@@ -13,7 +13,7 @@ import { nextStopIndex } from "@/lib/trip-next";
 type NextStopItem = { slug: string; nights: number; point?: unknown; place: PlaceSummary };
 type Dated = { arrive: Date; leave: Date };
 
-/** Blok bovenaan Mijn reis: de stop waar het nu om gaat, met vertrekregel, aankomst en Route */
+/** Blok bovenaan Mijn reis: de stop waar het nu om gaat, met vertrekregel, aankomst en Route openen */
 export function NextStop({
   stops,
   dated,
@@ -76,7 +76,7 @@ export function NextStop({
           slug={s.slug}
           className="flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-forest px-4 font-semibold text-on-forest hover:bg-forest-deep sm:flex-none"
         >
-          <Icon name="route" size={18} /> Route
+          <Icon name="route" size={18} /> Route openen
         </NavigateButton>
         {!own && (
           <Link href={`/plek/${s.slug}`} className="-my-3 py-3 font-semibold text-forest underline underline-offset-2">
