@@ -170,7 +170,9 @@ export function CreditedPhoto({
       <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
         <h3 className="font-display text-h3 font-semibold text-[#fffcf6]">{title}</h3>
         <p className="text-sm font-semibold text-[#efe9dc]">{subtitle}</p>
-        {photo?.credit && <p className="truncate text-sm text-[#efe9dc]/85">Foto: {photo.credit}</p>}
+        {/* Eén regel: een webadres midden in het woord breken is lelijker dan afkappen; de hele bron staat in title
+            (tekstcheck 27 november 2026) */}
+        {photo?.credit && <p className="truncate text-sm text-[#efe9dc]/85" title={`Foto: ${photo.credit}`}>Foto: {photo.credit}</p>}
       </div>
     </>
   );
@@ -458,13 +460,13 @@ function PlaceRow({
         {/* Past de prijs er niet naast (grote tekst), dan gaat hij eronder */}
         <div className="flex min-w-0 flex-1 flex-wrap gap-x-2">
         <div className="flex min-w-0 flex-[1_1_6rem] flex-col gap-0.5">
-          <h3 className="truncate font-display text-h3 font-semibold text-ink">
+          <h3 className="line-clamp-3 font-display text-h3 font-semibold text-ink">
             <Link href={`/plek/${place.slug}`} className="after:absolute after:inset-0 focus-visible:outline-none" prefetch={false}>
               {place.name}
             </Link>
           </h3>
           {leadDistance && distance && <p className="truncate text-ink" data-testid="lead-distance">{distance}</p>}
-          <p className="truncate text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
+          <p className="line-clamp-2 text-sm text-ink-2" title={`${place.town}, ${place.province}`}>
             {place.kind ? KIND_LABEL[place.kind] : "Camperplaats"} in {place.town}
           </p>
           <div className="mt-auto flex min-w-0 items-center gap-2 text-sm">

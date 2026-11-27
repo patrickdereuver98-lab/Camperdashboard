@@ -173,6 +173,9 @@ scheidingslijn (`divide-y`). Geen kaart in een kaart in een kaart.
   Nieuwe kaarten of tegels naast elkaar: zelfde regel, nooit kaarten van wisselende hoogte (design-audit 2 november 2026).
 - **Vertrekbadge**: 6 px hoek, klein klokje, getint vlak (groen/blauw/grijs). Het enige gekleurde element op een kaart.
 - **Lege foto**: zandkleurig vlak met een klein lijnicoon van het soort plek; geen tekening.
+- **Lege staat** (Dichtbij zonder locatie, lege reis): het beeldmerk (`BrandMark` in `icons.tsx`, 128 px breed,
+  kleuren uit de tokens zodat het in donker meekleurt) boven de vraag. Geen landschapstekening meer (besluit Patrick,
+  27 november 2026).
 - **Lege staat, fout, laden**: zie Design Brief; laden altijd met skeletvormen van de echte layout.
 
 ## 11. Snelheid
@@ -195,7 +198,11 @@ Minder tegelijk in beeld, niet minder informatie. Per scherm:
   rij `label · waarde`;
 - geen vraag of knop bij elk gegeven: onbekend is een gewone waarde ("Onbekend"); corrigeren gaat via één knop
   onderaan. Alleen de vertrektijd, het kernfeit, mag bij onbekend een eigen knop hebben;
-- niets dubbel tegelijk in beeld (prijs, vertrektijd, Route).
+- niets dubbel tegelijk in beeld (prijs, vertrektijd, Route);
+- tekst breekt niet lelijk af: geen los woord op de laatste regel (staat globaal), namen in lijsten lopen door naar
+  een tweede regel in plaats van "…", getal en eenheid blijven bij elkaar; alleen een webadres (fotobron) mag
+  afkappen, met de hele tekst in `title`;
+- een icoon krijgt geen eigen regel in een blok: klein naast de titel of links in de rij.
 
 ### Woordenboek (vaste termen)
 

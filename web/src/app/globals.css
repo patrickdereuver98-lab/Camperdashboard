@@ -191,6 +191,9 @@ body {
   h3 {
     text-wrap: balance;
   }
+  /* Overal geen los woord op de laatste regel (tekstcheck 27 november 2026): erft door naar elke span, li, dd en
+     label; koppen blijven gebalanceerd, `truncate` en `text-balance` gaan voor */
+  body,
   p {
     text-wrap: pretty;
   }
