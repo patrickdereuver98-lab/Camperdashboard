@@ -827,8 +827,8 @@ export function TripApp() {
                   )}
                 </dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-ink-2">Overnachtingen{fromPrice ? " (vanaf)" : ""}</dt>
+              <div className="flex justify-between gap-4">
+                <dt className="shrink-0 text-ink-2">Overnachtingen{fromPrice ? " (vanaf)" : ""}</dt>
                 <dd className="text-right font-semibold">
                   {eur(stay, true)}
                   {!!costs.perPerson && (

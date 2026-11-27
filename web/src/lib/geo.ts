@@ -18,9 +18,10 @@ function rad(deg: number) {
 }
 
 export function formatKm(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  if (km < 10) return `${km.toFixed(1).replace(".", ",")} km`;
-  return `${Math.round(km)} km`;
+  // Vaste spatie: getal en eenheid nooit over twee regels (tekstcheck 27 november 2026)
+  if (km < 1) return `${Math.round(km * 1000)}\u00a0m`;
+  if (km < 10) return `${km.toFixed(1).replace(".", ",")}\u00a0km`;
+  return `${Math.round(km)}\u00a0km`;
 }
 
 export function directionsUrl(to: LatLng, from?: LatLng[]): string {

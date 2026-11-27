@@ -88,7 +88,7 @@ export function DecisionSummary({ place, visitors = 0 }: { place: Place; visitor
           <p className={`mt-1 font-display text-h1 leading-tight font-semibold text-balance tabular-nums ${departureKnown ? "text-ink" : "text-ink-2"}`}>
             {departureKnown ? departureLong(place) : "Vertrektijd onbekend"}
           </p>
-          {note && <p className="mt-1 text-ink-2">{note}</p>}
+          {note && <p className="mt-1 text-balance text-ink-2">{note}</p>}
           {askDeparture ? (
             <div className="mt-2">
               <GiveDepartureButton placeId={place.id} placeName={place.name} />

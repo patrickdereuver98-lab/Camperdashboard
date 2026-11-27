@@ -49,7 +49,7 @@ export default async function Home() {
     {
       href: searchHref({ departure: "vrij" }),
       title: "Zonder vertrektijd",
-      text: "Blijf tot je zelf weg wilt, of betaal per 24 uur.",
+      text: "Blijf zolang je wilt, of betaal per 24 uur.",
       count: stats.freeDeparture,
       sign: "clock",
       tone: "forest",
@@ -88,10 +88,12 @@ export default async function Home() {
           Waar sta je vannacht?
         </h1>
         {/* UI/UX-plan T2 (26 november 2026): de belofte in één zin; de aantallen staan bij "Hoe wil je staan?" */}
-        <p className="animate-rise mt-2 max-w-xl text-ink-2 [animation-delay:60ms] sm:text-lg">
+        {/* Op één regel vanaf sm (Patrick, 27 november 2026): "moet vertrekken" niet los op een tweede regel */}
+        <p className="animate-rise mt-2 text-pretty text-ink-2 [animation-delay:60ms] sm:text-lg">
           Zoek een camperplaats voor vannacht. Zie meteen wanneer je moet vertrekken.
         </p>
-        <div className="animate-rise mt-4 [animation-delay:120ms] sm:mt-6">
+        {/* relative z-20: de animatie maakt een eigen stapellaag; zonder z-index lag alles eronder over de uitklaplijst */}
+        <div className="animate-rise relative z-20 mt-4 [animation-delay:120ms] sm:mt-6">
           <HomeSearch />
         </div>
       </section>
@@ -103,11 +105,16 @@ export default async function Home() {
         <ul className="mt-3 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {ways.map((w) => (
             <li key={w.title}>
-              <Link href={w.href} className="group flex h-full min-h-19 items-center gap-3.5 px-3.5 py-3 hover:bg-sunken/50 sm:flex-col sm:items-start sm:gap-2 sm:p-5">
-                {/* Lijnicoon zonder vlak (stijlgids §2, design-audit 26 november 2026) */}
-                <Sign name={w.sign} size={30} bare className={TONE_TEXT[w.tone]} />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">{w.title}</span>
+              <Link href={w.href} className="group flex h-full min-h-19 items-center gap-3.5 px-3.5 py-3 hover:bg-sunken/50 sm:flex-col sm:items-start sm:gap-2 sm:px-5 sm:py-4">
+                {/* Lijnicoon zonder vlak (stijlgids §2). Telefoon: links in de rij; vanaf sm klein rechts naast de titel, zodat
+                    het blok lager wordt (Patrick, 27 november 2026). Geen absolute positie: die legde de blokken over de
+                    uitklaplijst van het zoekvak */}
+                <Sign name={w.sign} size={24} bare className={`sm:hidden ${TONE_TEXT[w.tone]}`} />
+                <span className="min-w-0 flex-1 sm:w-full">
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="block font-semibold">{w.title}</span>
+                    <Sign name={w.sign} size={22} bare className={`mt-0.5 hidden sm:block ${TONE_TEXT[w.tone]}`} />
+                  </span>
                   <span className="mt-0.5 block text-sm text-ink-2">{w.text}</span>
                 </span>
                 <span className={`shrink-0 font-semibold tabular-nums sm:hidden ${TONE_TEXT[w.tone]}`}>{nf.format(w.count)}</span>
@@ -115,23 +122,6 @@ export default async function Home() {
                   {pluralize(w.count, "plek", "plekken")}
                 </span>
               </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Vertrouwen: wat je hier zeker weet */}
-      <section aria-label="Waarom VrijStaan" className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6 sm:pt-8">
-        <ul className="grid gap-x-6 gap-y-2 text-ink-2 sm:grid-cols-3">
-          {[
-            "We vullen niets zelf in: wat we niet weten, staat er als onbekend",
-            "Bij de prijs staan de toeslagen die de plek zelf noemt",
-            "Gratis te gebruiken, je hebt geen account nodig",
-          ].map((t) => (
-            <li key={t} className="flex items-start gap-2.5">
-              {/* Lijnicoon zonder eigen vlak (UI/UX-plan T8) */}
-              <Icon name="check" size={20} className="mt-0.5 shrink-0 text-forest" />
-              <span className="leading-snug sm:text-base">{t}</span>
             </li>
           ))}
         </ul>
