@@ -38,7 +38,9 @@ test.describe("kleine schermen", () => {
         expect(m.body, `${path} op ${width} px: body breder dan het scherm`).toBeLessThanOrEqual(m.client);
 
         // Inloggen en het menu Meer (met de themaknop, UI/UX-plan T39) staan helemaal in beeld
-        for (const id of ["account-button", "menu-button"]) {
+        // Op de plekpagina staat Inloggen onder md in het menu ⋯ (UX-audit 27 november, V3)
+        const ids = path.startsWith("/plek/") && width < 768 ? ["menu-button"] : ["account-button", "menu-button"];
+        for (const id of ids) {
           const box = await page.getByTestId(id).boundingBox();
           expect(box, `${id} op ${path}`).not.toBeNull();
           expect(box!.x, `${id} links op ${path}`).toBeGreaterThanOrEqual(0);

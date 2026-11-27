@@ -12,21 +12,28 @@ test.describe("detailpagina", () => {
     });
   }
 
-  test("telefoon: actierij onder de naam en springlinks die blijven plakken", async ({ page }, info) => {
-    test.skip(info.project.name !== "mobile", "Actierij en springlinks staan alleen op de telefoon");
+  test("telefoon: kop met Bewaren en menu, geen springlinks, één vaste Route openen", async ({ page }, info) => {
+    test.skip(info.project.name !== "mobile", "Kop en vaste balk zijn voor de telefoon");
     const place = PRERENDERED[0];
     await page.goto(`/plek/${place.slug}`);
-    await expect(page.getByRole("button", { name: "Bewaar", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Delen" })).toBeVisible();
-    const nav = page.getByRole("navigation", { name: "Onderdelen van deze plek" });
-    await expect(nav.getByRole("link", { name: "Overzicht" })).toHaveAttribute("aria-current", "location");
-    await nav.getByRole("link", { name: "Voorzieningen" }).click();
-    await expect(page.getByRole("heading", { name: "Voorzieningen" })).toBeInViewport();
-    // De rij blijft onder de header staan en zegt waar je bent
-    await expect(nav).toBeInViewport();
-    await expect(nav.getByRole("link", { name: "Voorzieningen" })).toHaveAttribute("aria-current", "location");
-    // Eén hoofdactie in de vaste balk
-    await expect(page.getByRole("button", { name: "Route", exact: true })).toBeVisible();
+    // Kop (V3): terug, Bewaren en ⋯; Plek aanmelden en Inloggen staan in het menu, met Delen
+    await expect(page.getByRole("button", { name: `${place.name} bewaren in Mijn reis` })).toBeVisible();
+    await expect(page.locator("header").first().getByRole("link", { name: "Plek aanmelden", exact: true })).toBeHidden();
+    await page.getByTestId("menu-button").click();
+    await expect(page.getByTestId("menu-share")).toBeVisible();
+    await expect(page.locator("#meer-menu").getByRole("link", { name: "Plek aanmelden" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    // Geen actierij met vier tegels en geen springlinks meer (V2, D9)
+    await expect(page.getByRole("button", { name: "Bewaar", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("navigation", { name: "Onderdelen van deze plek" })).toHaveCount(0);
+    // Eén hoofdactie in de vaste balk; de prijs staat daar pas als het beslisblok uit beeld is (K4)
+    const bar = page.getByTestId("sticky-route");
+    await expect(bar.getByRole("button", { name: "Route openen" })).toBeVisible();
+    await expect(page.getByTestId("sticky-price")).toBeHidden();
+    await page.getByRole("heading", { name: "Voorzieningen" }).scrollIntoViewIfNeeded();
+    await expect(page.getByTestId("sticky-price")).toBeVisible();
+    // De naam van de plek staat dan in de kop
+    await expect(page.getByTestId("header-place-name")).toHaveCSS("opacity", "1");
   });
 
   test("onbekende plek geeft een 404-pagina", async ({ page }) => {

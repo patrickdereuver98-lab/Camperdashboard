@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, ViewTransition } from "react";
 import { formatDuration, formatMonth, pluralize, scoreLabel } from "@/lib/format";
 import { coarse, formatKm, type LatLng } from "@/lib/geo";
-import { NavigateButton } from "@/components/navigate";
 import { errorMessage, formValue, supabase } from "@/lib/supabase-browser";
 import { fieldAria, fieldError, formError, REVIEW_RULES } from "@/lib/form-errors";
 import { FieldError, FormAlert, useFormError } from "@/components/form-error";
@@ -48,7 +47,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <ViewTransition name={`foto-${slug}`} share="photo-morph" default="none">
         <div
           // Waren er foto's maar laadde geen enkele, dan blijft het vak even groot: anders springt de pagina omhoog
-          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-lg ${photos.length ? "h-[200px] sm:h-auto sm:aspect-[21/9]" : "h-20 sm:h-28"}`}
+          className={`flex items-center justify-center gap-2 bg-sunken text-sm text-muted sm:rounded-lg ${photos.length ? "h-[200px] sm:h-auto sm:aspect-[21/9] lg:aspect-auto lg:h-80" : "h-20 sm:h-28"}`}
           role="img"
           aria-label={`Nog geen foto van ${name}`}
         >
@@ -62,7 +61,7 @@ export function Gallery({ slug, name, photos, kind, town }: { slug: string; name
       <div
         ref={track_}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="no-scrollbar flex h-[200px] snap-x snap-mandatory overflow-x-auto bg-sunken sm:h-auto sm:aspect-[21/9] sm:rounded-lg"
+        className="no-scrollbar flex h-[200px] snap-x snap-mandatory overflow-x-auto bg-sunken sm:h-auto sm:aspect-[21/9] sm:rounded-lg lg:aspect-auto lg:h-80"
         // Scrollbaar vak: met Tab bereikbaar, dan bladeren met de pijltjes (WCAG 2.1.1)
         tabIndex={0}
         role="region"
@@ -275,7 +274,8 @@ type RouteState =
   | { s: "ok"; km: number; seconds: number; from: LatLng }
   | { s: "error"; msg: string };
 
-export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
+/** Rijtijd vanaf waar je bent. Route openen zelf staat in de vaste balk (telefoon) of bovenaan de zijkolom. */
+export function RouteCard({ to }: { to: LatLng }) {
   const [state, setState] = useState<RouteState>({ s: "idle" });
 
   function calculate() {
@@ -294,7 +294,7 @@ export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
           // Rijtijd berekenen is geen route openen: dat telt pas als je een navigatie-app kiest (NavigateButton)
           setState({ s: "ok", km: r.distanceM / 1000, seconds: r.durationS, from });
         } catch {
-          setState({ s: "error", msg: "De rijtijd kon niet worden berekend. Open de route in je navigatie-app." });
+          setState({ s: "error", msg: "De rijtijd kon niet worden berekend. Met Route openen kies je je navigatie-app." });
         }
       },
       (err) =>
@@ -317,8 +317,8 @@ export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
         <p className="text-ink-2">Bereken de rijtijd vanaf waar je nu bent.</p>
       )}
       {state.s === "error" && <p role="alert" className="mt-2 rounded-lg bg-alert-tint px-3 py-2 text-alert">{state.msg}</p>}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {state.s !== "ok" && (
+      {state.s !== "ok" && (
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={calculate}
@@ -328,11 +328,8 @@ export function RouteCard({ to, slug }: { to: LatLng; slug: string }) {
             <Icon name="locate" size={18} />
             {state.s === "locating" ? "Bezig…" : "Rijtijd berekenen"}
           </button>
-        )}
-        <NavigateButton to={to} slug={slug} className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 py-2 text-left font-semibold hover:border-forest">
-          <Icon name="route" size={18} /> Open in navigatie
-        </NavigateButton>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -623,7 +620,7 @@ export function WriteReview({ placeId, placeName, slug }: { placeId: string; pla
       <button type="button" onClick={openSheet} className="flex h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold hover:border-forest">
         <Icon name="edit" size={19} /> Schrijf een review
       </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt!" : `Review voor ${placeName}`}>
+      <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je review" : `Review voor ${placeName}`}>
         {done ? (
           <div className="pb-4">
             <SuccessNote>
@@ -839,11 +836,40 @@ function FacilityChoices({ value, onChange }: { value: Record<FacilityKey, Facil
   );
 }
 
+/** Onderwerpen van een correctie; de waarde gaat als `onderwerp` mee naar beheer ("vertrektijd" leest de server zelf) */
+const SUBJECTS: [string, string][] = [
+  ["vertrektijd", "Vertrektijd"],
+  ["prijs", "Prijs"],
+  ["aankomst", "Aankomst"],
+  ["reserveren", "Reserveren"],
+  ["voorzieningen", "Voorzieningen"],
+  ["seizoen", "Openingsperiode"],
+  ["contact", "Contactgegevens"],
+  ["locatie", "Locatie"],
+  ["foto", "Foto"],
+  ["gesloten", "De plek bestaat niet meer"],
+  ["anders", "Anders"],
+];
+
+/** Voorbeeld in het tekstvak, zodat je weet wat we nodig hebben */
+const HINT: Record<string, string> = {
+  vertrektijd: "Bijvoorbeeld: vertrek uiterlijk 12:00, staat op het bord bij de ingang",
+  prijs: "Bijvoorbeeld: € 18 per nacht, toeristenbelasting € 1,50 per persoon",
+  aankomst: "Bijvoorbeeld: aankomen kan van 14:00 tot 21:00",
+  reserveren: "Bijvoorbeeld: in juli en augustus moet je reserveren",
+  seizoen: "Bijvoorbeeld: open van 1 april tot 31 oktober",
+  contact: "Bijvoorbeeld: het nieuwe telefoonnummer of de website",
+  locatie: "Bijvoorbeeld: de ingang ligt aan de Dorpsstraat, niet aan de dijk",
+  foto: "Welke foto klopt niet, en waarom?",
+  gesloten: "Wat weet je erover? Sinds wanneer?",
+  anders: "Wat klopt er niet?",
+};
+
 export function ReportProblem({
   placeId,
   placeName,
-  topic = "prijs",
-  label = "Klopt er iets niet? Meld het",
+  topic,
+  label = "Gegevens corrigeren of aanvullen",
   facilities = {},
   context,
   quiet = false,
@@ -863,13 +889,14 @@ export function ReportProblem({
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [subject, setSubject] = useState(topic);
+  const [subject, setSubject] = useState<string | undefined>(topic);
   const [answers, setAnswers] = useState(() => facilityAnswers(facilities));
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     if (formValue(f, "website")) return;
+    if (!subject) return;
     const changes = subject === "voorzieningen" ? facilityChanges(facilities, answers) : {};
     const details = String(formValue(f, "details") ?? "").trim();
     if (subject === "voorzieningen" ? !Object.keys(changes).length && !details : details.length < 5) {
@@ -908,7 +935,7 @@ export function ReportProblem({
           {context && <span className="sr-only"> {context}</span>}
         </button>
       )}
-      <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je melding" : "Gegevens aanpassen"}>
+      <Sheet open={open} onClose={() => setOpen(false)} title={done ? "Bedankt voor je melding" : "Gegevens corrigeren of aanvullen"}>
         {done ? (
           <div className="pb-4">
             <SuccessNote>
@@ -921,25 +948,46 @@ export function ReportProblem({
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4 pb-4">
-            <label className="block">
-              <span className="mb-1.5 block font-semibold">Wat klopt er niet?</span>
-              <select name="topic" className={input} value={subject} onChange={(e) => setSubject(e.target.value)}>
-                <option value="vertrektijd">Aankomst- en vertrektijden</option>
-                <option value="prijs">Prijs of extra kosten</option>
-                <option value="voorzieningen">Voorzieningen</option>
-                <option value="seizoen">Openingsperiode</option>
-                <option value="contact">Contactgegevens</option>
-                <option value="locatie">Locatie op de kaart</option>
-                <option value="gesloten">De plek bestaat niet meer</option>
-                <option value="anders">Iets anders</option>
-              </select>
-            </label>
+            {/* Eerst kiezen wat je wilt aanpassen, daarna alleen de velden die daarbij horen (UX-audit 27 november, D13) */}
+            <fieldset>
+              <legend className="mb-2 font-semibold">Wat wil je aanpassen?</legend>
+              <div className="grid gap-1 sm:grid-cols-2">
+                {SUBJECTS.map(([value, text]) => (
+                  <label key={value} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-line px-3 has-[:checked]:border-forest has-[:checked]:bg-forest-tint">
+                    <input type="radio" name="topic" value={value} checked={subject === value} onChange={() => { setSubject(value); setErr(null); }} className="h-5 w-5 accent-[var(--forest)]" />
+                    {text}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {subject === "foto" && (
+              <p className="rounded-lg bg-sunken px-3 py-2 text-ink-2">
+                Een foto voeg je toe met <span className="font-semibold">Foto toevoegen</span>, onder Klopt er iets niet? op deze pagina. Is een foto
+                verkeerd, schrijf dan hieronder welke.
+              </p>
+            )}
             {subject === "voorzieningen" && <FacilityChoices value={answers} onChange={(k, a) => setAnswers((cur) => ({ ...cur, [k]: a }))} />}
-            <label className="block">
-              <span className="mb-1.5 block font-semibold">{subject === "voorzieningen" ? "Toelichting (optioneel)" : "Toelichting"}</span>
-              <textarea name="details" rows={4} className={`${input} h-auto py-2`} />
-            </label>
-            <label className="flex items-center gap-3">
+            {subject && (
+              <label className="block">
+                <span className="mb-1.5 block font-semibold">{subject === "voorzieningen" ? "Toelichting (optioneel)" : "Wat is de juiste informatie?"}</span>
+                <textarea
+                  name="details"
+                  rows={4}
+                  placeholder={HINT[subject]}
+                  aria-invalid={err ? true : undefined}
+                  aria-describedby={err ? "melding-fout" : undefined}
+                  className={`${input} h-auto py-2`}
+                />
+                {err && (
+                  <span id="melding-fout" role="alert" className="mt-1.5 block font-semibold text-alert">
+                    {err}
+                  </span>
+                )}
+              </label>
+            )}
+            {subject && (
+            <>
+            <label className="flex min-h-11 items-center gap-3">
               <input type="checkbox" name="owner" className="h-5 w-5 accent-[var(--forest)]" /> Ik ben de eigenaar of beheerder
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -953,10 +1001,11 @@ export function ReportProblem({
               </label>
             </div>
             <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-            {err && <p role="alert" className="rounded-lg bg-alert-tint px-3 py-2 text-alert">{err}</p>}
             <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-forest hover:bg-forest-deep font-display text-lg font-semibold text-on-forest disabled:opacity-60">
-              {busy ? "Versturen…" : "Melding versturen"}
+              {busy ? "Versturen…" : "Versturen"}
             </button>
+            </>
+            )}
           </form>
         )}
       </Sheet>
@@ -1010,10 +1059,10 @@ export function ShareButton({ title, text, className = "", variant = "full" }: {
 export function OutdatedNote({ verifiedAt, departureCheckedAt }: { verifiedAt?: string; departureCheckedAt?: string }) {
   const hydrated = useHydrated();
   if (!hydrated || !isPossiblyOutdated({ verifiedAt, departureCheckedAt })) return null;
-  // UI/UX-plan T27 (26 november 2026): in de foutkleur met een icoon, zodat het opvalt zonder de datum te overstemmen
+  // UX-audit 27 november 2026 (besluit V5): halfvet met icoon, geen foutkleur. Het is een signaal, geen fout
   return (
-    <span className="inline-flex items-center gap-1 font-semibold text-alert">
-      , <Icon name="alert" size={15} className="shrink-0" /> mogelijk verouderd
+    <span className="inline-flex items-center gap-1 font-semibold text-ink-2" data-testid="outdated">
+      , <Icon name="clock" size={15} className="shrink-0" /> mogelijk verouderd
     </span>
   );
 }

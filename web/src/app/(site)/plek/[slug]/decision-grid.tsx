@@ -1,10 +1,11 @@
-import { cardPrice, departureLong, pluralize } from "@/lib/format";
+import { cardPrice, departureLong, pluralize, reservationRuleOf } from "@/lib/format";
 import { departureKind } from "@/lib/search";
 import { isIncomplete } from "@/lib/place-status";
 import { nightTotal, TOTAL_PERSONS } from "@/lib/trip-extras";
 import { eur } from "@/lib/format";
 import { Icon } from "@/components/icons";
-import { Sign, type SignName } from "@/components/sign";
+import { Sign } from "@/components/sign";
+import { GiveDepartureButton } from "@/components/departure-form";
 import type { Place } from "@/lib/types";
 import { OpenValue } from "./live-facts";
 
@@ -18,38 +19,6 @@ export function arrivalTile(p: Pick<Place, "checkinFrom" | "checkinUntil" | "acc
   return undefined;
 }
 
-function Tile({
-  sign,
-  label,
-  known,
-  tone = "plain",
-  big = false,
-  children,
-  extra,
-}: {
-  sign: SignName;
-  label: string;
-  known: boolean;
-  tone?: "plain" | "forest" | "lake";
-  /** Vertrekken: één stap grotere waarde, zodat de kernbelofte de eerste blik krijgt (UI/UX-plan T21) */
-  big?: boolean;
-  children: React.ReactNode;
-  extra?: React.ReactNode;
-}) {
-  const bg = tone === "forest" ? "bg-forest-tint" : tone === "lake" ? "bg-lake-tint" : "bg-surface";
-  const head = tone === "forest" ? "text-forest" : tone === "lake" ? "text-lake" : "text-muted";
-  return (
-    <div className={`flex min-h-24 flex-col p-3 ${bg}`}>
-      <dt className={`flex items-center gap-1.5 text-sm font-medium ${head}`}>
-        <Sign name={sign} size={18} state={known ? "on" : "unknown"} tone={tone === "lake" ? "lake" : "forest"} />
-        {label}
-      </dt>
-      <dd className={`mt-1 font-display leading-snug font-semibold text-balance tabular-nums ${big ? "text-h2" : "text-[1.0625rem]"} ${known ? "text-ink" : "text-muted"}`}>{children}</dd>
-      {extra && <dd className="mt-auto pt-1 text-sm">{extra}</dd>}
-    </div>
-  );
-}
-
 /**
  * Vragen we om de vertrektijd? Als er geen bruikbare vertrekregel is: geen regel, een afgewezen of voorwaardelijke
  * regel, of een vaste tijd die we niet kunnen lezen (zelfde definitie als "onvolledig").
@@ -60,82 +29,108 @@ export function needsDeparture(place: Place): boolean {
   return !known || isIncomplete(place);
 }
 
+/** Eén zin onder de vertrektijd: wat de regel voor jou betekent. Alleen wat we weten. */
+function departureNote(place: Place, known: boolean): string | undefined {
+  if (!known) return "We weten nog niet hoe laat je hier moet vertrekken.";
+  const claimed = place.departure === "vrij" || place.departure === "per24";
+  if (claimed && place.departureCheck === "voorwaardelijk") return "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na.";
+  if (place.departure === "vrij") return "Je kunt hier vertrekken wanneer het jou uitkomt.";
+  if (place.departure === "per24") return "Je verblijf loopt per 24 uur.";
+  return undefined;
+}
+
+/** Korte waarde voor de regel Reserveren in het beslisblok */
+const RESERVATION_SHORT = { verplicht: "Verplicht", mogelijk: "Kan, niet verplicht", niet_nodig: "Niet nodig" } as const;
+
 /**
- * Beslisblok (redesign 30 oktober 2026, UX-audit): vier cellen die samen de vraag "kan ik hier vannacht staan?"
- * beantwoorden. Vertrekken is het kernfeit en de enige cel met kleur (bosgroen zonder vaste tijd, meerblauw voor
- * uitslapers). Onbekend staat er eerlijk als "Onbekend", met "Weet jij dit?" om het meteen door te geven; bij een
- * bekend gegeven "Klopt dit niet?".
+ * Beslisblok (UX-audit 27 november 2026, besluit V1, vervangt het raster van 2×2): eerst de vertrektijd, groot en over
+ * de hele breedte, met één zin wat dat voor je betekent; dan de prijs; dan drie korte regels Aankomst, Open en
+ * Reserveren. Vertrekken is het enige met kleur (bosgroen zonder vaste tijd, meerblauw voor uitslapers). Onbekend
+ * staat er rustig als "Onbekend"; alleen bij een onbekende vertrektijd, het kernfeit, staat er één knop om hem door te
+ * geven. Alle andere correcties gaan via "Klopt er iets niet?" onderaan.
  */
-export function DecisionGrid({ place, visitors = 0 }: { place: Place; visitors?: number }) {
+export function DecisionSummary({ place, visitors = 0 }: { place: Place; visitors?: number }) {
   const kind = departureKind(place);
   const free = kind === "vrij";
   const late = kind === "uitslapers";
   const claimed = place.departure === "vrij" || place.departure === "per24";
   const departureKnown = claimed ? place.departureCheck !== "afgewezen" : !!place.departure;
+  const askDeparture = needsDeparture(place);
+  const note = departureNote(place, departureKnown);
   const price = cardPrice(place);
   const t = nightTotal(place);
   const total = t.total !== undefined && t.parts.length > 1 ? t.total : undefined;
   const priceSub = price
-    ? total !== undefined
-      ? `${TOTAL_PERSONS} personen ${t.from ? "vanaf " : ""}${eur(total)}`
-      : price.perPerson
-        ? price.perNight ? "Per persoon per nacht" : "Per persoon"
-        : price.extras || place.touristTaxIncluded === false
-          ? "+ toeslagen"
-          : price.perNight
-            ? "Per nacht"
-            : undefined
+    ? price.perPerson
+      ? price.perNight ? "per persoon per nacht" : "per persoon"
+      : price.extras || place.touristTaxIncluded === false
+        ? "per nacht + toeslagen"
+        : price.perNight
+          ? "per nacht"
+          : undefined
     : undefined;
   const arrival = arrivalTile(place);
-  const askDeparture = needsDeparture(place);
+  const reservation = reservationRuleOf(place);
+  const tone = departureKnown && free ? "forest" : departureKnown && late ? "lake" : "plain";
+  const bg = tone === "forest" ? "bg-forest-tint" : tone === "lake" ? "bg-lake-tint" : "bg-surface";
+  const head = tone === "forest" ? "text-forest" : tone === "lake" ? "text-lake" : "text-ink-2";
+  const row = "flex items-baseline justify-between gap-4 px-4 py-2.5";
 
   return (
-    <section aria-labelledby="kort">
+    <section aria-labelledby="kort" data-testid="decision-summary">
       <h2 id="kort" className="sr-only">In het kort</h2>
-      {/* Eén blok met haarlijnen tussen de cellen (gap-px op de lijnkleur), geen losse kaartjes met schaduw */}
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line">
-        <Tile
-          sign="clock"
-          label={free ? "Zonder vertrektijd" : late ? "Voor uitslapers" : "Vertrekken"}
-          known={departureKnown}
-          tone={departureKnown ? (late ? "lake" : free ? "forest" : "plain") : "plain"}
-          big
-          extra={
-            // Geen vragen in het beslisblok (plekpagina-ronde 26 november 2026), met één uitzondering: een onbekende
-            // vertrektijd, het kernfeit. De link gaat naar Help deze plek kloppen onderaan.
-            askDeparture ? (
-              <a href="#help" className="-my-3 inline-block py-3 font-semibold text-forest underline underline-offset-2">
-                Weet jij het?
-              </a>
-            ) : visitors > 0 ? (
-              <span className="flex items-center gap-1 font-semibold text-ink-2" data-testid="departure-visitors">
-                <Icon name="check" size={15} className={late ? "text-lake" : "text-forest"} />
-                Volgens {pluralize(visitors, "bezoeker", "bezoekers")}
-              </span>
-            ) : undefined
-          }
-        >
-          {departureKnown ? departureLong(place) : "Onbekend"}
-        </Tile>
-        <Tile
-          sign="euro"
-          label="Prijs"
-          known={!!price}
-          extra={price && priceSub ? <span className="block text-ink-2">{priceSub}</span> : undefined}
-        >
-          {price ? price.value : "Onbekend"}
-        </Tile>
-        <Tile
-          sign="calendar"
-          label="Nu open"
-          known={place.openAllYear === true || !!place.season}
-        >
-          <OpenValue place={place} />
-        </Tile>
-        <Tile sign="clock" label="Aankomen" known={!!arrival}>
-          {arrival ?? "Onbekend"}
-        </Tile>
-      </dl>
+      <div className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+        {/* 1. Vertrekken: de kernbelofte, het grootst */}
+        <div className={`px-4 py-3.5 ${bg}`} data-testid="decision-departure">
+          <p className={`flex items-center gap-1.5 text-sm font-semibold ${head}`}>
+            <Sign name="clock" size={18} state={departureKnown ? "on" : "unknown"} tone={tone === "lake" ? "lake" : "forest"} />
+            {free && departureKnown ? "Zonder vertrektijd" : late && departureKnown ? "Voor uitslapers" : "Vertrekken"}
+          </p>
+          <p className={`mt-1 font-display text-h1 leading-tight font-semibold text-balance tabular-nums ${departureKnown ? "text-ink" : "text-ink-2"}`}>
+            {departureKnown ? departureLong(place) : "Vertrektijd onbekend"}
+          </p>
+          {note && <p className="mt-1 text-ink-2">{note}</p>}
+          {askDeparture ? (
+            <div className="mt-2">
+              <GiveDepartureButton placeId={place.id} placeName={place.name} />
+            </div>
+          ) : visitors > 0 ? (
+            <p className="mt-1.5 flex items-center gap-1 text-sm font-semibold text-ink-2" data-testid="departure-visitors">
+              <Icon name="check" size={15} className={late ? "text-lake" : "text-forest"} />
+              Volgens {pluralize(visitors, "bezoeker", "bezoekers")}
+            </p>
+          ) : null}
+        </div>
+        {/* 2. Prijs: tweede waarde; het totaal voor 2 personen alleen als elk onderdeel bekend is */}
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-4 py-3" data-testid="decision-price">
+          <span className="sr-only">Prijs: </span>
+          <span className={`font-display font-semibold tabular-nums ${price ? "text-h2 text-ink" : "text-lg text-ink-2"}`}>{price ? price.value : "Prijs onbekend"}</span>
+          {priceSub && <span className="text-ink-2">{priceSub}</span>}
+          {total !== undefined && (
+            <span className="basis-full text-sm text-ink-2">
+              {TOTAL_PERSONS} personen {t.from ? "vanaf " : ""}
+              {eur(total)} per nacht
+            </span>
+          )}
+        </div>
+        {/* 3. Aankomst, open en reserveren: kort, even zwaar, onbekend gedempt */}
+        <dl className="divide-y divide-line">
+          <div className={row}>
+            <dt className="text-ink-2">Aankomst</dt>
+            <dd className={`text-right font-semibold ${arrival ? "text-ink" : "text-muted"}`}>{arrival ?? "Onbekend"}</dd>
+          </div>
+          <div className={row}>
+            <dt className="text-ink-2">Open</dt>
+            <dd className="text-right font-semibold">
+              <OpenValue place={place} />
+            </dd>
+          </div>
+          <div className={row}>
+            <dt className="text-ink-2">Reserveren</dt>
+            <dd className={`text-right font-semibold ${reservation ? "text-ink" : "text-muted"}`}>{reservation ? RESERVATION_SHORT[reservation] : "Onbekend"}</dd>
+          </div>
+        </dl>
+      </div>
     </section>
   );
 }

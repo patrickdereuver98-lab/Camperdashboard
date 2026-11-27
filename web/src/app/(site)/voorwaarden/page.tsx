@@ -105,7 +105,7 @@ export default function TermsPage() {
         <p>
           Als eigenaar of beheerder van een plek kun je je vermelding claimen, gegevens laten aanpassen of de plek laten
           verwijderen. Gebruik daarvoor <Link href="/plek-aanmelden?soort=eigenaar">het formulier voor eigenaren</Link> of de
-          knop &quot;Klopt er iets niet?&quot; op de pagina van de plek. We verwerken dit meestal binnen twee werkdagen. Op
+          knop &quot;Gegevens corrigeren of aanvullen&quot; onderaan de pagina van de plek. We verwerken dit meestal binnen twee werkdagen. Op
           foto&apos;s van je eigen website staat klein waar ze vandaan komen. Wil je dat een foto verdwijnt, meld het dan via{" "}
           <Link href="/melden">Meld inhoud</Link>. Dan halen we hem weg.
         </p>

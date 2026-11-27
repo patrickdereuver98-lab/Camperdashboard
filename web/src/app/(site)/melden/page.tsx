@@ -18,8 +18,8 @@ export default function ReportPage() {
       </p>
       <ul className="mt-4 list-disc space-y-1 pl-5 text-ink-2">
         <li>
-          Klopt alleen een prijs, voorziening of openingstijd niet, gebruik dan de knop &quot;Klopt er iets niet?&quot; op de
-          pagina van de plek. Dat gaat sneller.
+          Klopt alleen een prijs, voorziening of openingstijd niet, gebruik dan de knop &quot;Gegevens corrigeren of aanvullen&quot;
+          onderaan de pagina van de plek. Dat gaat sneller.
         </li>
         <li>
           In de <Link href="/privacy" className="font-semibold text-forest underline">privacyverklaring</Link> lees je hoe je

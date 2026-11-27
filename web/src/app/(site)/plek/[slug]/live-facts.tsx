@@ -6,7 +6,7 @@ import { distanceKm, formatKm } from "@/lib/geo";
 import { isOpenOn, nowInNL, openStatus } from "@/lib/search";
 import { arrivalToday } from "@/lib/arrival-today";
 import { readResultOrder } from "@/lib/last-search";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import type { Place } from "@/lib/types";
@@ -82,7 +82,7 @@ export function ResultsNav({ slug }: { slug: string }) {
   const prev = order.items[i - 1];
   const next = order.items[i + 1];
   return (
-    <nav aria-label="Zoekresultaten" className="flex items-center justify-between gap-2 border-b border-line bg-surface px-1 text-sm sm:mb-2 sm:rounded-lg sm:border">
+    <nav aria-label="Zoekresultaten" className="flex items-center justify-between gap-2 border-b border-line bg-surface px-1 text-sm sm:mb-1 sm:border-0 sm:bg-transparent sm:px-0">
       {prev ? (
         <Link href={`/plek/${prev.slug}`} className="flex min-h-11 min-w-0 flex-1 items-center gap-1 px-2 font-semibold text-forest">
           <Icon name="chevronLeft" size={17} className="shrink-0" /> <span className="truncate">{prev.name}</span>
@@ -101,5 +101,33 @@ export function ResultsNav({ slug }: { slug: string }) {
         <span className="flex-1" />
       )}
     </nav>
+  );
+}
+
+/**
+ * Vaste balk onderaan op de telefoon (UX-audit 27 november, K4): Route openen staat er altijd; de prijs verschijnt pas
+ * als de prijs in het beslisblok uit beeld is, zodat hij niet twee keer tegelijk in beeld staat. De ruimte voor de
+ * prijs is er altijd (alleen onzichtbaar), dus de knop verspringt niet.
+ */
+export function StickyRouteBar({ price, priceSub, known, children }: { price: string; priceSub?: string; known: boolean; children: React.ReactNode }) {
+  const [showPrice, setShowPrice] = useState(false);
+  useEffect(() => {
+    const el = document.querySelector('[data-testid="decision-price"]');
+    if (!el || !("IntersectionObserver" in window)) return;
+    // Alleen tonen als de prijs boven de rand is weggescrold, niet als hij nog onder de balk ligt
+    const io = new IntersectionObserver(([e]) => setShowPrice(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden" data-testid="sticky-route">
+      <div className="flex items-center gap-3">
+        <div className={`min-w-0 shrink-0 transition-opacity duration-150 motion-reduce:transition-none ${showPrice ? "opacity-100" : "invisible opacity-0"}`} aria-hidden={!showPrice} data-testid="sticky-price">
+          <p className={`font-display leading-none font-semibold ${known ? "text-lg" : "text-sm text-muted"}`}>{price}</p>
+          {priceSub && <p className="mt-0.5 text-sm leading-tight whitespace-nowrap text-muted">{priceSub}</p>}
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }
