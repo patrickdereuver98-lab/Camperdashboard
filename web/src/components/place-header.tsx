@@ -40,7 +40,10 @@ export function PlaceHeaderBar() {
     // Pas als de titel onder de kop (±56 px) verdwijnt, de naam in de kop
     const io = new IntersectionObserver(([e]) => setShowName(!e.isIntersecting && e.boundingClientRect.top < 64), { rootMargin: "-56px 0px 0px 0px" });
     io.observe(title);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      setShowName(false);
+    };
   }, [place]);
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1 md:hidden">

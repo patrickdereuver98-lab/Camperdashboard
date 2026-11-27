@@ -268,6 +268,9 @@ function PlaceMenuItems({ className, onDone }: { className: string; onDone: () =
       <button type="button" onClick={share} className={className} data-testid="menu-share">
         <Icon name={copied ? "check" : "share"} size={20} /> {copied ? "Link gekopieerd" : "Delen"}
       </button>
+      <span role="status" className="sr-only">
+        {copied ? "Link gekopieerd" : ""}
+      </span>
       <Link href="/plek-aanmelden" onClick={onDone} className={className}>
         <Icon name="plus" size={20} /> Plek aanmelden
       </Link>
@@ -448,7 +451,7 @@ function SaveToastLive() {
       <Icon name="heart" size={20} filled className="shrink-0" />
       <span className="min-w-0 flex-1 truncate font-semibold">Bewaard in Mijn reis</span>
       <Link href="/mijn-reis" className="flex h-11 shrink-0 items-center rounded-lg px-3 font-semibold text-surface underline underline-offset-2">
-        Bekijk
+        Bekijk<span className="sr-only"> Mijn reis</span>
       </Link>
     </div>
   );

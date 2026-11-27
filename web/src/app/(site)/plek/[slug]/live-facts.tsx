@@ -112,7 +112,7 @@ export function ResultsNav({ slug }: { slug: string }) {
 export function StickyRouteBar({ price, priceSub, known, children }: { price: string; priceSub?: string; known: boolean; children: React.ReactNode }) {
   const [showPrice, setShowPrice] = useState(false);
   useEffect(() => {
-    const el = document.querySelector('[data-testid="decision-price"]');
+    const el = document.getElementById("beslis-prijs");
     if (!el || !("IntersectionObserver" in window)) return;
     // Alleen tonen als de prijs boven de rand is weggescrold, niet als hij nog onder de balk ligt
     const io = new IntersectionObserver(([e]) => setShowPrice(!e.isIntersecting && e.boundingClientRect.top < 0));

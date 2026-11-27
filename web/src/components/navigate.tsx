@@ -7,7 +7,7 @@ import { Icon } from "./icons";
 import { Sheet } from "./sheet";
 
 /**
- * Knop "Route": kies zelf je navigatie-app, of kopieer de coördinaten voor het navigatiesysteem in de camper.
+ * Knop "Route openen": kies zelf je navigatie-app, of kopieer de coördinaten voor het navigatiesysteem in de camper.
  * Een gekozen app telt als "route" (eigen teller, los van doorkliks naar website en telefoon).
  */
 export function NavigateButton({ to, slug, className, children }: { to: LatLng; slug: string; className: string; children: ReactNode }) {
@@ -35,7 +35,7 @@ export function NavigateButton({ to, slug, className, children }: { to: LatLng; 
       <button type="button" onClick={() => setOpen(true)} className={className}>
         {children}
       </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Navigeren naar deze plek">
+      <Sheet open={open} onClose={() => setOpen(false)} title="Route openen">
         <ul className="grid gap-2">
           {apps.map((a) => (
             <li key={a.label}>

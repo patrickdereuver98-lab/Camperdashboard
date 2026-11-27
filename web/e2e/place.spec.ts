@@ -24,7 +24,7 @@ test.describe("detailpagina", () => {
     await expect(page.locator("#meer-menu").getByRole("link", { name: "Plek aanmelden" })).toBeVisible();
     await page.keyboard.press("Escape");
     // Geen actierij met vier tegels en geen springlinks meer (V2, D9)
-    await expect(page.getByRole("button", { name: "Bewaar", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Bewaren", exact: true })).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "Onderdelen van deze plek" })).toHaveCount(0);
     // Eén hoofdactie in de vaste balk; de prijs staat daar pas als het beslisblok uit beeld is (K4)
     const bar = page.getByTestId("sticky-route");

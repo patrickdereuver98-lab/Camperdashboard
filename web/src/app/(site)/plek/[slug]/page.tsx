@@ -355,6 +355,11 @@ function PlaceActions({ place, tel, className }: { place: Place; tel?: string; c
           <Icon name="phone" size={19} /> Bellen <span className="font-normal text-ink-2">{tel}</span>
         </ContactLink>
       )}
+      {place.email && (
+        <a href={`mailto:${place.email}`} className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line font-semibold hover:border-forest">
+          <Icon name="mail" size={19} /> E-mail sturen
+        </a>
+      )}
     </div>
   );
 }

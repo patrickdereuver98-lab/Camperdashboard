@@ -222,7 +222,7 @@ export function SaveButton({ slug, name, variant = "icon" }: { slug: string; nam
     return (
       <button type="button" onClick={toggle} aria-pressed={saved} className={`${ACTION_TILE} aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest`}>
         <Icon name="heart" size={21} filled={saved} className={saved ? "animate-pop" : ""} />
-        {saved ? "Bewaard" : "Bewaar"}
+        {saved ? "Bewaard" : "Bewaren"}
       </button>
     );
   if (variant === "full")
@@ -234,7 +234,7 @@ export function SaveButton({ slug, name, variant = "icon" }: { slug: string; nam
         className="flex h-12 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 font-semibold transition-colors hover:border-forest aria-pressed:border-forest aria-pressed:bg-forest-tint aria-pressed:text-forest"
       >
         <Icon name="heart" size={20} filled={saved} className={saved ? "animate-pop" : ""} />
-        {saved ? "Bewaard" : "Bewaar"}
+        {saved ? "Bewaard" : "Bewaren"}
       </button>
     );
   return (

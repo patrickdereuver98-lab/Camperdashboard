@@ -968,6 +968,7 @@ export function ReportProblem({
             )}
             {subject === "voorzieningen" && <FacilityChoices value={answers} onChange={(k, a) => setAnswers((cur) => ({ ...cur, [k]: a }))} />}
             {subject && (
+              <div>
               <label className="block">
                 <span className="mb-1.5 block font-semibold">{subject === "voorzieningen" ? "Toelichting (optioneel)" : "Wat is de juiste informatie?"}</span>
                 <textarea
@@ -978,12 +979,13 @@ export function ReportProblem({
                   aria-describedby={err ? "melding-fout" : undefined}
                   className={`${input} h-auto py-2`}
                 />
-                {err && (
-                  <span id="melding-fout" role="alert" className="mt-1.5 block font-semibold text-alert">
-                    {err}
-                  </span>
-                )}
               </label>
+                {err && (
+                  <p id="melding-fout" role="alert" className="mt-1.5 font-semibold text-alert">
+                    {err}
+                  </p>
+                )}
+              </div>
             )}
             {subject && (
             <>

@@ -266,7 +266,7 @@ export default function PrivacyPage() {
           We gebruiken de afgeronde locatie alleen voor die berekening. We slaan hem niet op in onze database en koppelen hem
           niet aan andere gegevens over jou. Zodat de routeplanner niet te veel vragen krijgt, bewaart de server de uitkomst
           (de rijtijd bij een afgerond punt) een paar dagen in een technische cache. Daarin staat niets wat naar jou te
-          herleiden is. De knop &quot;Open in navigatie&quot; opent Google Maps. Daar gelden de privacyregels van Google.
+          herleiden is. De knop &quot;Route openen&quot; opent de navigatie-app die je kiest, bijvoorbeeld Google Maps. Daar gelden de privacyregels van Google.
         </p>
         <p>
           In Mijn reis kun je een begin- en eindpunt kiezen, bijvoorbeeld je huisadres. Dat punt staat alleen op je eigen

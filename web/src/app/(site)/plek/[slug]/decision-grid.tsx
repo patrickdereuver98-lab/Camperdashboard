@@ -35,7 +35,6 @@ function departureNote(place: Place, known: boolean): string | undefined {
   const claimed = place.departure === "vrij" || place.departure === "per24";
   if (claimed && place.departureCheck === "voorwaardelijk") return "Soms geldt er toch een vertrektijd, bijvoorbeeld als het druk is. Vraag het even na.";
   if (place.departure === "vrij") return "Je kunt hier vertrekken wanneer het jou uitkomt.";
-  if (place.departure === "per24") return "Je verblijf loopt per 24 uur.";
   return undefined;
 }
 
@@ -102,7 +101,7 @@ export function DecisionSummary({ place, visitors = 0 }: { place: Place; visitor
           ) : null}
         </div>
         {/* 2. Prijs: tweede waarde; het totaal voor 2 personen alleen als elk onderdeel bekend is */}
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-4 py-3" data-testid="decision-price">
+        <div id="beslis-prijs" className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-4 py-3" data-testid="decision-price">
           <span className="sr-only">Prijs: </span>
           <span className={`font-display font-semibold tabular-nums ${price ? "text-h2 text-ink" : "text-lg text-ink-2"}`}>{price ? price.value : "Prijs onbekend"}</span>
           {priceSub && <span className="text-ink-2">{priceSub}</span>}
