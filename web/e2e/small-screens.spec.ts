@@ -6,7 +6,7 @@ import { expect, PRERENDERED, test } from "./fixtures";
 // Alleen in het desktopproject: de breedte zetten we hier zelf.
 
 const WIDTHS = [320, 360, 390, 820];
-const PAGES = ["/", "/zoeken", `/plek/${PRERENDERED[0].slug}`, "/mijn-reis", "/plek-aanmelden"];
+const PAGES = ["/", "/zoeken", `/plek/${PRERENDERED[0].slug}`, "/mijn-reis", "/plek-aanmelden", "/doe-mee"];
 
 async function overflow(page: Page) {
   return page.evaluate(() => {

@@ -16,6 +16,7 @@ const PAGES = [
   "/mijn-reis",
   PLACE,
   "/plek-aanmelden",
+  "/doe-mee",
   "/melden",
   "/contact",
   "/inloggen",
