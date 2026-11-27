@@ -24,7 +24,7 @@ export default async function HelpPage() {
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-16 sm:px-6 sm:pt-10">
       <h1 className="font-display text-h1 font-semibold">Ken je een plek of weet je iets dat niet klopt?</h1>
       <p className="mt-2 max-w-prose text-ink-2">
-        Dan help je andere camperaars. We kijken alles na voordat het online komt. Je naam en e-mail zijn niet nodig.
+        Dan help je andere camperaars. We kijken alles na voordat het online komt. Ken je alleen een plek, dan zijn je naam en e-mail niet nodig.
       </p>
 
       {/* G2 (27 november 2026): één primaire actie (plek zoeken, want de meeste plekken staan er al) en één secundaire */}
@@ -55,7 +55,7 @@ export default async function HelpPage() {
       <section aria-labelledby="eigenaar" className="mt-8 border-t border-line pt-6 sm:mt-12">
         <h2 id="eigenaar" className="font-display text-h2 font-semibold">Heb je zelf een camperplaats of camping?</h2>
         <p className="mt-1 text-ink-2">
-          Meld je plek aan, of zoek hem op en tik daar op de knop voor eigenaren. Dan vul je de vertrektijd, de prijs en de rest zelf in.
+          Meld je plek aan, of zoek hem op en tik onderaan bij Eigenaar van deze plek? op &ldquo;Gegevens aanpassen&rdquo;. Dan vul je de vertrektijd, de prijs en de rest zelf in.
         </p>
         <Link href="/plek-aanmelden?soort=eigenaar" className="mt-2 inline-flex h-11 items-center gap-2 font-semibold text-forest underline underline-offset-2">
           <Icon name="plus" size={18} /> Meld je plek als eigenaar

@@ -177,6 +177,9 @@ V6, keuzes K1 tot en met K10 door de agent op verzoek van de eigenaar.
   **Vertrektijd doorgeven**, **Vertrektijd onbekend**, **Onbekend**. Zie de stijlgids, "Woordenboek".
 - **Vaste balk** (K4): Route openen altijd; prijs pas als die uit beeld is.
 - **Dichtbij**: hoogstens twee uitwegen bij nul resultaten; locatie geweigerd geeft één zin en een zoekveld.
+- **Formulieren** (G2 tot en met G4): Doe mee met één primaire actie (Plek zoeken) en één secundaire (Plek aanmelden),
+  eigenaren onderaan; Plek aanmelden in vier stappen met "Stap n van 4" in de kop, een decoratieve voortgangsbalk,
+  Vorige en Volgende, fout bij het veld en focus naar de kop van de nieuwe stap.
 - **Mijn reis**: knop Route openen; bij een onbekende vertrektijd één gewone uitlegregel als de aankomsttijd daardoor
   niet te berekenen is.
 

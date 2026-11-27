@@ -140,3 +140,21 @@ test("serverfout: de melding staat er en de invoer blijft", async ({ page }) => 
   await page.getByRole("button", { name: "Vorige" }).click();
   await expect(page.getByLabel(/Naam van de plek/)).toHaveValue("Weide bij de Maas");
 });
+
+test("Enter in een tekstveld gaat naar de volgende stap, met de fout bij het veld als het leeg is", async ({ page }) => {
+  const sent = await mock(page);
+  await page.goto("/plek-aanmelden");
+  const name = page.getByLabel(/Naam van de plek/);
+  await name.press("Enter");
+  await expect(heading(page, "Stap 1 van 4")).toBeVisible();
+  await expect(name).toHaveAttribute("aria-invalid", "true");
+  await name.fill("Weide bij de Maas");
+  await name.press("Enter");
+  await expect(heading(page, "Stap 2 van 4")).toBeVisible();
+  await page.getByLabel(/Plaats/).fill("Gennep");
+  await page.getByLabel(/Provincie/).selectOption("Limburg");
+  await page.getByLabel(/Plaats/).press("Enter");
+  await expect(heading(page, "Stap 3 van 4")).toBeVisible();
+  // Nog niets verstuurd: Enter verstuurt alleen op de laatste stap
+  expect(sent.body).toBeUndefined();
+});

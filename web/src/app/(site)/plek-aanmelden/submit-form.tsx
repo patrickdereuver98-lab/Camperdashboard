@@ -135,7 +135,22 @@ export function SubmitForm() {
   );
 
   return (
-    <form ref={formRef} onSubmit={submit} noValidate className="mt-8">
+    <form
+      ref={formRef}
+      onSubmit={submit}
+      // Enter in een tekstveld van een eerdere stap: naar de volgende stap. Zonder submitknop in die stappen doet de
+      // browser zelf niets (review 27 november 2026)
+      onKeyDown={(e) => {
+        const t = e.target as HTMLElement;
+        if (e.key !== "Enter" || step >= STEPS.length - 1 || t.tagName !== "INPUT") return;
+        const type = (t as HTMLInputElement).type;
+        if (type === "radio" || type === "checkbox") return;
+        e.preventDefault();
+        next();
+      }}
+      noValidate
+      className="mt-8"
+    >
       <div className="mb-6 flex gap-1.5" aria-hidden="true">
         {STEPS.map((_, i) => (
           <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-forest" : "bg-sunken"}`} />
@@ -144,11 +159,13 @@ export function SubmitForm() {
 
       <section {...pane(0)} className="space-y-4">
         {title(0)}
-        <label className="block">
-          <span className="mb-1.5 block font-semibold">Naam van de plek <span className="text-alert" aria-hidden="true">*</span></span>
-          <input name="name" required minLength={2} autoComplete="off" className={field} {...fieldAria(err, F, "name")} />
+        <div>
+          <label className="block">
+            <span className="mb-1.5 block font-semibold">Naam van de plek <span className="text-alert" aria-hidden="true">*</span></span>
+            <input name="name" required minLength={2} autoComplete="off" className={field} {...fieldAria(err, F, "name")} />
+          </label>
           <FieldError error={err} form={F} field="name" />
-        </label>
+        </div>
         <RadioCards
           label="Wie ben je?"
           options={[
@@ -166,21 +183,25 @@ export function SubmitForm() {
       <section {...pane(1)} className="space-y-4">
         {title(1)}
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 block font-semibold">Plaats <span className="text-alert" aria-hidden="true">*</span></span>
-            <input name="town" required className={field} {...fieldAria(err, F, "town")} />
+          <div>
+            <label className="block">
+              <span className="mb-1.5 block font-semibold">Plaats <span className="text-alert" aria-hidden="true">*</span></span>
+              <input name="town" required className={field} {...fieldAria(err, F, "town")} />
+            </label>
             <FieldError error={err} form={F} field="town" />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block font-semibold">Provincie <span className="text-alert" aria-hidden="true">*</span></span>
-            <select name="province" required className={field} defaultValue="" {...fieldAria(err, F, "province")}>
-              <option value="" disabled>Kies…</option>
-              {PROVINCES.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+          </div>
+          <div>
+            <label className="block">
+              <span className="mb-1.5 block font-semibold">Provincie <span className="text-alert" aria-hidden="true">*</span></span>
+              <select name="province" required className={field} defaultValue="" {...fieldAria(err, F, "province")}>
+                <option value="" disabled>Kies…</option>
+                {PROVINCES.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+            </label>
             <FieldError error={err} form={F} field="province" />
-          </label>
+          </div>
         </div>
         <label className="block">
           <span className="mb-1.5 block font-semibold">Adres (optioneel)</span>
@@ -277,16 +298,20 @@ export function SubmitForm() {
           alleen als we een vraag hebben over je aanmelding. Het staat niet op de site.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 block font-semibold">Naam{owner && <> <span className="text-alert" aria-hidden="true">*</span></>}</span>
-            <input name="contact_name" required={owner} className={field} autoComplete="name" {...fieldAria(err, F, "contact_name")} />
+          <div>
+            <label className="block">
+              <span className="mb-1.5 block font-semibold">Naam{owner && <> <span className="text-alert" aria-hidden="true">*</span></>}</span>
+              <input name="contact_name" required={owner} className={field} autoComplete="name" {...fieldAria(err, F, "contact_name")} />
+            </label>
             <FieldError error={err} form={F} field="contact_name" />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block font-semibold">E-mail{owner && <> <span className="text-alert" aria-hidden="true">*</span></>}</span>
-            <input name="contact_email" type="email" required={owner} className={field} autoComplete="email" {...fieldAria(err, F, "contact_email")} />
+          </div>
+          <div>
+            <label className="block">
+              <span className="mb-1.5 block font-semibold">E-mail{owner && <> <span className="text-alert" aria-hidden="true">*</span></>}</span>
+              <input name="contact_email" type="email" required={owner} className={field} autoComplete="email" {...fieldAria(err, F, "contact_email")} />
+            </label>
             <FieldError error={err} form={F} field="contact_email" />
-          </label>
+          </div>
         </div>
       </section>
 

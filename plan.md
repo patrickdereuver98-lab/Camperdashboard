@@ -206,16 +206,16 @@ geen instellingen vóór de stops.
 - ⬜ F2 e2e: volgende stop bovenaan, reisopties niet boven de stops, volgorde wijzigen zonder slepen (B T25).
 
 ### Fase G: globaal (P1)
-- 🔄 G1 **Woordenboek en statuscopy** (woordenboek en statustaal ✅ in stijlgids §11a; doorvoeren buiten de plekpagina open) (A §32, B T55–T56) in de stijlgids, daarna overal doorvoeren:
+- ✅ G1 **Woordenboek en statuscopy** (stijlgids §11a, doorgevoerd; FAQ via migratie `20261127100000` na de merge) (A §32, B T55–T56) in de stijlgids, daarna overal doorvoeren:
   Bewaren · Route openen · Naar de website · Bellen · Delen · Gegevens corrigeren of aanvullen · Vertrektijd
   doorgeven · Vertrektijd onbekend · Onbekend · Laatste update · Mogelijk verouderd · Bekijk plek. Verwijzingen naar
   "Klopt er iets niet?" in voorwaarden, melden, disclaimer en FAQ; "Bedankt!" zonder uitroepteken.
-- ⬜ G2 Doe mee: twee doelen (plek verbeteren, plek aanmelden), eigenaren onderaan.
-- ⬜ G3 Plek aanmelden in stappen (welke plek, waar, wat weet je, contact); server-side validatie blijft.
-- ⬜ G4 Formulierfouten en successen gelijk: fout bij het veld, invoer blijft, succes zegt wat er nu gebeurt (B T34–T35).
-- ⬜ G5 Empty, loading, error en offline per datacomponent: skeleton zoals de echte lijst; offline "Geen verbinding.
+- ✅ G2 Doe mee: twee doelen (plek verbeteren, plek aanmelden), eigenaren onderaan.
+- ✅ G3 Plek aanmelden in stappen (welke plek, waar, wat weet je, contact); server-side validatie blijft.
+- ✅ G4 Formulierfouten en successen gelijk: fout bij het veld, invoer blijft, succes zegt wat er nu gebeurt (B T34–T35).
+- ✅ G5 Empty, loading, error en offline per datacomponent: skeleton zoals de echte lijst; offline "Geen verbinding.
   Je ziet de gegevens die eerder zijn bewaard."
-- ⬜ G6 Provincie- en plaatspagina's als reisgids: titel, korte feiten, kaart, vertrekgroepen, plekken, plaatsen.
+- ✅ G6 (stond er al; nagekeken op screenshots) Provincie- en plaatspagina's als reisgids: titel, korte feiten, kaart, vertrekgroepen, plekken, plaatsen.
 - ⬜ G7 Technische opruimlijst (A §55, B T43–T47): 13× `shadow-`, 9× `text-[…]`, 2× `rounded-2xl`, 32 inline
   styles, 77 hexwaarden (meeste in kaart, iconen en OG-beelden: terecht). Alleen in schermen die we toch aanraken.
 
